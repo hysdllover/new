@@ -73,3 +73,4 @@ export function longPress(getOpts, delay = 320) {
 
 // 드래그 중에는 스크롤 막기 (iOS 는 미리 등록된 non-passive 리스너가 필요)
 if (typeof document !== 'undefined') document.addEventListener('touchmove', (e) => { if (active) e.preventDefault() }, { passive: false })
+export const lockScroll = (on) => { active = on ? { lock: true } : null }
