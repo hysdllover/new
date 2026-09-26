@@ -1,0 +1,231 @@
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+
+/* ── 아이콘 (얇은 선) ── */
+const P = {
+  home: 'M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z',
+  planner: 'M4 5h16v15H4zM4 9h16M8 3v4M16 3v4',
+  tasks: 'M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2',
+  study: 'M12 7a8 8 0 1 0 0 14 8 8 0 0 0 0-14zM12 11v3l2 1M10 3h4M12 3v4',
+  notes: 'M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h7',
+  plus: 'M12 5v14M5 12h14',
+  search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4',
+  more: 'M5 12h.01M12 12h.01M19 12h.01',
+  close: 'M6 6l12 12M18 6 6 18',
+  back: 'M15 5l-7 7 7 7',
+  next: 'M9 5l7 7-7 7',
+  trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',
+  edit: 'M4 20h4L19 9l-4-4L4 16zM14 6l4 4',
+  grip: 'M9 6h.01M9 12h.01M9 18h.01M15 6h.01M15 12h.01M15 18h.01',
+  play: 'M7 5v14l11-7z',
+  pause: 'M8 5v14M16 5v14',
+  stop: 'M6 6h12v12H6z',
+  settings: 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
+  heart: 'M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z',
+  calendar: 'M4 5h16v15H4zM4 9h16M8 3v4M16 3v4M8 13h2M12 13h2M16 13h.01M8 17h2M12 17h2',
+  clock: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2',
+  link: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
+  file: 'M6 3h9l4 4v14H6zM14 3v5h5',
+  image: 'M4 5h16v14H4zM4 16l5-5 4 4 3-3 4 4M15 9h.01',
+  flag: 'M5 21V4h11l-2 4 2 4H5',
+  star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z',
+  repeat: 'M17 2l3 3-3 3M4 11V9a4 4 0 0 1 4-4h12M7 22l-3-3 3-3M20 13v2a4 4 0 0 1-4 4H4',
+  sync: 'M20 11a8 8 0 0 0-14.8-4M4 5v3h3M4 13a8 8 0 0 0 14.8 4M20 19v-3h-3',
+  check: 'M5 12l5 5 9-10',
+  chart: 'M4 20h16M7 16v-5M12 16V8M17 16v-8',
+  folder: 'M3 6h6l2 2h10v11H3z',
+  graph: 'M6 6a2 2 0 1 0 0 .1M18 8a2 2 0 1 0 0 .1M12 18a2 2 0 1 0 0 .1M7.5 7l9 1M7 8l4 8.5M17 10l-4 6.5',
+  archive: 'M4 5h16v4H4zM5 9v11h14V9M10 13h4',
+  bell: 'M6 9a6 6 0 1 1 12 0c0 6 2 8 2 8H4s2-2 2-8M10 21h4',
+  sun: 'M12 4V2M12 22v-2M4 12H2M22 12h-2M5.6 5.6 4.2 4.2M19.8 19.8l-1.4-1.4M5.6 18.4l-1.4 1.4M19.8 4.2l-1.4 1.4M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z',
+  split: 'M12 3v18M3 12h6M15 12h6',
+  layers: 'M12 3 2 8l10 5 10-5zM2 13l10 5 10-5M2 17.5l10 5 10-5',
+  download: 'M12 4v11M7 10l5 5 5-5M4 20h16',
+  upload: 'M12 20V9M7 14l5-5 5 5M4 4h16',
+  print: 'M7 8V3h10v5M7 17H4V9h16v8h-3M7 14h10v7H7z',
+  pill: 'M10.5 20.5a5 5 0 0 1-7-7l6-6a5 5 0 0 1 7 7zM8.5 8.5l7 7',
+  target: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z',
+  book: 'M4 4h6a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4zM20 4h-6a3 3 0 0 0-3 3',
+  brain: 'M9 4a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 2 5 3 3 0 0 0 6 1V5a2 2 0 0 0-3-1zM15 4a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3 3 0 0 1-2 5 3 3 0 0 1-6 1',
+  eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
+  sparkle: 'M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6',
+}
+export function Icon({ name, size = 18, stroke = 1.5, fill = 'none', style }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={style} aria-hidden="true">
+      <path d={P[name] || P.more} />
+    </svg>
+  )
+}
+
+/* ── UI 상태 (비영속) ── */
+let ui = { detail: null, sheets: [], toasts: [], menu: null }
+const uiL = new Set()
+const setUi = (p) => { ui = { ...ui, ...p }; uiL.forEach((l) => l()) }
+export const useUi = () => useSyncExternalStore((f) => { uiL.add(f); return () => uiL.delete(f) }, () => ui)
+export const getUi = () => ui
+
+// 상세 편집: iPad 가로(≥1024)면 우측 패널, 아니면 바텀시트
+export const openDetail = (type, id, extra) => setUi({ detail: { type, id, ...extra } })
+export const closeDetail = () => setUi({ detail: null })
+export const openSheet = (render, opt = {}) => { const key = Math.random(); setUi({ sheets: [...ui.sheets, { key, render, ...opt }] }); return key }
+export const closeSheet = (key) => setUi({ sheets: key == null ? ui.sheets.slice(0, -1) : ui.sheets.filter((s) => s.key !== key) })
+export function toast(text, action) {
+  const id = Math.random()
+  setUi({ toasts: [...ui.toasts, { id, text, action }] })
+  setTimeout(() => setUi({ toasts: ui.toasts.filter((t) => t.id !== id) }), action ? 5000 : 2400)
+}
+export const openMenu = (e, items) => {
+  const r = e.currentTarget.getBoundingClientRect()
+  setUi({ menu: { x: Math.min(r.left, window.innerWidth - 190), y: Math.min(r.bottom + 4, window.innerHeight - items.length * 40 - 16), items } })
+}
+export const closeMenu = () => setUi({ menu: null })
+
+export function UiLayer() {
+  const u = useUi()
+  return (
+    <>
+      {u.sheets.map((s) => (
+        <div key={s.key}>
+          <div className="sheet-bg" onClick={() => closeSheet(s.key)} />
+          <div className={'sheet' + (s.full ? ' full' : '')} role="dialog">
+            <div className="sheet-grab" />
+            {s.title != null && (
+              <div className="sheet-h"><h2>{s.title}</h2><button className="icon-btn" onClick={() => closeSheet(s.key)} aria-label="닫기"><Icon name="close" /></button></div>
+            )}
+            <div className="sheet-b">{s.render(() => closeSheet(s.key))}</div>
+          </div>
+        </div>
+      ))}
+      {u.menu && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 79 }} onClick={closeMenu} />
+          <div className="menu" style={{ left: u.menu.x, top: u.menu.y }}>
+            {u.menu.items.filter(Boolean).map((it, i) => (
+              <button key={i} className={it.danger ? 'btn-danger' : ''} style={it.danger ? { color: 'var(--danger)' } : null} onClick={() => { closeMenu(); it.onClick() }}>
+                {it.icon && <Icon name={it.icon} size={16} />}{it.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+      <div className="toasts">
+        {u.toasts.map((t) => (
+          <div className="toast" key={t.id}>{t.text}{t.action && <button onClick={() => { t.action.fn(); setUi({ toasts: ui.toasts.filter((x) => x.id !== t.id) }) }}>{t.action.label}</button>}</div>
+        ))}
+      </div>
+    </>
+  )
+}
+
+/* ── 작은 컴포넌트 ── */
+export function Seg({ value, options, onChange, small }) {
+  return (
+    <div className="seg" style={small ? { fontSize: '.9em' } : null}>
+      {options.map((o) => {
+        const [v, l] = Array.isArray(o) ? o : [o, o]
+        return <button key={v} className={value === v ? 'on' : ''} onClick={() => onChange(v)}>{l}</button>
+      })}
+    </div>
+  )
+}
+
+export function Check({ on, onClick, round, color }) {
+  const [burst, setBurst] = useState(0)
+  return (
+    <button
+      className={'check' + (on ? ' on' : '') + (round ? ' round' : '')}
+      style={color ? { borderColor: color, ...(on ? { background: color } : null) } : null}
+      onClick={(e) => { e.stopPropagation(); if (!on) setBurst((b) => b + 1); onClick?.() }}
+      aria-label={on ? '완료 취소' : '완료'}
+    >
+      {on && burst > 0 && <span key={burst} className="burst" style={color ? { borderColor: color } : null} />}
+    </button>
+  )
+}
+
+export const Prog = ({ value, color, h }) => (
+  <div className="prog" style={h ? { height: h } : null}><i style={{ width: Math.round(Math.min(1, Math.max(0, value || 0)) * 100) + '%', background: color }} /></div>
+)
+
+export function Ring({ value, size = 64, stroke = 6, color = 'var(--accent)', children }) {
+  const r = (size - stroke) / 2, c = 2 * Math.PI * r
+  return (
+    <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
+      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--surface-2)" strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - Math.min(1, value || 0))} style={{ transition: 'stroke-dashoffset .4s' }} />
+      </svg>
+      <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', textAlign: 'center', lineHeight: 1.15 }}>{children}</div>
+    </div>
+  )
+}
+
+export function Field({ label, children }) {
+  return <div className="field">{label && <label>{label}</label>}{children}</div>
+}
+
+export function Empty({ children }) { return <div className="empty">{children}</div> }
+
+export function Card({ title, action, children, className = '', style, onClick }) {
+  return (
+    <div className={'card ' + className} style={style} onClick={onClick}>
+      {(title || action) && <div className="card-h"><h3>{title}</h3>{action}</div>}
+      {children}
+    </div>
+  )
+}
+
+export function SectionTitle({ children, action }) {
+  return <div className="section-title"><h4>{children}</h4>{action}</div>
+}
+
+export function Toggle({ checked, onChange, label }) {
+  return (
+    <label className="row between" style={{ minHeight: 40 }}>
+      <span>{label}</span>
+      <input type="checkbox" className="sw" checked={!!checked} onChange={(e) => onChange(e.target.checked)} />
+    </label>
+  )
+}
+
+// 텍스트 입력 후 엔터로 추가
+export function AddInput({ placeholder, onAdd, autoFocus }) {
+  const [v, setV] = useState('')
+  return (
+    <form className="row" onSubmit={(e) => { e.preventDefault(); if (v.trim()) { onAdd(v.trim()); setV('') } }}>
+      <input className="input" value={v} onChange={(e) => setV(e.target.value)} placeholder={placeholder} autoFocus={autoFocus} />
+      <button className="btn" type="submit" aria-label="추가"><Icon name="plus" size={16} /></button>
+    </form>
+  )
+}
+
+// 자동 높이 textarea
+export function AutoText({ value, onChange, className = '', style, ...rest }) {
+  const ref = useRef(null)
+  useEffect(() => { const el = ref.current; if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }, [value])
+  return <textarea ref={ref} rows={1} value={value} onChange={(e) => onChange(e.target.value)} className={className} style={{ resize: 'none', overflow: 'hidden', ...style }} {...rest} />
+}
+
+export function useNow(interval = 30000) {
+  const [n, setN] = useState(Date.now())
+  useEffect(() => { const t = setInterval(() => setN(Date.now()), interval); return () => clearInterval(t) }, [interval])
+  return n
+}
+
+export function useMedia(q) {
+  const [m, setM] = useState(() => window.matchMedia(q).matches)
+  useEffect(() => { const mq = window.matchMedia(q); const f = () => setM(mq.matches); mq.addEventListener('change', f); return () => mq.removeEventListener('change', f) }, [q])
+  return m
+}
+
+export function confirmSheet(title, message, onOk, okLabel = '확인') {
+  openSheet((close) => (
+    <div className="col">
+      <div>{message}</div>
+      <div className="row" style={{ justifyContent: 'flex-end' }}>
+        <button className="btn" onClick={close}>취소</button>
+        <button className="btn primary" onClick={() => { close(); onOk() }}>{okLabel}</button>
+      </div>
+    </div>
+  ), { title })
+}

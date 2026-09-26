@@ -1,0 +1,13 @@
+@page { size: A4; margin: 12mm; }
+@media print {
+  :root { --bg: #fff; --surface: #fff; --surface-2: #f4f4f2; --text: #222; --line: #ddd; color-scheme: light; }
+  html, body, #root, .app, .main { height: auto !important; overflow: visible !important; display: block !important; background: #fff !important; }
+  .no-print, .sidebar, .tabbar, .fab, .topbar, .segbar, .detail, .toasts, .sheet, .sheet-bg, .icon-btn, .w-tools { display: none !important; }
+  .content { padding: 0 !important; overflow: visible !important; }
+  .content-inner { max-width: none !important; }
+  .card { break-inside: avoid; box-shadow: none !important; border: 1px solid #ddd !important; }
+  body { font-size: 10.5pt; }
+  a { color: inherit; }
+  .print-only { display: block !important; }
+}
+.print-only { display: none; }

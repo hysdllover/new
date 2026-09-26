@@ -1,0 +1,12 @@
+/* ── 편집기·첨부 ── */
+.title-input { font-size: 1.15em !important; font-weight: var(--fw-b); border-color: transparent !important; padding-left: 2px !important; background: transparent !important; }
+.input.bare { border-color: transparent; background: transparent; min-height: 34px; padding: 4px 6px; }
+.input.bare:focus { border-color: var(--line); }
+.link-card { border: 1px solid var(--line); border-radius: 8px; padding: 6px 4px 6px 10px; background: var(--surface); }
+.link-card a { color: var(--text); min-width: 0; }
+.thumb { border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); overflow: hidden; display: grid; place-items: center; flex-shrink: 0; }
+.thumb img { width: 100%; height: 100%; object-fit: cover; }
+.thumb.add { width: 56px; height: 56px; color: var(--muted); border-style: dashed; }
+.thumb-x { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 10px; background: var(--text); color: var(--bg); font-size: 10px; display: grid; place-items: center; }
+.field > .seg { align-self: flex-start; max-width: 100%; overflow-x: auto; }
+.grid { align-items: start; }
