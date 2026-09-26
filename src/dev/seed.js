@@ -1,5 +1,6 @@
 // ?demo 로 열면 샘플 데이터를 채운다 (개발·미리보기용)
 import { put, batch, list } from '../store/store.js'
+import { regeneratePlan } from '../store/actions.js'
 import { today, addDays } from '../engine/date.js'
 
 export function seed() {
@@ -62,4 +63,5 @@ export function seed() {
     put('notes', { id: 'n3', title: '보고서 개요', projectId: p1.id, subjectId: 'sub-sci', blocks: [{ id: 'c1', type: 'h1', text: '탐구 주제' }, { id: 'c2', type: 'text', text: '식물 생장과 빛의 파장. [[실험 노트]] 참고' }] })
     put('notes', { id: 'n4', title: '실험 노트', projectId: p1.id, blocks: [{ id: 'd1', type: 'text', text: '1차 실험 결과 기록' }] })
   })
+  regeneratePlan('pl1')
 }
