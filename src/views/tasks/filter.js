@@ -1,0 +1,46 @@
+import { today, addDays, weekStart } from '../../engine/date.js'
+
+export const SMART = [
+  ['all', '전체'], ['today', '오늘'], ['tomorrow', '내일'], ['week', '이번 주'], ['nodue', '기한 없음'], ['overdue', '지연'], ['done', '완료'],
+]
+
+export function smartMatch(t, smart) {
+  const d = today()
+  switch (smart) {
+    case 'today': return !t.done && t.due && t.due <= d
+    case 'tomorrow': return !t.done && t.due === addDays(d, 1)
+    case 'week': { const ws = weekStart(d); return !t.done && t.due && t.due >= ws && t.due <= addDays(ws, 6) }
+    case 'nodue': return !t.done && !t.due
+    case 'overdue': return !t.done && t.due && t.due < d
+    case 'done': return t.done
+    default: return !t.done
+  }
+}
+
+export function applyFilter(tasks, f = {}) {
+  const q = (f.q || '').trim().toLowerCase()
+  let out = tasks.filter((t) => !t.archived && smartMatch(t, f.smart || 'all'))
+  if (f.subjectId) out = out.filter((t) => t.subjectId === f.subjectId)
+  if (f.projectId) out = out.filter((t) => t.projectId === f.projectId)
+  if (f.priority) out = out.filter((t) => (t.priority || 0) >= +f.priority)
+  if (q) out = out.filter((t) => (t.title || '').toLowerCase().includes(q) || (t.note || '').toLowerCase().includes(q))
+  return sortTasks(out, f.sort)
+}
+
+export function sortTasks(list, sort = 'manual') {
+  const a = [...list]
+  if (sort === 'due') a.sort((x, y) => (x.due || '9999').localeCompare(y.due || '9999') || (x.dueTime ?? 9999) - (y.dueTime ?? 9999))
+  else if (sort === 'priority') a.sort((x, y) => (y.priority || 0) - (x.priority || 0) || (x.due || '9999').localeCompare(y.due || '9999'))
+  else if (sort === 'subject') a.sort((x, y) => (x.subjectId || '~').localeCompare(y.subjectId || '~'))
+  else if (sort === 'created') a.sort((x, y) => (y.createdAt || 0) - (x.createdAt || 0))
+  else a.sort((x, y) => (x.order ?? 0) - (y.order ?? 0))
+  return a
+}
+
+// 아이젠하워: q 가 지정 안 됐으면 우선순위·마감으로 추정
+export function quadrant(t) {
+  if (t.q) return t.q
+  const important = (t.priority || 0) >= 2
+  const urgent = t.due && t.due <= addDays(today(), 2)
+  return important && urgent ? 1 : important ? 2 : urgent ? 3 : 4
+}

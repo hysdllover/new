@@ -8,7 +8,7 @@ import { startStopwatch, startPomodoro } from '../lib/timer.js'
 import { go } from '../nav.js'
 
 // '#과목' 과 '@날짜 시각' 을 인식
-function parse(text) {
+export function parseQuick(text) {
   let rest = text
   let subjectId = null
   const m = rest.match(/#(\S+)/)
@@ -24,7 +24,7 @@ export default function QuickAdd({ close }) {
   const [type, setType] = useState('task')
   const [text, setText] = useState('')
   const [subject, setSubject] = useState(null)
-  const p = parse(text)
+  const p = parseQuick(text)
 
   const submit = (e) => {
     e?.preventDefault()

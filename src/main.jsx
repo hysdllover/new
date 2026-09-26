@@ -16,7 +16,8 @@ function Root() {
   return <App />
 }
 
-loadState().then(() => {
+loadState().then(async () => {
+  if (location.search.includes('demo')) (await import('./dev/seed.js')).seed()
   createRoot(document.getElementById('root')).render(<StrictMode><Root /></StrictMode>)
   startServices()
   startSync()

@@ -10,3 +10,39 @@
 .thumb-x { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 10px; background: var(--text); color: var(--bg); font-size: 10px; display: grid; place-items: center; }
 .field > .seg { align-self: flex-start; max-width: 100%; overflow-x: auto; }
 .grid { align-items: start; }
+
+/* ── 할 일 ── */
+.draggable { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.task-item { cursor: pointer; }
+.matrix { display: grid; grid-template-columns: 1fr; gap: var(--gap); }
+@media (min-width: 768px) { .matrix { grid-template-columns: 1fr 1fr; } }
+.quad { min-height: 160px; display: flex; flex-direction: column; gap: 6px; }
+.quad .list { flex: 1; }
+.kanban { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(260px, 1fr); gap: var(--gap); overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x mandatory; }
+@media (max-width: 767px) { .kanban { grid-auto-columns: 82%; } }
+.kcol { background: var(--surface-2); border-radius: var(--radius); padding: 10px; display: flex; flex-direction: column; gap: 8px; min-height: 200px; scroll-snap-align: start; }
+.kcard { padding: 6px 10px; cursor: pointer; }
+.kcard .item { border: 0; padding: 4px 0; }
+
+.gantt-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.gantt-head { display: flex; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--surface); }
+.gantt-day { flex-shrink: 0; text-align: center; font-size: .72em; color: var(--muted); padding: 6px 0; }
+.gantt-day.today { color: var(--accent); font-weight: var(--fw-b); }
+.gantt-day.sun { color: var(--c4); }
+.gantt-row { position: relative; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+.gantt-row.group { background: var(--surface-2); }
+.gantt-label { position: sticky; left: 0; z-index: 2; height: 100%; display: flex; align-items: center; gap: 6px; padding: 0 10px; background: var(--surface); border-right: 1px solid var(--line); font-size: .9em; text-align: left; }
+.gantt-row.group .gantt-label { background: var(--surface-2); }
+.gantt-bar { position: absolute; top: 8px; height: 20px; border-radius: 6px; border: 1px solid; overflow: hidden; touch-action: none; cursor: grab; z-index: 1; }
+.gantt-bar span { display: block; height: 100%; opacity: .55; }
+.gantt-today { position: absolute; top: 0; bottom: 0; width: 1.5px; background: var(--accent); opacity: .5; z-index: 1; }
+
+.db-table table { border-collapse: collapse; width: 100%; font-size: .92em; }
+.db-table th { text-align: left; font-weight: var(--fw-b); color: var(--muted); padding: 9px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; cursor: pointer; font-size: .9em; }
+.db-table td { padding: 6px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.db-table tr:last-child td { border-bottom: 0; }
+.cell-sel { border: 0; background: transparent; font-size: .95em; padding: 2px; color: inherit; font-family: inherit; }
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--gap); }
+.gcard { text-align: left; display: flex; flex-direction: column; overflow: hidden; }
+.gcover { width: calc(100% + 28px); margin: -14px -14px 10px; height: 100px; object-fit: cover; }
+.btn.on-acc { border-color: var(--accent); color: var(--accent); }
