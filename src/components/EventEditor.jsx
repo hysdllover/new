@@ -1,6 +1,6 @@
 import { useRec, patch, remove, restore, put, list } from '../store/store.js'
 import { Icon, Field, AutoText, closeDetail, toast, Toggle } from './ui.jsx'
-import { RepeatEditor, TimeInput, ColorPick } from './common.jsx'
+import { RepeatEditor, TimeInput, ColorPick, SubjectSelect, ProjectSelect } from './common.jsx'
 import { PALETTE } from '../store/schema.js'
 import { openNote } from '../nav.js'
 import { fmtDate } from '../engine/date.js'
@@ -59,6 +59,10 @@ export default function EventEditor({ id, occ }) {
             <option value="event">일정</option><option value="anniv">기념일·생일 (매년)</option>
           </select>
         </Field>
+        <div className="row">
+          <Field label="과목"><SubjectSelect value={e.subjectId} onChange={(v) => up({ subjectId: v })} /></Field>
+          <Field label="프로젝트"><ProjectSelect value={e.projectId} onChange={(v) => up({ projectId: v })} /></Field>
+        </div>
         <Field label="색상"><ColorPick value={e.color} onChange={(c) => up({ color: c })} colors={PALETTE} /></Field>
         <Field label="반복"><RepeatEditor rule={e.repeat} start={e.date} onChange={(r) => up({ repeat: r })} /></Field>
         {e.repeat && occ && <button className="btn danger sm" onClick={delOcc}>이 날({occ.slice(5)})만 삭제</button>}

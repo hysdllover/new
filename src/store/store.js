@@ -55,7 +55,8 @@ const stamp = (rec) => ({ ...rec, updatedAt: Date.now(), deviceId })
 export function put(coll, rec) {
   const id = rec.id || uid()
   const prev = state[coll][id]
-  return write(coll, stamp({ createdAt: prev?.createdAt || Date.now(), ...prev, ...rec, id }), prev)
+  const { deleted, deletedAt, purged, ...base } = prev || {} // 같은 id 로 다시 쓰면 휴지통에서 되살림
+  return write(coll, stamp({ createdAt: prev?.createdAt || Date.now(), ...base, ...rec, id }), prev)
 }
 export function patch(coll, id, partial) {
   const prev = state[coll][id]

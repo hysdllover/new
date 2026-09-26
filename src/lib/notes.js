@@ -1,0 +1,112 @@
+import { list, put, patch, find } from '../store/store.js'
+import { addTask, updateTask } from '../store/actions.js'
+import { parseMention, fmtTime } from '../engine/date.js'
+import { uid } from '../store/store.js'
+
+export const LINK_RE = /\[\[([^\]]+)\]\]/g
+export const newBlock = (type = 'text', text = '') => ({ id: uid(), type, text })
+
+export const noteTitle = (n) => n?.title || '제목 없음'
+export const findByTitle = (title) => list('notes').find((n) => (n.title || '').trim() === title.trim())
+
+export function openOrCreateByTitle(title) {
+  return findByTitle(title) || put('notes', { title: title.trim(), type: 'page', blocks: [newBlock()] })
+}
+
+export function dailyNote(date, create) {
+  const n = list('notes').find((x) => x.type === 'daily' && x.date === date)
+  if (n || !create) return n
+  return put('notes', { id: 'daily-' + date, title: date, type: 'daily', date, blocks: [newBlock()] })
+}
+
+// 블록 텍스트 전체 (동기화 블록 포함)
+export function allBlocks(note) {
+  const out = []
+  for (const b of note.blocks || []) {
+    if (b.type === 'sync') out.push(...(find('syncBlocks', b.syncId)?.blocks || []))
+    else out.push(b)
+  }
+  return out
+}
+export const noteText = (note) => allBlocks(note).map((b) => b.text || '').join('\n')
+
+export function linksOf(note) {
+  const set = new Set()
+  for (const m of noteText(note).matchAll(LINK_RE)) set.add(m[1].trim())
+  return [...set]
+}
+
+export function backlinks(note, notes = list('notes')) {
+  const t = (note.title || '').trim()
+  if (!t) return []
+  return notes.filter((n) => n.id !== note.id && linksOf(n).includes(t))
+}
+
+// 날짜를 언급(@)한 노트
+export function mentionsOf(date, notes = list('notes')) {
+  return notes.filter((n) => allBlocks(n).some((b) => b.ref?.date === date))
+}
+
+// 블록 편집이 끝났을 때: 체크박스 ↔ 할 일, @날짜 → 일정/할 일
+export function commitBlock(block, note) {
+  let b = { ...block }
+  const text = (b.text || '').trim()
+  if (b.type === 'todo' && text) {
+    const m = parseMention(text)
+    const title = (m ? m.rest : text).replace(LINK_RE, '$1')
+    if (!b.taskId || !find('tasks', b.taskId)) {
+      const t = addTask({ title, noteId: note?.id, subjectId: note?.subjectId || null, projectId: note?.projectId || null, due: m?.date || null, dueTime: m?.time ?? null })
+      b.taskId = t.id
+    } else {
+      const t = find('tasks', b.taskId)
+      const p = {}
+      if (t.title !== title) p.title = title
+      if (m && t.due !== m.date) { p.due = m.date; p.dueTime = m.time }
+      if (Object.keys(p).length) updateTask(b.taskId, p, { silentLog: !p.due })
+    }
+    if (m) b.ref = { type: 'task', id: b.taskId, date: m.date, time: m.time }
+    return b
+  }
+  if (b.type !== 'todo' && b.type !== 'divider') {
+    const m = parseMention(text)
+    if (m && (!b.ref || b.ref.date !== m.date || b.ref.time !== m.time)) {
+      const title = m.rest.replace(LINK_RE, '$1') || note?.title || '메모'
+      if (b.ref?.type === 'event' && find('events', b.ref.id)) {
+        patch('events', b.ref.id, { date: m.date, start: m.time, end: m.time != null ? m.time + 60 : null })
+      } else if (b.ref?.type === 'task' && find('tasks', b.ref.id)) {
+        updateTask(b.ref.id, { due: m.date, dueTime: m.time })
+      } else if (m.time != null) {
+        const e = put('events', { title, date: m.date, start: m.time, end: m.time + 60, noteId: note?.id, subjectId: note?.subjectId, projectId: note?.projectId })
+        b.ref = { type: 'event', id: e.id }
+      } else {
+        const t = addTask({ title, due: m.date, noteId: note?.id, subjectId: note?.subjectId || null, projectId: note?.projectId || null })
+        b.ref = { type: 'task', id: t.id }
+      }
+      b.ref = { ...b.ref, date: m.date, time: m.time }
+    }
+  }
+  return b
+}
+
+export const refLabel = (ref) => ref ? `${ref.type === 'event' ? '일정' : '할 일'} ${ref.date.slice(5).replace('-', '/')}${ref.time != null ? ' ' + fmtTime(ref.time) : ''}` : ''
+
+export function toMarkdown(note) {
+  const tasks = list('tasks')
+  const lines = [`# ${noteTitle(note)}`, '']
+  for (const b of allBlocks(note)) {
+    const t = b.text || ''
+    switch (b.type) {
+      case 'h1': lines.push(`## ${t}`); break
+      case 'h2': lines.push(`### ${t}`); break
+      case 'bullet': lines.push(`- ${t}`); break
+      case 'todo': lines.push(`- [${tasks.find((x) => x.id === b.taskId)?.done ? 'x' : ' '}] ${t}`); break
+      case 'quote': lines.push(`> ${t}`); break
+      case 'divider': lines.push('---'); break
+      case 'file': lines.push(`[첨부: ${find('files', b.fileId)?.name || '파일'}]`); break
+      case 'embed': lines.push(`<!-- ${b.embed?.kind} -->`); break
+      default: lines.push(t)
+    }
+    if (!['bullet', 'todo'].includes(b.type)) lines.push('')
+  }
+  return lines.join('\n').replace(/\n{3,}/g, '\n\n')
+}
