@@ -201,3 +201,20 @@
 .lib-card { cursor: pointer; padding: 8px; }
 .lib-card .thumb { width: 100% !important; height: 110px !important; }
 .sm-input { min-height: 40px; }
+
+/* ── 홈·위젯·건강 ── */
+.greet { padding: 4px 2px 2px; }
+.greet-hi { font-size: 1.25em; font-weight: var(--fw-b); }
+.now-cur { display: block; width: 100%; text-align: left; border-left: 3px solid var(--c); padding: 4px 0 4px 10px; }
+.dday-big { font-size: 1.9em; font-weight: var(--fw-b); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.today-w { display: grid; gap: 4px 16px; grid-template-columns: 1fr; }
+@media (min-width: 768px) { .today-w { grid-template-columns: 1fr 1.4fr; } }
+.memo-list { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.memo { display: flex; align-items: center; gap: 4px; background: color-mix(in srgb, var(--c3) 12%, transparent); border-radius: 6px; padding: 2px 2px 2px 10px; font-size: .9em; min-height: 32px; }
+.quote { font-size: 1.02em; line-height: 1.5; padding: 4px 0 6px; color: var(--text); }
+.quote-w details { margin-top: 4px; }
+.mood { font-size: 22px; width: 40px; height: 40px; border-radius: 20px; display: grid; place-items: center; opacity: .45; }
+.mood.on { opacity: 1; background: var(--surface-2); outline: 1.5px solid var(--accent); }
+.cycle-info { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.cycle-info div { display: flex; flex-direction: column; align-items: center; background: var(--surface-2); border-radius: 8px; padding: 8px 4px; }
+.cycle-info b { font-size: 1.05em; }
