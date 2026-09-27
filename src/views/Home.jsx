@@ -18,7 +18,7 @@ export const DEFAULT_PAGES = [
   { id: 'pg-life', name: '생활', widgets: [
     { id: 'b1', type: 'clock', size: 's', style: 'bold' }, { id: 'b2', type: 'now', size: 'm' }, { id: 'b3', type: 'weekstrip', size: 'l' },
     { id: 'b4', type: 'habits', size: 'm' }, { id: 'b5', type: 'meds', size: 's' }, { id: 'b6', type: 'sticky', size: 's', style: 'tint', color: '#b5a47a' },
-    { id: 'b7', type: 'quicknote', size: 'm' }, { id: 'b8', type: 'quote', size: 's', style: 'plain' }, { id: 'b9', type: 'links', size: 's' },
+    { id: 'b7', type: 'quicknote', size: 'm' }, { id: 'b9', type: 'links', size: 's' },
   ] },
 ]
 
