@@ -50,7 +50,7 @@ export default function Plan() {
   )
 }
 
-function DdayCard() {
+export function DdayCard() {
   const ddays = useColl('ddays').sort((a, b) => a.date.localeCompare(b.date))
   const [title, setTitle] = useState('')
   const [date, setDate] = useState(addDays(today(), 30))

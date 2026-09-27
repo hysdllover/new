@@ -8,9 +8,9 @@ const save = () => { try { localStorage.setItem('nav', JSON.stringify(nav)) } ca
 
 export const TABS = [
   { id: 'home', label: '홈', icon: 'home' },
-  { id: 'planner', label: '플래너', icon: 'planner' },
   { id: 'tasks', label: '할 일', icon: 'tasks' },
-  { id: 'study', label: '공부', icon: 'study' },
+  { id: 'study', label: '기록', icon: 'study' },
+  { id: 'planner', label: '캘린더', icon: 'planner' },
   { id: 'notes', label: '노트', icon: 'notes' },
 ]
 export const EXTRA = [
@@ -19,9 +19,9 @@ export const EXTRA = [
 ]
 
 export const SEGMENTS = {
-  planner: [['today', '오늘'], ['week', '주'], ['month', '월'], ['circle', '원형', 'circle'], ['grid', '10분']],
+  planner: [['today', '오늘'], ['week', '주'], ['month', '월'], ['circle', '원형', 'planning'], ['grid', '10분', 'planning']],
   tasks: [['list', '리스트'], ['matrix', '매트릭스', 'matrix'], ['kanban', '칸반', 'kanban'], ['gantt', '간트', 'gantt'], ['table', '표', 'db'], ['archive', '보관함']],
-  study: [['timer', '타이머'], ['plan', '계획'], ['review', '복습'], ['progress', '진도'], ['records', '기록']],
+  study: [['log', '기록 입력'], ['timer', '타이머'], ['records', '통계'], ['review', '복습'], ['progress', '진도'], ['plan', '계획', 'planning']],
   notes: [['daily', '데일리'], ['pages', '페이지'], ['hub', '허브'], ['graph', '그래프', 'graph'], ['library', '자료']],
 }
 

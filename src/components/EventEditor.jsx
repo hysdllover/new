@@ -40,8 +40,8 @@ export default function EventEditor({ id, occ }) {
         <Toggle label="하루 종일" checked={allDay} onChange={(v) => up(v ? { start: null, end: null } : { start: 9 * 60, end: 10 * 60 })} />
         {!allDay && (
           <div className="row">
-            <Field label="시작"><TimeInput value={e.start} onChange={(v) => up({ start: v, end: Math.max(v + 10, e.end ?? v + 60) })} /></Field>
-            <Field label="종료"><TimeInput value={e.end} onChange={(v) => up({ end: v })} /></Field>
+            <Field label="시작"><TimeInput allowEmpty={false} value={e.start} onChange={(v) => up({ start: v, end: Math.max(v + 10, e.end ?? v + 60) })} /></Field>
+            <Field label="종료"><TimeInput allowEmpty={false} value={e.end} onChange={(v) => up({ end: v })} /></Field>
           </div>
         )}
         {!allDay && (

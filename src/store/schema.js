@@ -5,7 +5,7 @@ export const COLLECTIONS = {
   notes: 'notes', syncBlocks: 'notes', files: 'notes',
   subjects: 'study', sessions: 'study', ddays: 'study', plans: 'study', textbooks: 'study',
   reviews: 'study', grades: 'study', habits: 'study', mocks: 'study',
-  conditions: 'health', meds: 'health', medLogs: 'health', cycles: 'health',
+  conditions: 'health', meds: 'health', medLogs: 'health',
   settings: 'settings', links: 'settings', quotes: 'settings',
 }
 export const COLL_NAMES = Object.keys(COLLECTIONS)
@@ -31,14 +31,14 @@ export const DEFAULT_WIDGETS = [
 export const DEFAULT_SETTINGS = {
   id: 'main',
   theme: { preset: 'default', accent: null, mode: 'system', font: 'system', fontSize: 13, fontWeight: 300, radius: 10, density: 'normal', card: 'line' },
-  modules: { health: true, gantt: true, db: true, mindmap: true, graph: true, matrix: true, kanban: true, circle: true, mock: true },
+  modules: { health: true, gantt: true, db: true, mindmap: true, graph: true, matrix: true, kanban: true, circle: true, mock: true, planning: false },
   widgets: DEFAULT_WIDGETS,
   dayStart: 7 * 60, dayEnd: 24 * 60,
   weekStart: 1,
   goalDaily: 240, goalWeekly: 1500,
   pomodoro: { work: 25, short: 5, long: 15, every: 4 },
   reviewIntervals: [1, 3, 7, 14, 30],
-  syncExclude: { cycles: true },
+  syncExclude: {},
   defaultBuffer: 10,
   autoTemplate: true,
   notify: true,

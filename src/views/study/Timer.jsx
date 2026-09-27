@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useColl, useSettings, put, patch, remove } from '../../store/store.js'
 import { useTimerState, useTick, elapsed, startStopwatch, startPomodoro, pause, resume, stop, skipPhase, setTimerTask } from '../../lib/timer.js'
-import { today, fmtClock, fmtDur } from '../../engine/date.js'
+import { today, fmtClock, fmtDur, fmtTime, tsToMin } from '../../engine/date.js'
+import { openRecord } from './Log.jsx'
 import { Card, Icon, Ring, Field, openSheet } from '../../components/ui.jsx'
 import { keepAwake } from '../../lib/notify.js'
 
@@ -80,10 +81,35 @@ export default function Timer() {
         </Card>
       </div>
       <div className="col">
+        <TodayRecords />
         {st.modules.mock !== false && <MockExam />}
         <WakeCard />
       </div>
     </div>
+  )
+}
+
+function TodayRecords() {
+  const sessions = useColl('sessions').filter((s) => s.date === today()).sort((a, b) => (b.start ?? 0) - (a.start ?? 0))
+  const subjects = useColl('subjects')
+  return (
+    <Card title="오늘 기록" action={<button className="btn sm" onClick={() => openRecord(null)}><Icon name="plus" size={14} />직접 입력</button>}>
+      <div className="list">
+        {sessions.map((r) => {
+          const sub = subjects.find((s) => s.id === r.subjectId)
+          return (
+            <button key={r.id} className="item" style={{ textAlign: 'left', alignItems: 'center' }} onClick={() => openRecord(r)}>
+              <span className="dot" style={{ background: sub?.color }} />
+              <span className="t">{sub?.name}{r.note ? <span className="muted small"> · {r.note.slice(0, 20)}</span> : null}</span>
+              <span className="small muted">{r.start != null ? fmtTime(tsToMin(r.start)) : ''}</span>
+              <b className="small">{fmtDur(r.dur)}</b>
+              <Icon name="edit" size={14} />
+            </button>
+          )
+        })}
+        {!sessions.length && <div className="empty">타이머를 멈추면 여기 기록돼요. 눌러서 수정할 수 있어요</div>}
+      </div>
+    </Card>
   )
 }
 

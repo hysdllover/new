@@ -21,6 +21,7 @@ export default function Grid({ date }) {
   // 실제: 10분 칸 단위로 과목 매핑
   const actual = {}
   for (const s of sessions) {
+    if (s.start == null) continue
     const a = tsToMin(s.start)
     for (let m = Math.floor(a / 10) * 10; m < a + s.dur; m += 10) actual[m / 10] = s.subjectId
   }

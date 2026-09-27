@@ -105,7 +105,16 @@ export function RepeatEditor({ rule, start, onChange }) {
   )
 }
 
-export function TimeInput({ value, onChange, placeholder }) {
-  return <input className="input" type="time" value={value == null ? '' : fmtTime(value)} placeholder={placeholder}
-    onChange={(e) => onChange(e.target.value ? +e.target.value.split(':')[0] * 60 + +e.target.value.split(':')[1] : null)} />
+// 시간은 선택 사항: 비어 있으면 '시간 없음' 버튼, 있으면 ✕ 로 지우기 (iOS 는 time 입력을 비울 수 없음)
+export function TimeInput({ value, onChange, defaultValue = 9 * 60, allowEmpty = true }) {
+  if (value == null && allowEmpty) {
+    return <button type="button" className="input time-empty" onClick={() => onChange(defaultValue)}>시간 없음 <span className="muted">＋</span></button>
+  }
+  return (
+    <div className="row" style={{ gap: 4 }}>
+      <input className="input" type="time" value={value == null ? '' : fmtTime(value)}
+        onChange={(e) => e.target.value && onChange(+e.target.value.split(':')[0] * 60 + +e.target.value.split(':')[1])} />
+      {allowEmpty && <button type="button" className="icon-btn" onClick={() => onChange(null)} aria-label="시간 지우기">✕</button>}
+    </div>
+  )
 }

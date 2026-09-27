@@ -1,10 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSettings, setSettings, useColl, put, remove, patch, exportJSON, importJSON, uid } from '../store/store.js'
 import { PRESETS, FONTS } from '../theme/theme.js'
 import { PALETTE } from '../store/schema.js'
 import { Card, Seg, Toggle, Field, Icon, toast, confirmSheet, openSheet } from '../components/ui.jsx'
 import { ColorPick, TimeInput, SubjectSelect } from '../components/common.jsx'
-import { useSyncStatus, connect, disconnect, syncNow } from '../sync/sync.js'
+import { useSyncStatus, connect, disconnect, syncNow, gistInfo } from '../sync/sync.js'
+import { enablePush, disablePush, pushState, testLocal, isStandalone, pushSupported } from '../lib/push.js'
+import { buildScript } from '../lib/scriptable.js'
+import { PRESETS as THEMES } from '../theme/theme.js'
 import { download } from '../lib/files.js'
 import { requestPermission } from '../lib/notify.js'
 import { fmtTime, today, WD } from '../engine/date.js'
@@ -16,6 +19,8 @@ export default function Settings() {
   return (
     <div className="grid two">
       <SyncCard />
+      <PushCard />
+      <HomeWidgetCard />
       <Card title="디자인">
         <div className="form">
           <Field label="색상 프리셋">
@@ -48,7 +53,7 @@ export default function Settings() {
       </Card>
 
       <Card title="기능 켜기 / 끄기">
-        {[['health', '건강 (컨디션·약·주기)'], ['matrix', '아이젠하워 매트릭스'], ['kanban', '칸반'], ['gantt', '간트'], ['db', '표 · DB 뷰'], ['circle', '원형 계획표'], ['graph', '개념 그래프'], ['mindmap', '마인드맵'], ['mock', '모의고사 타이머']].map(([k, l]) => (
+        {[['planning', '계획 기능 (자동 학습 계획·타임박싱·원형·10분 플래너)'], ['health', '건강 (컨디션·약)'], ['matrix', '아이젠하워 매트릭스'], ['kanban', '칸반'], ['gantt', '간트'], ['db', '표 · DB 뷰'], ['circle', '원형 계획표'], ['graph', '개념 그래프'], ['mindmap', '마인드맵'], ['mock', '모의고사 타이머']].map(([k, l]) => (
           <Toggle key={k} label={l} checked={st.modules[k] !== false} onChange={(v) => setSettings({ modules: { ...st.modules, [k]: v } })} />
         ))}
       </Card>
@@ -59,8 +64,8 @@ export default function Settings() {
       <Card title="플래너 · 공부">
         <div className="form">
           <div className="row">
-            <Field label="하루 시작"><TimeInput value={st.dayStart} onChange={(v) => v != null && setSettings({ dayStart: v })} /></Field>
-            <Field label="하루 끝"><TimeInput value={st.dayEnd % 1440} onChange={(v) => v != null && setSettings({ dayEnd: v === 0 ? 1440 : v })} /></Field>
+            <Field label="하루 시작"><TimeInput allowEmpty={false} value={st.dayStart} onChange={(v) => v != null && setSettings({ dayStart: v })} /></Field>
+            <Field label="하루 끝"><TimeInput allowEmpty={false} value={st.dayEnd % 1440} onChange={(v) => v != null && setSettings({ dayEnd: v === 0 ? 1440 : v })} /></Field>
           </div>
           <Field label="주 시작"><Seg value={st.weekStart} onChange={(v) => setSettings({ weekStart: v })} options={[[1, '월요일'], [0, '일요일']]} /></Field>
           <div className="row">
@@ -134,7 +139,6 @@ function SyncCard() {
         </div>
       )}
       <div className="divider" />
-      <Toggle label="생리 주기는 이 기기에만 저장" checked={st.syncExclude?.cycles} onChange={(v) => setSettings({ syncExclude: { ...st.syncExclude, cycles: v } })} />
       <Toggle label="약·컨디션도 이 기기에만 저장" checked={st.syncExclude?.meds} onChange={(v) => setSettings({ syncExclude: { ...st.syncExclude, meds: v, medLogs: v, conditions: v } })} />
     </Card>
   )
@@ -220,7 +224,7 @@ function TemplateEditor({ id }) {
         <div className="form">
           <input className="input" placeholder="블록 이름 (예: 학원, 수학 자습)" value={nb.title} onChange={(e) => setNb({ ...nb, title: e.target.value })} />
           <div className="row">
-            <Field label="시작"><TimeInput value={nb.start} onChange={(v) => setNb({ ...nb, start: v ?? 0 })} /></Field>
+            <Field label="시작"><TimeInput allowEmpty={false} value={nb.start} onChange={(v) => setNb({ ...nb, start: v ?? 0 })} /></Field>
             <Field label="길이(분)"><input className="input" type="number" step="10" value={nb.dur} onChange={(e) => setNb({ ...nb, dur: +e.target.value })} /></Field>
           </div>
           <div className="row">
@@ -232,5 +236,72 @@ function TemplateEditor({ id }) {
       </div>
       <button className="btn danger" onClick={() => remove('templates', id)}>템플릿 삭제</button>
     </div>
+  )
+}
+
+function PushCard() {
+  const st = useSettings()
+  const sync = useSyncStatus()
+  const [on, setOn] = useState(false)
+  const [busy, setBusy] = useState(false)
+  useEffect(() => { pushState().then(setOn) }, [])
+  const connected = sync.state !== 'off'
+  const t2m = (v) => v == null ? null : +v.split(':')[0] * 60 + +v.split(':')[1]
+  const m2t = (m) => m == null ? null : fmtTime(m)
+  return (
+    <Card title="알림 (앱을 닫아도 받기)" action={<span className="small">{on ? '● 켜짐' : '꺼짐'}</span>}>
+      <div className="form">
+        <div className="small muted">
+          할 일 시간 · 일정 알림 · 약 · 아침 요약 · 저녁 공부 목표를 푸시로 보내요. GitHub Actions 가 5~10분마다 확인해 보내므로 몇 분 늦을 수 있어요.
+        </div>
+        {!isStandalone() && <div className="small" style={{ color: 'var(--danger)' }}>iPhone·iPad 는 Safari › 공유 › 홈 화면에 추가 후, 설치된 앱에서 켜야 해요 (iOS 16.4+)</div>}
+        {!connected && <div className="small" style={{ color: 'var(--danger)' }}>먼저 위의 동기화를 연결하세요</div>}
+        <div className="row wrap">
+          {!on ? <button className="btn primary" disabled={busy || !connected || !pushSupported()} onClick={async () => { setBusy(true); try { await enablePush(); setOn(true); setSettings({ notify: true }); toast('이 기기에서 알림을 받아요') } catch (e) { toast(e.message) } setBusy(false) }}>{busy ? '설정 중…' : '이 기기에서 알림 켜기'}</button>
+            : <button className="btn" disabled={busy} onClick={async () => { setBusy(true); try { await disablePush(); setOn(false); toast('알림 해제') } catch (e) { toast(e.message) } setBusy(false) }}>이 기기 알림 끄기</button>}
+          {on && <button className="btn" onClick={() => testLocal()}>테스트</button>}
+        </div>
+        <div className="row">
+          <Field label="아침 요약"><TimeInput value={t2m(st.notifyMorning ?? '07:30')} onChange={(v) => setSettings({ notifyMorning: m2t(v) })} defaultValue={450} /></Field>
+          <Field label="저녁 목표 알림"><TimeInput value={t2m(st.notifyEvening ?? '21:00')} onChange={(v) => setSettings({ notifyEvening: m2t(v) })} defaultValue={1260} /></Field>
+        </div>
+        <details className="more">
+          <summary>처음 한 번만: GitHub 설정</summary>
+          <div className="small" style={{ marginTop: 6, lineHeight: 1.7 }}>
+            1. github.com/hysdllover/new › <b>Settings › Secrets and variables › Actions</b><br />
+            2. <b>New repository secret</b> → 이름 <code>GIST_TOKEN</code>, 값은 동기화에 쓴 토큰<br />
+            3. Actions 탭 › <b>Push notifications</b> 가 10분마다 자동 실행돼요<br />
+            <span className="muted">푸시 키는 비공개 Gist 에 저장됩니다.</span>
+          </div>
+        </details>
+      </div>
+    </Card>
+  )
+}
+
+function HomeWidgetCard() {
+  const st = useSettings()
+  const sync = useSyncStatus()
+  const { token, gistId } = gistInfo()
+  const appUrl = location.origin + location.pathname
+  const accent = st.theme.accent || THEMES[st.theme.preset]?.accent
+  const copy = async () => {
+    const script = buildScript({ token, gistId, appUrl, accent })
+    try { await navigator.clipboard.writeText(script); toast('스크립트를 복사했어요') }
+    catch { openSheet(() => <textarea className="input" readOnly value={script} style={{ minHeight: 300, fontFamily: 'monospace', fontSize: 11 }} onFocus={(e) => e.target.select()} />, { title: '스크립트 (전체 선택 후 복사)', full: true }) }
+  }
+  return (
+    <Card title="아이폰·아이패드 홈 화면 위젯">
+      <div className="small" style={{ lineHeight: 1.7 }}>
+        1. App Store 에서 무료 앱 <b>Scriptable</b> 설치<br />
+        2. 아래 <b>스크립트 복사</b> → Scriptable › ＋ › 붙여넣기 → 이름 ‘스터디’<br />
+        3. 홈 화면 길게 누르기 › ＋ › Scriptable 위젯(소·중·대) 추가 → 위젯 편집 › Script: ‘스터디’
+      </div>
+      <div className="small muted" style={{ marginTop: 6 }}>오늘 공부시간 링 · D-day · 오늘 할 일 · 과목별 시간 표시, 누르면 앱이 열려요. 15분마다 갱신.</div>
+      <div className="row" style={{ marginTop: 10 }}>
+        <button className="btn primary" disabled={sync.state === 'off'} onClick={copy}><Icon name="download" size={16} />스크립트 복사</button>
+        {sync.state === 'off' && <span className="small muted">동기화를 먼저 연결하세요</span>}
+      </div>
+    </Card>
   )
 }
