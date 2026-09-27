@@ -2,8 +2,8 @@ import { useMemo, useState } from 'react'
 import { useColl, useSettings, put, patch, remove } from '../../store/store.js'
 import { Card, Ring, Icon, Empty, AddInput, openSheet, Field } from '../../components/ui.jsx'
 import { SubjectSelect } from '../../components/common.jsx'
-import { Heatmap, Bars, WeekBars, LineChart } from '../../components/charts.jsx'
-import { today, addDays, weekStart, fmtDur, fmtShort, diffDays } from '../../engine/date.js'
+import { Heatmap, Bars, WeekBars, LineChart, MonthHeat } from '../../components/charts.jsx'
+import { today, addDays, weekStart, fmtDur, fmtShort, fmtDate, fmtTime, tsToMin, diffDays } from '../../engine/date.js'
 import { PALETTE } from '../../store/schema.js'
 import { DdayCard } from './Plan.jsx'
 
@@ -57,12 +57,35 @@ export default function Records() {
         <WeekBars values={s.byDay} goal={st.goalDaily} />
         {subBars.length > 0 && <div style={{ marginTop: 10 }}><Bars items={subBars} /></div>}
       </Card>
-      <Card title="공부 캘린더" action={<span className="tiny muted">최근 15주</span>}>
-        <Heatmap values={s.byDay} max={st.goalDaily} />
+      <Card title="공부 캘린더">
+        <MonthHeat values={s.byDay} goal={st.goalDaily} weekStartDow={st.weekStart} onPick={(d) => openSheet(() => <DayRecords date={d} />, { title: fmtDate(d) })} />
       </Card>
       <DdayCard />
       <Habits />
       <Grades />
+    </div>
+  )
+}
+
+// 달력에서 고른 날의 공부 기록
+export function DayRecords({ date }) {
+  const sessions = useColl('sessions').filter((x) => x.date === date).sort((a, b) => (a.start ?? 0) - (b.start ?? 0))
+  const subjects = useColl('subjects')
+  const total = sessions.reduce((a, x) => a + x.dur, 0)
+  return (
+    <div className="col">
+      <div className="small muted">합계 {fmtDur(total)}</div>
+      <div className="list">
+        {sessions.map((x) => { const sb = subjects.find((s) => s.id === x.subjectId); return (
+          <div key={x.id} className="item" style={{ padding: '6px 0', alignItems: 'center' }}>
+            <span className="dot" style={{ background: sb?.color || 'var(--muted)' }} />
+            <span className="grow ellipsis">{sb?.name || '기타'}{x.note ? ` · ${x.note}` : ''}</span>
+            {x.start != null && <span className="tiny muted">{fmtTime(tsToMin(x.start))}</span>}
+            <span className="small">{fmtDur(x.dur)}</span>
+          </div>
+        ) })}
+        {!sessions.length && <Empty>기록이 없어요</Empty>}
+      </div>
     </div>
   )
 }

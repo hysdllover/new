@@ -4,6 +4,7 @@ import { getState, replaceColl, onChange, patch, settings, list } from '../store
 import { COLLECTIONS, GIST_FILES } from '../store/schema.js'
 import { mergeColl, stableFile } from './merge.js'
 import { blobToDataUrl, setRemoteRaw, MAX_FILE } from '../lib/files.js'
+import { listFonts, getFontBlob, importFont, removeFont, markSynced, pendingDeletes, clearDeletes, SYNC_FONT_MAX } from '../lib/fonts.js'
 
 // GitHub Gist 기반 iPhone ↔ iPad 동기화
 const DESC = 'study-dashboard-sync'
@@ -80,6 +81,31 @@ export function disconnect() {
   setStatus({ state: 'off', last: null, error: null })
 }
 
+// 내 폰트 동기화 (1MB 이하): 원격에만 있으면 받고, 로컬에만 있으면 올리고, 지운 건 양쪽에서 지움
+async function syncFonts(gist, patchFiles) {
+  const remote = Object.fromEntries(Object.entries(gist.files || {}).filter(([n]) => n.startsWith('font-')).map(([n, f]) => [n.slice(5).replace(/\.txt$/, ''), f]))
+  const dels = await pendingDeletes()
+  for (const id of dels) if (remote[id]) patchFiles[`font-${id}.txt`] = null
+  const local = listFonts()
+  for (const f of local) if (f.synced && !remote[f.id]) await removeFont(f.id, { remote: true })
+  for (const [id, f] of Object.entries(remote)) {
+    if (dels.includes(id) || local.some((x) => x.id === id)) continue
+    try {
+      const meta = JSON.parse(f.truncated || !f.content ? await (await fetch(f.raw_url)).text() : f.content)
+      await importFont(id, meta, await (await fetch(meta.data)).blob())
+    } catch {}
+  }
+  const up = []
+  for (const f of listFonts()) {
+    if (f.synced || remote[f.id] || f.size > SYNC_FONT_MAX) continue
+    const blob = await getFontBlob(f.id)
+    if (!blob) continue
+    patchFiles[`font-${f.id}.txt`] = { content: JSON.stringify({ name: f.name, ps: f.ps, data: await blobToDataUrl(blob) }) }
+    up.push(f.id)
+  }
+  return up
+}
+
 let running = null, again = false
 export async function syncNow() {
   if (!token() || !gistId()) return
@@ -92,6 +118,7 @@ export async function syncNow() {
       const remoteText = {}
       for (const [name, f] of Object.entries(gist.files || {})) {
         if (name.startsWith('att-')) { setRemoteRaw(name.slice(4).replace(/\.txt$/, ''), f.raw_url); continue }
+        if (name.startsWith('font-')) continue
         remoteText[name] = f.truncated ? await (await fetch(f.raw_url)).text() : f.content
       }
       // 1) 원격 → 로컬 병합
@@ -119,11 +146,14 @@ export async function syncNow() {
         uploaded.push(m.id)
       }
       for (const r of Object.values(getState().files)) if (r.deleted && gist.files?.[`att-${r.id}.txt`]) patchFiles[`att-${r.id}.txt`] = null
+      const fontsUp = await syncFonts(gist, patchFiles)
       if (Object.keys(patchFiles).length) {
         const res = await gh(`/gists/${gistId()}`, { method: 'PATCH', body: JSON.stringify({ files: patchFiles }) })
         for (const [name, f] of Object.entries(res.files || {})) if (name.startsWith('att-')) setRemoteRaw(name.slice(4).replace(/\.txt$/, ''), f.raw_url)
         for (const id of uploaded) patch('files', id, { gist: true })
+        for (const id of fontsUp) await markSynced(id)
       }
+      await clearDeletes()
       const now = Date.now()
       ls.set('gist_last', String(now))
       setStatus({ state: 'ok', last: now })

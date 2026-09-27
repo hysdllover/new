@@ -6,9 +6,9 @@ import { Card, Seg, Toggle, Field, Icon, toast, confirmSheet, openSheet } from '
 import { ColorPick, TimeInput, SubjectSelect } from '../components/common.jsx'
 import { useSyncStatus, connect, disconnect, syncNow, gistInfo } from '../sync/sync.js'
 import { enablePush, disablePush, pushState, testLocal, isStandalone, pushSupported } from '../lib/push.js'
-import { buildScript } from '../lib/scriptable.js'
+import { buildScript, WIDGET_KINDS } from '../lib/scriptable.js'
 import { download } from '../lib/files.js'
-import { useMyFonts, addFont, removeFont, fontFamily, loadAllFonts } from '../lib/fonts.js'
+import { useMyFonts, addFont, removeFont, fontFamily, loadAllFonts, SYNC_FONT_MAX } from '../lib/fonts.js'
 import { requestPermission } from '../lib/notify.js'
 import { fmtTime, today, WD } from '../engine/date.js'
 
@@ -299,8 +299,10 @@ function HomeWidgetCard() {
       <div className="small" style={{ lineHeight: 1.7, marginTop: 10 }}>
         1. App Store 에서 무료 앱 <b>Scriptable</b> 설치<br />
         2. 아래 <b>스크립트 복사</b> → Scriptable › ＋ › 붙여넣기 → 이름 ‘스터디’<br />
-        3. 홈 화면 길게 누르기 › ＋ › Scriptable 위젯(소·중·대) 추가 → 위젯 편집 › Script: ‘스터디’
+        3. 홈 화면 길게 누르기 › ＋ › Scriptable 위젯(소·중·대) 추가 → 위젯 편집 › Script: ‘스터디’ · Parameter: 위 형태 단어<br />
+        4. 잠금 화면: 잠금 화면 길게 누르기 › 사용자화 › 위젯 추가 › Scriptable → 같은 스크립트 선택
       </div>
+      <div className="tiny muted" style={{ marginTop: 4 }}>위젯을 누르면 해당 화면(할 일·공부 기록)이 열려요. iOS 제한으로 사파리에서 열리니, 사파리에서도 한 번 동기화를 연결해 두세요.</div>
       <div className="row" style={{ marginTop: 10 }}>
         <button className="btn primary" disabled={sync.state === 'off'} onClick={copy}><Icon name="download" size={16} />스크립트 복사</button>
         {sync.state === 'off' && <span className="small muted">동기화를 먼저 연결하세요</span>}
@@ -321,7 +323,7 @@ function MyFonts({ th, setTheme, fonts }) {
     i.onchange = async () => {
       const f = i.files[0]; if (!f) return
       setBusy(true)
-      try { const rec = await addFont(f); setTheme({ font: 'my:' + rec.id }); toast(`‘${rec.name}’ 폰트를 적용했어요`) } catch (e) { toast(e.message) }
+      try { const rec = await addFont(f); setTheme({ font: 'my:' + rec.id }); toast(`‘${rec.name}’ 폰트를 적용했어요`); syncNow() } catch (e) { toast(e.message) }
       setBusy(false)
     }
     i.click()
@@ -331,13 +333,14 @@ function MyFonts({ th, setTheme, fonts }) {
       {fonts.map((f) => (
         <div key={f.id} className="row" style={{ gap: 6 }}>
           <span className="grow ellipsis" style={{ fontFamily: `"${fontFamily(f.id)}"`, fontSize: '1.15em' }}>{f.name} 가나다 Aa 123</span>
+          <span className="tiny muted">{f.size <= SYNC_FONT_MAX ? (f.synced ? '동기화됨' : '동기화 대기') : '이 기기만'}</span>
           {f.ps && <button className={'chip' + (st.widgetFont === f.ps ? ' on' : '')} onClick={() => { setSettings({ widgetFont: f.ps }); toast('위젯 폰트로 지정했어요') }}>위젯에도</button>}
-          <button className="icon-btn" aria-label="삭제" onClick={() => confirmSheet('폰트 삭제', `‘${f.name}’ 폰트를 이 기기에서 지울까요?`, async () => { await removeFont(f.id); if (th.font === 'my:' + f.id) setTheme({ font: 'system' }) }, '삭제')}><Icon name="trash" size={14} /></button>
+          <button className="icon-btn" aria-label="삭제" onClick={() => confirmSheet('폰트 삭제', `‘${f.name}’ 폰트를 이 기기에서 지울까요?`, async () => { await removeFont(f.id); if (th.font === 'my:' + f.id) setTheme({ font: 'system' }); syncNow() }, '삭제')}><Icon name="trash" size={14} /></button>
         </div>
       ))}
       <div className="row"><button className="btn sm" disabled={busy} onClick={pick}><Icon name="plus" size={14} />{busy ? '불러오는 중…' : '내 폰트 추가'}</button></div>
       <div className="tiny muted" style={{ lineHeight: 1.6 }}>
-        다운로드한 폰트 파일(.ttf · .otf · .woff)을 파일 앱에서 선택하세요. 폰트는 이 기기에만 저장되니 아이폰·아이패드에서 각각 한 번씩 추가해 주세요.
+        다운로드한 폰트 파일(.ttf · .otf · .woff)을 파일 앱에서 선택하세요. 1MB 이하 폰트는 아이폰·아이패드에 자동으로 동기화되고, 그보다 큰 폰트는 기기마다 한 번씩 추가해 주세요.
         {missing && <><br /><b>지금 고른 내 폰트가 이 기기에 없어 기본 폰트로 보여요. 같은 폰트를 추가해 주세요.</b></>}
       </div>
     </div>
@@ -388,26 +391,76 @@ function WidgetPreview() {
   )
   const ddRow = dd && <div className="dw-ddrow"><span className="dw-gold">{ddTxt}</span><span className="dw-soft">{dd.title}</span></div>
   const list = (n) => <>{todo.slice(0, n).map((t) => <div key={t.id} className="dw-todo"><span className={t.priority >= 3 ? 'dw-gold' : 'dw-soft'}>{t.priority >= 3 ? '•' : '–'}</span><span className="ellipsis">{t.title}</span></div>)}{!todo.length && <div className="dw-soft">All clear.</div>}</>
-  return (
-    <div className="dw-row">
-      <div className="dw dw-s" style={ff}><div className="dw-cap">{dateStr}</div><div className="grow" />{big(26)}<div className="grow" />{ddRow}</div>
-      <div className="dw dw-m" style={ff}>
-        <div className="col" style={{ gap: 0, width: 128, flexShrink: 0 }}><div className="dw-cap">{dateStr}</div><div className="grow" />{big(28)}<div className="grow" />{ddRow}</div>
-        <div className="dw-vr" />
-        <div className="col" style={{ gap: 0, flex: 1, minWidth: 0 }}><div className="dw-cap sp">TODAY</div><div style={{ height: 10 }} />{list(4)}</div>
+  const [kind, setKind] = useState('')
+  const ddList = ddays.filter((x) => x.date >= d).sort((a, b) => a.date.localeCompare(b.date))
+  const subMins = subjects.map((s) => ({ s, m: today0.filter((x) => x.subjectId === s.id).reduce((a, x) => a + x.dur, 0) })).filter((x) => x.m).sort((a, b) => b.m - a.m)
+  const subBars = (n) => <>{subMins.slice(0, n).map((x) => <div key={x.s.id} className="dw-sub"><div className="row between"><span>{x.s.name}</span><span className="dw-soft">{hm(x.m)}</span></div><div className="dw-line"><i style={{ width: (x.m / subMins[0].m) * 100 + '%' }} /></div></div>)}{!subMins.length && <div className="dw-soft">No study yet.</div>}</>
+  const month = (cell, nums) => {
+    const byDay = {}
+    for (const x of sessions) byDay[x.date] = (byDay[x.date] || 0) + x.dur
+    const y = now.getFullYear(), mo = now.getMonth(), n = new Date(y, mo + 1, 0).getDate(), ws = st.weekStart ?? 1
+    const lead = (new Date(y, mo, 1).getDay() - ws + 7) % 7
+    const key = (i) => `${y}-${String(mo + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`
+    return (
+      <div className="dw-cal" style={{ gridTemplateColumns: `repeat(7, ${cell}px)` }}>
+        {Array.from({ length: 7 }, (_, i) => <span key={'w' + i} className="dw-cap" style={{ textAlign: 'center' }}>{'SMTWTFS'[(i + ws) % 7]}</span>)}
+        {Array.from({ length: lead }, (_, i) => <span key={'e' + i} />)}
+        {Array.from({ length: n }, (_, i) => { const v = byDay[key(i + 1)] || 0, r = Math.min(1, v / goal); return <span key={i} className={'dw-day' + (key(i + 1) === d ? ' on' : '')} style={{ height: nums ? cell * 0.8 : cell * 0.72, background: v ? `color-mix(in srgb, var(--gold) ${Math.round(18 + 72 * r)}%, transparent)` : 'var(--rule)', color: r >= .6 ? 'var(--bg)' : 'var(--soft)' }}>{nums ? i + 1 : ''}</span> })}
       </div>
-      <div className="dw dw-l" style={ff}>
-        <div className="row between"><span className="dw-cap">{dateStr}</span>{dd && <span><span className="dw-soft">{dd.title}  </span><span className="dw-gold" style={{ fontSize: 13 }}>{ddTxt}</span></span>}</div>
+    )
+  }
+  const V = {
+    '': [
+      <><div className="dw-cap">{dateStr}</div><div className="grow" />{big(26)}<div className="grow" />{ddRow}</>,
+      <><div className="col" style={{ gap: 0, width: 128, flexShrink: 0 }}><div className="dw-cap">{dateStr}</div><div className="grow" />{big(28)}<div className="grow" />{ddRow}</div>
+        <div className="dw-vr" />
+        <div className="col" style={{ gap: 0, flex: 1, minWidth: 0 }}><div className="dw-cap sp">TODAY</div><div style={{ height: 10 }} />{list(4)}</div></>,
+      <><div className="row between"><span className="dw-cap">{dateStr}</span>{dd && <span><span className="dw-soft">{dd.title}  </span><span className="dw-gold" style={{ fontSize: 13 }}>{ddTxt}</span></span>}</div>
         {quote && <div className="dw-quote">— {quote}</div>}
         <div className="dw-hr" />
         <div className="dw-cap sp">STUDY</div>
         {big(34)}
-        <div className="dw-soft dw-subs">{subjects.map((s) => { const m = today0.filter((x) => x.subjectId === s.id).reduce((a, x) => a + x.dur, 0); return m ? <span key={s.id}>{s.name} {hm(m)}</span> : null })}</div>
+        <div className="dw-soft dw-subs">{subMins.map((x) => <span key={x.s.id}>{x.s.name} {hm(x.m)}</span>)}</div>
         <div className="dw-hr" />
         <div className="row between"><span className="dw-cap sp">TODAY</span><span className="dw-cap dw-gold">{done} DONE</span></div>
         <div style={{ height: 8 }} />
-        {list(6)}
+        {list(6)}</>,
+    ],
+    공부: [
+      <><div className="row between"><span className="dw-cap sp">STUDY</span></div><div style={{ height: 10 }} />{big(28)}<div style={{ height: 10 }} />{subBars(2)}</>,
+      <><div className="col" style={{ gap: 0, width: 140, flexShrink: 0 }}><span className="dw-cap sp">STUDY</span><div className="grow" />{big(30)}<div className="grow" /></div><div className="dw-vr" /><div className="col" style={{ gap: 0, flex: 1, minWidth: 0 }}>{subBars(3)}</div></>,
+      <><div className="row between"><span className="dw-cap sp">STUDY</span><span className="dw-cap">{dateStr}</span></div><div style={{ height: 12 }} />{big(40)}<div style={{ height: 18 }} />{subBars(6)}</>,
+    ],
+    할일: [4, 5, 12].map((n) => <><div className="row between"><span className="dw-cap sp">TODAY</span><span className="dw-cap dw-gold">{done} DONE</span></div><div style={{ height: 10 }} />{list(n)}</>),
+    디데이: [40, 52, 52].map((sz, i) => <><div className="dw-cap">{dateStr}</div><div className="grow" />
+      {dd ? <><div style={{ fontSize: sz, fontWeight: 100, lineHeight: 1 }}>{ddTxt}</div><div className="row" style={{ gap: 8, marginTop: 4 }}><span className="dw-gold">{dd.title}</span><span className="dw-soft">{dd.date.slice(5).replace('-', '.')}</span></div></> : <div className="dw-soft">No D-day.</div>}
+      {i > 0 && quote && <div className="dw-soft" style={{ marginTop: 10, fontSize: 12 }}>— {quote}</div>}
+      {i === 2 && ddList.length > 1 && <><div className="dw-hr" />{ddList.slice(1, 6).map((x) => <div key={x.id} className="row between" style={{ marginBottom: 8 }}><span>{x.title}</span><span className="dw-gold">D-{Math.round((new Date(x.date) - new Date(d)) / 86400000)}</span></div>)}</>}
+      {i < 2 && <div className="grow" />}</>),
+    달력: [
+      <><div className="dw-cap">{['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][now.getMonth()]} {now.getFullYear()}</div><div style={{ height: 8 }} />{month(16)}</>,
+      <><div className="col" style={{ gap: 0, flex: 1 }}><div className="dw-cap">{dateStr}</div><div className="grow" /><div style={{ fontSize: 28, fontWeight: 100 }}>{hm(mins)}</div><div className="dw-cap dw-gold">TODAY</div></div>{month(20)}</>,
+      <><div className="row between"><span className="dw-cap">{dateStr}</span><span className="dw-cap dw-gold">TODAY {hm(mins)}</span></div><div style={{ height: 8 }} />{month(39, true)}</>,
+    ],
+    다짐: [14, 17, 22].map((sz) => <><div className="dw-cap">{dateStr}</div><div className="grow" /><div style={{ fontSize: sz, lineHeight: 1.45 }}>{quote || '앱에서 다짐을 적어 보세요'}</div><div className="grow" />{ddRow}</>),
+  }
+  const [vs, vm, vl] = V[kind]
+  return (
+    <>
+      <div className="scroll-x" style={{ marginBottom: 6 }}><div className="row" style={{ gap: 6 }}>
+        {WIDGET_KINDS.map(([k, l]) => <button key={k} className={'chip' + (kind === k ? ' on' : '')} onClick={() => setKind(k)}>{l}</button>)}
+      </div></div>
+      <div className="tiny muted">{kind ? <>위젯 편집 › Parameter 에 <b>{kind}</b> 입력</> : '위젯 편집 › Parameter 를 비워 두면 기본 형태'}</div>
+      <div className="dw-row">
+        <div className="dw dw-s" style={ff}>{vs}</div>
+        <div className="dw dw-m" style={ff}>{vm}</div>
+        <div className="dw dw-l" style={ff}>{vl}</div>
       </div>
-    </div>
+      <div className="dw-lock" style={ff}>
+        <div className="dw-lc"><b>{hm(mins)}</b><span>{pct}%</span><svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="27" /><circle cx="30" cy="30" r="27" className="on" style={{ strokeDasharray: `${2 * Math.PI * 27 * pct / 100} 999` }} /></svg></div>
+        <div className="dw-lr"><div><b>{hm(mins)}</b> / {hm(goal)}<span className="grow" />{ddTxt}</div><div className="dw-line"><i style={{ width: pct + '%' }} /></div><div className="ellipsis">{todo[0] ? '– ' + todo[0].title : dd?.title || 'All clear.'}</div></div>
+        <div className="dw-li">{hm(mins)}{dd ? ` · ${ddTxt} ${dd.title}` : ''}</div>
+      </div>
+    </>
   )
 }
