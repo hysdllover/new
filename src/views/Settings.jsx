@@ -290,6 +290,7 @@ function HomeWidgetCard() {
   return (
     <Card title="아이폰·아이패드 홈 화면 위젯">
       <WidgetPreview />
+      <WidgetFontField />
       <div className="small" style={{ lineHeight: 1.7, marginTop: 10 }}>
         1. App Store 에서 무료 앱 <b>Scriptable</b> 설치<br />
         2. 아래 <b>스크립트 복사</b> → Scriptable › ＋ › 붙여넣기 → 이름 ‘스터디’<br />
@@ -304,9 +305,25 @@ function HomeWidgetCard() {
   )
 }
 
+// 위젯 폰트 — 기본(산돌고딕 얇게) 또는 기기에 설치한 폰트의 PostScript 이름
+function WidgetFontField() {
+  const st = useSettings()
+  const custom = st.widgetFont != null
+  return (
+    <div className="col" style={{ gap: 6, marginTop: 10 }}>
+      <Field label="위젯 폰트"><Seg value={custom ? 'c' : 'd'} onChange={(v) => setSettings({ widgetFont: v === 'c' ? '' : null })} options={[['d', '기본 · 산돌고딕 얇게'], ['c', '설치한 폰트']]} /></Field>
+      {custom && <>
+        <input className="input" placeholder="PostScript 이름 (예: NanumMyeongjo)" defaultValue={st.widgetFont} onBlur={(e) => setSettings({ widgetFont: e.target.value.trim() })} autoCapitalize="off" autoCorrect="off" spellCheck={false} />
+        <div className="tiny muted" style={{ lineHeight: 1.6 }}>타자기체·손글씨체 등 한글 폰트를 폰트 앱(예: iFont)으로 설치한 뒤, 그 폰트의 PostScript 이름을 적어 주세요. 이름이 틀리거나 설치되지 않은 기기에서는 시스템 폰트로 보여요. 스크립트를 다시 복사할 필요 없어요.</div>
+      </>}
+    </div>
+  )
+}
+
 // 홈 화면 위젯 미리보기 (실제 데이터) — Scriptable 위젯과 같은 디자인
 function WidgetPreview() {
   const st = useSettings()
+  const ff = st.widgetFont ? { fontFamily: `"${st.widgetFont}", "Apple SD Gothic Neo", sans-serif` } : null
   const tasks = useColl('tasks'), sessions = useColl('sessions'), ddays = useColl('ddays'), quotes = useColl('quotes'), subjects = useColl('subjects')
   const d = today()
   const today0 = sessions.filter((x) => x.date === d)
@@ -333,13 +350,13 @@ function WidgetPreview() {
   const list = (n) => <>{todo.slice(0, n).map((t) => <div key={t.id} className="dw-todo"><span className={t.priority >= 3 ? 'dw-gold' : 'dw-soft'}>{t.priority >= 3 ? '•' : '–'}</span><span className="ellipsis">{t.title}</span></div>)}{!todo.length && <div className="dw-soft">All clear.</div>}</>
   return (
     <div className="dw-row">
-      <div className="dw dw-s"><div className="dw-cap">{dateStr}</div><div className="grow" />{big(26)}<div className="grow" />{ddRow}</div>
-      <div className="dw dw-m">
+      <div className="dw dw-s" style={ff}><div className="dw-cap">{dateStr}</div><div className="grow" />{big(26)}<div className="grow" />{ddRow}</div>
+      <div className="dw dw-m" style={ff}>
         <div className="col" style={{ gap: 0, width: 128, flexShrink: 0 }}><div className="dw-cap">{dateStr}</div><div className="grow" />{big(28)}<div className="grow" />{ddRow}</div>
         <div className="dw-vr" />
         <div className="col" style={{ gap: 0, flex: 1, minWidth: 0 }}><div className="dw-cap sp">TODAY</div><div style={{ height: 10 }} />{list(4)}</div>
       </div>
-      <div className="dw dw-l">
+      <div className="dw dw-l" style={ff}>
         <div className="row between"><span className="dw-cap">{dateStr}</span>{dd && <span><span className="dw-soft">{dd.title}  </span><span className="dw-gold" style={{ fontSize: 13 }}>{ddTxt}</span></span>}</div>
         {quote && <div className="dw-quote">— {quote}</div>}
         <div className="dw-hr" />
