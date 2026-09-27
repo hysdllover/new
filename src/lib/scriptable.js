@@ -1,4 +1,4 @@
-// iPhone·iPad 홈 화면 위젯 (Scriptable) — 타자기 폰트 · 모노톤 · 여백 중심의 고급 구성
+// iPhone·iPad 홈 화면 위젯 (Scriptable) — 얇은 단일 서체 · 모노톤 · 여백 중심의 고급 구성
 // 내용: 오늘 할 일 · 오늘 공부시간/목표 · D-day · 다짐
 export function buildScript({ token, gistId, appUrl }) {
   return `// Study — 홈 화면 위젯 (Scriptable) · 소·중·대
@@ -14,10 +14,12 @@ const SOFT = dyn('#a19c93', '#7d786f')
 const GOLD = dyn('#b39d74', '#c9b489')
 const RULE = dyn('#e2ded6', '#2c2b29')
 
-// 타자기 폰트(영문·숫자) — 한글은 시스템이 얇은 고딕으로 대체
-const tw = (s) => { const f = new Font('AmericanTypewriter-Light', s); return f }
-const twC = (s) => new Font('AmericanTypewriter-CondensedLight', s)
-const label = (s) => new Font('Menlo-Regular', s)
+// 폰트 — 한글·영문·숫자 한 서체로 통일. 기본 애플 산돌고딕 얇게, 앱 설정에서 설치한 폰트(PostScript 이름) 지정 가능
+let CUSTOM = ''
+const F = (s, wt = 'Light') => new Font(CUSTOM || 'AppleSDGothicNeo-' + wt, s)
+const tw = (s) => F(s, 'Light')
+const thin = (s) => F(s, 'Thin')
+const label = (s) => F(s, 'Regular')
 
 const pad = (n) => String(n).padStart(2, '0')
 const d0 = new Date()
@@ -69,6 +71,7 @@ if (!data) {
   t(w, 'Connect sync in the app', tw(12), SOFT, 3)
 } else {
   const st = data.settings.settings?.main || {}
+  CUSTOM = (st.widgetFont || '').trim()
   const goal = st.goalDaily || 240
   const subjects = alive(data.study.subjects)
   const sessions = alive(data.study.sessions).filter((s) => s.date === today)
@@ -86,7 +89,7 @@ if (!data) {
 
   const studyBig = (parent, size, width) => {
     const r = parent.addStack(); r.bottomAlignContent()
-    t(r, hm(mins), tw(size), INK)
+    t(r, hm(mins), thin(size), INK)
     r.addSpacer(6); t(r, 'of ' + hm(goal), tw(size * 0.32), SOFT)
     r.addSpacer(); t(r, pct + '%', tw(size * 0.32), GOLD)
     parent.addSpacer(6)
