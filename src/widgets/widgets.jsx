@@ -2,7 +2,7 @@ import { useColl, useSettings, put, patch, remove } from '../store/store.js'
 import { dayRec, setDay, toggleTask, completeReview } from '../store/actions.js'
 import { eventsOn } from '../engine/scheduler.js'
 import { today, nowMin, fmtTime, fmtDur, dday, fmtShort, fmtClock, addDays, weekStart, parseYmd, fmtDate, tsToYmd } from '../engine/date.js'
-import { WeekBars } from '../components/charts.jsx'
+import { WeekBars, MonthHeat } from '../components/charts.jsx'
 import { openRecord } from '../views/study/Log.jsx'
 import { Card, Check, Ring, Empty, Icon, AddInput, openDetail, useNow } from '../components/ui.jsx'
 import TaskItem from '../components/TaskItem.jsx'
@@ -334,6 +334,18 @@ function WeekStudy() {
   return <Card title="최근 7일" action={<span className="tiny muted">{fmtDur(week)}</span>}><WeekBars values={byDay} goal={st.goalDaily} /></Card>
 }
 
+function MonthHeatW({ w }) {
+  const st = useSettings()
+  const sessions = useColl('sessions')
+  const byDay = {}
+  for (const x of sessions) byDay[x.date] = (byDay[x.date] || 0) + x.dur
+  return (
+    <Card title="공부 달력">
+      <MonthHeat values={byDay} goal={st.goalDaily} weekStartDow={st.weekStart} compact={w.size === 's' || w.size === 'm'} onPick={() => go('study', 'records')} />
+    </Card>
+  )
+}
+
 function Streak() {
   const sessions = useColl('sessions')
   const days = new Set(sessions.map((x) => x.date))
@@ -449,6 +461,7 @@ export const WIDGETS = {
   donut: { label: '오늘 공부 (과목 비율)', C: Donut, size: 'm' },
   weekstudy: { label: '최근 7일 공부', C: WeekStudy, size: 'm' },
   streak: { label: '연속 공부일', C: Streak, size: 's' },
+  monthheat: { label: '공부 달력 (월별)', C: MonthHeatW, size: 'm' },
   clock: { label: '시계', C: Clock, size: 's' },
   weekstrip: { label: '이번 주 달력', C: WeekStrip, size: 'm' },
   taskring: { label: '오늘 할 일 진행률', C: TaskRing, size: 's' },

@@ -1,10 +1,11 @@
 // 내 폰트 — 사용자가 불러온 폰트 파일을 이 기기(IndexedDB)에 저장하고 FontFace 로 앱에 적용
-// 한글 폰트는 용량이 커서 동기화하지 않음 (기기마다 한 번씩 추가)
+// 1MB 이하 폰트는 동기화(gist `font-<id>.txt`), 그보다 큰 폰트는 기기마다 한 번씩 추가
 import { useSyncExternalStore } from 'react'
 import { get, set, del } from 'idb-keyval'
 import { uid } from '../store/store.js'
 
 const MAX_FONT = 40 * 1024 * 1024
+export const SYNC_FONT_MAX = 1024 * 1024
 const OK_EXT = /\.(ttf|otf|ttc|woff2?)$/i
 let fonts = []
 const subs = new Set()
@@ -71,14 +72,33 @@ export async function addFont(file) {
   return rec
 }
 
-export async function removeFont(id) {
+const save = async () => { await set('myFonts', fonts); emit() }
+export const listFonts = () => fonts
+export const getFontBlob = (id) => get('font:' + id)
+export async function markSynced(id) { fonts = fonts.map((f) => (f.id === id ? { ...f, synced: true } : f)); await save() }
+
+// 다른 기기에서 동기화된 폰트 추가
+export async function importFont(id, meta, blob) {
+  if (fonts.some((f) => f.id === id)) return
+  await set('font:' + id, blob)
+  fonts = [...fonts, { id, name: meta.name, ps: meta.ps || '', size: blob.size, synced: true }]; await save()
+  loadFont(id)
+}
+
+// 삭제된 동기화 폰트 — 다음 동기화 때 원격에서도 지움
+export const pendingDeletes = async () => (await get('fontDel').catch(() => null)) || []
+export const clearDeletes = () => set('fontDel', [])
+
+export async function removeFont(id, { remote = false } = {}) {
+  const rec = fonts.find((f) => f.id === id)
+  if (rec?.synced && !remote) await set('fontDel', [...await pendingDeletes(), id])
   const face = await loaded.get(id)
   if (face) document.fonts.delete(face)
   loaded.delete(id)
   const ps = fonts.find((f) => f.id === id)?.ps
   if (ps && aliases.has(ps)) { document.fonts.delete(aliases.get(ps)); aliases.delete(ps) }
   await del('font:' + id)
-  fonts = fonts.filter((f) => f.id !== id); await set('myFonts', fonts); emit()
+  fonts = fonts.filter((f) => f.id !== id); await save()
 }
 
 // 앱에 폰트 등록 (한 번만)

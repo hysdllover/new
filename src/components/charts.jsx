@@ -1,4 +1,5 @@
-import { addDays, diffDays, today, weekStart, fmtShort, parseYmd } from '../engine/date.js'
+import { useState } from 'react'
+import { addDays, addMonths, diffDays, today, weekStart, fmtShort, parseYmd, monthStart, daysInMonth, fmtDur, WD } from '../engine/date.js'
 
 // 선 그래프: series = [{ points: [[x,y]], color, dash }], x 는 0..1 로 정규화된 값
 export function LineChart({ series, height = 140, yMax, yMin = 0, labels = [], goal }) {
@@ -67,6 +68,46 @@ export function Heatmap({ values, weeks = 15, max, color = 'var(--c2)', onPick }
           })}
         </div>
       ))}
+    </div>
+  )
+}
+
+// 월별 공부 달력: 칸 진하기 = 목표 대비 공부량
+export function MonthHeat({ values, goal = 240, weekStartDow = 1, color = 'var(--c2)', onPick, compact }) {
+  const t = today()
+  const [month, setMonth] = useState(monthStart(t))
+  const y = +month.slice(0, 4), mo = +month.slice(5, 7) - 1
+  const n = daysInMonth(y, mo)
+  const lead = (parseYmd(month).getDay() - weekStartDow + 7) % 7
+  const days = Array.from({ length: n }, (_, i) => addDays(month, i))
+  const vals = days.map((d) => values[d] || 0)
+  const total = vals.reduce((a, v) => a + v, 0), studied = vals.filter(Boolean).length
+  const hit = vals.filter((v) => v >= goal).length
+  const wd = Array.from({ length: 7 }, (_, i) => WD[(i + weekStartDow) % 7])
+  return (
+    <div className={'mheat' + (compact ? ' compact' : '')}>
+      <div className="row between mheat-top">
+        <button className="icon-btn no-print" onClick={() => setMonth(addMonths(month, -1))} aria-label="이전 달">‹</button>
+        <b>{y}. {mo + 1}</b>
+        <button className="icon-btn no-print" onClick={() => setMonth(addMonths(month, 1))} aria-label="다음 달">›</button>
+      </div>
+      <div className="mheat-grid">
+        {wd.map((w) => <span key={w} className="mheat-wd">{w}</span>)}
+        {Array.from({ length: lead }, (_, i) => <span key={'e' + i} />)}
+        {days.map((d, i) => {
+          const v = vals[i], r = Math.min(1, v / goal)
+          return (
+            <button key={d} className={'mheat-cell' + (d === t ? ' today' : '') + (r >= .6 ? ' dark' : '')} disabled={d > t} onClick={() => onPick?.(d)}
+              style={{ background: v ? `color-mix(in srgb, ${color} ${Math.round(18 + 72 * r)}%, var(--surface))` : 'var(--surface-2)' }}>
+              <span className="mheat-d">{i + 1}</span>
+              {!compact && v > 0 && <span className="mheat-v">{Math.floor(v / 60)}:{String(v % 60).padStart(2, '0')}</span>}
+            </button>
+          )
+        })}
+      </div>
+      <div className="row between tiny muted mheat-sum">
+        <span>합계 {fmtDur(total)}</span><span>공부 {studied}일</span><span>목표 달성 {hit}일</span><span>평균 {fmtDur(studied ? Math.round(total / studied) : 0)}</span>
+      </div>
     </div>
   )
 }
