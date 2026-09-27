@@ -7,6 +7,7 @@ import './styles/print.css'
 import App from './App.jsx'
 import { loadState, useSettings } from './store/store.js'
 import { applyTheme } from './theme/theme.js'
+import { initFonts } from './lib/fonts.js'
 import { startServices } from './lib/notify.js'
 import { startSync } from './sync/sync.js'
 
@@ -16,7 +17,7 @@ function Root() {
   return <App />
 }
 
-loadState().then(async () => {
+Promise.all([loadState(), initFonts()]).then(async () => {
   if (location.search.includes('demo')) (await import('./dev/seed.js')).seed()
   createRoot(document.getElementById('root')).render(<StrictMode><Root /></StrictMode>)
   startServices()

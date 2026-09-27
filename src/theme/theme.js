@@ -1,4 +1,6 @@
 // 테마 프리셋과 CSS 변수 적용
+import { fontFamily, loadFont } from '../lib/fonts.js'
+
 export const PRESETS = {
   default: { name: '기본', accent: '#4a5a78', c2: '#7a8660', c3: '#a99bc4', c4: '#c9a0a8' },
   olive: { name: '올리브', accent: '#6f7a55', c2: '#4a5a78', c3: '#b5a47a', c4: '#c9a0a8' },
@@ -21,7 +23,9 @@ export function applyTheme(t) {
   const root = document.documentElement
   const p = PRESETS[t.preset] || PRESETS.default
   const accent = t.accent || p.accent
-  const font = FONTS[t.font] || FONTS.system
+  const mine = t.font?.startsWith('my:') ? t.font.slice(3) : null
+  if (mine) loadFont(mine)
+  const font = mine ? { family: `"${fontFamily(mine)}", ${FONTS.system.family}` } : FONTS[t.font] || FONTS.system
   if (font.href && !document.querySelector(`link[data-font="${t.font}"]`)) {
     const l = document.createElement('link')
     l.rel = 'stylesheet'; l.href = font.href; l.dataset.font = t.font
