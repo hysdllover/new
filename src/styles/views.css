@@ -291,3 +291,5 @@ details.more[open] > summary::before { content: '▾ '; }
 .wf-bold .ws-d.on { background: #fff; color: var(--wc); }
 .wf-bold .big-num span { color: rgba(255, 255, 255, .8); }
 textarea.title-input { min-height: 0 !important; }
+button.greet { display: block; width: 100%; text-align: left; }
+.greet-hi { font-weight: var(--fw); line-height: 1.45; }
