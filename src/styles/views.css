@@ -294,25 +294,29 @@ textarea.title-input { min-height: 0 !important; }
 button.greet { display: block; width: 100%; text-align: left; }
 .greet-hi { font-weight: var(--fw); line-height: 1.45; }
 
-/* ── 홈 화면 위젯 미리보기 (다이어리) ── */
-.dw-row { display: flex; align-items: flex-start; gap: 10px; overflow-x: auto; padding: 4px 2px 8px; scrollbar-width: none; }
+/* ── 홈 화면 위젯 미리보기 (타자기 · 모노톤) ── */
+.dw-row { display: flex; align-items: flex-start; gap: 12px; overflow-x: auto; padding: 4px 2px 10px; scrollbar-width: none; }
 .dw-row::-webkit-scrollbar { display: none; }
-.dw { flex-shrink: 0; border-radius: 20px; padding: 12px 14px 12px 26px; display: flex; flex-direction: column; gap: 3px; color: #3b3a36; font-size: 12px; font-family: Georgia, 'Noto Serif KR', serif;
-  background: repeating-linear-gradient(180deg, transparent 0 21px, #e6dfd0 21px 22px) 0 12px, linear-gradient(90deg, transparent 21px, rgba(201, 160, 168, .35) 21px 22px, transparent 22px), #f6f1e7; box-shadow: 0 2px 10px rgba(0, 0, 0, .08); }
-.dw-s { width: 158px; height: 158px; }
-.dw-m { width: 338px; height: 158px; flex-direction: row; gap: 12px; }
+.dw { --bg: #f5f3ef; --ink: #2b2a28; --soft: #a19c93; --gold: #b39d74; --rule: #e2ded6;
+  flex-shrink: 0; border-radius: 22px; padding: 18px; display: flex; flex-direction: column; background: var(--bg); color: var(--ink);
+  font-family: "American Typewriter", "Courier Prime", "Courier New", "Apple SD Gothic Neo", monospace; font-weight: 300; font-size: 12px; box-shadow: 0 1px 2px rgba(0, 0, 0, .06), 0 8px 24px rgba(0, 0, 0, .06); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .dw { --bg: #161616; --ink: #ece8e1; --soft: #7d786f; --gold: #c9b489; --rule: #2c2b29; } }
+:root[data-theme="dark"] .dw { --bg: #161616; --ink: #ece8e1; --soft: #7d786f; --gold: #c9b489; --rule: #2c2b29; }
+.dw-s { width: 158px; height: 158px; padding: 16px; }
+.dw-m { width: 338px; height: 158px; flex-direction: row; gap: 16px; }
 .dw-l { width: 338px; height: 354px; }
-.dw-tape { align-self: flex-start; background: rgba(201, 160, 168, .35); padding: 1px 8px; border-radius: 2px; font-family: -apple-system, sans-serif; font-size: 11px; transform: rotate(-2deg); }
-.dw-soft { color: #8f887b; font-size: 10.5px; }
-.dw-dd { color: #c9a0a8; font-weight: 700; font-size: 26px; line-height: 1.1; }
-.dw-serif { font-size: 15px; }
-.dw-bar { height: 8px; border-radius: 4px; background: rgba(143, 136, 123, .18); overflow: hidden; margin-top: 3px; }
-.dw-bar i { display: block; height: 100%; border-radius: 4px; background: repeating-linear-gradient(90deg, #4a5a78 0 5px, #5b6b89 5px 6px); }
-.dw-h { color: #4a5a78; font-size: 11px; }
-.dw-todo { display: flex; gap: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dw-star { color: #c9a0a8; }
-.dw-ok { color: #7a8660; font-family: -apple-system, sans-serif; }
-.dw-quote { font-size: 13px; line-height: 1.5; margin: 6px 0 8px; }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .dw { color: #e8e1d3; background: repeating-linear-gradient(180deg, transparent 0 21px, #3a352e 21px 22px) 0 12px, linear-gradient(90deg, transparent 21px, rgba(201, 160, 168, .3) 21px 22px, transparent 22px), #2a2621; }
-}
+.dw-cap { font-family: Menlo, ui-monospace, monospace; font-size: 9px; color: var(--soft); letter-spacing: .06em; }
+.dw-cap.sp { letter-spacing: .32em; }
+.dw-soft { color: var(--soft); font-size: 10.5px; }
+.dw-gold { color: var(--gold); }
+.dw-big { display: flex; align-items: baseline; gap: 6px; line-height: 1; white-space: nowrap; }
+.dw-big > span:first-child { font-weight: 300; letter-spacing: -.01em; }
+.dw-line { height: 3px; position: relative; margin-top: 8px; }
+.dw-line::before { content: ''; position: absolute; left: 0; right: 0; top: 1px; height: 1px; background: var(--rule); }
+.dw-line i { position: absolute; left: 0; top: .5px; height: 2px; background: var(--gold); }
+.dw-ddrow { display: flex; align-items: baseline; gap: 6px; font-size: 13px; }
+.dw-vr { width: .6px; background: var(--rule); align-self: stretch; }
+.dw-hr { height: .6px; background: var(--rule); margin: 12px 0; }
+.dw-quote { font-size: 14px; line-height: 1.5; margin-top: 14px; }
+.dw-subs { display: flex; gap: 12px; margin-top: 8px; }
+.dw-todo { display: flex; gap: 8px; margin-bottom: 6px; min-width: 0; font-size: 12px; }
