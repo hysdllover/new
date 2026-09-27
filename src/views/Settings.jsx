@@ -8,6 +8,7 @@ import { useSyncStatus, connect, disconnect, syncNow, gistInfo } from '../sync/s
 import { enablePush, disablePush, pushState, testLocal, isStandalone, pushSupported } from '../lib/push.js'
 import { buildScript } from '../lib/scriptable.js'
 import { download } from '../lib/files.js'
+import { useMyFonts, addFont, removeFont, fontFamily, loadAllFonts } from '../lib/fonts.js'
 import { requestPermission } from '../lib/notify.js'
 import { fmtTime, today, WD } from '../engine/date.js'
 
@@ -15,6 +16,7 @@ export default function Settings() {
   const st = useSettings()
   const th = st.theme
   const setTheme = (p) => setSettings({ theme: { ...th, ...p } })
+  const myFonts = useMyFonts()
   return (
     <div className="grid two">
       <SyncCard />
@@ -41,8 +43,11 @@ export default function Settings() {
           <Field label="폰트">
             <select className="input" value={th.font} onChange={(e) => setTheme({ font: e.target.value })}>
               {Object.entries(FONTS).map(([k, f]) => <option key={k} value={k}>{f.name}</option>)}
+              {myFonts.map((f) => <option key={f.id} value={'my:' + f.id}>내 폰트 · {f.name}</option>)}
+              {th.font?.startsWith('my:') && !myFonts.some((f) => 'my:' + f.id === th.font) && <option value={th.font}>내 폰트 (이 기기에 없음)</option>}
             </select>
           </Field>
+          <MyFonts th={th} setTheme={setTheme} fonts={myFonts} />
           <Field label={`글자 크기 ${th.fontSize}px`}><input type="range" min="12" max="16" step="0.5" value={th.fontSize} onChange={(e) => setTheme({ fontSize: +e.target.value })} /></Field>
           <Field label={`글자 굵기 ${th.fontWeight}`}><input type="range" min="300" max="500" step="100" value={th.fontWeight} onChange={(e) => setTheme({ fontWeight: +e.target.value })} /></Field>
           <Field label={`모서리 둥글기 ${th.radius}px`}><input type="range" min="0" max="20" value={th.radius} onChange={(e) => setTheme({ radius: +e.target.value })} /></Field>
@@ -305,6 +310,40 @@ function HomeWidgetCard() {
   )
 }
 
+// 내 폰트 — 다운로드한 폰트 파일을 불러와 앱에 적용 (이 기기에만 저장)
+function MyFonts({ th, setTheme, fonts }) {
+  const st = useSettings()
+  const [busy, setBusy] = useState(false)
+  useEffect(() => { loadAllFonts() }, [fonts])
+  const missing = th.font?.startsWith('my:') && !fonts.some((f) => 'my:' + f.id === th.font)
+  const pick = () => {
+    const i = document.createElement('input'); i.type = 'file'
+    i.onchange = async () => {
+      const f = i.files[0]; if (!f) return
+      setBusy(true)
+      try { const rec = await addFont(f); setTheme({ font: 'my:' + rec.id }); toast(`‘${rec.name}’ 폰트를 적용했어요`) } catch (e) { toast(e.message) }
+      setBusy(false)
+    }
+    i.click()
+  }
+  return (
+    <div className="col" style={{ gap: 6 }}>
+      {fonts.map((f) => (
+        <div key={f.id} className="row" style={{ gap: 6 }}>
+          <span className="grow ellipsis" style={{ fontFamily: `"${fontFamily(f.id)}"`, fontSize: '1.15em' }}>{f.name} 가나다 Aa 123</span>
+          {f.ps && <button className={'chip' + (st.widgetFont === f.ps ? ' on' : '')} onClick={() => { setSettings({ widgetFont: f.ps }); toast('위젯 폰트로 지정했어요') }}>위젯에도</button>}
+          <button className="icon-btn" aria-label="삭제" onClick={() => confirmSheet('폰트 삭제', `‘${f.name}’ 폰트를 이 기기에서 지울까요?`, async () => { await removeFont(f.id); if (th.font === 'my:' + f.id) setTheme({ font: 'system' }) }, '삭제')}><Icon name="trash" size={14} /></button>
+        </div>
+      ))}
+      <div className="row"><button className="btn sm" disabled={busy} onClick={pick}><Icon name="plus" size={14} />{busy ? '불러오는 중…' : '내 폰트 추가'}</button></div>
+      <div className="tiny muted" style={{ lineHeight: 1.6 }}>
+        다운로드한 폰트 파일(.ttf · .otf · .woff)을 파일 앱에서 선택하세요. 폰트는 이 기기에만 저장되니 아이폰·아이패드에서 각각 한 번씩 추가해 주세요.
+        {missing && <><br /><b>지금 고른 내 폰트가 이 기기에 없어 기본 폰트로 보여요. 같은 폰트를 추가해 주세요.</b></>}
+      </div>
+    </div>
+  )
+}
+
 // 위젯 폰트 — 기본(산돌고딕 얇게) 또는 기기에 설치한 폰트의 PostScript 이름
 function WidgetFontField() {
   const st = useSettings()
@@ -323,6 +362,7 @@ function WidgetFontField() {
 // 홈 화면 위젯 미리보기 (실제 데이터) — Scriptable 위젯과 같은 디자인
 function WidgetPreview() {
   const st = useSettings()
+  useEffect(() => { loadAllFonts() }, [])
   const ff = st.widgetFont ? { fontFamily: `"${st.widgetFont}", "Apple SD Gothic Neo", sans-serif` } : null
   const tasks = useColl('tasks'), sessions = useColl('sessions'), ddays = useColl('ddays'), quotes = useColl('quotes'), subjects = useColl('subjects')
   const d = today()
