@@ -1,14 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { useColl, useSettings, setSettings, uid } from '../store/store.js'
+import { useColl, useSettings, setSettings, uid, put, patch, remove } from '../store/store.js'
 import { WIDGETS } from '../widgets/widgets.jsx'
-import { Icon, openSheet, Seg, Field, confirmSheet } from '../components/ui.jsx'
+import { Icon, openSheet, Seg, Field, confirmSheet, AddInput } from '../components/ui.jsx'
 import { ColorPick } from '../components/common.jsx'
 import { PALETTE } from '../store/schema.js'
 import { longPress } from '../lib/drag.js'
-import { applyFilter } from './tasks/filter.js'
-import { eventsOn } from '../engine/scheduler.js'
-import { today, fmtDur } from '../engine/date.js'
-import { holiday } from '../engine/holidays.js'
 
 const SIZES = [['s', 'S · 1칸'], ['m', 'M · 2칸'], ['l', 'L · 한 줄'], ['t', 'T · 세로']]
 const STYLES = [['card', '카드'], ['tint', '색채움'], ['plain', '미니멀'], ['bold', '진하게']]
@@ -133,18 +129,29 @@ function WidgetSettings({ w, pages, pi, close, onSave, onDelete }) {
 }
 
 function Greeting() {
-  const tasks = useColl('tasks'), events = useColl('events'), sessions = useColl('sessions')
-  const d = today()
-  const h = new Date().getHours()
-  const hi = h < 5 ? '늦은 밤이에요' : h < 12 ? '좋은 아침이에요' : h < 18 ? '좋은 오후예요' : '오늘도 수고했어요'
-  const left = applyFilter(tasks, { smart: 'today' }).length
-  const evs = eventsOn(d, events).length
-  const m = sessions.filter((s) => s.date === d).reduce((a, s) => a + s.dur, 0)
-  const hol = holiday(d)
+  const quotes = useColl('quotes')
+  const q = quotes.length ? quotes[Math.floor(Date.now() / 86400000) % quotes.length] : null
   return (
-    <div className="greet">
-      <div className="greet-hi">{hi}{hol ? ` · ${hol}` : ''}</div>
-      <div className="small muted">남은 할 일 {left} · 일정 {evs} · 공부 {fmtDur(m)}</div>
+    <button className="greet" onClick={() => openSheet(() => <QuoteEditor />, { title: '다짐 · 명언' })}>
+      <div className="greet-hi">{q ? q.text : '다짐이나 명언을 적어 보세요'}</div>
+    </button>
+  )
+}
+
+function QuoteEditor() {
+  const quotes = useColl('quotes')
+  return (
+    <div className="form">
+      <div className="small muted">홈 맨 위에 하루에 하나씩 번갈아 보여요</div>
+      <div className="list">
+        {quotes.map((x) => (
+          <div key={x.id} className="row" style={{ padding: '4px 0' }}>
+            <input className="input" value={x.text} onChange={(e) => patch('quotes', x.id, { text: e.target.value })} />
+            <button className="icon-btn" onClick={() => remove('quotes', x.id)} aria-label="삭제"><Icon name="close" size={14} /></button>
+          </div>
+        ))}
+      </div>
+      <AddInput placeholder="새 다짐 · 명언" onAdd={(text) => put('quotes', { text })} />
     </div>
   )
 }
