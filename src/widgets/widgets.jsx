@@ -441,7 +441,6 @@ export const WIDGETS = {
   habits: { label: '습관', C: Habits, size: 'm' },
   meds: { label: '약', C: Meds, size: 's' },
   condition: { label: '기분·수면', C: Condition, size: 's' },
-  quote: { label: '명언·다짐', C: Quote, size: 's' },
   links: { label: '즐겨찾기 링크', C: Links, size: 's' },
   timer: { label: '타이머', C: Stopwatch, size: 's' },
   calendar: { label: '미니 캘린더', C: Calendar, size: 's' },
