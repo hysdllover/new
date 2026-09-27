@@ -304,38 +304,52 @@ function HomeWidgetCard() {
   )
 }
 
-// 홈 화면 위젯 미리보기 (실제 데이터)
+// 홈 화면 위젯 미리보기 (실제 데이터) — Scriptable 위젯과 같은 디자인
 function WidgetPreview() {
   const st = useSettings()
   const tasks = useColl('tasks'), sessions = useColl('sessions'), ddays = useColl('ddays'), quotes = useColl('quotes'), subjects = useColl('subjects')
   const d = today()
-  const mins = sessions.filter((x) => x.date === d).reduce((a, x) => a + x.dur, 0)
+  const today0 = sessions.filter((x) => x.date === d)
+  const mins = today0.reduce((a, x) => a + x.dur, 0)
   const goal = st.goalDaily || 240
+  const pct = Math.round(Math.min(1, mins / goal) * 100)
   const todo = tasks.filter((t) => !t.archived && !t.done && t.due && t.due <= d).sort((a, b) => (b.priority || 0) - (a.priority || 0))
+  const done = tasks.filter((t) => t.done && t.doneAt && new Date(t.doneAt).toDateString() === new Date().toDateString()).length
   const dd = ddays.filter((x) => x.date >= d).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || a.date.localeCompare(b.date))[0]
   const ddN = dd ? Math.round((new Date(dd.date) - new Date(d)) / 86400000) : null
+  const ddTxt = dd ? (ddN === 0 ? 'D-DAY' : 'D-' + ddN) : null
   const qs = [...quotes].sort((a, b) => a.id.localeCompare(b.id))
   const quote = qs.length ? qs[Math.floor(Date.now() / 86400000) % qs.length].text : null
   const now = new Date()
-  const label = `${now.getMonth() + 1}.${now.getDate()} ${WD[now.getDay()]}`
-  const fmt = (m) => m < 60 ? m + '분' : Math.floor(m / 60) + '시간' + (m % 60 ? ' ' + (m % 60) + '분' : '')
-  const bar = <div className="dw-bar"><i style={{ width: Math.min(100, mins / goal * 100) + '%' }} /></div>
-  const study = <><div><b className="dw-serif">{fmt(mins)}</b> <span className="dw-soft">/ {fmt(goal)}</span></div>{bar}</>
-  const ddv = dd ? <><div className="dw-soft">{dd.title}</div><div className="dw-dd">{ddN === 0 ? 'D-DAY' : 'D-' + ddN}</div></> : <div className="dw-soft">D-day 없음</div>
-  const list = (n) => <>{todo.slice(0, n).map((t) => <div key={t.id} className="dw-todo"><span className={t.priority >= 3 ? 'dw-star' : 'dw-soft'}>{t.priority >= 3 ? '★' : '☐'}</span>{t.title}</div>)}{!todo.length && <div className="dw-ok">오늘 할 일 끝 ✓</div>}</>
+  const dateStr = `${['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][now.getDay()]} · ${now.getDate()} ${['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][now.getMonth()]}`
+  const hm = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`
+  const big = (size) => (
+    <>
+      <div className="dw-big"><span style={{ fontSize: size }}>{hm(mins)}</span><span className="dw-soft">of {hm(goal)}</span><span className="grow" /><span className="dw-gold">{pct}%</span></div>
+      <div className="dw-line"><i style={{ width: pct + '%' }} /></div>
+    </>
+  )
+  const ddRow = dd && <div className="dw-ddrow"><span className="dw-gold">{ddTxt}</span><span className="dw-soft">{dd.title}</span></div>
+  const list = (n) => <>{todo.slice(0, n).map((t) => <div key={t.id} className="dw-todo"><span className={t.priority >= 3 ? 'dw-gold' : 'dw-soft'}>{t.priority >= 3 ? '•' : '–'}</span><span className="ellipsis">{t.title}</span></div>)}{!todo.length && <div className="dw-soft">All clear.</div>}</>
   return (
     <div className="dw-row">
-      <div className="dw dw-s"><span className="dw-tape">{label}</span><div style={{ marginTop: 6 }}>{ddv}</div><div className="grow" />{study}</div>
+      <div className="dw dw-s"><div className="dw-cap">{dateStr}</div><div className="grow" />{big(26)}<div className="grow" />{ddRow}</div>
       <div className="dw dw-m">
-        <div className="col" style={{ gap: 4, width: '42%' }}><span className="dw-tape">{label}</span>{ddv}<div className="grow" />{study}</div>
-        <div className="col" style={{ gap: 3, flex: 1, minWidth: 0 }}><b className="dw-h">오늘 할 일</b>{list(4)}</div>
+        <div className="col" style={{ gap: 0, width: 128, flexShrink: 0 }}><div className="dw-cap">{dateStr}</div><div className="grow" />{big(28)}<div className="grow" />{ddRow}</div>
+        <div className="dw-vr" />
+        <div className="col" style={{ gap: 0, flex: 1, minWidth: 0 }}><div className="dw-cap sp">TODAY</div><div style={{ height: 10 }} />{list(4)}</div>
       </div>
       <div className="dw dw-l">
-        <div className="row between"><span className="dw-tape">{label}</span>{dd && <span><span className="dw-soft">{dd.title} </span><b className="dw-dd" style={{ fontSize: 18 }}>{ddN === 0 ? 'D-DAY' : 'D-' + ddN}</b></span>}</div>
-        {quote && <div className="dw-quote">“{quote}”</div>}
-        <b className="dw-h">오늘 공부</b>{study}
-        <div className="dw-soft" style={{ fontSize: 10 }}>{subjects.map((s) => { const m = sessions.filter((x) => x.date === d && x.subjectId === s.id).reduce((a, x) => a + x.dur, 0); return m ? <span key={s.id} style={{ marginRight: 10 }}><span style={{ color: s.color }}>●</span> {s.name} {fmt(m)}</span> : null })}</div>
-        <b className="dw-h" style={{ marginTop: 6 }}>오늘 할 일</b>{list(6)}
+        <div className="row between"><span className="dw-cap">{dateStr}</span>{dd && <span><span className="dw-soft">{dd.title}  </span><span className="dw-gold" style={{ fontSize: 13 }}>{ddTxt}</span></span>}</div>
+        {quote && <div className="dw-quote">— {quote}</div>}
+        <div className="dw-hr" />
+        <div className="dw-cap sp">STUDY</div>
+        {big(34)}
+        <div className="dw-soft dw-subs">{subjects.map((s) => { const m = today0.filter((x) => x.subjectId === s.id).reduce((a, x) => a + x.dur, 0); return m ? <span key={s.id}>{s.name} {hm(m)}</span> : null })}</div>
+        <div className="dw-hr" />
+        <div className="row between"><span className="dw-cap sp">TODAY</span><span className="dw-cap dw-gold">{done} DONE</span></div>
+        <div style={{ height: 8 }} />
+        {list(6)}
       </div>
     </div>
   )
