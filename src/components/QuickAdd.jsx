@@ -1,39 +1,28 @@
 import { useState } from 'react'
 import { put, list } from '../store/store.js'
-import { addTask } from '../store/actions.js'
 import { Seg, openDetail, toast } from './ui.jsx'
 import { SubjectSelect } from './common.jsx'
-import { parseMention, today, fmtDate, fmtTime } from '../engine/date.js'
+import { today, fmtDate, fmtTime } from '../engine/date.js'
+import { parseQuick } from '../lib/quick.js'
+import TaskQuickInput from './TaskQuickInput.jsx'
+import RecordEditor from './RecordEditor.jsx'
 import { startStopwatch, startPomodoro } from '../lib/timer.js'
 import { go } from '../nav.js'
 
-// '#과목' 과 '@날짜 시각' 을 인식
-export function parseQuick(text) {
-  let rest = text
-  let subjectId = null
-  const m = rest.match(/#(\S+)/)
-  if (m) {
-    const s = list('subjects').find((x) => x.name === m[1])
-    if (s) { subjectId = s.id; rest = rest.replace(m[0], '').trim() }
-  }
-  const mm = parseMention(rest)
-  return { title: mm ? mm.rest : rest.trim(), date: mm?.date || null, time: mm?.time ?? null, subjectId }
-}
+export { parseQuick }
 
-export default function QuickAdd({ close }) {
-  const [type, setType] = useState('task')
+export default function QuickAdd({ close, initial = 'task' }) {
+  const [type, setType] = useState(initial)
   const [text, setText] = useState('')
   const [subject, setSubject] = useState(null)
+  const [added, setAdded] = useState([])
   const p = parseQuick(text)
 
   const submit = (e) => {
     e?.preventDefault()
-    if (type === 'timer') { startStopwatch(subject); go('study', 'timer'); close(); return }
+    if (type === 'timer') { startStopwatch(subject || list('subjects')[0]?.id); go('study', 'timer'); close(); return }
     if (!p.title) return
-    if (type === 'task') {
-      const t = addTask({ title: p.title, due: p.date || null, dueTime: p.time, subjectId: p.subjectId || subject })
-      toast('할 일 추가', { label: '열기', fn: () => openDetail('task', t.id) })
-    } else if (type === 'event') {
+    if (type === 'event') {
       const date = p.date || today()
       const e2 = put('events', { title: p.title, date, start: p.time ?? 9 * 60, end: (p.time ?? 9 * 60) + 60 })
       toast(`${fmtDate(date)} 일정 추가`, { label: '열기', fn: () => openDetail('event', e2.id) })
@@ -46,32 +35,38 @@ export default function QuickAdd({ close }) {
   }
 
   return (
-    <form className="form" onSubmit={submit}>
-      <Seg value={type} onChange={setType} options={[['task', '할 일'], ['event', '일정'], ['memo', '메모'], ['timer', '타이머']]} />
-      {type !== 'timer' ? (
+    <div className="form">
+      <Seg value={type} onChange={setType} options={[['task', '할 일'], ['record', '공부 기록'], ['event', '일정'], ['memo', '메모'], ['timer', '타이머']]} />
+      {type === 'task' && (
         <>
-          {type === 'memo'
-            ? <textarea className="input" autoFocus value={text} onChange={(e) => setText(e.target.value)} placeholder="빠른 메모" style={{ minHeight: 120 }} />
-            : <input className="input" autoFocus value={text} onChange={(e) => setText(e.target.value)} placeholder={type === 'task' ? '예: 수학 문제집 @내일 #수학' : '예: 스터디 모임 @9/30 15:00'} />}
-          {type !== 'memo' && (p.date || p.subjectId) && (
-            <div className="row small muted wrap">
-              {p.date && <span className="badge acc">{fmtDate(p.date)}{p.time != null ? ' ' + fmtTime(p.time) : ''}</span>}
-              {p.subjectId && <span className="badge acc">{list('subjects').find((s) => s.id === p.subjectId)?.name}</span>}
+          <TaskQuickInput autoFocus onAdded={(t) => setAdded((a) => [t, ...a].slice(0, 6))} />
+          {added.length > 0 && (
+            <div className="list small">
+              {added.map((t) => <button key={t.id} className="row" style={{ minHeight: 32, textAlign: 'left' }} onClick={() => { close(); openDetail('task', t.id) }}><span style={{ color: 'var(--ok)' }}>✓</span><span className="grow ellipsis">{t.title}</span><span className="tiny muted">수정 ›</span></button>)}
             </div>
           )}
-          {type === 'task' && !p.subjectId && <SubjectSelect value={subject} onChange={setSubject} />}
-          <div className="tiny muted">@오늘 · @내일 · @모레 · @9/30 · @2026-10-02 15:00 · #과목</div>
+          <div className="tiny muted">계속 입력할 수 있어요 · @내일 15:00 처럼 쓰면 시간도 지정 · 다 쓰면 바깥을 눌러 닫기</div>
         </>
-      ) : (
-        <>
+      )}
+      {type === 'record' && <RecordEditor compact onDone={close} />}
+      {(type === 'event' || type === 'memo') && (
+        <form className="form" onSubmit={submit}>
+          {type === 'memo'
+            ? <textarea className="input" autoFocus value={text} onChange={(e) => setText(e.target.value)} placeholder="빠른 메모" style={{ minHeight: 120 }} />
+            : <input className="input" autoFocus value={text} onChange={(e) => setText(e.target.value)} placeholder="예: 스터디 모임 @9/30 15:00" />}
+          {type === 'event' && p.date && <div className="row small"><span className="badge acc">{fmtDate(p.date)}{p.time != null ? ' ' + fmtTime(p.time) : ''}</span></div>}
+          <button className="btn primary" type="submit">추가</button>
+        </form>
+      )}
+      {type === 'timer' && (
+        <form className="form" onSubmit={submit}>
           <SubjectSelect value={subject} onChange={setSubject} allowEmpty={false} />
           <div className="row">
             <button type="button" className="btn grow" onClick={() => { startPomodoro(subject || list('subjects')[0]?.id); go('study', 'timer'); close() }}>뽀모도로</button>
             <button type="submit" className="btn primary grow">스톱워치 시작</button>
           </div>
-        </>
+        </form>
       )}
-      {type !== 'timer' && <button className="btn primary" type="submit">추가</button>}
-    </form>
+    </div>
   )
 }

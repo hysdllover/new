@@ -23,8 +23,8 @@ export const elapsed = (x = t) => !x ? 0 : (x.acc || 0) + (x.paused || x.phase =
 
 function flush(x) {
   // 현재 공부 구간을 세션으로 저장
-  if (!x || x.paused || x.phase === 'break') return
-  addSession({ subjectId: x.subjectId, taskId: x.taskId, start: x.segStart, end: Date.now(), kind: x.mode })
+  if (!x || x.paused || x.phase === 'break') return null
+  return addSession({ subjectId: x.subjectId, taskId: x.taskId, start: x.segStart, end: Date.now(), kind: x.mode })
 }
 
 export function startStopwatch(subjectId, taskId) {
@@ -50,11 +50,11 @@ export function resume() {
 }
 export function stop() {
   if (!t) return
-  flush(t)
+  const last = flush(t)
   const total = Math.round(elapsed(t) / 60000)
   set(null)
   keepAwake(false)
-  if (total >= 1) toast(`${total}분 기록했어요`)
+  if (total >= 1) toast(`${total}분 기록했어요`, last ? { label: '수정', fn: () => import('../views/study/Log.jsx').then((m) => m.openRecord(last)) } : undefined)
 }
 export const setTimerTask = (taskId, subjectId) => t && set({ ...t, taskId, subjectId: subjectId ?? t.subjectId })
 

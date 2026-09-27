@@ -99,7 +99,7 @@ function Daily({ date }) {
               <div><h4>일정</h4>{evs.length ? evs.map((e) => <button key={e.id} className="row agg-row" onClick={() => openDetail('event', e.id, { occ: date })}><span className="dot" style={{ background: e.color || 'var(--accent)' }} /><span className="tiny muted">{e.start != null ? fmtTime(e.start) : '종일'}</span><span className="ellipsis">{e.title}</span></button>) : <span className="tiny muted">없음</span>}</div>
               <div><h4>완료 {doneFix.length}</h4>{doneFix.length ? doneFix.map((t) => <button key={t.id} className="row agg-row" onClick={() => openDetail('task', t.id)}><span style={{ color: 'var(--ok)' }}>✓</span><span className="ellipsis">{t.title}</span></button>) : <span className="tiny muted">없음</span>}</div>
               <div><h4>공부 {fmtDur(ss.reduce((a, s) => a + s.dur, 0))}</h4>{bySub.map(({ s, m }) => <div key={s.id} className="row agg-row"><span className="dot" style={{ background: s.color }} /><span className="grow">{s.name}</span><span className="tiny muted">{fmtDur(m)}</span></div>)}
-                {ss.length > 0 && <div className="tiny muted">{fmtTime(Math.min(...ss.map((s) => tsToMin(s.start))))} 시작</div>}
+                {ss.some((s) => s.start != null) && <div className="tiny muted">{fmtTime(Math.min(...ss.filter((s) => s.start != null).map((s) => tsToMin(s.start))))} 시작</div>}
               </div>
               {cond && <div><h4>컨디션</h4><div className="small">수면 {cond.sleep ?? '-'}시간 · 기분 {'●'.repeat(cond.mood || 0)}{'○'.repeat(5 - (cond.mood || 0))}</div></div>}
               {dayFiles.length > 0 && <div><h4>첨부</h4><div className="row wrap" style={{ gap: 6 }}>{dayFiles.map((f) => <FileThumb key={f.id} file={f} size={48} />)}</div></div>}

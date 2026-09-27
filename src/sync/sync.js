@@ -150,3 +150,18 @@ export function startSync() {
   setInterval(() => { if (document.visibilityState === 'visible') syncNow() }, 60000)
   syncNow()
 }
+
+// 동기화와 별개인 Gist 파일 읽기/쓰기 (푸시 구독·위젯용)
+export const gistInfo = () => ({ token: token(), gistId: gistId() })
+export async function readGistFile(name) {
+  if (!token() || !gistId()) throw new Error('먼저 동기화를 연결하세요')
+  const g = await gh(`/gists/${gistId()}`)
+  const f = g.files?.[name]
+  if (!f) return null
+  const text = f.truncated ? await (await fetch(f.raw_url)).text() : f.content
+  try { return JSON.parse(text) } catch { return null }
+}
+export async function writeGistFile(name, data) {
+  if (!token() || !gistId()) throw new Error('먼저 동기화를 연결하세요')
+  await gh(`/gists/${gistId()}`, { method: 'PATCH', body: JSON.stringify({ files: { [name]: { content: JSON.stringify(data, null, 1) } } }) })
+}

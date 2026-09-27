@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import { useColl, useSettings, put, patch, remove } from '../store/store.js'
 import { Card, Icon, Empty, Field, AddInput, toast } from '../components/ui.jsx'
 import { LineChart } from '../components/charts.jsx'
-import { cycleInfo } from '../engine/health.js'
 import { today, addDays, fmtDate, fmtShort, dday, diffDays, fmtDur } from '../engine/date.js'
 
 const MOODS = ['😣', '😕', '😐', '🙂', '😄']
@@ -12,7 +11,6 @@ export default function Health() {
     <div className="grid two">
       <Condition />
       <Meds />
-      <Cycle />
     </div>
   )
 }
@@ -106,39 +104,6 @@ function Meds() {
         ))}
       </div>
       <AddInput placeholder="약·영양제 추가" onAdd={(name) => { const r = put('meds', { name, times: ['08:00'], active: true }); setEdit(r.id) }} />
-    </Card>
-  )
-}
-
-function Cycle() {
-  const st = useSettings()
-  const cycles = useColl('cycles').sort((a, b) => a.start.localeCompare(b.start))
-  const info = useMemo(() => cycleInfo(cycles), [cycles])
-  const open = cycles.find((c) => !c.end && diffDays(today(), c.start) < 15)
-  const [date, setDate] = useState(today())
-  return (
-    <Card title="생리 주기" action={<span className="tiny muted">{st.syncExclude?.cycles ? '이 기기에만 저장' : '동기화됨'}</span>}>
-      {info ? (
-        <div className="cycle-info">
-          <div><span className="tiny muted">다음 예정</span><b>{fmtDate(info.next, { wd: false })}</b><span className="tiny">{dday(info.next)}</span></div>
-          <div><span className="tiny muted">평균 주기</span><b>{info.avg}일</b></div>
-          <div><span className="tiny muted">평균 기간</span><b>{info.dur}일</b></div>
-        </div>
-      ) : <div className="small muted">시작일을 기록하면 다음 예정일을 알려줘요.</div>}
-      <div className="row" style={{ marginTop: 10 }}>
-        <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ maxWidth: 170 }} />
-        {open ? <button className="btn primary" onClick={() => { patch('cycles', open.id, { end: date }); toast('종료 기록') }}>종료 기록</button>
-          : <button className="btn primary" onClick={() => { put('cycles', { start: date }); toast('시작 기록') }}>시작 기록</button>}
-      </div>
-      <div className="list small" style={{ marginTop: 8 }}>
-        {[...cycles].reverse().slice(0, 6).map((c) => (
-          <div key={c.id} className="item" style={{ padding: '6px 0', alignItems: 'center' }}>
-            <span className="t">{fmtShort(c.start)} ~ {c.end ? fmtShort(c.end) : '진행 중'}</span>
-            <button className="icon-btn" onClick={() => remove('cycles', c.id)} aria-label="삭제"><Icon name="close" size={12} /></button>
-          </div>
-        ))}
-      </div>
-      <div className="tiny muted">월간 캘린더의 ‘주기’ 레이어에서 기록·예측 기간을 볼 수 있어요.</div>
     </Card>
   )
 }

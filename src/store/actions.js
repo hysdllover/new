@@ -158,6 +158,21 @@ export function addSession({ subjectId, taskId, start, end, kind = 'stopwatch' }
   return s
 }
 
+// 직접 입력한 공부 기록 (시작 시각은 선택)
+export function saveRecord({ id, subjectId, taskId, date, dur, startMin, note, files, focus }) {
+  dur = Math.max(1, Math.round(dur || 0))
+  let start = null, end = null
+  if (startMin != null) {
+    const d = new Date(date + 'T00:00')
+    start = d.getTime() + startMin * 60000
+    end = start + dur * 60000
+  }
+  const prev = id && find('sessions', id)
+  const rec = put('sessions', { ...(id ? { id } : null), subjectId, taskId: taskId || null, date, dur, start, end, note: note || '', files: files || [], focus: focus || null, kind: prev?.kind || 'manual' })
+  if (!prev && taskId) log(taskId, 'study', `${dur}분 공부 (직접 입력)`)
+  return rec
+}
+
 /* ── 교재 진도 & 학습 계획 ── */
 export function setTextbookProgress(id, value) {
   const tb = find('textbooks', id)

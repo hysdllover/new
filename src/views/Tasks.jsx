@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useColl, patch, put, remove } from '../store/store.js'
 import { addTask, toggleTask } from '../store/actions.js'
-import { parseQuick } from '../components/QuickAdd.jsx'
+import TaskQuickInput from '../components/TaskQuickInput.jsx'
 import { AddInput, Empty, Icon, openSheet, openMenu, toast } from '../components/ui.jsx'
 import TaskItem from '../components/TaskItem.jsx'
 import { SMART, applyFilter, quadrant } from './tasks/filter.js'
@@ -60,10 +60,7 @@ function TaskList({ params }) {
 
   return (
     <div className="col">
-      <AddInput placeholder="할 일 추가 (@내일 · #과목)" onAdd={(text) => {
-        const p = parseQuick(text)
-        addTask({ title: p.title, due: p.date || (f.smart === 'today' ? today() : null), dueTime: p.time, subjectId: p.subjectId || f.subjectId || null, projectId: f.projectId || null, order: (items[0]?.order ?? Date.now()) - 1 })
-      }} />
+      <TaskQuickInput key={f.smart + (f.subjectId || '')} defaultDate={f.smart === 'today' ? 'today' : f.smart === 'tomorrow' ? 'tomorrow' : ''} defaults={{ subjectId: f.subjectId || null, projectId: f.projectId || null }} />
       <div className="scroll-x"><div className="row" style={{ gap: 6, paddingBottom: 2 }}>
         {SMART.map(([k, l]) => <button key={k} className={'chip' + ((f.smart || 'all') === k && !view ? ' on' : '')} onClick={() => set({ smart: k })}>{l} <span className="muted tiny">{applyFilter(tasks, { smart: k }).length}</span></button>)}
       </div></div>
@@ -109,26 +106,36 @@ function TaskList({ params }) {
 }
 
 const QUAD = [
-  [1, '긴급 · 중요', '지금 하기', 'var(--c4)'], [2, '중요', '계획하기', 'var(--accent)'],
-  [3, '긴급', '줄이기 · 맡기기', 'var(--c3)'], [4, '둘 다 아님', '나중에', 'var(--muted)'],
+  [1, '지금 하기', '긴급·중요', 'var(--c4)'], [2, '계획하기', '중요', 'var(--accent)'],
+  [3, '빨리 끝내기', '긴급', 'var(--c3)'], [4, '나중에', '여유', 'var(--c2)'],
 ]
 function Matrix() {
   const tasks = useColl('tasks').filter((t) => !t.done && !t.archived)
   const subjects = useColl('subjects')
   return (
-    <div className="matrix">
-      {QUAD.map(([q, l, hint, c]) => {
-        const items = tasks.filter((t) => quadrant(t) === q)
-        return (
-          <div key={q} className="card quad" data-drop={'q:' + q} style={{ borderTop: `3px solid ${c}` }}>
-            <div className="card-h"><h3>{l}</h3><span className="tiny muted">{hint} · {items.length}</span></div>
-            <div className="list">
-              {items.map((t) => <TaskItem key={t.id} t={t} subjects={subjects} compact drag={longPress(() => ({ label: t.title, onDrop: (z) => z.dataset.drop.startsWith('q:') && patch('tasks', t.id, { q: +z.dataset.drop.slice(2) }) }))} />)}
-            </div>
-            <AddInput placeholder="+ 추가" onAdd={(title) => addTask({ title, q, priority: q <= 2 ? 2 : 0, due: q === 1 || q === 3 ? today() : null })} />
-          </div>
-        )
-      })}
+    <div className="matrix-wrap">
+      <div className="mx-axis-top"><span>긴급</span><span>여유</span></div>
+      <div className="mx-body">
+        <div className="mx-axis-left"><span>중요</span><span>덜 중요</span></div>
+        <div className="matrix">
+          {QUAD.map(([q, l, hint, c]) => {
+            const items = tasks.filter((t) => quadrant(t) === q)
+            return (
+              <div key={q} className="quad" data-drop={'q:' + q} style={{ '--qc': c }}>
+                <div className="quad-h"><b>{l}</b><span className="tiny muted">{hint} {items.length}</span></div>
+                <div className="quad-list">
+                  {items.map((t) => <TaskItem key={t.id} t={t} subjects={subjects} compact drag={longPress(() => ({ label: t.title, onDrop: (z) => z.dataset.drop.startsWith('q:') && patch('tasks', t.id, { q: +z.dataset.drop.slice(2) }) }))} />)}
+                  {!items.length && <div className="tiny muted" style={{ padding: 6 }}>비어 있음</div>}
+                </div>
+                <form className="quad-add" onSubmit={(e) => { e.preventDefault(); const v = e.target.t.value.trim(); if (v) { addTask({ title: v, q, priority: q <= 2 ? 2 : 0, due: q === 1 || q === 3 ? today() : null }); e.target.reset() } }}>
+                  <input name="t" className="input bare" placeholder="+ 추가" />
+                </form>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+      <div className="tiny muted center">길게 눌러 다른 칸으로 옮기기</div>
     </div>
   )
 }

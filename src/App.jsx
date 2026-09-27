@@ -18,7 +18,7 @@ import Health from './views/Health.jsx'
 import Settings from './views/Settings.jsx'
 
 const VIEWS = { home: Home, planner: Planner, tasks: Tasks, study: Study, notes: Notes, health: Health, settings: Settings }
-const TITLES = { home: null, planner: '플래너', tasks: '할 일', study: '공부', notes: '노트', health: '건강', settings: '설정' }
+const TITLES = { home: null, planner: '캘린더', tasks: '할 일', study: '공부 기록', notes: '노트', health: '건강', settings: '설정' }
 
 export default function App() {
   const nav = useNav()
@@ -31,7 +31,8 @@ export default function App() {
   const tab = nav.tab
   const View = VIEWS[tab] || Home
   const segs = (SEGMENTS[tab] || []).filter((s) => !s[2] || st.modules[s[2]] !== false)
-  const seg = segOf(tab)
+  const seg0 = segOf(tab)
+  const seg = segs.length && !segs.some((x) => x[0] === seg0) ? segs[0][0] : seg0
 
   useEffect(() => {
     const onKey = (e) => {
@@ -113,11 +114,21 @@ export default function App() {
           </button>
         ))}
       </nav>
-      <button className="fab no-print" onClick={openQuick} aria-label="빠른 추가"><Icon name="plus" size={24} stroke={1.8} /></button>
+      <button className="fab no-print" {...fabPress} aria-label="빠른 추가 (길게 누르면 공부 기록)"><Icon name="plus" size={24} stroke={1.8} /></button>
       <UiLayer />
     </div>
   )
 }
 
-function openQuick() { openSheet((close) => <QuickAdd close={close} />, { title: '빠른 추가' }) }
+function openQuick(initial) { openSheet((close) => <QuickAdd close={close} initial={initial} />, { title: '빠른 추가' }) }
+
+// + 버튼: 탭 = 빠른 추가, 길게 누르기 = 공부 기록 입력
+let pressTimer = null, longFired = false
+const fabPress = {
+  onPointerDown: () => { longFired = false; pressTimer = setTimeout(() => { longFired = true; try { navigator.vibrate?.(15) } catch {} openQuick('record') }, 450) },
+  onPointerUp: () => clearTimeout(pressTimer),
+  onPointerLeave: () => clearTimeout(pressTimer),
+  onClick: () => { if (!longFired) openQuick() },
+  onContextMenu: (e) => e.preventDefault(),
+}
 function openSearch() { openSheet((close) => <CommandPalette close={close} />, { title: null, full: true }) }

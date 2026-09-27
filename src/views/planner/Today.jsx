@@ -1,4 +1,5 @@
-import { useColl, useRec } from '../../store/store.js'
+import { useColl, useRec, useSettings } from '../../store/store.js'
+import TaskQuickInput from '../../components/TaskQuickInput.jsx'
 import { dayRec, setDay, scheduleTask, applyTemplate, toggleTask } from '../../store/actions.js'
 import { freeSlots } from '../../engine/scheduler.js'
 import { fmtTime, today, nowMin, fmtDur } from '../../engine/date.js'
@@ -19,6 +20,8 @@ export default function Today({ date }) {
   const projects = useColl('projects')
   useNow(60000)
   const scheduledIds = new Set(blocks.filter((b) => b.date === date && b.taskId).map((b) => b.taskId))
+  const planning = useSettings().modules.planning !== false
+  const dayTasks = tasks.filter((t) => !t.archived && (t.due === date || (date === today() && !t.done && t.due && t.due < date)))
   const unscheduled = tasks.filter((t) => !t.done && !t.archived && !scheduledIds.has(t.id) && (!t.due || t.due <= date)).sort((a, b) => (b.priority || 0) - (a.priority || 0))
 
   const dragTask = (t) => longPress(() => ({
@@ -41,16 +44,28 @@ export default function Today({ date }) {
         </Card>
       </div>
       <div className="col">
-        {date === today() && <Gaps tasks={unscheduled} />}
-        <Card title={`배정할 할 일 ${unscheduled.length}`} action={<span className="tiny muted">길게 눌러 타임라인으로</span>}>
-          <div className="list">
-            {unscheduled.slice(0, 30).map((t) => (
-              <TaskItem key={t.id} t={t} subjects={subjects} projects={projects} drag={dragTask(t)}
-                extra={<button className="chip" onClick={(e) => { e.stopPropagation(); if (scheduleTask(t.id, date)) toast('빈 시간에 배정') }}>배정</button>} />
-            ))}
-            {!unscheduled.length && <Empty>모두 배정했어요 👏</Empty>}
-          </div>
-        </Card>
+        {planning ? (
+          <>
+            {date === today() && <Gaps tasks={unscheduled} />}
+            <Card title={`배정할 할 일 ${unscheduled.length}`} action={<span className="tiny muted">길게 눌러 타임라인으로</span>}>
+              <div className="list">
+                {unscheduled.slice(0, 30).map((t) => (
+                  <TaskItem key={t.id} t={t} subjects={subjects} projects={projects} drag={dragTask(t)}
+                    extra={<button className="chip" onClick={(e) => { e.stopPropagation(); if (scheduleTask(t.id, date)) toast('빈 시간에 배정') }}>배정</button>} />
+                ))}
+                {!unscheduled.length && <Empty>모두 배정했어요 👏</Empty>}
+              </div>
+            </Card>
+          </>
+        ) : (
+          <Card title="이 날 할 일">
+            <TaskQuickInput key={date} defaults={{ due: date }} />
+            <div className="list">
+              {dayTasks.map((t) => <TaskItem key={t.id} t={t} subjects={subjects} projects={projects} />)}
+              {!dayTasks.length && <Empty>할 일이 없어요</Empty>}
+            </div>
+          </Card>
+        )}
       </div>
     </div>
   )

@@ -22,7 +22,7 @@ export default function BlockItemEditor({ id }) {
         {task && <button className="btn" onClick={() => openDetail('task', task.id)}>할 일 열기</button>}
         <Field label="날짜"><input className="input" type="date" value={b.date} onChange={(e) => up({ date: e.target.value })} /></Field>
         <div className="row">
-          <Field label="시작"><TimeInput value={b.start} onChange={(v) => v != null && applyCascadeChange({ ...b, start: v })} /></Field>
+          <Field label="시작"><TimeInput allowEmpty={false} value={b.start} onChange={(v) => v != null && applyCascadeChange({ ...b, start: v })} /></Field>
           <Field label="길이(분)"><input className="input" type="number" min="10" step="10" value={b.dur} onChange={(e) => applyCascadeChange({ ...b, dur: Math.max(10, +e.target.value) })} /></Field>
         </div>
         <Field label="종류">

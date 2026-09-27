@@ -1,7 +1,9 @@
 import { useColl, useSettings, put, patch, remove } from '../store/store.js'
 import { dayRec, setDay, toggleTask, completeReview } from '../store/actions.js'
 import { eventsOn } from '../engine/scheduler.js'
-import { today, nowMin, fmtTime, fmtDur, dday, fmtShort, fmtClock } from '../engine/date.js'
+import { today, nowMin, fmtTime, fmtDur, dday, fmtShort, fmtClock, addDays, weekStart, parseYmd, fmtDate, tsToYmd } from '../engine/date.js'
+import { WeekBars } from '../components/charts.jsx'
+import { openRecord } from '../views/study/Log.jsx'
 import { Card, Check, Ring, Empty, Icon, AddInput, openDetail, useNow } from '../components/ui.jsx'
 import TaskItem from '../components/TaskItem.jsx'
 import { LinkPreview } from '../components/Attach.jsx'
@@ -9,7 +11,7 @@ import { CalEmbed } from '../components/BlockEditor.jsx'
 import { Gaps } from '../views/planner/Today.jsx'
 import { MoodPicker } from '../views/Health.jsx'
 import { applyFilter } from '../views/tasks/filter.js'
-import { go, openNote } from '../nav.js'
+import { go, openNote, setParams } from '../nav.js'
 import { useTimerState, useTick, elapsed, startStopwatch, pause, resume, stop } from '../lib/timer.js'
 import { noteTitle, noteText } from '../lib/notes.js'
 
@@ -26,7 +28,7 @@ function Now() {
   const cur = items.find((x) => x.s <= m && x.e > m)
   const next = items.find((x) => x.s > m)
   return (
-    <Card title="지금" action={<button className="tiny muted" onClick={goto('planner', 'today')}>플래너 →</button>}>
+    <Card title="지금" action={<button className="tiny muted" onClick={goto('planner', 'today')}>캘린더 →</button>}>
       {cur ? (
         <button className="now-cur" onClick={() => openDetail(cur.t, cur.id, { occ: d })} style={{ '--c': cur.c || 'var(--accent)' }}>
           <div className="ellipsis"><b>{cur.title}</b></div>
@@ -53,7 +55,7 @@ function Top3() {
             <button className="t title ellipsis" style={{ textAlign: 'left' }} onClick={() => openDetail('task', t.id)}>{t.title}</button>
           </div>
         ))}
-        {!top.length && <Empty>플래너에서 오늘 핵심 3가지를 골라요</Empty>}
+        {!top.length && <Empty>캘린더 › 오늘에서 핵심 3가지를 골라요</Empty>}
       </div>
       {day.comment && <div className="small muted" style={{ marginTop: 6 }}>“{day.comment}” {(day.stickers || []).join('')}</div>}
     </Card>
@@ -277,6 +279,156 @@ function Recent() {
   )
 }
 
+/* ── v2 위젯 ── */
+function QuickRec() {
+  const subjects = useColl('subjects')
+  return (
+    <Card title="빠른 공부 기록" action={<button className="tiny muted" onClick={goto('study', 'log')}>기록 →</button>}>
+      <div className="qr-grid">
+        {subjects.map((s) => (
+          <button key={s.id} className="qr-btn" style={{ '--c': s.color }} onClick={() => openRecord(null, { subjectId: s.id })}>
+            <span className="dot" style={{ background: s.color }} />{s.name}
+          </button>
+        ))}
+      </div>
+    </Card>
+  )
+}
+
+function useTodayBySub() {
+  const sessions = useColl('sessions')
+  const subjects = useColl('subjects')
+  const d = today()
+  const list = sessions.filter((x) => x.date === d)
+  const total = list.reduce((a, x) => a + x.dur, 0)
+  return { total, parts: subjects.map((s) => ({ s, m: list.filter((x) => x.subjectId === s.id).reduce((a, x) => a + x.dur, 0) })).filter((x) => x.m) }
+}
+
+function Donut() {
+  const { total, parts } = useTodayBySub()
+  const R = 42, C = 2 * Math.PI * R
+  let off = 0
+  return (
+    <Card title="오늘 공부">
+      <div className="row" style={{ gap: 14 }}>
+        <svg width="104" height="104" viewBox="0 0 104 104" style={{ flexShrink: 0 }}>
+          <circle cx="52" cy="52" r={R} fill="none" stroke="var(--surface-2)" strokeWidth="12" />
+          {parts.map(({ s, m }) => { const len = (m / total) * C; const el = <circle key={s.id} cx="52" cy="52" r={R} fill="none" stroke={s.color} strokeWidth="12" strokeDasharray={`${len} ${C - len}`} strokeDashoffset={-off} transform="rotate(-90 52 52)" />; off += len; return el })}
+          <text x="52" y="56" textAnchor="middle" fontSize="13" fill="var(--text)">{fmtDur(total)}</text>
+        </svg>
+        <div className="col" style={{ gap: 3 }}>
+          {parts.map(({ s, m }) => <span key={s.id} className="small"><span className="dot" style={{ background: s.color }} /> {s.name} <span className="muted">{fmtDur(m)}</span></span>)}
+          {!parts.length && <span className="small muted">아직 기록이 없어요</span>}
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+function WeekStudy() {
+  const st = useSettings()
+  const sessions = useColl('sessions')
+  const byDay = {}
+  for (const x of sessions) byDay[x.date] = (byDay[x.date] || 0) + x.dur
+  const week = Array.from({ length: 7 }, (_, i) => byDay[addDays(today(), i - 6)] || 0).reduce((a, b) => a + b, 0)
+  return <Card title="최근 7일" action={<span className="tiny muted">{fmtDur(week)}</span>}><WeekBars values={byDay} goal={st.goalDaily} /></Card>
+}
+
+function Streak() {
+  const sessions = useColl('sessions')
+  const days = new Set(sessions.map((x) => x.date))
+  let n = 0
+  for (let k = days.has(today()) ? 0 : 1; days.has(addDays(today(), -k)); k++) n++
+  return (
+    <Card className="center">
+      <div className="big-num">{n}<span>일</span></div>
+      <div className="small muted">연속 공부 🔥</div>
+    </Card>
+  )
+}
+
+function Clock() {
+  useNow(15000)
+  const d = new Date()
+  return (
+    <Card className="center">
+      <div className="big-num">{String(d.getHours()).padStart(2, '0')}:{String(d.getMinutes()).padStart(2, '0')}</div>
+      <div className="small muted">{fmtDate(today())}</div>
+    </Card>
+  )
+}
+
+function WeekStrip() {
+  const events = useColl('events'), tasks = useColl('tasks')
+  const ws = weekStart(today())
+  return (
+    <Card title="이번 주">
+      <div className="wstrip">
+        {Array.from({ length: 7 }, (_, i) => {
+          const d = addDays(ws, i)
+          const n = eventsOn(d, events).length + tasks.filter((t) => t.due === d && !t.done).length
+          return (
+            <button key={d} className={'ws-d' + (d === today() ? ' on' : '')} onClick={() => { setParams('planner', { date: d }); go('planner', 'today') }}>
+              <span className="tiny">{'일월화수목금토'[parseYmd(d).getDay()]}</span><b>{parseYmd(d).getDate()}</b>
+              <span className="ws-dots">{Array.from({ length: Math.min(3, n) }, (_, k) => <i key={k} />)}</span>
+            </button>
+          )
+        })}
+      </div>
+    </Card>
+  )
+}
+
+function TaskRing() {
+  const tasks = useColl('tasks')
+  const d = today()
+  const list = tasks.filter((t) => !t.archived && (t.due === d || (t.done && t.doneAt && tsToYmd(t.doneAt) === d)))
+  const done = list.filter((t) => t.done).length
+  return (
+    <Card className="center" onClick={goto('tasks', 'list')} style={{ cursor: 'pointer' }}>
+      <div className="col" style={{ alignItems: 'center', gap: 4 }}>
+        <Ring value={list.length ? done / list.length : 0} size={78} color="var(--c3)"><b className="small">{done}/{list.length}</b></Ring>
+        <span className="small">오늘 할 일</span>
+      </div>
+    </Card>
+  )
+}
+
+function BigDday() {
+  const dd = useColl('ddays').filter((d) => d.date >= today()).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || a.date.localeCompare(b.date))[0]
+  return (
+    <Card className="center" onClick={goto('study', 'records')} style={{ cursor: 'pointer' }}>
+      {dd ? <><div className="small muted ellipsis">{dd.title}</div><div className="big-num" style={{ color: dd.color || 'var(--accent)' }}>{dday(dd.date)}</div><div className="tiny muted">{fmtShort(dd.date)}</div></> : <div className="small muted">통계에서 D-day 추가</div>}
+    </Card>
+  )
+}
+
+function RecentRec() {
+  const sessions = useColl('sessions').slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).slice(0, 5)
+  const subjects = useColl('subjects')
+  return (
+    <Card title="최근 공부 기록" action={<button className="tiny muted" onClick={goto('study', 'log')}>→</button>}>
+      <div className="list">
+        {sessions.map((r) => { const s = subjects.find((x) => x.id === r.subjectId); return (
+          <button key={r.id} className="row" style={{ minHeight: 32, width: '100%', textAlign: 'left' }} onClick={() => openRecord(r)}>
+            <span className="dot" style={{ background: s?.color }} /><span className="grow ellipsis small">{s?.name}{r.note ? ' · ' + r.note : ''}</span>
+            <span className="tiny muted">{fmtShort(r.date)}</span><b className="small">{fmtDur(r.dur)}</b>
+          </button>
+        ) })}
+        {!sessions.length && <span className="small muted">기록 없음</span>}
+      </div>
+    </Card>
+  )
+}
+
+function Sticky({ w, update }) {
+  return (
+    <Card className="sticky">
+      <textarea className="sticky-ta" value={w.text || ''} placeholder="메모를 붙여두세요" onChange={(e) => update({ text: e.target.value })} />
+    </Card>
+  )
+}
+
 export const WIDGETS = {
   now: { label: '지금 (현재·다음 일정)', C: Now, size: 'm' },
   top3: { label: '오늘의 Top 3', C: Top3, size: 'm' },
@@ -294,4 +446,14 @@ export const WIDGETS = {
   timer: { label: '타이머', C: Stopwatch, size: 's' },
   calendar: { label: '미니 캘린더', C: Calendar, size: 's' },
   recent: { label: '최근 노트', C: Recent, size: 's' },
+  quickrec: { label: '빠른 공부 기록', C: QuickRec, size: 'm' },
+  donut: { label: '오늘 공부 (과목 비율)', C: Donut, size: 'm' },
+  weekstudy: { label: '최근 7일 공부', C: WeekStudy, size: 'm' },
+  streak: { label: '연속 공부일', C: Streak, size: 's' },
+  clock: { label: '시계', C: Clock, size: 's' },
+  weekstrip: { label: '이번 주 달력', C: WeekStrip, size: 'm' },
+  taskring: { label: '오늘 할 일 진행률', C: TaskRing, size: 's' },
+  bigdday: { label: '큰 D-day', C: BigDday, size: 's' },
+  recentrec: { label: '최근 공부 기록', C: RecentRec, size: 'm' },
+  sticky: { label: '포스트잇 메모', C: Sticky, size: 's' },
 }

@@ -5,6 +5,7 @@ import { SubjectSelect } from '../../components/common.jsx'
 import { Heatmap, Bars, WeekBars, LineChart } from '../../components/charts.jsx'
 import { today, addDays, weekStart, fmtDur, fmtShort, diffDays } from '../../engine/date.js'
 import { PALETTE } from '../../store/schema.js'
+import { DdayCard } from './Plan.jsx'
 
 export function useStudyStats() {
   const st = useSettings()
@@ -59,6 +60,7 @@ export default function Records() {
       <Card title="공부 캘린더" action={<span className="tiny muted">최근 15주</span>}>
         <Heatmap values={s.byDay} max={st.goalDaily} />
       </Card>
+      <DdayCard />
       <Habits />
       <Grades />
     </div>

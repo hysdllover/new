@@ -42,7 +42,7 @@ export default function Circle({ date }) {
             <path key={it.id} d={it.t === 'event' ? arc(it.s, it.e, 162, 182) : arc(it.s, it.e, 134, 156)} fill={it.c} opacity={it.t === 'event' ? .9 : .7} stroke="var(--surface)" strokeWidth="1"
               onClick={() => openDetail(it.t === 'event' ? 'event' : 'block', it.id, { occ: date })} style={{ cursor: 'pointer' }} />
           ))}
-          {ss.map((s) => { const a = tsToMin(s.start); return <path key={s.id} d={arc(a, a + s.dur, 116, 128)} fill={color(s.subjectId) || 'var(--accent)'} /> })}
+          {ss.filter((s) => s.start != null).map((s) => { const a = tsToMin(s.start); return <path key={s.id} d={arc(a, a + s.dur, 116, 128)} fill={color(s.subjectId) || 'var(--accent)'} /> })}
           {date === today() && (() => { const [x, y] = pt(n, 192), [x0, y0] = pt(n, 112); return <line x1={x0} y1={y0} x2={x} y2={y} stroke="var(--c4)" strokeWidth="1.5" strokeLinecap="round" /> })()}
           <text x={C} y={C - 16} textAnchor="middle" fontSize="11" fill="var(--muted)">계획</text>
           <text x={C} y={C + 2} textAnchor="middle" fontSize="15" fill="var(--text)">{fmtDur(planned)}</text>

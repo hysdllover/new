@@ -3,12 +3,11 @@ import { useColl, useSettings, put } from '../../store/store.js'
 import { eventsOn } from '../../engine/scheduler.js'
 import { monthStart, weekStart, addDays, addMonths, parseYmd, WD, today, fmtDate, fmtTime, fmtDur } from '../../engine/date.js'
 import { holiday } from '../../engine/holidays.js'
-import { cycleInfo, cycleState } from '../../engine/health.js'
 import { Icon, openDetail, Check, Card, Empty } from '../../components/ui.jsx'
 import { toggleTask } from '../../store/actions.js'
 import { go, setParams } from '../../nav.js'
 
-const LAYERS = [['events', '일정'], ['tasks', '할 일'], ['study', '공부기록'], ['habits', '습관'], ['cycle', '주기'], ['meds', '약']]
+const LAYERS = [['events', '일정'], ['tasks', '할 일'], ['study', '공부기록'], ['habits', '습관'], ['meds', '약']]
 const loadLayers = () => { try { return JSON.parse(localStorage.getItem('layers')) || { events: 1, tasks: 1, study: 1 } } catch { return { events: 1, tasks: 1, study: 1 } } }
 
 export default function Month({ date, setDate }) {
@@ -16,12 +15,11 @@ export default function Month({ date, setDate }) {
   const [layers, setLayers] = useState(loadLayers)
   const toggle = (k) => { const n = { ...layers, [k]: !layers[k] }; setLayers(n); try { localStorage.setItem('layers', JSON.stringify(n)) } catch {} }
   const events = useColl('events'), tasks = useColl('tasks'), sessions = useColl('sessions'), habits = useColl('habits')
-  const cycles = useColl('cycles'), meds = useColl('meds'), medLogs = useColl('medLogs'), subjects = useColl('subjects')
+  const meds = useColl('meds'), medLogs = useColl('medLogs'), subjects = useColl('subjects')
   const ms = monthStart(date)
   const start = weekStart(ms, st.weekStart)
   const cells = Array.from({ length: 42 }, (_, i) => addDays(start, i))
   const month = parseYmd(ms).getMonth()
-  const cinfo = useMemo(() => cycleInfo(cycles), [cycles])
   const studyBy = useMemo(() => { const m = {}; for (const s of sessions) m[s.date] = (m[s.date] || 0) + s.dur; return m }, [sessions])
   const activeMeds = meds.filter((m) => m.active)
   const medTotal = activeMeds.reduce((a, m) => a + (m.times?.length || 0), 0)
@@ -58,14 +56,12 @@ export default function Month({ date, setDate }) {
             const mins = studyBy[d] || 0
             const heat = layers.study && mins ? Math.min(1, mins / (st.goalDaily || 240)) : 0
             const hDone = layers.habits ? habits.filter((h) => h.days?.[d]).length : 0
-            const cyc = layers.cycle ? cycleState(d, cycles, cinfo) : null
             const medDone = layers.meds && medTotal ? medLogs.filter((l) => l.date === d && l.taken).length : 0
             return (
               <button key={d} className={'mcell' + (inM ? '' : ' out') + (d === today() ? ' is-today' : '') + (d === sel ? ' sel' : '')}
                 onClick={() => d === sel ? (setParams('planner', { date: d }), go('planner', 'today')) : setDate(d)}
                 style={heat ? { background: `color-mix(in srgb, var(--c2) ${Math.round(heat * 32)}%, var(--surface))` } : null}>
                 <div className="mnum"><span className={wd === 0 || hol ? 'sun' : wd === 6 ? 'sat' : ''}>{parseYmd(d).getDate()}</span>
-                  {cyc && <span className={'cyc ' + cyc} />}
                 </div>
                 {hol && <div className="mhol ellipsis">{hol}</div>}
                 <div className="mitems">
