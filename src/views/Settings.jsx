@@ -7,7 +7,6 @@ import { ColorPick, TimeInput, SubjectSelect } from '../components/common.jsx'
 import { useSyncStatus, connect, disconnect, syncNow, gistInfo } from '../sync/sync.js'
 import { enablePush, disablePush, pushState, testLocal, isStandalone, pushSupported } from '../lib/push.js'
 import { buildScript } from '../lib/scriptable.js'
-import { PRESETS as THEMES } from '../theme/theme.js'
 import { download } from '../lib/files.js'
 import { requestPermission } from '../lib/notify.js'
 import { fmtTime, today, WD } from '../engine/date.js'
@@ -280,28 +279,64 @@ function PushCard() {
 }
 
 function HomeWidgetCard() {
-  const st = useSettings()
   const sync = useSyncStatus()
   const { token, gistId } = gistInfo()
   const appUrl = location.origin + location.pathname
-  const accent = st.theme.accent || THEMES[st.theme.preset]?.accent
   const copy = async () => {
-    const script = buildScript({ token, gistId, appUrl, accent })
+    const script = buildScript({ token, gistId, appUrl })
     try { await navigator.clipboard.writeText(script); toast('스크립트를 복사했어요') }
     catch { openSheet(() => <textarea className="input" readOnly value={script} style={{ minHeight: 300, fontFamily: 'monospace', fontSize: 11 }} onFocus={(e) => e.target.select()} />, { title: '스크립트 (전체 선택 후 복사)', full: true }) }
   }
   return (
     <Card title="아이폰·아이패드 홈 화면 위젯">
-      <div className="small" style={{ lineHeight: 1.7 }}>
+      <WidgetPreview />
+      <div className="small" style={{ lineHeight: 1.7, marginTop: 10 }}>
         1. App Store 에서 무료 앱 <b>Scriptable</b> 설치<br />
         2. 아래 <b>스크립트 복사</b> → Scriptable › ＋ › 붙여넣기 → 이름 ‘스터디’<br />
         3. 홈 화면 길게 누르기 › ＋ › Scriptable 위젯(소·중·대) 추가 → 위젯 편집 › Script: ‘스터디’
       </div>
-      <div className="small muted" style={{ marginTop: 6 }}>오늘 공부시간 링 · D-day · 오늘 할 일 · 과목별 시간 표시, 누르면 앱이 열려요. 15분마다 갱신.</div>
       <div className="row" style={{ marginTop: 10 }}>
         <button className="btn primary" disabled={sync.state === 'off'} onClick={copy}><Icon name="download" size={16} />스크립트 복사</button>
         {sync.state === 'off' && <span className="small muted">동기화를 먼저 연결하세요</span>}
       </div>
+      <div className="tiny muted" style={{ marginTop: 6 }}>이미 설치했다면 새로 복사해 Scriptable 스크립트 내용을 바꿔 주세요. 15분마다 갱신돼요.</div>
     </Card>
+  )
+}
+
+// 홈 화면 위젯 미리보기 (실제 데이터)
+function WidgetPreview() {
+  const st = useSettings()
+  const tasks = useColl('tasks'), sessions = useColl('sessions'), ddays = useColl('ddays'), quotes = useColl('quotes'), subjects = useColl('subjects')
+  const d = today()
+  const mins = sessions.filter((x) => x.date === d).reduce((a, x) => a + x.dur, 0)
+  const goal = st.goalDaily || 240
+  const todo = tasks.filter((t) => !t.archived && !t.done && t.due && t.due <= d).sort((a, b) => (b.priority || 0) - (a.priority || 0))
+  const dd = ddays.filter((x) => x.date >= d).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || a.date.localeCompare(b.date))[0]
+  const ddN = dd ? Math.round((new Date(dd.date) - new Date(d)) / 86400000) : null
+  const qs = [...quotes].sort((a, b) => a.id.localeCompare(b.id))
+  const quote = qs.length ? qs[Math.floor(Date.now() / 86400000) % qs.length].text : null
+  const now = new Date()
+  const label = `${now.getMonth() + 1}.${now.getDate()} ${WD[now.getDay()]}`
+  const fmt = (m) => m < 60 ? m + '분' : Math.floor(m / 60) + '시간' + (m % 60 ? ' ' + (m % 60) + '분' : '')
+  const bar = <div className="dw-bar"><i style={{ width: Math.min(100, mins / goal * 100) + '%' }} /></div>
+  const study = <><div><b className="dw-serif">{fmt(mins)}</b> <span className="dw-soft">/ {fmt(goal)}</span></div>{bar}</>
+  const ddv = dd ? <><div className="dw-soft">{dd.title}</div><div className="dw-dd">{ddN === 0 ? 'D-DAY' : 'D-' + ddN}</div></> : <div className="dw-soft">D-day 없음</div>
+  const list = (n) => <>{todo.slice(0, n).map((t) => <div key={t.id} className="dw-todo"><span className={t.priority >= 3 ? 'dw-star' : 'dw-soft'}>{t.priority >= 3 ? '★' : '☐'}</span>{t.title}</div>)}{!todo.length && <div className="dw-ok">오늘 할 일 끝 ✓</div>}</>
+  return (
+    <div className="dw-row">
+      <div className="dw dw-s"><span className="dw-tape">{label}</span><div style={{ marginTop: 6 }}>{ddv}</div><div className="grow" />{study}</div>
+      <div className="dw dw-m">
+        <div className="col" style={{ gap: 4, width: '42%' }}><span className="dw-tape">{label}</span>{ddv}<div className="grow" />{study}</div>
+        <div className="col" style={{ gap: 3, flex: 1, minWidth: 0 }}><b className="dw-h">오늘 할 일</b>{list(4)}</div>
+      </div>
+      <div className="dw dw-l">
+        <div className="row between"><span className="dw-tape">{label}</span>{dd && <span><span className="dw-soft">{dd.title} </span><b className="dw-dd" style={{ fontSize: 18 }}>{ddN === 0 ? 'D-DAY' : 'D-' + ddN}</b></span>}</div>
+        {quote && <div className="dw-quote">“{quote}”</div>}
+        <b className="dw-h">오늘 공부</b>{study}
+        <div className="dw-soft" style={{ fontSize: 10 }}>{subjects.map((s) => { const m = sessions.filter((x) => x.date === d && x.subjectId === s.id).reduce((a, x) => a + x.dur, 0); return m ? <span key={s.id} style={{ marginRight: 10 }}><span style={{ color: s.color }}>●</span> {s.name} {fmt(m)}</span> : null })}</div>
+        <b className="dw-h" style={{ marginTop: 6 }}>오늘 할 일</b>{list(6)}
+      </div>
+    </div>
   )
 }

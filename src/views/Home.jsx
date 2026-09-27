@@ -129,7 +129,7 @@ function WidgetSettings({ w, pages, pi, close, onSave, onDelete }) {
 }
 
 function Greeting() {
-  const quotes = useColl('quotes')
+  const quotes = [...useColl('quotes')].sort((a, b) => a.id.localeCompare(b.id))
   const q = quotes.length ? quotes[Math.floor(Date.now() / 86400000) % quotes.length] : null
   return (
     <button className="greet" onClick={() => openSheet(() => <QuoteEditor />, { title: '다짐 · 명언' })}>
