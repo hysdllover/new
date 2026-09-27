@@ -293,3 +293,26 @@ details.more[open] > summary::before { content: '▾ '; }
 textarea.title-input { min-height: 0 !important; }
 button.greet { display: block; width: 100%; text-align: left; }
 .greet-hi { font-weight: var(--fw); line-height: 1.45; }
+
+/* ── 홈 화면 위젯 미리보기 (다이어리) ── */
+.dw-row { display: flex; align-items: flex-start; gap: 10px; overflow-x: auto; padding: 4px 2px 8px; scrollbar-width: none; }
+.dw-row::-webkit-scrollbar { display: none; }
+.dw { flex-shrink: 0; border-radius: 20px; padding: 12px 14px 12px 26px; display: flex; flex-direction: column; gap: 3px; color: #3b3a36; font-size: 12px; font-family: Georgia, 'Noto Serif KR', serif;
+  background: repeating-linear-gradient(180deg, transparent 0 21px, #e6dfd0 21px 22px) 0 12px, linear-gradient(90deg, transparent 21px, rgba(201, 160, 168, .35) 21px 22px, transparent 22px), #f6f1e7; box-shadow: 0 2px 10px rgba(0, 0, 0, .08); }
+.dw-s { width: 158px; height: 158px; }
+.dw-m { width: 338px; height: 158px; flex-direction: row; gap: 12px; }
+.dw-l { width: 338px; height: 354px; }
+.dw-tape { align-self: flex-start; background: rgba(201, 160, 168, .35); padding: 1px 8px; border-radius: 2px; font-family: -apple-system, sans-serif; font-size: 11px; transform: rotate(-2deg); }
+.dw-soft { color: #8f887b; font-size: 10.5px; }
+.dw-dd { color: #c9a0a8; font-weight: 700; font-size: 26px; line-height: 1.1; }
+.dw-serif { font-size: 15px; }
+.dw-bar { height: 8px; border-radius: 4px; background: rgba(143, 136, 123, .18); overflow: hidden; margin-top: 3px; }
+.dw-bar i { display: block; height: 100%; border-radius: 4px; background: repeating-linear-gradient(90deg, #4a5a78 0 5px, #5b6b89 5px 6px); }
+.dw-h { color: #4a5a78; font-size: 11px; }
+.dw-todo { display: flex; gap: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dw-star { color: #c9a0a8; }
+.dw-ok { color: #7a8660; font-family: -apple-system, sans-serif; }
+.dw-quote { font-size: 13px; line-height: 1.5; margin: 6px 0 8px; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .dw { color: #e8e1d3; background: repeating-linear-gradient(180deg, transparent 0 21px, #3a352e 21px 22px) 0 12px, linear-gradient(90deg, transparent 21px, rgba(201, 160, 168, .3) 21px 22px, transparent 22px), #2a2621; }
+}
