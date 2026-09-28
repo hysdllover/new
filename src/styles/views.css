@@ -332,7 +332,9 @@ button.greet { display: block; width: 100%; text-align: left; }
 .dw-hr { height: .6px; background: var(--rule); margin: 12px 0; }
 .dw-quote { font-size: 14px; line-height: 1.5; margin-top: 14px; }
 .dw-subs { display: flex; gap: 12px; margin-top: 8px; }
-.dw-todo { display: flex; gap: 8px; margin-bottom: 6px; min-width: 0; font-size: 12px; }
+.dw-todo { display: flex; gap: 8px; margin-bottom: 6px; min-width: 0; font-size: 14px; }
+.dw-s .dw-todo { font-size: 13px; }
+.dw-l .dw-todo { font-size: 15px; }
 .dw-sub { margin-bottom: 7px; font-size: 10.5px; }
 .dw-sub .dw-line { margin-top: 3px; }
 .dw-cal { display: grid; gap: 3px; align-content: start; }
