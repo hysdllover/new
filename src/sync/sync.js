@@ -28,6 +28,17 @@ async function gh(path, opt = {}) {
     headers: { Authorization: `Bearer ${token()}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', ...(opt.body ? { 'Content-Type': 'application/json' } : null) },
   })
   if (!res.ok) {
+    if (res.status === 403 || res.status === 429) {
+      const body = await res.json().catch(() => ({}))
+      const h = (k) => res.headers.get(k)
+      const retry = +h('retry-after'), reset = +h('x-ratelimit-reset')
+      if (res.status === 429 || retry || h('x-ratelimit-remaining') === '0' || /rate limit/i.test(body.message || '')) {
+        // GitHub 요청 제한 — 알려 준 시간(없으면 5분)만큼 쉬었다가 자동 재시도
+        const until = retry ? Date.now() + retry * 1000 : reset && h('x-ratelimit-remaining') === '0' ? reset * 1000 : Date.now() + 5 * 60000
+        throw Object.assign(new Error('GitHub 요청이 많아요. 잠시 후 다시 시도해 주세요'), { until: Math.max(until, Date.now() + 60000) })
+      }
+      throw new Error('토큰 권한이 부족해요 (gist 권한 확인)')
+    }
     const msg = res.status === 401 ? '토큰이 올바르지 않아요' : res.status === 404 ? 'Gist 를 찾을 수 없어요 (gist 권한 확인)' : `GitHub 오류 ${res.status}`
     throw new Error(msg)
   }
@@ -77,7 +88,7 @@ export async function connect(tok) {
 }
 
 export function disconnect() {
-  ls.set('gist_token', null); ls.set('gist_id', null); ls.set('gist_last', null); ls.set('widget_gist', null); ls.set('widget_last', null)
+  ls.set('gist_token', null); ls.set('gist_id', null); ls.set('gist_last', null); ls.set('widget_gist', null); ls.set('widget_last', null); ls.set('widget_at', null)
   setStatus({ state: 'off', last: null, error: null })
 }
 
@@ -122,7 +133,9 @@ function widgetPayload() {
     settings: { settings: { main: { goalDaily: main.goalDaily, weekStart: main.weekStart, widgetFont: main.widgetFont } }, quotes: keep('quotes') },
   })
 }
-async function syncWidget(remoteId, patchFiles) {
+const WIDGET_GAP = 3 * 60000 // 위젯 gist 쓰기 최소 간격 (앱을 나갈 때는 바로)
+let widgetDirty = false
+async function syncWidget(remoteId, patchFiles, force) {
   const content = widgetPayload()
   let id = remoteId || widgetGistId()
   if (!id) {
@@ -130,11 +143,12 @@ async function syncWidget(remoteId, patchFiles) {
     id = res.id
     ls.set('widget_last', content)
   } else if (ls.get('widget_last') !== content || ls.get('widget_gist') !== id) {
+    if (!force && ls.get('widget_gist') === id && Date.now() - (+ls.get('widget_at') || 0) < WIDGET_GAP) { widgetDirty = true; return }
     try {
       await gh(`/gists/${id}`, { method: 'PATCH', body: JSON.stringify({ files: { 'widget.json': { content } } }) })
-      ls.set('widget_last', content)
+      ls.set('widget_last', content); ls.set('widget_at', String(Date.now())); widgetDirty = false
     } catch (e) {
-      if (/찾을 수 없/.test(e.message)) { ls.set('widget_gist', null); ls.set('widget_last', null); return syncWidget(null, patchFiles) }
+      if (/찾을 수 없/.test(e.message)) { ls.set('widget_gist', null); ls.set('widget_last', null); return syncWidget(null, patchFiles, force) }
       throw e
     }
   }
@@ -142,10 +156,12 @@ async function syncWidget(remoteId, patchFiles) {
   if (remoteId !== id) patchFiles['widget-gist.txt'] = { content: id }
 }
 
-let running = null, again = false
-export async function syncNow() {
+let running = null, again = false, pausedUntil = 0, resumeTimer = null, lastPush = 0
+const pauseMsg = () => `요청이 많아 잠시 쉬는 중 · ${Math.max(1, Math.ceil((pausedUntil - Date.now()) / 60000))}분 뒤 자동 재시도`
+export async function syncNow({ flush = false } = {}) {
   if (!token() || !gistId()) return
   if (!navigator.onLine) { setStatus({ state: 'pending' }); return }
+  if (Date.now() < pausedUntil) { setStatus({ state: 'error', error: pauseMsg() }); return }
   if (running) { again = true; return running }
   running = (async () => {
     setStatus({ state: 'syncing', error: null })
@@ -183,9 +199,10 @@ export async function syncNow() {
       }
       for (const r of Object.values(getState().files)) if (r.deleted && gist.files?.[`att-${r.id}.txt`]) patchFiles[`att-${r.id}.txt`] = null
       const fontsUp = await syncFonts(gist, patchFiles)
-      try { await syncWidget(remoteText['widget-gist.txt']?.trim(), patchFiles) } catch {}
+      try { await syncWidget(remoteText['widget-gist.txt']?.trim(), patchFiles, flush) } catch (e) { if (e.until) throw e }
       if (Object.keys(patchFiles).length) {
         const res = await gh(`/gists/${gistId()}`, { method: 'PATCH', body: JSON.stringify({ files: patchFiles }) })
+        lastPush = Date.now()
         for (const [name, f] of Object.entries(res.files || {})) if (name.startsWith('att-')) setRemoteRaw(name.slice(4).replace(/\.txt$/, ''), f.raw_url)
         for (const id of uploaded) patch('files', id, { gist: true })
         for (const id of fontsUp) await markSynced(id)
@@ -195,7 +212,11 @@ export async function syncNow() {
       ls.set('gist_last', String(now))
       setStatus({ state: 'ok', last: now })
     } catch (e) {
-      setStatus({ state: 'error', error: e.message })
+      if (e.until) {
+        pausedUntil = e.until
+        clearTimeout(resumeTimer); resumeTimer = setTimeout(() => syncNow(), pausedUntil - Date.now() + 1000)
+        setStatus({ state: 'error', error: pauseMsg() })
+      } else setStatus({ state: 'error', error: e.message })
     }
   })()
   try { await running } finally {
@@ -210,10 +231,11 @@ export function startSync() {
     if (!token()) return
     if (status.state !== 'syncing') setStatus({ state: 'pending' })
     clearTimeout(timer)
-    timer = setTimeout(syncNow, 1000)
+    // 입력이 멈추고 5초 뒤, 연속 업로드는 최소 15초 간격 (GitHub 쓰기 제한 대비)
+    timer = setTimeout(() => syncNow(), Math.max(5000, lastPush + 15000 - Date.now()))
   })
   // 앱을 나갈 때 대기 중인 변경을 바로 올림 (iOS 는 백그라운드에서 곧 멈춤)
-  const flush = () => { if (status.state === 'pending') { clearTimeout(timer); syncNow() } }
+  const flush = () => { if (status.state === 'pending' || widgetDirty) { clearTimeout(timer); syncNow({ flush: true }) } }
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') syncNow(); else flush() })
   window.addEventListener('pagehide', flush)
   window.addEventListener('online', () => syncNow())
