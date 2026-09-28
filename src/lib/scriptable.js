@@ -26,7 +26,9 @@ const thin = (s) => F(s, 'Thin')
 const label = (s) => F(s, 'Regular')
 
 const PARAM = String(args.widgetParameter || '').replace(/\\s/g, '').toLowerCase()
-const KIND = { '공부': 'study', '할일': 'todo', '디데이': 'dday', 'd-day': 'dday', '달력': 'month', '다짐': 'quote', study: 'study', todo: 'todo', dday: 'dday', month: 'month', quote: 'quote' }[PARAM] || 'default'
+// 디데이2, 디데이3 … → 두 번째·세 번째 D-day
+const DDI = Math.max(0, (+(PARAM.match(/(\\d)$/) || [])[1] || 1) - 1)
+const KIND = { '공부': 'study', '할일': 'todo', '디데이': 'dday', 'd-day': 'dday', '달력': 'month', '다짐': 'quote', study: 'study', todo: 'todo', dday: 'dday', month: 'month', quote: 'quote' }[PARAM.replace(/\\d$/, '')] || 'default'
 const pickQuote = ${pickQuote.toString()}
 const link = (path) => APP + (path ? '?go=' + path : '')
 
@@ -125,7 +127,7 @@ if (!data) {
   const ddAll = alive(data.study.ddays).filter((d) => d.date >= today).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || a.date.localeCompare(b.date))
   const ddN = (d) => Math.round((new Date(d.date) - new Date(today)) / 86400000)
   const ddT = (d) => (ddN(d) === 0 ? 'D-DAY' : 'D-' + ddN(d))
-  const dd = ddAll[0]
+  const dd = ddAll[KIND === 'dday' ? DDI : 0]
   const ddTxt = dd ? ddT(dd) : null
   const quotes = Object.keys(data.settings.quotes || {}).sort().map((k) => data.settings.quotes[k]).filter((q) => !q.deleted)
   const quote = pickQuote(quotes)?.text ?? null // 3시간마다 무작위 (앱과 같은 문구)
@@ -193,7 +195,25 @@ if (!data) {
     return { total: monthMins.reduce((a, v) => a + v, 0), days: monthMins.filter(Boolean).length, hit: monthMins.filter((v) => v >= goal).length }
   }
 
-  if (lock) {
+  if (lock && KIND === 'dday') {
+    // ── 잠금 화면 · D-day 만 ──
+    const next = ddAll[DDI + 1]
+    if (!dd) t(w, 'No D-day', tw(12))
+    else if (fam === 'accessoryInline') {
+      t(w, ddTxt + ' ' + dd.title, tw(12))
+    } else if (fam === 'accessoryCircular') {
+      w.addAccessoryWidgetBackground = true
+      const z = w.addStack(); z.size = new Size(60, 60); z.layoutVertically(); z.centerAlignContent()
+      const a = z.addStack(); a.addSpacer(); t(a, ddN(dd) === 0 ? 'D-DAY' : ddN(dd), thin(ddN(dd) === 0 ? 14 : 24)).minimumScaleFactor = 0.5; a.addSpacer()
+      const b = z.addStack(); b.addSpacer(); t(b, dd.title, label(8)).minimumScaleFactor = 0.6; b.addSpacer()
+    } else {
+      const r = w.addStack(); r.bottomAlignContent()
+      t(r, ddTxt, thin(26)).minimumScaleFactor = 0.6; r.addSpacer()
+      w.addSpacer(2)
+      const r2 = w.addStack(); t(r2, dd.title, tw(12)); r2.addSpacer(6); t(r2, dd.date.slice(5).replace('-', '.'), tw(10)); r2.addSpacer()
+      if (next) { w.addSpacer(2); const r3 = w.addStack(); t(r3, next.title + ' ' + ddT(next), tw(10)).textOpacity = 0.7; r3.addSpacer() }
+    }
+  } else if (lock) {
     // ── 잠금 화면 ──
     if (fam === 'accessoryInline') {
       t(w, hm(mins) + (dd ? ' · ' + ddTxt + ' ' + dd.title : ''), tw(12))
@@ -244,7 +264,7 @@ if (!data) {
     if (fam !== 'small' && quote) { w.addSpacer(10); t(w, '— ' + quote, tw(12), SOFT, 2) }
     if (fam === 'large' && ddAll.length > 1) {
       w.addSpacer(16); rule(w, inner); w.addSpacer(12)
-      for (const x of ddAll.slice(1, 6)) { const r = w.addStack(); r.centerAlignContent(); t(r, x.title, tw(12), INK); r.addSpacer(); t(r, ddT(x), tw(12), GOLD); w.addSpacer(8) }
+      for (const x of ddAll.filter((x) => x !== dd).slice(0, 5)) { const r = w.addStack(); r.centerAlignContent(); t(r, x.title, tw(12), INK); r.addSpacer(); t(r, ddT(x), tw(12), GOLD); w.addSpacer(8) }
     }
   } else if (KIND === 'month') {
     // ── 달력 ──

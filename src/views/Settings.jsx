@@ -311,7 +311,7 @@ function HomeWidgetCard() {
         1. App Store 에서 무료 앱 <b>Scriptable</b> 설치<br />
         2. 아래 <b>스크립트 복사</b> → Scriptable › ＋ › 붙여넣기 → 이름 ‘스터디’<br />
         3. 홈 화면 길게 누르기 › ＋ › Scriptable 위젯(소·중·대) 추가 → 위젯 편집 › Script: ‘스터디’ · Parameter: 위 형태 단어<br />
-        4. 잠금 화면: 잠금 화면 길게 누르기 › 사용자화 › 위젯 추가 › Scriptable → 같은 스크립트 선택
+        4. 잠금 화면: 잠금 화면 길게 누르기 › 사용자화 › 위젯 추가 › Scriptable → 같은 스크립트 선택 · D-day 만 보려면 Parameter: 디데이 (다음 D-day 는 디데이2)
       </div>
       <div className="tiny muted" style={{ marginTop: 4 }}>위젯을 누르면 해당 화면(할 일·공부 기록)이 열려요. iOS 제한으로 사파리에서 열리니, 사파리에서도 한 번 동기화를 연결해 두세요.</div>
       <div className="row" style={{ marginTop: 10 }}>
@@ -388,7 +388,8 @@ function WidgetPreview() {
   const doneT = tasks.filter((t) => !t.archived && t.done && t.doneAt && new Date(t.doneAt).toDateString() === new Date().toDateString())
   const done = doneT.length
   const items = sortTasks(tasks.filter((t) => !t.archived && t.due && t.due <= d && (!t.done || t.due === d || doneT.includes(t))), 'due')
-  const dd = ddays.filter((x) => x.date >= d).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || a.date.localeCompare(b.date))[0]
+  const ddSorted = ddays.filter((x) => x.date >= d).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || a.date.localeCompare(b.date))
+  const dd = ddSorted[0], ddNext = ddSorted[1]
   const ddN = dd ? Math.round((new Date(dd.date) - new Date(d)) / 86400000) : null
   const ddTxt = dd ? (ddN === 0 ? 'D-DAY' : 'D-' + ddN) : null
   const qs = [...quotes].sort((a, b) => a.id.localeCompare(b.id))
@@ -473,9 +474,15 @@ function WidgetPreview() {
         <div className="dw dw-l" style={ff}>{vl}</div>
       </div>
       <div className="dw-lock" style={ff}>
+        {kind === '디데이' ? <>
+          <div className="dw-lc"><b style={{ fontSize: 22, fontWeight: 100 }}>{dd ? (ddN === 0 ? 'D' : ddN) : '–'}</b><span>{dd?.title || 'No D-day'}</span></div>
+          <div className="dw-lr"><div><b style={{ fontSize: 24 }}>{ddTxt || 'No D-day'}</b></div>{dd && <div>{dd.title}  <span style={{ opacity: .7 }}>{dd.date.slice(5).replace('-', '.')}</span></div>}{ddNext && <div style={{ opacity: .7, fontSize: 10 }}>{ddNext.title} D-{Math.round((new Date(ddNext.date) - new Date(d)) / 86400000)}</div>}</div>
+          <div className="dw-li">{dd ? `${ddTxt} ${dd.title}` : 'No D-day'}</div>
+        </> : <>
         <div className="dw-lc"><b>{hm(mins)}</b><span>{pct}%</span><svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="27" /><circle cx="30" cy="30" r="27" className="on" style={{ strokeDasharray: `${2 * Math.PI * 27 * pct / 100} 999` }} /></svg></div>
         <div className="dw-lr"><div><b>{hm(mins)}</b> / {hm(goal)}<span className="grow" />{ddTxt}</div><div className="dw-line"><i style={{ width: pct + '%' }} /></div><div className="ellipsis">{todo[0] ? '– ' + todo[0].title : dd?.title || 'All clear.'}</div></div>
         <div className="dw-li">{hm(mins)}{dd ? ` · ${ddTxt} ${dd.title}` : ''}</div>
+        </>}
       </div>
     </>
   )
