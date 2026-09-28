@@ -374,7 +374,9 @@ function WidgetPreview() {
   const goal = st.goalDaily || 240
   const pct = Math.round(Math.min(1, mins / goal) * 100)
   const todo = tasks.filter((t) => !t.archived && !t.done && t.due && t.due <= d).sort((a, b) => (b.priority || 0) - (a.priority || 0))
-  const done = tasks.filter((t) => t.done && t.doneAt && new Date(t.doneAt).toDateString() === new Date().toDateString()).length
+  const doneT = tasks.filter((t) => !t.archived && t.done && t.doneAt && new Date(t.doneAt).toDateString() === new Date().toDateString())
+  const done = doneT.length
+  const items = [...todo, ...doneT.filter((t) => t.due && t.due <= d)]
   const dd = ddays.filter((x) => x.date >= d).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || a.date.localeCompare(b.date))[0]
   const ddN = dd ? Math.round((new Date(dd.date) - new Date(d)) / 86400000) : null
   const ddTxt = dd ? (ddN === 0 ? 'D-DAY' : 'D-' + ddN) : null
@@ -390,7 +392,10 @@ function WidgetPreview() {
     </>
   )
   const ddRow = dd && <div className="dw-ddrow"><span className="dw-gold">{ddTxt}</span><span className="dw-soft">{dd.title}</span></div>
-  const list = (n) => <>{todo.slice(0, n).map((t) => <div key={t.id} className="dw-todo"><span className={t.priority >= 3 ? 'dw-gold' : 'dw-soft'}>{t.priority >= 3 ? '•' : '–'}</span><span className="ellipsis">{t.title}</span></div>)}{!todo.length && <div className="dw-soft">All clear.</div>}</>
+  const list = (n) => <>{items.slice(0, n).map((t) => t.done
+    ? <div key={t.id} className="dw-todo dw-soft"><span>✓</span><span className="ellipsis" style={{ textDecoration: 'line-through' }}>{t.title}</span></div>
+    : <div key={t.id} className="dw-todo"><span className={t.priority >= 3 ? 'dw-gold' : 'dw-soft'}>{t.priority >= 3 ? '•' : '–'}</span><span className="ellipsis">{t.title}</span></div>)}
+    {!items.length && <div className="dw-soft">All clear.</div>}</>
   const [kind, setKind] = useState('')
   const ddList = ddays.filter((x) => x.date >= d).sort((a, b) => a.date.localeCompare(b.date))
   const subMins = subjects.map((s) => ({ s, m: today0.filter((x) => x.subjectId === s.id).reduce((a, x) => a + x.dur, 0) })).filter((x) => x.m).sort((a, b) => b.m - a.m)

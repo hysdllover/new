@@ -1,19 +1,22 @@
-import { today, addDays, weekStart } from '../../engine/date.js'
+import { today, addDays, weekStart, tsToYmd } from '../../engine/date.js'
 
 export const SMART = [
   ['all', '전체'], ['today', '오늘'], ['tomorrow', '내일'], ['week', '이번 주'], ['nodue', '기한 없음'], ['overdue', '지연'], ['done', '완료'],
 ]
 
+// 완료한 할 일은 목록에서 사라지지 않고 줄 그은 채로 남음 (보관함으로 옮겨야 사라짐)
+export const doneToday = (t) => !!(t.done && t.doneAt && tsToYmd(t.doneAt) === today())
+
 export function smartMatch(t, smart) {
   const d = today()
   switch (smart) {
-    case 'today': return !t.done && t.due && t.due <= d
-    case 'tomorrow': return !t.done && t.due === addDays(d, 1)
-    case 'week': { const ws = weekStart(d); return !t.done && t.due && t.due >= ws && t.due <= addDays(ws, 6) }
-    case 'nodue': return !t.done && !t.due
+    case 'today': return !!t.due && t.due <= d && (!t.done || t.due === d || doneToday(t))
+    case 'tomorrow': return t.due === addDays(d, 1)
+    case 'week': { const ws = weekStart(d); return !!t.due && t.due >= ws && t.due <= addDays(ws, 6) }
+    case 'nodue': return !t.due
     case 'overdue': return !t.done && t.due && t.due < d
     case 'done': return t.done
-    default: return !t.done
+    default: return true
   }
 }
 
@@ -24,8 +27,10 @@ export function applyFilter(tasks, f = {}) {
   if (f.projectId) out = out.filter((t) => t.projectId === f.projectId)
   if (f.priority) out = out.filter((t) => (t.priority || 0) >= +f.priority)
   if (q) out = out.filter((t) => (t.title || '').toLowerCase().includes(q) || (t.note || '').toLowerCase().includes(q))
-  return sortTasks(out, f.sort)
+  return sortTasks(out, f.sort).sort((x, y) => (x.done ? 1 : 0) - (y.done ? 1 : 0)) // 완료는 아래로
 }
+
+export const openCount = (list) => list.filter((t) => !t.done).length
 
 export function sortTasks(list, sort = 'manual') {
   const a = [...list]

@@ -10,7 +10,7 @@ import { LinkPreview } from '../components/Attach.jsx'
 import { CalEmbed } from '../components/BlockEditor.jsx'
 import { Gaps } from '../views/planner/Today.jsx'
 import { MoodPicker } from '../views/Health.jsx'
-import { applyFilter } from '../views/tasks/filter.js'
+import { applyFilter, openCount } from '../views/tasks/filter.js'
 import { go, openNote, setParams } from '../nav.js'
 import { useTimerState, useTick, elapsed, startStopwatch, pause, resume, stop } from '../lib/timer.js'
 import { noteTitle, noteText } from '../lib/notes.js'
@@ -101,7 +101,7 @@ function TodayList() {
   const evs = eventsOn(d, events)
   const due = applyFilter(tasks, { smart: 'today', sort: 'due' })
   return (
-    <Card title={`오늘 · 일정 ${evs.length} · 할 일 ${due.length}`} action={<button className="tiny muted" onClick={goto('tasks', 'list')}>전체 →</button>}>
+    <Card title={`오늘 · 일정 ${evs.length} · 할 일 ${openCount(due)}`} action={<button className="tiny muted" onClick={goto('tasks', 'list')}>전체 →</button>}>
       <div className="today-w">
         <div className="list">
           {evs.map((e) => (
@@ -114,8 +114,8 @@ function TodayList() {
           {!evs.length && <div className="small muted" style={{ padding: '8px 0' }}>일정 없음</div>}
         </div>
         <div className="list">
-          {due.slice(0, 8).map((t) => <TaskItem key={t.id} t={t} subjects={subjects} projects={projects} />)}
-          {!due.length && <Empty>오늘 할 일을 모두 끝냈어요 🎉</Empty>}
+          {due.slice(0, 10).map((t) => <TaskItem key={t.id} t={t} subjects={subjects} projects={projects} />)}
+          {!openCount(due) && <Empty>오늘 할 일을 모두 끝냈어요 🎉</Empty>}
         </div>
       </div>
     </Card>

@@ -107,7 +107,11 @@ if (!data) {
   const mins = sessions.reduce((a, s) => a + (s.dur || 0), 0)
   const tasksAll = alive(data.tasks.tasks).filter((x) => !x.archived)
   const todo = tasksAll.filter((x) => !x.done && x.due && x.due <= today).sort((a, b) => (b.priority || 0) - (a.priority || 0))
-  const done = tasksAll.filter((x) => x.done && x.doneAt && new Date(x.doneAt).toDateString() === d0.toDateString()).length
+  const doneT = tasksAll.filter((x) => x.done && x.doneAt && new Date(x.doneAt).toDateString() === d0.toDateString())
+  const done = doneT.length
+  // 오늘 할 일: 남은 것 먼저, 오늘 완료한 것은 줄 그어 아래에
+  const items = [...todo, ...doneT.filter((x) => x.due && x.due <= today)]
+  const strike = (s) => Array.from(s).map((c) => c + '\u0336').join('')
   const ddAll = alive(data.study.ddays).filter((d) => d.date >= today).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || a.date.localeCompare(b.date))
   const ddN = (d) => Math.round((new Date(d.date) - new Date(today)) / 86400000)
   const ddT = (d) => (ddN(d) === 0 ? 'D-DAY' : 'D-' + ddN(d))
@@ -128,14 +132,14 @@ if (!data) {
     const img = parent.addImage(line(mins / goal, width)); img.imageSize = new Size(width, 3)
   }
   const todoList = (parent, n, gap = fam === 'large' ? 7 : 5) => {
-    for (const x of todo.slice(0, n)) {
+    for (const x of items.slice(0, n)) {
       const r = parent.addStack(); r.centerAlignContent(); r.spacing = 8
-      t(r, x.priority >= 3 ? '•' : '–', tw(11), x.priority >= 3 ? GOLD : SOFT)
-      t(r, x.title, tw(12), INK)
+      if (x.done) { t(r, '✓', tw(10), SOFT); t(r, strike(x.title), tw(12), SOFT) }
+      else { t(r, x.priority >= 3 ? '•' : '–', tw(11), x.priority >= 3 ? GOLD : SOFT); t(r, x.title, tw(12), INK) }
       parent.addSpacer(gap)
     }
-    if (!todo.length) t(parent, 'All clear.', tw(12), SOFT)
-    else if (todo.length > n) t(parent, '+ ' + (todo.length - n) + ' more', tw(10), SOFT)
+    if (!items.length) t(parent, 'All clear.', tw(12), SOFT)
+    else if (items.length > n) t(parent, '+ ' + (items.length - n) + ' more', tw(10), SOFT)
   }
   const ddRow = (parent, big = 13) => { if (!dd) return; const r = parent.addStack(); r.centerAlignContent(); t(r, ddTxt, tw(big), GOLD); r.addSpacer(6); t(r, dd.title, tw(10), SOFT) }
   const subBars = (parent, width, n) => {

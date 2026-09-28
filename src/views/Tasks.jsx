@@ -4,7 +4,7 @@ import { addTask, toggleTask } from '../store/actions.js'
 import TaskQuickInput from '../components/TaskQuickInput.jsx'
 import { AddInput, Empty, Icon, openSheet, openMenu, toast } from '../components/ui.jsx'
 import TaskItem from '../components/TaskItem.jsx'
-import { SMART, applyFilter, quadrant } from './tasks/filter.js'
+import { SMART, applyFilter, quadrant, openCount } from './tasks/filter.js'
 import { setParams } from '../nav.js'
 import { longPress } from '../lib/drag.js'
 import { today } from '../engine/date.js'
@@ -62,7 +62,7 @@ function TaskList({ params }) {
     <div className="col">
       <TaskQuickInput key={f.smart + (f.subjectId || '')} defaultDate={f.smart === 'today' ? 'today' : f.smart === 'tomorrow' ? 'tomorrow' : ''} defaults={{ subjectId: f.subjectId || null, projectId: f.projectId || null }} />
       <div className="scroll-x"><div className="row" style={{ gap: 6, paddingBottom: 2 }}>
-        {SMART.map(([k, l]) => <button key={k} className={'chip' + ((f.smart || 'all') === k && !view ? ' on' : '')} onClick={() => set({ smart: k })}>{l} <span className="muted tiny">{applyFilter(tasks, { smart: k }).length}</span></button>)}
+        {SMART.map(([k, l]) => <button key={k} className={'chip' + ((f.smart || 'all') === k && !view ? ' on' : '')} onClick={() => set({ smart: k })}>{l} <span className="muted tiny">{k === 'done' ? applyFilter(tasks, { smart: k }).length : openCount(applyFilter(tasks, { smart: k }))}</span></button>)}
       </div></div>
       {views.length > 0 && (
         <div className="scroll-x"><div className="row" style={{ gap: 6 }}>
@@ -110,7 +110,7 @@ const QUAD = [
   [3, '빨리 끝내기', '긴급', 'var(--c3)'], [4, '나중에', '여유', 'var(--c2)'],
 ]
 function Matrix() {
-  const tasks = useColl('tasks').filter((t) => !t.done && !t.archived)
+  const tasks = useColl('tasks').filter((t) => !t.archived).sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0))
   const subjects = useColl('subjects')
   return (
     <div className="matrix-wrap">
