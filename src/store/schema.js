@@ -12,6 +12,8 @@ export const COLL_NAMES = Object.keys(COLLECTIONS)
 export const GIST_FILES = [...new Set(Object.values(COLLECTIONS))]
 
 export const PALETTE = ['#4a5a78', '#7a8660', '#a99bc4', '#c9a0a8', '#8a9bb5', '#b5a47a', '#7fa3a0', '#b58a7a', '#9a8fb0', '#8c8c86']
+// 설정 색 선택용: 저채도 파스텔·모노톤
+export const SOFT_PALETTE = [...PALETTE, '#9fb0a5', '#a9b59c', '#b4acc9', '#cfb2b7', '#c2b49c', '#93a3b8', '#d1b3b3', '#9aa3ad', '#a8a39b', '#6b6d72']
 
 export const DEFAULT_WIDGETS = [
   { id: 'w1', type: 'now', size: 'm' },

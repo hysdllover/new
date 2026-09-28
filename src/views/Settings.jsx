@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSettings, setSettings, useColl, put, remove, patch, exportJSON, importJSON, uid } from '../store/store.js'
 import { PRESETS, FONTS } from '../theme/theme.js'
-import { PALETTE } from '../store/schema.js'
+import { PALETTE, SOFT_PALETTE } from '../store/schema.js'
 import { Card, Seg, Toggle, Field, Icon, toast, confirmSheet, openSheet } from '../components/ui.jsx'
 import { ColorPick, TimeInput, SubjectSelect } from '../components/common.jsx'
 import { useSyncStatus, connect, disconnect, syncNow, gistInfo } from '../sync/sync.js'
@@ -28,8 +28,8 @@ export default function Settings() {
           <Field label="색상 프리셋">
             <div className="row wrap" style={{ gap: 6 }}>
               {Object.entries(PRESETS).map(([k, p]) => (
-                <button key={k} className={'chip' + (th.preset === k && !th.accent ? ' on' : '')} onClick={() => setTheme({ preset: k, accent: null })}>
-                  <span className="dot" style={{ background: p.accent }} /><span className="dot" style={{ background: p.c3 }} />{p.name}
+                <button key={k} className={'chip' + (th.preset === k && !th.accent ? ' on' : '')} onClick={() => setTheme({ preset: k, accent: null, c2: null, c3: null, c4: null })}>
+                  {[p.accent, p.c2, p.c3, p.c4].map((c, i) => <span key={i} className="dot" style={{ background: c, marginRight: -2 }} />)}<span style={{ marginLeft: 4 }}>{p.name}</span>
                 </button>
               ))}
             </div>
@@ -37,9 +37,18 @@ export default function Settings() {
           <Field label="포인트 색 직접 선택">
             <div className="row">
               <input type="color" value={th.accent || PRESETS[th.preset]?.accent || '#4a5a78'} onChange={(e) => setTheme({ accent: e.target.value })} />
-              <ColorPick value={th.accent} onChange={(c) => setTheme({ accent: c })} colors={PALETTE} />
+              <ColorPick value={th.accent} onChange={(c) => setTheme({ accent: c })} colors={SOFT_PALETTE} />
             </div>
           </Field>
+          {[['c2', '그래프·달력 색'], ['c3', '보조 색 1'], ['c4', '보조 색 2']].map(([k, l]) => (
+            <Field key={k} label={l}>
+              <div className="row">
+                <input type="color" value={th[k] || PRESETS[th.preset]?.[k] || '#7a8660'} onChange={(e) => setTheme({ [k]: e.target.value })} />
+                <ColorPick value={th[k]} onChange={(c) => setTheme({ [k]: c })} colors={SOFT_PALETTE} />
+                {th[k] && <button className="chip" onClick={() => setTheme({ [k]: null })}>기본</button>}
+              </div>
+            </Field>
+          ))}
           <Field label="화면 모드"><Seg value={th.mode} onChange={(v) => setTheme({ mode: v })} options={[['system', '시스템'], ['light', '라이트'], ['dark', '다크']]} /></Field>
           <Field label="폰트">
             <select className="input" value={th.font} onChange={(e) => setTheme({ font: e.target.value })}>
