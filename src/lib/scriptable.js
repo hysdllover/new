@@ -135,9 +135,9 @@ if (!data) {
 
   const studyBig = (parent, size, width) => {
     const r = parent.addStack(); r.bottomAlignContent()
-    t(r, hm(mins), thin(size), INK)
-    r.addSpacer(6); t(r, 'of ' + hm(goal), tw(size * 0.32), SOFT)
-    r.addSpacer(); t(r, pct + '%', tw(size * 0.32), GOLD)
+    t(r, hm(mins), thin(size), INK).minimumScaleFactor = 0.5 // 폭이 모자라면 잘리지 않고 작아짐
+    r.addSpacer(6); t(r, 'of ' + hm(goal), tw(size * 0.32), SOFT).minimumScaleFactor = 0.6
+    r.addSpacer(); t(r, pct + '%', tw(size * 0.32), GOLD).minimumScaleFactor = 0.6
     parent.addSpacer(6)
     const img = parent.addImage(line(mins / goal, width)); img.imageSize = new Size(width, 3)
   }
@@ -146,12 +146,13 @@ if (!data) {
       const r = parent.addStack(); r.centerAlignContent(); r.spacing = 8
       if (x.done) { t(r, '✓', tw(10), SOFT); strike(r, x.title, tw(12)) }
       else { t(r, x.priority >= 3 ? '•' : '–', tw(11), x.priority >= 3 ? GOLD : SOFT); t(r, x.title, tw(12), INK) }
+      r.addSpacer() // 줄을 꽉 채워 왼쪽 정렬 (스택은 기본 가운데 정렬)
       parent.addSpacer(gap)
     }
     if (!items.length) t(parent, 'All clear.', tw(12), SOFT)
     else if (items.length > n) t(parent, '+ ' + (items.length - n) + ' more', tw(10), SOFT)
   }
-  const ddRow = (parent, big = 13) => { if (!dd) return; const r = parent.addStack(); r.centerAlignContent(); t(r, ddTxt, tw(big), GOLD); r.addSpacer(6); t(r, dd.title, tw(10), SOFT) }
+  const ddRow = (parent, big = 13) => { if (!dd) return; const r = parent.addStack(); r.centerAlignContent(); t(r, ddTxt, tw(big), GOLD); r.addSpacer(6); t(r, dd.title, tw(10), SOFT); r.addSpacer() }
   const subBars = (parent, width, n) => {
     const max = subMins[0]?.m || 1
     for (const x of subMins.slice(0, n)) {
@@ -220,6 +221,7 @@ if (!data) {
       L.addSpacer(); studyBig(L, 30, 140); L.addSpacer()
       row.addSpacer(16); vrule(row, 100); row.addSpacer(16)
       const R = row.addStack(); R.layoutVertically(); subBars(R, inner - 173, 3)
+      row.addSpacer()
     } else {
       studyBig(w, fam === 'small' ? 28 : 40, inner)
       w.addSpacer(fam === 'small' ? 10 : 18)
@@ -237,7 +239,7 @@ if (!data) {
     if (dd) {
       t(w, ddTxt, thin(fam === 'small' ? 40 : 52), INK)
       w.addSpacer(2)
-      const r = w.addStack(); r.centerAlignContent(); t(r, dd.title, tw(fam === 'small' ? 12 : 14), GOLD); r.addSpacer(8); t(r, dd.date.slice(5).replace('-', '.'), tw(10), SOFT)
+      const r = w.addStack(); r.centerAlignContent(); t(r, dd.title, tw(fam === 'small' ? 12 : 14), GOLD); r.addSpacer(8); t(r, dd.date.slice(5).replace('-', '.'), tw(10), SOFT); r.addSpacer()
     } else t(w, 'No D-day.', tw(14), SOFT)
     if (fam !== 'small' && quote) { w.addSpacer(10); t(w, '— ' + quote, tw(12), SOFT, 2) }
     if (fam === 'large' && ddAll.length > 1) {
@@ -257,7 +259,7 @@ if (!data) {
       t(L, hm(sum.total), thin(28), INK); L.addSpacer(4)
       t(L, sum.days + ' DAYS', label(8), SOFT); L.addSpacer(2)
       t(L, sum.hit + ' GOAL', label(8), GOLD); L.addSpacer()
-      row.addSpacer(14)
+      row.addSpacer()
     } else if (fam === 'small') {
       monthGrid(w, 16, 3, false)
     } else {
@@ -282,9 +284,9 @@ if (!data) {
     ddRow(w)
   } else if (fam === 'medium') {
     const row = w.addStack()
-    const L = row.addStack(); L.layoutVertically(); L.size = new Size(128, 134); L.url = link('study.records')
+    const L = row.addStack(); L.layoutVertically(); L.size = new Size(140, 134); L.url = link('study.records')
     t(L, dateStr, label(9), SOFT); L.addSpacer()
-    studyBig(L, 28, 128)
+    studyBig(L, 28, 140)
     L.addSpacer()
     ddRow(L, 12)
     row.addSpacer(16); vrule(row, 134); row.addSpacer(16)
@@ -292,6 +294,7 @@ if (!data) {
     cap(R, 'TODAY'); R.addSpacer(10)
     todoList(R, 4)
     R.addSpacer()
+    row.addSpacer() // 줄을 위젯 폭만큼 채워 가운데로 밀리지 않게
   } else {
     const top = w.addStack(); top.centerAlignContent()
     t(top, dateStr, label(9), SOFT); top.addSpacer()
@@ -305,6 +308,7 @@ if (!data) {
     S.addSpacer(7)
     const subs = S.addStack(); subs.spacing = 12
     for (const x of subMins) t(subs, x.s.name + ' ' + hm(x.m), tw(10), SOFT)
+    subs.addSpacer()
     w.addSpacer(12); rule(w, inner); w.addSpacer(12)
     const T = w.addStack(); T.layoutVertically(); T.url = link('tasks')
     const h = T.addStack(); cap(h, 'TODAY'); h.addSpacer(); t(h, done + ' DONE', label(8), GOLD)
