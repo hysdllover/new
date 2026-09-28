@@ -4,6 +4,7 @@ import { getState, replaceColl, onChange, patch, settings, list } from '../store
 import { COLLECTIONS, GIST_FILES } from '../store/schema.js'
 import { mergeColl, stableFile } from './merge.js'
 import { blobToDataUrl, setRemoteRaw, MAX_FILE } from '../lib/files.js'
+import { eventsOn } from '../engine/scheduler.js'
 import { listFonts, getFontBlob, importFont, removeFont, markSynced, pendingDeletes, clearDeletes, SYNC_FONT_MAX } from '../lib/fonts.js'
 
 // GitHub Gist 기반 iPhone ↔ iPad 동기화
@@ -120,6 +121,18 @@ async function syncFonts(gist, patchFiles) {
 // 위젯 전용 작은 gist — 홈 화면 위젯(Scriptable)이 빠르게 받을 수 있게 필요한 데이터만
 const WIDGET_DESC = 'study-dashboard-widget'
 export const widgetGistId = () => ls.get('widget_gist')
+// 캘린더 위젯용: 지난달 말~앞으로 45일 일정(반복 포함)을 날짜별로 펼침
+function calPayload() {
+  if (excluded().has('events')) return {}
+  const ymd = (x) => x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0')
+  const d = new Date(); d.setDate(1); d.setDate(d.getDate() - 7)
+  const out = {}
+  for (let i = 0; i < 90; i++, d.setDate(d.getDate() + 1)) {
+    const evs = eventsOn(ymd(d))
+    if (evs.length) out[ymd(d)] = evs.map((e) => ({ t: e.title || '', s: e.start ?? null, c: e.color || null }))
+  }
+  return out
+}
 function widgetPayload() {
   const st = getState()
   const keep = (c, fn = () => true) => Object.fromEntries(Object.values(st[c] || {}).filter((r) => !r.deleted && fn(r)).map((r) => [r.id, r]))
@@ -130,6 +143,7 @@ function widgetPayload() {
   return JSON.stringify({
     tasks: { tasks: keep('tasks', (t) => !t.archived && (!t.done || (t.doneAt && new Date(t.doneAt).getTime() > recent))) },
     study: { subjects: keep('subjects'), sessions: keep('sessions', (x) => x.date >= from), ddays: keep('ddays') },
+    cal: calPayload(),
     settings: { settings: { main: { goalDaily: main.goalDaily, weekStart: main.weekStart, widgetFont: main.widgetFont } }, quotes: keep('quotes') },
   })
 }

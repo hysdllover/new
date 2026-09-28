@@ -335,6 +335,9 @@ button.greet { display: block; width: 100%; text-align: left; }
 .dw-todo { display: flex; gap: 8px; margin-bottom: 6px; min-width: 0; font-size: 14px; }
 .dw-s .dw-todo { font-size: 13px; }
 .dw-l .dw-todo { font-size: 15px; }
+.dw-cday { display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 99px; font-size: 7.5px; line-height: 1; }
+.dw-cday i { font-style: normal; font-size: 7px; height: 7px; }
+.dw-l .dw-cday { font-size: 10px; }
 .dw-bars { position: relative; display: flex; align-items: flex-end; gap: 6px; }
 .dw-bars i { flex: 1; background: var(--gold); border-radius: 2px; }
 .dw-bars b { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--rule); }

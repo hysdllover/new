@@ -1,7 +1,7 @@
 import { pickQuote } from './quote.js'
 // iPhone·iPad 홈 화면·잠금 화면 위젯 (Scriptable) — 얇은 단일 서체 · 모노톤
 // 유형: 위젯 편집 › Parameter 에 공부 · 할일 · 디데이 · 달력 · 다짐 (비우면 기본)
-export const WIDGET_KINDS = [['', '기본'], ['공부', '공부'], ['할일', '할 일'], ['디데이', 'D-day'], ['달력', '달력'], ['다짐', '다짐']]
+export const WIDGET_KINDS = [['', '기본'], ['공부', '공부'], ['할일', '할 일'], ['디데이', 'D-day'], ['달력', '공부 달력'], ['캘린더', '캘린더'], ['다짐', '다짐']]
 
 export function buildScript({ token, gistId, widgetGist, appUrl }) {
   return `// Study — 홈 화면·잠금 화면 위젯 (Scriptable)
@@ -28,7 +28,7 @@ const label = (s) => F(s, 'Regular')
 const PARAM = String(args.widgetParameter || '').replace(/\\s/g, '').toLowerCase()
 // 디데이2, 디데이3 … → 두 번째·세 번째 D-day
 const DDI = Math.max(0, (+(PARAM.match(/(\\d)$/) || [])[1] || 1) - 1)
-const KIND = { '공부': 'study', '할일': 'todo', '디데이': 'dday', 'd-day': 'dday', '달력': 'month', '다짐': 'quote', study: 'study', todo: 'todo', dday: 'dday', month: 'month', quote: 'quote' }[PARAM.replace(/\\d$/, '')] || 'default'
+const KIND = { '공부': 'study', '할일': 'todo', '디데이': 'dday', 'd-day': 'dday', '달력': 'month', '캘린더': 'cal', '일정': 'cal', calendar: 'cal', '다짐': 'quote', study: 'study', todo: 'todo', dday: 'dday', month: 'month', quote: 'quote' }[PARAM.replace(/\\d$/, '')] || 'default'
 const pickQuote = ${pickQuote.toString()}
 const link = (path) => APP + (path ? '?go=' + path : '')
 
@@ -93,7 +93,7 @@ const data = await load()
 const fam = config.widgetFamily || 'large'
 const lock = fam.startsWith('accessory')
 const w = new ListWidget()
-w.url = link(KIND === 'todo' ? 'tasks' : KIND === 'default' ? '' : 'study.records')
+w.url = link(KIND === 'todo' ? 'tasks' : KIND === 'cal' ? 'planner.month' : KIND === 'default' ? '' : 'study.records')
 w.refreshAfterDate = new Date(Date.now() + 15 * 60000)
 const P = fam === 'small' ? 16 : 18
 if (!lock) { w.backgroundColor = BG; w.setPadding(P, P, P, P) }
@@ -324,6 +324,67 @@ if (!data) {
       w.addSpacer(4)
       const r = w.addStack(); r.centerAlignContent()
       t(r, 'TOTAL ' + hm(sum.total), label(8), INK); r.addSpacer(); t(r, sum.days + ' DAYS', label(8), SOFT); r.addSpacer(); t(r, sum.hit + ' GOAL', label(8), GOLD)
+    }
+  } else if (KIND === 'cal') {
+    // ── 캘린더: 이번 달 + 다가오는 일정 ──
+    const cal = data.cal || {}
+    const y = d0.getFullYear(), m = d0.getMonth(), n = new Date(y, m + 1, 0).getDate()
+    const ws = st.weekStart ?? 1, lead = (new Date(y, m, 1).getDay() - ws + 7) % 7
+    const key = (dd2) => y + '-' + pad(m + 1) + '-' + pad(dd2)
+    const dueOn = (k) => tasksAll.filter((x) => x.due === k && !x.done)
+    const rows = Math.ceil((lead + n) / 7)
+    const grid = (parent, cell, cellH, gap, numSize, showWd = true) => {
+      if (showWd) {
+        const hdr = parent.addStack(); hdr.spacing = gap
+        for (let i = 0; i < 7; i++) { const c = hdr.addStack(); c.size = new Size(cell, 10); c.centerAlignContent(); t(c, ['S', 'M', 'T', 'W', 'T', 'F', 'S'][(i + ws) % 7], label(7), SOFT) }
+        parent.addSpacer(gap)
+      }
+      let day = 1 - lead
+      while (day <= n) {
+        const row = parent.addStack(); row.spacing = gap
+        for (let i = 0; i < 7; i++, day++) {
+          const c = row.addStack(); c.size = new Size(cell, cellH); c.layoutVertically(); c.centerAlignContent()
+          if (day < 1 || day > n) continue
+          const k = key(day), evs = cal[k] || [], has = evs.length || dueOn(k).length
+          if (k === today) { c.backgroundColor = INK; c.cornerRadius = Math.min(cell, cellH) / 2 }
+          const a = c.addStack(); a.addSpacer(); t(a, day, label(numSize), k === today ? BG : has ? INK : SOFT); a.addSpacer()
+          const b = c.addStack(); b.addSpacer(); t(b, has ? '•' : ' ', label(numSize - 2), k === today ? BG : GOLD); b.addSpacer()
+        }
+        parent.addSpacer(gap)
+      }
+    }
+    // 다가오는 일정·할 일 (오늘부터 14일)
+    const agenda = []
+    for (let i = 0; i < 14 && agenda.length < 12; i++) {
+      const dt = new Date(d0); dt.setDate(dt.getDate() + i); const k = ymd(dt)
+      for (const e of cal[k] || []) agenda.push({ k, dt, time: e.s == null ? 'ALL' : pad(Math.floor(e.s / 60) % 24) + ':' + pad(e.s % 60), title: e.t })
+      for (const x of dueOn(k)) agenda.push({ k, dt, time: x.dueTime == null ? '–' : pad(Math.floor(x.dueTime / 60)) + ':' + pad(x.dueTime % 60), title: x.title, task: true })
+    }
+    const agendaList = (parent, count) => {
+      let last = ''
+      for (const a of agenda.slice(0, count)) {
+        if (a.k !== last) { last = a.k; const h = parent.addStack(); t(h, a.k === today ? 'TODAY' : DAY[a.dt.getDay()] + ' ' + a.dt.getDate(), label(8), a.k === today ? GOLD : SOFT); h.addSpacer(); parent.addSpacer(3) }
+        const r = parent.addStack(); r.centerAlignContent(); r.spacing = 8
+        const tm = r.addStack(); tm.size = new Size(34, 0); t(tm, a.time, tw(10), SOFT); tm.addSpacer()
+        t(r, a.title, tw(fam === 'large' ? 14 : 13), a.task ? SOFT : INK).minimumScaleFactor = 0.85; r.addSpacer()
+        parent.addSpacer(5)
+      }
+      if (!agenda.length) t(parent, 'No plans.', tw(13), SOFT)
+    }
+    const h = w.addStack(); h.centerAlignContent(); t(h, MON[m] + ' ' + y, label(9), SOFT); h.addSpacer(); if (fam !== 'small') t(h, dateStr, label(8), SOFT)
+    w.addSpacer(8)
+    if (fam === 'small') {
+      grid(w, 16, rows > 5 ? 12 : 14, 2, 7, rows < 6)
+    } else if (fam === 'medium') {
+      const row = w.addStack()
+      const L = row.addStack(); L.layoutVertically(); grid(L, 17, rows > 5 ? 14 : 16, 2, 7, false)
+      row.addSpacer(14); vrule(row, 110); row.addSpacer(14)
+      const R = row.addStack(); R.layoutVertically(); agendaList(R, 4); R.addSpacer()
+      row.addSpacer()
+    } else {
+      grid(w, (inner - 6 * 4) / 7, rows > 5 ? 23 : 26, 3, 10)
+      w.addSpacer(4); rule(w, inner); w.addSpacer(8)
+      agendaList(w, rows > 5 ? 3 : 4)
     }
   } else if (KIND === 'quote') {
     // ── 다짐 ──

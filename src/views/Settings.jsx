@@ -8,6 +8,7 @@ import { useSyncStatus, connect, disconnect, syncNow, gistInfo } from '../sync/s
 import { enablePush, disablePush, pushState, testLocal, isStandalone, pushSupported } from '../lib/push.js'
 import { buildScript, WIDGET_KINDS } from '../lib/scriptable.js'
 import { pickQuote } from '../lib/quote.js'
+import { eventsOn } from '../engine/scheduler.js'
 import { sortTasks } from './tasks/filter.js'
 import { download } from '../lib/files.js'
 import { useMyFonts, addFont, removeFont, fontFamily, loadAllFonts, SYNC_FONT_MAX } from '../lib/fonts.js'
@@ -443,6 +444,34 @@ function WidgetPreview() {
     return <div><div className="dw-bars" style={{ height: h }}>{sw.last7.map((x, i) => <i key={i} style={{ height: Math.max(2, x.m / max * h), opacity: i === 6 ? 1 : .35 + .4 * Math.min(1, x.m / goal) }} />)}<b style={{ bottom: goal / max * h }} /></div>
       <div className="dw-bars-l">{sw.last7.map((x, i) => <span key={i} className={i === 6 ? 'dw-gold' : ''}>{'SMTWTFS'[x.wd]}</span>)}</div></div>
   }
+  // 캘린더 유형: 이번 달 + 다가오는 일정
+  const MONS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+  const ymdOf = (x) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`
+  const hasPlan = (k) => eventsOn(k).length > 0 || tasks.some((t) => t.due === k && !t.done && !t.archived)
+  const calGrid = (cell, cellH, gap, wd) => {
+    const y = now.getFullYear(), mo = now.getMonth(), n = new Date(y, mo + 1, 0).getDate(), ws = st.weekStart ?? 1
+    const lead = (new Date(y, mo, 1).getDay() - ws + 7) % 7
+    return (
+      <div className="dw-cal" style={{ gridTemplateColumns: `repeat(7, ${cell}px)`, gap }}>
+        {wd && Array.from({ length: 7 }, (_, i) => <span key={'w' + i} className="dw-cap" style={{ textAlign: 'center', fontSize: 7 }}>{'SMTWTFS'[(i + ws) % 7]}</span>)}
+        {Array.from({ length: lead }, (_, i) => <span key={'e' + i} />)}
+        {Array.from({ length: n }, (_, i) => { const k = ymdOf(new Date(y, mo, i + 1)), has = hasPlan(k), on = k === d
+          return <span key={i} className="dw-cday" style={{ height: cellH, background: on ? 'var(--ink)' : null, color: on ? 'var(--bg)' : has ? 'var(--ink)' : 'var(--soft)' }}>{i + 1}<i style={{ color: on ? 'var(--bg)' : 'var(--gold)' }}>{has ? '•' : ''}</i></span> })}
+      </div>
+    )
+  }
+  const agenda = (count) => {
+    const out = []
+    for (let i = 0; i < 14 && out.length < count; i++) {
+      const x = new Date(); x.setDate(x.getDate() + i); const k = ymdOf(x)
+      for (const e of eventsOn(k)) out.push({ k, x, time: e.start == null ? 'ALL' : fmtTime(e.start), title: e.title })
+      for (const t of tasks.filter((t) => t.due === k && !t.done && !t.archived)) out.push({ k, x, time: t.dueTime == null ? '–' : fmtTime(t.dueTime), title: t.title, task: true })
+    }
+    let last = ''
+    return <>{out.slice(0, count).map((a, i) => <div key={i}>{a.k !== last && (last = a.k) && <div className={'dw-cap' + (a.k === d ? ' dw-gold' : '')} style={{ margin: '2px 0 3px' }}>{a.k === d ? 'TODAY' : ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][a.x.getDay()] + ' ' + a.x.getDate()}</div>}
+      <div className="dw-todo"><span className="dw-soft" style={{ width: 30, flexShrink: 0 }}>{a.time}</span><span className="ellipsis" style={a.task ? { color: 'var(--soft)' } : null}>{a.title}</span></div></div>)}
+      {!out.length && <div className="dw-soft">No plans.</div>}</>
+  }
   const V = {
     '': [
       <><div className="dw-cap">{dateStr}</div><div className="grow" />{big(26)}<div className="grow" />{ddRow}</>,
@@ -475,6 +504,11 @@ function WidgetPreview() {
       <><div className="dw-cap">{['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][now.getMonth()]} {now.getFullYear()}</div><div style={{ height: 8 }} />{month(16)}</>,
       <><div className="col" style={{ gap: 0, flex: 1 }}><div className="dw-cap">{dateStr}</div><div className="grow" /><div style={{ fontSize: 28, fontWeight: 100 }}>{hm(mins)}</div><div className="dw-cap dw-gold">TODAY</div></div>{month(20)}</>,
       <><div className="row between"><span className="dw-cap">{dateStr}</span><span className="dw-cap dw-gold">TODAY {hm(mins)}</span></div><div style={{ height: 8 }} />{month(39, true)}</>,
+    ],
+    캘린더: [
+      <><div className="dw-cap">{MONS[now.getMonth()]} {now.getFullYear()}</div><div style={{ height: 6 }} />{calGrid(16, 13, 2, true)}</>,
+      <><div className="col" style={{ gap: 0, flexShrink: 0 }}><div className="dw-cap">{MONS[now.getMonth()]} {now.getFullYear()}</div><div style={{ height: 6 }} />{calGrid(17, 14, 2, false)}</div><div className="dw-vr" /><div className="col" style={{ gap: 0, flex: 1, minWidth: 0 }}>{agenda(4)}</div></>,
+      <><div className="row between"><span className="dw-cap">{MONS[now.getMonth()]} {now.getFullYear()}</span><span className="dw-cap">{dateStr}</span></div><div style={{ height: 6 }} />{calGrid(39, 24, 3, true)}<div className="dw-hr" style={{ margin: '6px 0 8px' }} />{agenda(3)}</>,
     ],
     다짐: [14, 17, 22].map((sz) => <><div className="dw-cap">{dateStr}</div><div className="grow" /><div style={{ fontSize: sz, lineHeight: 1.45 }}>{quote || '앱에서 다짐을 적어 보세요'}</div><div className="grow" />{ddRow}</>),
   }
