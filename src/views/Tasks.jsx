@@ -4,7 +4,7 @@ import { addTask, toggleTask } from '../store/actions.js'
 import TaskQuickInput from '../components/TaskQuickInput.jsx'
 import { AddInput, Empty, Icon, openSheet, openMenu, toast } from '../components/ui.jsx'
 import TaskItem from '../components/TaskItem.jsx'
-import { SMART, applyFilter, quadrant, doneToday, openCount } from './tasks/filter.js'
+import { SMART, applyFilter, quadrant, openCount } from './tasks/filter.js'
 import { setParams } from '../nav.js'
 import { longPress } from '../lib/drag.js'
 import { today } from '../engine/date.js'
@@ -110,7 +110,7 @@ const QUAD = [
   [3, '빨리 끝내기', '긴급', 'var(--c3)'], [4, '나중에', '여유', 'var(--c2)'],
 ]
 function Matrix() {
-  const tasks = useColl('tasks').filter((t) => !t.archived && (!t.done || doneToday(t))).sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0))
+  const tasks = useColl('tasks').filter((t) => !t.archived).sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0))
   const subjects = useColl('subjects')
   return (
     <div className="matrix-wrap">
