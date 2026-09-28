@@ -234,20 +234,55 @@ if (!data) {
       t(w, KIND === 'dday' && dd ? dd.title : todo[0] ? '– ' + todo[0].title : (dd ? dd.title : 'All clear.'), tw(11))
     }
   } else if (KIND === 'study') {
-    // ── 공부 ──
+    // ── 공부 (시간 위주) ──
+    const dayMins = {}
+    for (const x of allSess) dayMins[x.date] = (dayMins[x.date] || 0) + (x.dur || 0)
+    const ymdOff = (k) => { const d = new Date(d0); d.setDate(d.getDate() - k); return ymd(d) }
+    const last7 = [6, 5, 4, 3, 2, 1, 0].map((k) => ({ d: ymdOff(k), m: dayMins[ymdOff(k)] || 0, wd: new Date(ymdOff(k) + 'T00:00').getDay() }))
+    const ws = st.weekStart ?? 1, back = (d0.getDay() - ws + 7) % 7
+    let week = 0; for (let k = 0; k <= back; k++) week += dayMins[ymdOff(k)] || 0
+    let streak = 0; for (let k = dayMins[today] ? 0 : 1; dayMins[ymdOff(k)]; k++) streak++
+    const avg = Math.round(last7.reduce((a, x) => a + x.m, 0) / 7)
+    // 최근 7일 막대 (오늘은 진하게, 목표선 점선)
+    const bars = (parent, width, height) => {
+      const c = new DrawContext(); c.size = new Size(width, height); c.opaque = false; c.respectScreenScale = true
+      const max = Math.max(goal, ...last7.map((x) => x.m)), bw = (width - 6 * 6) / 7
+      const gy = height - (goal / max) * height
+      c.setFillColor(new Color(dark() ? '#3a3935' : '#d9d4ca')); for (let x = 0; x < width; x += 4) c.fillRect(new Rect(x, gy, 2, 0.6))
+      last7.forEach((x, i) => {
+        const h = Math.max(1.5, (x.m / max) * height)
+        c.setFillColor(new Color(dark() ? '#c9b489' : '#b39d74', i === 6 ? 1 : 0.35 + 0.4 * Math.min(1, x.m / goal)))
+        const p = new Path(); p.addRoundedRect(new Rect(i * (bw + 6), height - h, bw, h), 2, 2); c.addPath(p); c.fillPath()
+      })
+      const img = parent.addImage(c.getImage()); img.imageSize = new Size(width, height)
+      parent.addSpacer(3)
+      const lr = parent.addStack(); lr.spacing = 6
+      last7.forEach((x, i) => { const k = lr.addStack(); k.size = new Size((width - 36) / 7, 10); k.centerAlignContent(); t(k, ['S', 'M', 'T', 'W', 'T', 'F', 'S'][x.wd], label(7), i === 6 ? GOLD : SOFT) })
+    }
+    const stat = (parent, k, v, color = INK) => { const c = parent.addStack(); c.layoutVertically(); t(c, k, label(7), SOFT); c.addSpacer(2); t(c, v, tw(13), color).minimumScaleFactor = 0.7 }
     const r = w.addStack(); r.centerAlignContent(); cap(r, 'STUDY'); r.addSpacer(); t(r, dateStr, label(8), SOFT)
-    w.addSpacer(fam === 'small' ? 10 : 12)
-    if (fam === 'medium') {
+    w.addSpacer(fam === 'small' ? 8 : 10)
+    if (fam === 'small') {
+      studyBig(w, 30, inner)
+      w.addSpacer()
+      const s2 = w.addStack(); stat(s2, 'WEEK', hm(week)); s2.addSpacer(); stat(s2, 'STREAK', streak + 'd', GOLD)
+    } else if (fam === 'medium') {
       const row = w.addStack()
-      const L = row.addStack(); L.layoutVertically(); L.size = new Size(140, 100)
-      L.addSpacer(); studyBig(L, 30, 140); L.addSpacer()
-      row.addSpacer(16); vrule(row, 100); row.addSpacer(16)
-      const R = row.addStack(); R.layoutVertically(); subBars(R, inner - 173, 3)
+      const L = row.addStack(); L.layoutVertically(); L.size = new Size(150, 104)
+      studyBig(L, 34, 150); L.addSpacer()
+      const s2 = L.addStack(); stat(s2, 'WEEK', hm(week)); s2.addSpacer(); stat(s2, 'STREAK', streak + 'd', GOLD); s2.addSpacer()
+      row.addSpacer(16); vrule(row, 104); row.addSpacer(16)
+      const R = row.addStack(); R.layoutVertically()
+      bars(R, inner - 183, 78); R.addSpacer()
       row.addSpacer()
     } else {
-      studyBig(w, fam === 'small' ? 28 : 40, inner)
-      w.addSpacer(fam === 'small' ? 10 : 18)
-      subBars(w, inner, fam === 'small' ? 2 : 6)
+      studyBig(w, 44, inner)
+      w.addSpacer(14)
+      const s2 = w.addStack(); stat(s2, 'WEEK', hm(week)); s2.addSpacer(); stat(s2, '7-DAY AVG', hm(avg)); s2.addSpacer(); stat(s2, 'STREAK', streak + ' days', GOLD)
+      w.addSpacer(14)
+      bars(w, inner, 70)
+      w.addSpacer(14); rule(w, inner); w.addSpacer(10)
+      subBars(w, inner, 3)
     }
   } else if (KIND === 'todo') {
     // ── 할 일 ──

@@ -335,6 +335,12 @@ button.greet { display: block; width: 100%; text-align: left; }
 .dw-todo { display: flex; gap: 8px; margin-bottom: 6px; min-width: 0; font-size: 14px; }
 .dw-s .dw-todo { font-size: 13px; }
 .dw-l .dw-todo { font-size: 15px; }
+.dw-bars { position: relative; display: flex; align-items: flex-end; gap: 6px; }
+.dw-bars i { flex: 1; background: var(--gold); border-radius: 2px; }
+.dw-bars b { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--rule); }
+.dw-bars-l { display: flex; gap: 6px; margin-top: 3px; }
+.dw-bars-l span { flex: 1; text-align: center; font-size: 7px; color: var(--soft); }
+.dw-bars-l span.dw-gold { color: var(--gold); }
 .dw-sub { margin-bottom: 7px; font-size: 10.5px; }
 .dw-sub .dw-line { margin-top: 3px; }
 .dw-cal { display: grid; gap: 3px; align-content: start; }
