@@ -113,7 +113,13 @@ if (!data) {
   const done = doneT.length
   // 오늘 할 일: 완료해도 자리 그대로, 줄 그어 표시
   const items = tasksAll.filter((x) => x.due && x.due <= today && (!x.done || x.due === today || doneT.includes(x))).sort(byDate)
-  const strike = (s) => Array.from(s).map((c) => c + '\u0336').join('')
+  // 취소선: 글자는 설정 폰트 그대로, 뒤에 가운데 가는 선 이미지를 깔아 표시 (특수 문자는 폰트가 바뀌어 사용 안 함)
+  const strikeImg = (() => {
+    const c = new DrawContext(); c.size = new Size(240, 24); c.opaque = false; c.respectScreenScale = true
+    c.setFillColor(new Color(dark() ? '#7d786f' : '#a19c93')); c.fillRect(new Rect(0, 11.6, 240, 1.2))
+    return c.getImage()
+  })()
+  const strike = (parent, s, font) => { const k = parent.addStack(); k.backgroundImage = strikeImg; t(k, s, font, SOFT); return k }
   const ddAll = alive(data.study.ddays).filter((d) => d.date >= today).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || a.date.localeCompare(b.date))
   const ddN = (d) => Math.round((new Date(d.date) - new Date(today)) / 86400000)
   const ddT = (d) => (ddN(d) === 0 ? 'D-DAY' : 'D-' + ddN(d))
@@ -136,7 +142,7 @@ if (!data) {
   const todoList = (parent, n, gap = fam === 'large' ? 7 : 5) => {
     for (const x of items.slice(0, n)) {
       const r = parent.addStack(); r.centerAlignContent(); r.spacing = 8
-      if (x.done) { t(r, '✓', tw(10), SOFT); t(r, strike(x.title), tw(12), SOFT) }
+      if (x.done) { t(r, '✓', tw(10), SOFT); strike(r, x.title, tw(12)) }
       else { t(r, x.priority >= 3 ? '•' : '–', tw(11), x.priority >= 3 ? GOLD : SOFT); t(r, x.title, tw(12), INK) }
       parent.addSpacer(gap)
     }
