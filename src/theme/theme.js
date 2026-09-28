@@ -7,6 +7,17 @@ export const PRESETS = {
   violet: { name: '바이올렛', accent: '#8577a8', c2: '#c9a0a8', c3: '#7a8660', c4: '#8a9bb5' },
   rose: { name: '로즈', accent: '#b0838c', c2: '#a99bc4', c3: '#7a8660', c4: '#4a5a78' },
   mono: { name: '모노', accent: '#55585e', c2: '#8c8c86', c3: '#a5a5a0', c4: '#6e7075' },
+  // 저채도 파스텔
+  mist: { name: '안개', accent: '#6b7a8f', c2: '#9fb0a5', c3: '#b8aecb', c4: '#d1b3b3' },
+  sage: { name: '세이지', accent: '#7d8a74', c2: '#a9b59c', c3: '#c9bfa6', c4: '#b7a9c4' },
+  lavender: { name: '라벤더 미스트', accent: '#8e86a8', c2: '#b4acc9', c3: '#a9b8a4', c4: '#d3b2bb' },
+  dustyrose: { name: '더스티 로즈', accent: '#a88890', c2: '#cfb2b7', c3: '#9ea6b8', c4: '#b9b39a' },
+  sand: { name: '샌드 베이지', accent: '#9a8a74', c2: '#c2b49c', c3: '#a3a89a', c4: '#b59e9e' },
+  slate: { name: '슬레이트 블루', accent: '#5f6f86', c2: '#93a3b8', c3: '#b3a9c2', c4: '#a7b3a0' },
+  // 모노톤
+  charcoal: { name: '차콜', accent: '#3f4146', c2: '#8a8c90', c3: '#b3b4b6', c4: '#6b6d72' },
+  greige: { name: '그레이지', accent: '#6e6a64', c2: '#a8a39b', c3: '#c7c2ba', c4: '#8d8880' },
+  bluegray: { name: '블루그레이', accent: '#5d6670', c2: '#9aa3ad', c3: '#c0c6cc', c4: '#7b848e' },
 }
 
 export const FONTS = {
@@ -32,7 +43,7 @@ export function applyTheme(t) {
     document.head.appendChild(l)
   }
   const vars = {
-    '--accent': accent, '--c2': p.c2, '--c3': p.c3, '--c4': p.c4,
+    '--accent': accent, '--c2': t.c2 || p.c2, '--c3': t.c3 || p.c3, '--c4': t.c4 || p.c4,
     '--font': font.family, '--fs': t.fontSize + 'px', '--fw': t.fontWeight,
     '--fw-b': Math.min(t.fontWeight + 200, 700),
     '--radius': t.radius + 'px', '--gap': (12 * (DENSITY[t.density] || 1)) + 'px',
