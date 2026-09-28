@@ -426,6 +426,23 @@ function WidgetPreview() {
       </div>
     )
   }
+  // 공부 유형: 이번 주·연속·최근 7일
+  const sw = (() => {
+    const byDay = {}
+    for (const x of sessions) byDay[x.date] = (byDay[x.date] || 0) + x.dur
+    const off = (k) => { const x = new Date(); x.setDate(x.getDate() - k); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}` }
+    const last7 = [6, 5, 4, 3, 2, 1, 0].map((k) => ({ m: byDay[off(k)] || 0, wd: (now.getDay() - k + 7) % 7 }))
+    const back = (now.getDay() - (st.weekStart ?? 1) + 7) % 7
+    let week = 0; for (let k = 0; k <= back; k++) week += byDay[off(k)] || 0
+    let streak = 0; for (let k = byDay[d] ? 0 : 1; byDay[off(k)]; k++) streak++
+    return { last7, week, streak, avg: Math.round(last7.reduce((a, x) => a + x.m, 0) / 7) }
+  })()
+  const stat = (k, v, gold) => <div className="col" style={{ gap: 2 }}><span className="dw-cap">{k}</span><span className={gold ? 'dw-gold' : ''} style={{ fontSize: 13 }}>{v}</span></div>
+  const bars7 = (h) => {
+    const max = Math.max(goal, ...sw.last7.map((x) => x.m))
+    return <div><div className="dw-bars" style={{ height: h }}>{sw.last7.map((x, i) => <i key={i} style={{ height: Math.max(2, x.m / max * h), opacity: i === 6 ? 1 : .35 + .4 * Math.min(1, x.m / goal) }} />)}<b style={{ bottom: goal / max * h }} /></div>
+      <div className="dw-bars-l">{sw.last7.map((x, i) => <span key={i} className={i === 6 ? 'dw-gold' : ''}>{'SMTWTFS'[x.wd]}</span>)}</div></div>
+  }
   const V = {
     '': [
       <><div className="dw-cap">{dateStr}</div><div className="grow" />{big(26)}<div className="grow" />{ddRow}</>,
@@ -444,9 +461,9 @@ function WidgetPreview() {
         {list(6)}</>,
     ],
     공부: [
-      <><div className="row between"><span className="dw-cap sp">STUDY</span></div><div style={{ height: 10 }} />{big(28)}<div style={{ height: 10 }} />{subBars(2)}</>,
-      <><div className="col" style={{ gap: 0, width: 140, flexShrink: 0 }}><span className="dw-cap sp">STUDY</span><div className="grow" />{big(30)}<div className="grow" /></div><div className="dw-vr" /><div className="col" style={{ gap: 0, flex: 1, minWidth: 0 }}>{subBars(3)}</div></>,
-      <><div className="row between"><span className="dw-cap sp">STUDY</span><span className="dw-cap">{dateStr}</span></div><div style={{ height: 12 }} />{big(40)}<div style={{ height: 18 }} />{subBars(6)}</>,
+      <><div className="row between"><span className="dw-cap sp">STUDY</span></div><div style={{ height: 8 }} />{big(30)}<div className="grow" /><div className="row between">{stat('WEEK', hm(sw.week))}{stat('STREAK', sw.streak + 'd', true)}</div></>,
+      <><div className="col" style={{ gap: 0, width: 150, flexShrink: 0 }}><span className="dw-cap sp">STUDY</span><div style={{ height: 8 }} />{big(34)}<div className="grow" /><div className="row between">{stat('WEEK', hm(sw.week))}{stat('STREAK', sw.streak + 'd', true)}</div></div><div className="dw-vr" /><div className="col" style={{ gap: 0, flex: 1, minWidth: 0, justifyContent: 'flex-end' }}>{bars7(78)}</div></>,
+      <><div className="row between"><span className="dw-cap sp">STUDY</span><span className="dw-cap">{dateStr}</span></div><div style={{ height: 10 }} />{big(44)}<div style={{ height: 14 }} /><div className="row between">{stat('WEEK', hm(sw.week))}{stat('7-DAY AVG', hm(sw.avg))}{stat('STREAK', sw.streak + ' days', true)}</div><div style={{ height: 14 }} />{bars7(70)}<div className="dw-hr" />{subBars(3)}</>,
     ],
     할일: [4, 5, 12].map((n) => <><div className="row between"><span className="dw-cap sp">TODAY</span><span className="dw-cap dw-gold">{done} DONE</span></div><div style={{ height: 10 }} />{list(n)}</>),
     디데이: [40, 52, 52].map((sz, i) => <><div className="dw-cap">{dateStr}</div><div className="grow" />
