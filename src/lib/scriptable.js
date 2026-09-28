@@ -1,3 +1,4 @@
+import { pickQuote } from './quote.js'
 // iPhone·iPad 홈 화면·잠금 화면 위젯 (Scriptable) — 얇은 단일 서체 · 모노톤
 // 유형: 위젯 편집 › Parameter 에 공부 · 할일 · 디데이 · 달력 · 다짐 (비우면 기본)
 export const WIDGET_KINDS = [['', '기본'], ['공부', '공부'], ['할일', '할 일'], ['디데이', 'D-day'], ['달력', '달력'], ['다짐', '다짐']]
@@ -26,6 +27,7 @@ const label = (s) => F(s, 'Regular')
 
 const PARAM = String(args.widgetParameter || '').replace(/\\s/g, '').toLowerCase()
 const KIND = { '공부': 'study', '할일': 'todo', '디데이': 'dday', 'd-day': 'dday', '달력': 'month', '다짐': 'quote', study: 'study', todo: 'todo', dday: 'dday', month: 'month', quote: 'quote' }[PARAM] || 'default'
+const pickQuote = ${pickQuote.toString()}
 const link = (path) => APP + (path ? '?go=' + path : '')
 
 const pad = (n) => String(n).padStart(2, '0')
@@ -126,7 +128,7 @@ if (!data) {
   const dd = ddAll[0]
   const ddTxt = dd ? ddT(dd) : null
   const quotes = Object.keys(data.settings.quotes || {}).sort().map((k) => data.settings.quotes[k]).filter((q) => !q.deleted)
-  const quote = quotes.length ? quotes[Math.floor(Date.now() / 86400000) % quotes.length].text : null
+  const quote = pickQuote(quotes)?.text ?? null // 3시간마다 무작위 (앱과 같은 문구)
   const dateStr = DAY[d0.getDay()] + ' · ' + d0.getDate() + ' ' + MON[d0.getMonth()] + (STALE ? ' · ' + pad(STALE.getHours()) + ':' + pad(STALE.getMinutes()) : '')
   const pct = Math.round(Math.min(1, mins / goal) * 100)
   const subMins = subjects.map((s) => ({ s, m: sessions.filter((x) => x.subjectId === s.id).reduce((a, x) => a + (x.dur || 0), 0) })).filter((x) => x.m).sort((a, b) => b.m - a.m)
