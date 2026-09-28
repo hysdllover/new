@@ -285,10 +285,10 @@ function PushCard() {
 
 function HomeWidgetCard() {
   const sync = useSyncStatus()
-  const { token, gistId } = gistInfo()
   const appUrl = location.origin + location.pathname
   const copy = async () => {
-    const script = buildScript({ token, gistId, appUrl })
+    if (!gistInfo().widgetGist) await syncNow()
+    const script = buildScript({ ...gistInfo(), appUrl })
     try { await navigator.clipboard.writeText(script); toast('스크립트를 복사했어요') }
     catch { openSheet(() => <textarea className="input" readOnly value={script} style={{ minHeight: 300, fontFamily: 'monospace', fontSize: 11 }} onFocus={(e) => e.target.select()} />, { title: '스크립트 (전체 선택 후 복사)', full: true }) }
   }
@@ -307,7 +307,7 @@ function HomeWidgetCard() {
         <button className="btn primary" disabled={sync.state === 'off'} onClick={copy}><Icon name="download" size={16} />스크립트 복사</button>
         {sync.state === 'off' && <span className="small muted">동기화를 먼저 연결하세요</span>}
       </div>
-      <div className="tiny muted" style={{ marginTop: 6 }}>이미 설치했다면 새로 복사해 Scriptable 스크립트 내용을 바꿔 주세요. 15분마다 갱신돼요.</div>
+      <div className="tiny muted" style={{ marginTop: 6 }}>이미 설치했다면 새로 복사해 Scriptable 스크립트 내용을 바꿔 주세요. 갱신 주기는 iOS가 정해요(보통 15분~1시간). 날짜 옆에 시각이 보이면 그때 받은 데이터예요.</div>
     </Card>
   )
 }
