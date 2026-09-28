@@ -123,7 +123,7 @@ if (!data) {
     c.setFillColor(new Color(dark() ? '#7d786f' : '#a19c93')); c.fillRect(new Rect(0, 11.6, 240, 1.2))
     return c.getImage()
   })()
-  const strike = (parent, s, font) => { const k = parent.addStack(); k.backgroundImage = strikeImg; t(k, s, font, SOFT); return k }
+  const strike = (parent, s, font) => { const k = parent.addStack(); k.backgroundImage = strikeImg; t(k, s, font, SOFT).minimumScaleFactor = 0.85; return k }
   const ddAll = alive(data.study.ddays).filter((d) => d.date >= today).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || a.date.localeCompare(b.date))
   const ddN = (d) => Math.round((new Date(d.date) - new Date(today)) / 86400000)
   const ddT = (d) => (ddN(d) === 0 ? 'D-DAY' : 'D-' + ddN(d))
@@ -143,16 +143,18 @@ if (!data) {
     parent.addSpacer(6)
     const img = parent.addImage(line(mins / goal, width)); img.imageSize = new Size(width, 3)
   }
+  // 할 일 글자 크기: 소 13 · 중 14 · 대 15
+  const TS = fam === 'small' ? 13 : fam === 'medium' ? 14 : 15
   const todoList = (parent, n, gap = fam === 'large' ? 7 : 5) => {
     for (const x of items.slice(0, n)) {
       const r = parent.addStack(); r.centerAlignContent(); r.spacing = 8
-      if (x.done) { t(r, '✓', tw(10), SOFT); strike(r, x.title, tw(12)) }
-      else { t(r, x.priority >= 3 ? '•' : '–', tw(11), x.priority >= 3 ? GOLD : SOFT); t(r, x.title, tw(12), INK) }
+      if (x.done) { t(r, '✓', tw(TS - 2), SOFT); strike(r, x.title, tw(TS)) }
+      else { t(r, x.priority >= 3 ? '•' : '–', tw(TS - 1), x.priority >= 3 ? GOLD : SOFT); t(r, x.title, tw(TS), INK).minimumScaleFactor = 0.85 }
       r.addSpacer() // 줄을 꽉 채워 왼쪽 정렬 (스택은 기본 가운데 정렬)
       parent.addSpacer(gap)
     }
-    if (!items.length) t(parent, 'All clear.', tw(12), SOFT)
-    else if (items.length > n) t(parent, '+ ' + (items.length - n) + ' more', tw(10), SOFT)
+    if (!items.length) t(parent, 'All clear.', tw(TS), SOFT)
+    else if (items.length > n) t(parent, '+ ' + (items.length - n) + ' more', tw(11), SOFT)
   }
   const ddRow = (parent, big = 13) => { if (!dd) return; const r = parent.addStack(); r.centerAlignContent(); t(r, ddTxt, tw(big), GOLD); r.addSpacer(6); t(r, dd.title, tw(10), SOFT); r.addSpacer() }
   const subBars = (parent, width, n) => {
@@ -251,7 +253,7 @@ if (!data) {
     // ── 할 일 ──
     const h = w.addStack(); h.centerAlignContent(); cap(h, 'TODAY'); h.addSpacer(); t(h, done + ' DONE', label(8), GOLD)
     w.addSpacer(10)
-    todoList(w, fam === 'small' ? 4 : fam === 'medium' ? 5 : 12, fam === 'large' ? 8 : 4)
+    todoList(w, fam === 'small' ? 4 : fam === 'medium' ? 5 : 10, fam === 'large' ? 8 : 4)
   } else if (KIND === 'dday') {
     // ── D-day ──
     t(w, dateStr, label(9), SOFT)
