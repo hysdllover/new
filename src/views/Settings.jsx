@@ -7,6 +7,7 @@ import { ColorPick, TimeInput, SubjectSelect } from '../components/common.jsx'
 import { useSyncStatus, connect, disconnect, syncNow, gistInfo } from '../sync/sync.js'
 import { enablePush, disablePush, pushState, testLocal, isStandalone, pushSupported } from '../lib/push.js'
 import { buildScript, WIDGET_KINDS } from '../lib/scriptable.js'
+import { pickQuote } from '../lib/quote.js'
 import { sortTasks } from './tasks/filter.js'
 import { download } from '../lib/files.js'
 import { useMyFonts, addFont, removeFont, fontFamily, loadAllFonts, SYNC_FONT_MAX } from '../lib/fonts.js'
@@ -391,7 +392,7 @@ function WidgetPreview() {
   const ddN = dd ? Math.round((new Date(dd.date) - new Date(d)) / 86400000) : null
   const ddTxt = dd ? (ddN === 0 ? 'D-DAY' : 'D-' + ddN) : null
   const qs = [...quotes].sort((a, b) => a.id.localeCompare(b.id))
-  const quote = qs.length ? qs[Math.floor(Date.now() / 86400000) % qs.length].text : null
+  const quote = pickQuote(qs)?.text ?? null
   const now = new Date()
   const dateStr = `${['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][now.getDay()]} · ${now.getDate()} ${['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][now.getMonth()]}`
   const hm = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`
