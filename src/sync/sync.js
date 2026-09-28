@@ -77,7 +77,7 @@ export async function connect(tok) {
 }
 
 export function disconnect() {
-  ls.set('gist_token', null); ls.set('gist_id', null); ls.set('gist_last', null)
+  ls.set('gist_token', null); ls.set('gist_id', null); ls.set('gist_last', null); ls.set('widget_gist', null); ls.set('widget_last', null)
   setStatus({ state: 'off', last: null, error: null })
 }
 
@@ -104,6 +104,42 @@ async function syncFonts(gist, patchFiles) {
     up.push(f.id)
   }
   return up
+}
+
+// 위젯 전용 작은 gist — 홈 화면 위젯(Scriptable)이 빠르게 받을 수 있게 필요한 데이터만
+const WIDGET_DESC = 'study-dashboard-widget'
+export const widgetGistId = () => ls.get('widget_gist')
+function widgetPayload() {
+  const st = getState()
+  const keep = (c, fn = () => true) => Object.fromEntries(Object.values(st[c] || {}).filter((r) => !r.deleted && fn(r)).map((r) => [r.id, r]))
+  const d = new Date(); d.setDate(d.getDate() - 62)
+  const from = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+  const recent = Date.now() - 2 * 86400000
+  const main = settings()
+  return JSON.stringify({
+    tasks: { tasks: keep('tasks', (t) => !t.archived && (!t.done || (t.doneAt && new Date(t.doneAt).getTime() > recent))) },
+    study: { subjects: keep('subjects'), sessions: keep('sessions', (x) => x.date >= from), ddays: keep('ddays') },
+    settings: { settings: { main: { goalDaily: main.goalDaily, weekStart: main.weekStart, widgetFont: main.widgetFont } }, quotes: keep('quotes') },
+  })
+}
+async function syncWidget(remoteId, patchFiles) {
+  const content = widgetPayload()
+  let id = remoteId || widgetGistId()
+  if (!id) {
+    const res = await gh('/gists', { method: 'POST', body: JSON.stringify({ description: WIDGET_DESC, public: false, files: { 'widget.json': { content } } }) })
+    id = res.id
+    ls.set('widget_last', content)
+  } else if (ls.get('widget_last') !== content || ls.get('widget_gist') !== id) {
+    try {
+      await gh(`/gists/${id}`, { method: 'PATCH', body: JSON.stringify({ files: { 'widget.json': { content } } }) })
+      ls.set('widget_last', content)
+    } catch (e) {
+      if (/찾을 수 없/.test(e.message)) { ls.set('widget_gist', null); ls.set('widget_last', null); return syncWidget(null, patchFiles) }
+      throw e
+    }
+  }
+  ls.set('widget_gist', id)
+  if (remoteId !== id) patchFiles['widget-gist.txt'] = { content: id }
 }
 
 let running = null, again = false
@@ -147,6 +183,7 @@ export async function syncNow() {
       }
       for (const r of Object.values(getState().files)) if (r.deleted && gist.files?.[`att-${r.id}.txt`]) patchFiles[`att-${r.id}.txt`] = null
       const fontsUp = await syncFonts(gist, patchFiles)
+      try { await syncWidget(remoteText['widget-gist.txt']?.trim(), patchFiles) } catch {}
       if (Object.keys(patchFiles).length) {
         const res = await gh(`/gists/${gistId()}`, { method: 'PATCH', body: JSON.stringify({ files: patchFiles }) })
         for (const [name, f] of Object.entries(res.files || {})) if (name.startsWith('att-')) setRemoteRaw(name.slice(4).replace(/\.txt$/, ''), f.raw_url)
@@ -173,16 +210,19 @@ export function startSync() {
     if (!token()) return
     if (status.state !== 'syncing') setStatus({ state: 'pending' })
     clearTimeout(timer)
-    timer = setTimeout(syncNow, 3000)
+    timer = setTimeout(syncNow, 1000)
   })
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') syncNow() })
+  // 앱을 나갈 때 대기 중인 변경을 바로 올림 (iOS 는 백그라운드에서 곧 멈춤)
+  const flush = () => { if (status.state === 'pending') { clearTimeout(timer); syncNow() } }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') syncNow(); else flush() })
+  window.addEventListener('pagehide', flush)
   window.addEventListener('online', () => syncNow())
   setInterval(() => { if (document.visibilityState === 'visible') syncNow() }, 60000)
   syncNow()
 }
 
 // 동기화와 별개인 Gist 파일 읽기/쓰기 (푸시 구독·위젯용)
-export const gistInfo = () => ({ token: token(), gistId: gistId() })
+export const gistInfo = () => ({ token: token(), gistId: gistId(), widgetGist: widgetGistId() })
 export async function readGistFile(name) {
   if (!token() || !gistId()) throw new Error('먼저 동기화를 연결하세요')
   const g = await gh(`/gists/${gistId()}`)

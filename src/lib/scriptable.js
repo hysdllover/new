@@ -2,11 +2,12 @@
 // 유형: 위젯 편집 › Parameter 에 공부 · 할일 · 디데이 · 달력 · 다짐 (비우면 기본)
 export const WIDGET_KINDS = [['', '기본'], ['공부', '공부'], ['할일', '할 일'], ['디데이', 'D-day'], ['달력', '달력'], ['다짐', '다짐']]
 
-export function buildScript({ token, gistId, appUrl }) {
+export function buildScript({ token, gistId, widgetGist, appUrl }) {
   return `// Study — 홈 화면·잠금 화면 위젯 (Scriptable)
 // 위젯 길게 누르기 › 위젯 편집 › Script: 이 스크립트 · Parameter: 공부 / 할일 / 디데이 / 달력 / 다짐 (비우면 기본)
 const TOKEN = ${JSON.stringify(token || '')}
 const GIST = ${JSON.stringify(gistId || '')}
+const WGIST = ${JSON.stringify(widgetGist || '')} // 위젯 전용 작은 gist (빠름)
 const APP = ${JSON.stringify(appUrl)}
 
 const dyn = (l, d, a = 1) => Color.dynamic(new Color(l, a), new Color(d, a))
@@ -36,18 +37,28 @@ const MON = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT
 const alive = (o) => Object.values(o || {}).filter((r) => !r.deleted)
 const hm = (m) => Math.floor(m / 60) + ':' + pad(m % 60)
 
+let STALE = null // 받기 실패로 캐시를 쓸 때 마지막 갱신 시각
 async function load() {
   const key = 'study-widget-data'
+  const req = (url) => { const r = new Request(url); r.headers = { Authorization: 'Bearer ' + TOKEN, Accept: 'application/vnd.github+json', 'Cache-Control': 'no-cache' }; r.timeoutInterval = 20; return r }
   try {
-    const r = new Request('https://api.github.com/gists/' + GIST)
-    r.headers = { Authorization: 'Bearer ' + TOKEN, Accept: 'application/vnd.github+json' }
-    const g = await r.loadJSON()
-    const get = async (n) => { const f = g.files[n + '.json']; if (!f) return {}; const t = f.truncated ? await new Request(f.raw_url).loadString() : f.content; return JSON.parse(t) }
-    const data = { tasks: await get('tasks'), study: await get('study'), settings: await get('settings') }
+    const g = await req('https://api.github.com/gists/' + (WGIST || GIST) + '?t=' + Date.now()).loadJSON()
+    if (!g.files) throw new Error(g.message || 'gist')
+    const text = async (f) => (f.truncated ? await req(f.raw_url).loadString() : f.content)
+    let data
+    if (WGIST && g.files['widget.json']) data = JSON.parse(await text(g.files['widget.json']))
+    else {
+      const get = async (n) => { const f = g.files[n + '.json']; return f ? JSON.parse(await text(f)) : {} }
+      data = { tasks: await get('tasks'), study: await get('study'), settings: await get('settings') }
+    }
+    data.at = Date.now()
     Keychain.set(key, JSON.stringify(data))
     return data
   } catch (e) {
-    return Keychain.contains(key) ? JSON.parse(Keychain.get(key)) : null
+    if (!Keychain.contains(key)) return null
+    const data = JSON.parse(Keychain.get(key))
+    STALE = data.at ? new Date(data.at) : new Date(0)
+    return data
   }
 }
 
@@ -104,7 +115,7 @@ if (!data) {
   const ddTxt = dd ? ddT(dd) : null
   const quotes = Object.keys(data.settings.quotes || {}).sort().map((k) => data.settings.quotes[k]).filter((q) => !q.deleted)
   const quote = quotes.length ? quotes[Math.floor(Date.now() / 86400000) % quotes.length].text : null
-  const dateStr = DAY[d0.getDay()] + ' · ' + d0.getDate() + ' ' + MON[d0.getMonth()]
+  const dateStr = DAY[d0.getDay()] + ' · ' + d0.getDate() + ' ' + MON[d0.getMonth()] + (STALE ? ' · ' + pad(STALE.getHours()) + ':' + pad(STALE.getMinutes()) : '')
   const pct = Math.round(Math.min(1, mins / goal) * 100)
   const subMins = subjects.map((s) => ({ s, m: sessions.filter((x) => x.subjectId === s.id).reduce((a, x) => a + (x.dur || 0), 0) })).filter((x) => x.m).sort((a, b) => b.m - a.m)
 
