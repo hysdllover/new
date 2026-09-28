@@ -106,11 +106,13 @@ if (!data) {
   const sessions = allSess.filter((s) => s.date === today)
   const mins = sessions.reduce((a, s) => a + (s.dur || 0), 0)
   const tasksAll = alive(data.tasks.tasks).filter((x) => !x.archived)
-  const todo = tasksAll.filter((x) => !x.done && x.due && x.due <= today).sort((a, b) => (b.priority || 0) - (a.priority || 0))
+  // 날짜·시간 순, 같으면 사용자가 정한 순서
+  const byDate = (a, b) => (a.due || '9999').localeCompare(b.due || '9999') || (a.dueTime ?? 9999) - (b.dueTime ?? 9999) || (a.order ?? 0) - (b.order ?? 0)
+  const todo = tasksAll.filter((x) => !x.done && x.due && x.due <= today).sort(byDate)
   const doneT = tasksAll.filter((x) => x.done && x.doneAt && new Date(x.doneAt).toDateString() === d0.toDateString())
   const done = doneT.length
-  // 오늘 할 일: 남은 것 먼저, 오늘 완료한 것은 줄 그어 아래에
-  const items = [...todo, ...doneT.filter((x) => x.due && x.due <= today)]
+  // 오늘 할 일: 완료해도 자리 그대로, 줄 그어 표시
+  const items = tasksAll.filter((x) => x.due && x.due <= today && (!x.done || x.due === today || doneT.includes(x))).sort(byDate)
   const strike = (s) => Array.from(s).map((c) => c + '\u0336').join('')
   const ddAll = alive(data.study.ddays).filter((d) => d.date >= today).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || a.date.localeCompare(b.date))
   const ddN = (d) => Math.round((new Date(d.date) - new Date(today)) / 86400000)

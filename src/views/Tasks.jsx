@@ -110,7 +110,7 @@ const QUAD = [
   [3, '빨리 끝내기', '긴급', 'var(--c3)'], [4, '나중에', '여유', 'var(--c2)'],
 ]
 function Matrix() {
-  const tasks = useColl('tasks').filter((t) => !t.archived).sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0))
+  const tasks = useColl('tasks').filter((t) => !t.archived)
   const subjects = useColl('subjects')
   return (
     <div className="matrix-wrap">

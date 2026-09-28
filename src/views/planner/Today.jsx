@@ -22,7 +22,7 @@ export default function Today({ date }) {
   const scheduledIds = new Set(blocks.filter((b) => b.date === date && b.taskId).map((b) => b.taskId))
   const planning = useSettings().modules.planning !== false
   const dayTasks = tasks.filter((t) => !t.archived && (t.due === date || (date === today() && !t.done && t.due && t.due < date)))
-  const unscheduled = tasks.filter((t) => !t.done && !t.archived && !scheduledIds.has(t.id) && (!t.due || t.due <= date)).sort((a, b) => (b.priority || 0) - (a.priority || 0))
+  const unscheduled = tasks.filter((t) => !t.done && !t.archived && !scheduledIds.has(t.id) && (!t.due || t.due <= date)).sort((a, b) => (a.due || '9999').localeCompare(b.due || '9999') || (a.dueTime ?? 9999) - (b.dueTime ?? 9999) || (a.order ?? 0) - (b.order ?? 0))
 
   const dragTask = (t) => longPress(() => ({
     label: t.title,

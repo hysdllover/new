@@ -27,14 +27,14 @@ export function applyFilter(tasks, f = {}) {
   if (f.projectId) out = out.filter((t) => t.projectId === f.projectId)
   if (f.priority) out = out.filter((t) => (t.priority || 0) >= +f.priority)
   if (q) out = out.filter((t) => (t.title || '').toLowerCase().includes(q) || (t.note || '').toLowerCase().includes(q))
-  return sortTasks(out, f.sort).sort((x, y) => (x.done ? 1 : 0) - (y.done ? 1 : 0)) // 완료는 아래로
+  return sortTasks(out, f.sort)
 }
 
 export const openCount = (list) => list.filter((t) => !t.done).length
 
 export function sortTasks(list, sort = 'manual') {
   const a = [...list]
-  if (sort === 'due') a.sort((x, y) => (x.due || '9999').localeCompare(y.due || '9999') || (x.dueTime ?? 9999) - (y.dueTime ?? 9999))
+  if (sort === 'due') a.sort((x, y) => (x.due || '9999').localeCompare(y.due || '9999') || (x.dueTime ?? 9999) - (y.dueTime ?? 9999) || (x.order ?? 0) - (y.order ?? 0))
   else if (sort === 'priority') a.sort((x, y) => (y.priority || 0) - (x.priority || 0) || (x.due || '9999').localeCompare(y.due || '9999'))
   else if (sort === 'subject') a.sort((x, y) => (x.subjectId || '~').localeCompare(y.subjectId || '~'))
   else if (sort === 'created') a.sort((x, y) => (y.createdAt || 0) - (x.createdAt || 0))

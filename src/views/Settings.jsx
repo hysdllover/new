@@ -7,6 +7,7 @@ import { ColorPick, TimeInput, SubjectSelect } from '../components/common.jsx'
 import { useSyncStatus, connect, disconnect, syncNow, gistInfo } from '../sync/sync.js'
 import { enablePush, disablePush, pushState, testLocal, isStandalone, pushSupported } from '../lib/push.js'
 import { buildScript, WIDGET_KINDS } from '../lib/scriptable.js'
+import { sortTasks } from './tasks/filter.js'
 import { download } from '../lib/files.js'
 import { useMyFonts, addFont, removeFont, fontFamily, loadAllFonts, SYNC_FONT_MAX } from '../lib/fonts.js'
 import { requestPermission } from '../lib/notify.js'
@@ -373,10 +374,10 @@ function WidgetPreview() {
   const mins = today0.reduce((a, x) => a + x.dur, 0)
   const goal = st.goalDaily || 240
   const pct = Math.round(Math.min(1, mins / goal) * 100)
-  const todo = tasks.filter((t) => !t.archived && !t.done && t.due && t.due <= d).sort((a, b) => (b.priority || 0) - (a.priority || 0))
+  const todo = sortTasks(tasks.filter((t) => !t.archived && !t.done && t.due && t.due <= d), 'due')
   const doneT = tasks.filter((t) => !t.archived && t.done && t.doneAt && new Date(t.doneAt).toDateString() === new Date().toDateString())
   const done = doneT.length
-  const items = [...todo, ...doneT.filter((t) => t.due && t.due <= d)]
+  const items = sortTasks(tasks.filter((t) => !t.archived && t.due && t.due <= d && (!t.done || t.due === d || doneT.includes(t))), 'due')
   const dd = ddays.filter((x) => x.date >= d).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || a.date.localeCompare(b.date))[0]
   const ddN = dd ? Math.round((new Date(dd.date) - new Date(d)) / 86400000) : null
   const ddTxt = dd ? (ddN === 0 ? 'D-DAY' : 'D-' + ddN) : null
