@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { get as idbGet } from 'idb-keyval'
+import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval'
 import { getState, replaceColl, onChange, patch, settings, list } from '../store/store.js'
 import { COLLECTIONS, GIST_FILES } from '../store/schema.js'
 import { mergeColl, stableFile } from './merge.js'
@@ -40,8 +40,8 @@ async function gh(path, opt = {}) {
       }
       throw new Error('토큰 권한이 부족해요 (gist 권한 확인)')
     }
-    const msg = res.status === 401 ? '토큰이 올바르지 않아요' : res.status === 404 ? 'Gist 를 찾을 수 없어요 (gist 권한 확인)' : `GitHub 오류 ${res.status}`
-    throw new Error(msg)
+    if (res.status === 401) throw Object.assign(new Error('토큰이 만료되었거나 취소됐어요 · 새 토큰을 넣어 주세요'), { auth: true })
+    throw new Error(res.status === 404 ? 'Gist 를 찾을 수 없어요 (gist 권한 확인)' : `GitHub 오류 ${res.status}`)
   }
   return res.status === 204 ? null : res.json()
 }
@@ -62,34 +62,56 @@ function buildFiles(state) {
   return files
 }
 
-export async function connect(tok) {
-  ls.set('gist_token', tok.trim())
-  setStatus({ state: 'syncing', error: null })
-  try {
-    let found = null
-    for (let page = 1; page <= 5 && !found; page++) {
-      const gists = await gh(`/gists?per_page=100&page=${page}`)
-      found = gists.find((g) => g.description === DESC)
-      if (gists.length < 100) break
-    }
-    if (!found) {
-      const files = buildFiles(getState())
-      files['meta.json'] = JSON.stringify({ app: 'study-dashboard', createdAt: new Date().toISOString() })
-      const body = { description: DESC, public: false, files: Object.fromEntries(Object.entries(files).map(([k, v]) => [k, { content: v }])) }
-      found = await gh('/gists', { method: 'POST', body: JSON.stringify(body) })
-    }
-    ls.set('gist_id', found.id)
-    await syncNow()
-    return found.id
-  } catch (e) {
-    ls.set('gist_token', null); ls.set('gist_id', null)
-    setStatus({ state: 'off', error: e.message })
-    throw e
+// 토큰 백업: iOS 가 localStorage 만 비우는 경우를 대비해 IndexedDB 에도 저장
+const backup = () => idbSet('gist_backup', { token: token(), gistId: gistId() }).catch(() => {})
+export async function restoreSync() {
+  if (token()) { if (!(await idbGet('gist_backup').catch(() => null))?.token) backup(); return }
+  const b = await idbGet('gist_backup').catch(() => null)
+  if (b?.token) { ls.set('gist_token', b.token); if (b.gistId) ls.set('gist_id', b.gistId); setStatus({ state: 'idle', error: null }) }
+}
+
+// 동기화용 gist 찾기(없으면 만들기)
+async function ensureGist() {
+  if (gistId()) return gistId()
+  let found = null
+  for (let page = 1; page <= 5 && !found; page++) {
+    const gists = await gh(`/gists?per_page=100&page=${page}`)
+    found = gists.find((g) => g.description === DESC)
+    if (gists.length < 100) break
   }
+  if (!found) {
+    const files = buildFiles(getState())
+    files['meta.json'] = JSON.stringify({ app: 'study-dashboard', createdAt: new Date().toISOString() })
+    const body = { description: DESC, public: false, files: Object.fromEntries(Object.entries(files).map(([k, v]) => [k, { content: v }])) }
+    found = await gh('/gists', { method: 'POST', body: JSON.stringify(body) })
+  }
+  ls.set('gist_id', found.id); backup()
+  return found.id
+}
+
+// 연결: 토큰이 틀린 경우(401)에만 지우고, 요청 제한·네트워크 오류는 토큰을 남긴 채 자동 재시도
+export async function connect(tok) {
+  ls.set('gist_token', tok.trim()); ls.set('gist_id', null); backup()
+  setStatus({ state: 'syncing', error: null, auth: false })
+  try {
+    await ensureGist()
+  } catch (e) {
+    if (e.auth) {
+      ls.set('gist_token', null); idbDel('gist_backup').catch(() => {})
+      setStatus({ state: 'off', error: '토큰이 올바르지 않아요 (gist 권한·만료 확인)' })
+      throw new Error('토큰이 올바르지 않아요')
+    }
+    if (e.until) pause(e.until)
+    else setStatus({ state: 'error', error: '연결 대기 중 · 자동으로 다시 시도해요 (' + e.message + ')' })
+    return null
+  }
+  await syncNow()
+  return gistId()
 }
 
 export function disconnect() {
   ls.set('gist_token', null); ls.set('gist_id', null); ls.set('gist_last', null); ls.set('widget_gist', null); ls.set('widget_last', null); ls.set('widget_at', null)
+  idbDel('gist_backup').catch(() => {})
   setStatus({ state: 'off', last: null, error: null })
 }
 
@@ -172,14 +194,20 @@ async function syncWidget(remoteId, patchFiles, force) {
 
 let running = null, again = false, pausedUntil = 0, resumeTimer = null, lastPush = 0
 const pauseMsg = () => `요청이 많아 잠시 쉬는 중 · ${Math.max(1, Math.ceil((pausedUntil - Date.now()) / 60000))}분 뒤 자동 재시도`
+function pause(until) {
+  pausedUntil = until
+  clearTimeout(resumeTimer); resumeTimer = setTimeout(() => syncNow(), pausedUntil - Date.now() + 1000)
+  setStatus({ state: 'error', error: pauseMsg() })
+}
 export async function syncNow({ flush = false } = {}) {
-  if (!token() || !gistId()) return
+  if (!token()) return
   if (!navigator.onLine) { setStatus({ state: 'pending' }); return }
   if (Date.now() < pausedUntil) { setStatus({ state: 'error', error: pauseMsg() }); return }
   if (running) { again = true; return running }
   running = (async () => {
-    setStatus({ state: 'syncing', error: null })
+    setStatus({ state: 'syncing', error: null, auth: false })
     try {
+      await ensureGist()
       const gist = await gh(`/gists/${gistId()}`)
       const remoteText = {}
       for (const [name, f] of Object.entries(gist.files || {})) {
@@ -226,11 +254,11 @@ export async function syncNow({ flush = false } = {}) {
       ls.set('gist_last', String(now))
       setStatus({ state: 'ok', last: now })
     } catch (e) {
-      if (e.until) {
-        pausedUntil = e.until
-        clearTimeout(resumeTimer); resumeTimer = setTimeout(() => syncNow(), pausedUntil - Date.now() + 1000)
-        setStatus({ state: 'error', error: pauseMsg() })
-      } else setStatus({ state: 'error', error: e.message })
+      if (e.until) pause(e.until)
+      else {
+        if (/Gist 를 찾을 수 없/.test(e.message)) ls.set('gist_id', null) // 지워진 gist → 다음에 다시 찾거나 만듦
+        setStatus({ state: 'error', error: e.message, auth: !!e.auth })
+      }
     }
   })()
   try { await running } finally {

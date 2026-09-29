@@ -10,7 +10,7 @@ import { applyTheme } from './theme/theme.js'
 import { initFonts } from './lib/fonts.js'
 import { TABS, EXTRA, go } from './nav.js'
 import { startServices } from './lib/notify.js'
-import { startSync } from './sync/sync.js'
+import { startSync, restoreSync } from './sync/sync.js'
 
 function Root() {
   const st = useSettings()
@@ -18,7 +18,7 @@ function Root() {
   return <App />
 }
 
-Promise.all([loadState(), initFonts()]).then(async () => {
+Promise.all([loadState(), initFonts(), restoreSync()]).then(async () => {
   if (location.search.includes('demo')) (await import('./dev/seed.js')).seed()
   // 홈 화면 위젯에서 연 링크: ?go=탭.세그먼트
   const target = new URLSearchParams(location.search).get('go')

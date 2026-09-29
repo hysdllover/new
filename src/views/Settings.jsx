@@ -135,23 +135,24 @@ function SyncCard() {
       {!on ? (
         <div className="form">
           <div className="small muted">
-            1. github.com → Settings → Developer settings → Personal access tokens → <b>Tokens (classic)</b> → <b>gist</b> 권한만 체크해 생성<br />
+            1. github.com → Settings → Developer settings → Personal access tokens → <b>Tokens (classic)</b> → <b>gist</b> 권한만 체크, Expiration 은 <b>No expiration</b> 으로 생성<br />
             2. 아래에 붙여넣고 연결 (두 기기 모두 같은 토큰) — 비공개 Gist 가 자동으로 만들어지거나 찾아집니다.
           </div>
           <input className="input" type="password" autoComplete="off" placeholder="ghp_…" value={tok} onChange={(e) => setTok(e.target.value)} />
-          <button className="btn primary" disabled={!tok || busy} onClick={async () => { setBusy(true); try { await connect(tok); toast('동기화 연결됨'); setTok('') } catch (e) { toast(e.message) } setBusy(false) }}>{busy ? '연결 중…' : '연결'}</button>
+          <button className="btn primary" disabled={!tok || busy} onClick={async () => { setBusy(true); try { const id = await connect(tok); toast(id ? '동기화 연결됨' : '토큰 저장됨 · 연결은 자동으로 다시 시도해요'); setTok('') } catch (e) { toast(e.message) } setBusy(false) }}>{busy ? '연결 중…' : '연결'}</button>
           {s.error && <div className="small" style={{ color: 'var(--danger)' }}>{s.error}</div>}
         </div>
       ) : (
         <div className="form">
           <div className="small muted">마지막 동기화: {s.last ? new Date(s.last).toLocaleString('ko-KR') : '-'}</div>
           {s.error && <div className="small" style={{ color: 'var(--danger)' }}>{s.error}</div>}
+          {s.auth && <div className="row"><input className="input" type="password" autoComplete="off" placeholder="새 토큰 ghp_…" value={tok} onChange={(e) => setTok(e.target.value)} /><button className="btn primary" disabled={!tok || busy} onClick={async () => { setBusy(true); try { await connect(tok); setTok('') } catch (e) { toast(e.message) } setBusy(false) }}>다시 연결</button></div>}
           <div className="row wrap">
             <button className="btn" onClick={() => syncNow()}><Icon name="sync" size={16} />지금 동기화</button>
             {gistId && <a className="btn" href={`https://gist.github.com/${gistId}`} target="_blank" rel="noreferrer">Gist 보기</a>}
             <button className="btn danger" onClick={() => confirmSheet('연결 해제', '이 기기의 토큰을 지웁니다. 데이터는 그대로 남아요.', disconnect, '해제')}>연결 해제</button>
           </div>
-          <div className="tiny muted">앱을 열 때·돌아올 때·편집 3초 후·1분마다 자동 동기화. 같은 항목은 최신 수정이 우선합니다.</div>
+          <div className="tiny muted">앱을 열 때·돌아올 때·편집 후·1분마다 자동 동기화. 같은 항목은 최신 수정이 우선합니다. 홈 화면 앱과 사파리는 저장 공간이 따로라, 위젯을 눌러 사파리로 열었다면 사파리에서도 한 번 연결해 주세요.</div>
         </div>
       )}
       <div className="divider" />
