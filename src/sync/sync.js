@@ -28,6 +28,8 @@ async function gh(path, opt = {}) {
     ...opt,
     headers: { Authorization: `Bearer ${token()}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', ...(opt.body ? { 'Content-Type': 'application/json' } : null) },
   })
+  const exp = res.headers.get('github-authentication-token-expiration') // 브라우저에 공개된 경우에만 읽힘
+  if (exp) ls.set('token_exp', exp)
   if (!res.ok) {
     if (res.status === 403 || res.status === 429) {
       const body = await res.json().catch(() => ({}))
@@ -40,7 +42,7 @@ async function gh(path, opt = {}) {
       }
       throw new Error('토큰 권한이 부족해요 (gist 권한 확인)')
     }
-    if (res.status === 401) throw Object.assign(new Error('토큰이 만료되었거나 취소됐어요 · 새 토큰을 넣어 주세요'), { auth: true })
+    if (res.status === 401) throw Object.assign(new Error('GitHub 에서 토큰이 만료·취소됐어요 (GitHub 메일에 이유가 있어요) · 새 토큰을 넣어 주세요'), { auth: true })
     throw new Error(res.status === 404 ? 'Gist 를 찾을 수 없어요 (gist 권한 확인)' : `GitHub 오류 ${res.status}`)
   }
   return res.status === 204 ? null : res.json()
@@ -110,7 +112,7 @@ export async function connect(tok) {
 }
 
 export function disconnect() {
-  ls.set('gist_token', null); ls.set('gist_id', null); ls.set('gist_last', null); ls.set('widget_gist', null); ls.set('widget_last', null); ls.set('widget_at', null)
+  ls.set('gist_token', null); ls.set('gist_id', null); ls.set('gist_last', null); ls.set('widget_gist', null); ls.set('widget_last', null); ls.set('widget_at', null); ls.set('token_exp', null)
   idbDel('gist_backup').catch(() => {})
   setStatus({ state: 'off', last: null, error: null })
 }
@@ -143,6 +145,8 @@ async function syncFonts(gist, patchFiles) {
 // 위젯 전용 작은 gist — 홈 화면 위젯(Scriptable)이 빠르게 받을 수 있게 필요한 데이터만
 const WIDGET_DESC = 'study-dashboard-widget'
 export const widgetGistId = () => ls.get('widget_gist')
+// 위젯은 토큰 없이 비공개 gist 의 raw 주소로 읽음 (스크립트에 토큰을 넣지 않기 위해)
+export const widgetRawUrl = () => { const id = widgetGistId(), who = ls.get('gh_login'); return id && who ? `https://gist.githubusercontent.com/${who}/${id}/raw/widget.json` : null }
 // 캘린더 위젯용: 지난달 말~앞으로 45일 일정(반복 포함)을 날짜별로 펼침
 function calPayload() {
   if (excluded().has('events')) return {}
@@ -209,6 +213,7 @@ export async function syncNow({ flush = false } = {}) {
     try {
       await ensureGist()
       const gist = await gh(`/gists/${gistId()}`)
+      if (gist.owner?.login) ls.set('gh_login', gist.owner.login)
       const remoteText = {}
       for (const [name, f] of Object.entries(gist.files || {})) {
         if (name.startsWith('att-')) { setRemoteRaw(name.slice(4).replace(/\.txt$/, ''), f.raw_url); continue }
@@ -286,7 +291,8 @@ export function startSync() {
 }
 
 // 동기화와 별개인 Gist 파일 읽기/쓰기 (푸시 구독·위젯용)
-export const gistInfo = () => ({ token: token(), gistId: gistId(), widgetGist: widgetGistId() })
+export const gistInfo = () => ({ token: token(), gistId: gistId(), widgetGist: widgetGistId(), widgetRaw: widgetRawUrl() })
+export const tokenExpiry = () => ls.get('token_exp')
 export async function readGistFile(name) {
   if (!token() || !gistId()) throw new Error('먼저 동기화를 연결하세요')
   const g = await gh(`/gists/${gistId()}`)
