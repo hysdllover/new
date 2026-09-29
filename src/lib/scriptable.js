@@ -346,9 +346,10 @@ if (!data) {
           const c = row.addStack(); c.size = new Size(cell, cellH); c.layoutVertically(); c.centerAlignContent()
           if (day < 1 || day > n) continue
           const k = key(day), evs = cal[k] || [], has = evs.length || dueOn(k).length
-          if (k === today) { c.backgroundColor = INK; c.cornerRadius = Math.min(cell, cellH) / 2 }
-          const a = c.addStack(); a.addSpacer(); t(a, day, label(numSize), k === today ? BG : has ? INK : SOFT); a.addSpacer()
-          const b = c.addStack(); b.addSpacer(); t(b, has ? '•' : ' ', label(numSize - 2), k === today ? BG : GOLD); b.addSpacer()
+          // 오늘: 채우기 대신 테두리 — 틴트/투명 홈 화면에서도 숫자가 보이게
+          if (k === today) { c.borderWidth = 1; c.borderColor = INK; c.cornerRadius = Math.min(cell, cellH) / 2 }
+          const a = c.addStack(); a.addSpacer(); t(a, day, k === today ? F(numSize, 'SemiBold') : label(numSize), k === today || has ? INK : SOFT); a.addSpacer()
+          const b = c.addStack(); b.addSpacer(); t(b, has ? '•' : ' ', label(numSize - 2), GOLD); b.addSpacer()
         }
         parent.addSpacer(gap)
       }

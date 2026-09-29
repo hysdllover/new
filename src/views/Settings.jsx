@@ -457,7 +457,7 @@ function WidgetPreview() {
         {wd && Array.from({ length: 7 }, (_, i) => <span key={'w' + i} className="dw-cap" style={{ textAlign: 'center', fontSize: 7 }}>{'SMTWTFS'[(i + ws) % 7]}</span>)}
         {Array.from({ length: lead }, (_, i) => <span key={'e' + i} />)}
         {Array.from({ length: n }, (_, i) => { const k = ymdOf(new Date(y, mo, i + 1)), has = hasPlan(k), on = k === d
-          return <span key={i} className="dw-cday" style={{ height: cellH, background: on ? 'var(--ink)' : null, color: on ? 'var(--bg)' : has ? 'var(--ink)' : 'var(--soft)' }}>{i + 1}<i style={{ color: on ? 'var(--bg)' : 'var(--gold)' }}>{has ? '•' : ''}</i></span> })}
+          return <span key={i} className="dw-cday" style={{ height: cellH, border: on ? '1px solid var(--ink)' : null, fontWeight: on ? 600 : null, color: on || has ? 'var(--ink)' : 'var(--soft)' }}>{i + 1}<i style={{ color: 'var(--gold)' }}>{has ? '•' : ''}</i></span> })}
       </div>
     )
   }
