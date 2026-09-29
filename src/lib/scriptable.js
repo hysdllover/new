@@ -3,12 +3,11 @@ import { pickQuote } from './quote.js'
 // 유형: 위젯 편집 › Parameter 에 공부 · 할일 · 디데이 · 달력 · 다짐 (비우면 기본)
 export const WIDGET_KINDS = [['', '기본'], ['공부', '공부'], ['할일', '할 일'], ['디데이', 'D-day'], ['달력', '공부 달력'], ['캘린더', '캘린더'], ['다짐', '다짐']]
 
-export function buildScript({ token, gistId, widgetGist, appUrl }) {
+export function buildScript({ widgetRaw, appUrl }) {
   return `// Study — 홈 화면·잠금 화면 위젯 (Scriptable)
 // 위젯 길게 누르기 › 위젯 편집 › Script: 이 스크립트 · Parameter: 공부 / 할일 / 디데이 / 달력 / 다짐 (비우면 기본)
-const TOKEN = ${JSON.stringify(token || '')}
-const GIST = ${JSON.stringify(gistId || '')}
-const WGIST = ${JSON.stringify(widgetGist || '')} // 위젯 전용 작은 gist (빠름)
+// 토큰 없음: 비공개 위젯 gist 의 주소로만 읽어요 (이 스크립트가 어디 노출돼도 GitHub 계정은 안전)
+const SRC = ${JSON.stringify(widgetRaw || '')}
 const APP = ${JSON.stringify(appUrl)}
 
 const dyn = (l, d, a = 1) => Color.dynamic(new Color(l, a), new Color(d, a))
@@ -44,17 +43,11 @@ const hm = (m) => Math.floor(m / 60) + ':' + pad(m % 60)
 let STALE = null // 받기 실패로 캐시를 쓸 때 마지막 갱신 시각
 async function load() {
   const key = 'study-widget-data'
-  const req = (url) => { const r = new Request(url); r.headers = { Authorization: 'Bearer ' + TOKEN, Accept: 'application/vnd.github+json', 'Cache-Control': 'no-cache' }; r.timeoutInterval = 20; return r }
   try {
-    const g = await req('https://api.github.com/gists/' + (WGIST || GIST) + '?t=' + Date.now()).loadJSON()
-    if (!g.files) throw new Error(g.message || 'gist')
-    const text = async (f) => (f.truncated ? await req(f.raw_url).loadString() : f.content)
-    let data
-    if (WGIST && g.files['widget.json']) data = JSON.parse(await text(g.files['widget.json']))
-    else {
-      const get = async (n) => { const f = g.files[n + '.json']; return f ? JSON.parse(await text(f)) : {} }
-      data = { tasks: await get('tasks'), study: await get('study'), settings: await get('settings') }
-    }
+    if (!SRC) throw new Error('no source')
+    const r = new Request(SRC + '?t=' + Date.now()); r.headers = { 'Cache-Control': 'no-cache' }; r.timeoutInterval = 20
+    const data = JSON.parse(await r.loadString())
+    if (!data.study) throw new Error('bad data')
     data.at = Date.now()
     Keychain.set(key, JSON.stringify(data))
     return data
@@ -100,7 +93,7 @@ if (!lock) { w.backgroundColor = BG; w.setPadding(P, P, P, P) }
 const inner = fam === 'small' ? 170 - P * 2 : 364 - P * 2
 
 if (!data) {
-  t(w, lock ? '동기화 필요' : '앱에서 동기화를 연결해 주세요', tw(12), lock ? null : SOFT, 3)
+  t(w, lock ? '동기화 필요' : '앱에서 동기화를 연결하고 스크립트를 다시 복사해 주세요', tw(12), lock ? null : SOFT, 3)
 } else {
   const st = data.settings.settings?.main || {}
   CUSTOM = (st.widgetFont || '').trim()

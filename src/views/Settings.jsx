@@ -4,7 +4,7 @@ import { PRESETS, FONTS } from '../theme/theme.js'
 import { PALETTE, SOFT_PALETTE } from '../store/schema.js'
 import { Card, Seg, Toggle, Field, Icon, toast, confirmSheet, openSheet } from '../components/ui.jsx'
 import { ColorPick, TimeInput, SubjectSelect } from '../components/common.jsx'
-import { useSyncStatus, connect, disconnect, syncNow, gistInfo } from '../sync/sync.js'
+import { useSyncStatus, connect, disconnect, syncNow, gistInfo, tokenExpiry } from '../sync/sync.js'
 import { enablePush, disablePush, pushState, testLocal, isStandalone, pushSupported } from '../lib/push.js'
 import { buildScript, WIDGET_KINDS } from '../lib/scriptable.js'
 import { pickQuote } from '../lib/quote.js'
@@ -136,7 +136,8 @@ function SyncCard() {
         <div className="form">
           <div className="small muted">
             1. github.com → Settings → Developer settings → Personal access tokens → <b>Tokens (classic)</b> → <b>gist</b> 권한만 체크, Expiration 은 <b>No expiration</b> 으로 생성<br />
-            2. 아래에 붙여넣고 연결 (두 기기 모두 같은 토큰) — 비공개 Gist 가 자동으로 만들어지거나 찾아집니다.
+            2. 아래에 붙여넣고 연결 (두 기기 모두 같은 토큰) — 비공개 Gist 가 자동으로 만들어지거나 찾아집니다.<br />
+            ※ 토큰은 메모·채팅·공개 저장소 등에 붙여넣지 마세요. GitHub 가 공개된 토큰을 발견하면 바로 취소해요.
           </div>
           <input className="input" type="password" autoComplete="off" placeholder="ghp_…" value={tok} onChange={(e) => setTok(e.target.value)} />
           <button className="btn primary" disabled={!tok || busy} onClick={async () => { setBusy(true); try { const id = await connect(tok); toast(id ? '동기화 연결됨' : '토큰 저장됨 · 연결은 자동으로 다시 시도해요'); setTok('') } catch (e) { toast(e.message) } setBusy(false) }}>{busy ? '연결 중…' : '연결'}</button>
@@ -145,8 +146,10 @@ function SyncCard() {
       ) : (
         <div className="form">
           <div className="small muted">마지막 동기화: {s.last ? new Date(s.last).toLocaleString('ko-KR') : '-'}</div>
+          {(() => { const e = tokenExpiry(); if (!e) return null; const d = new Date(e.replace(' UTC', 'Z').replace(' ', 'T')), left = Math.ceil((d - Date.now()) / 86400000)
+            return <div className="small" style={{ color: left <= 7 ? 'var(--danger)' : 'var(--muted)' }}>토큰 만료: {d.toLocaleDateString('ko-KR')}{left <= 7 ? ` · ${Math.max(0, left)}일 남음 — 만료 없는 새 토큰으로 바꿔 주세요` : ''}</div> })()}
           {s.error && <div className="small" style={{ color: 'var(--danger)' }}>{s.error}</div>}
-          {s.auth && <div className="row"><input className="input" type="password" autoComplete="off" placeholder="새 토큰 ghp_…" value={tok} onChange={(e) => setTok(e.target.value)} /><button className="btn primary" disabled={!tok || busy} onClick={async () => { setBusy(true); try { await connect(tok); setTok('') } catch (e) { toast(e.message) } setBusy(false) }}>다시 연결</button></div>}
+          {(s.auth || (tokenExpiry() && new Date(tokenExpiry().replace(' UTC', 'Z').replace(' ', 'T')) - Date.now() < 7 * 86400000)) && <div className="row"><input className="input" type="password" autoComplete="off" placeholder="새 토큰 ghp_…" value={tok} onChange={(e) => setTok(e.target.value)} /><button className="btn primary" disabled={!tok || busy} onClick={async () => { setBusy(true); try { await connect(tok); setTok('') } catch (e) { toast(e.message) } setBusy(false) }}>다시 연결</button></div>}
           <div className="row wrap">
             <button className="btn" onClick={() => syncNow()}><Icon name="sync" size={16} />지금 동기화</button>
             {gistId && <a className="btn" href={`https://gist.github.com/${gistId}`} target="_blank" rel="noreferrer">Gist 보기</a>}
@@ -300,8 +303,10 @@ function HomeWidgetCard() {
   const sync = useSyncStatus()
   const appUrl = location.origin + location.pathname
   const copy = async () => {
-    if (!gistInfo().widgetGist) await syncNow()
-    const script = buildScript({ ...gistInfo(), appUrl })
+    if (!gistInfo().widgetRaw) await syncNow({ flush: true })
+    const { widgetRaw } = gistInfo()
+    if (!widgetRaw) { toast('동기화가 끝난 뒤 다시 눌러 주세요'); return }
+    const script = buildScript({ widgetRaw, appUrl })
     try { await navigator.clipboard.writeText(script); toast('스크립트를 복사했어요') }
     catch { openSheet(() => <textarea className="input" readOnly value={script} style={{ minHeight: 300, fontFamily: 'monospace', fontSize: 11 }} onFocus={(e) => e.target.select()} />, { title: '스크립트 (전체 선택 후 복사)', full: true }) }
   }
@@ -320,7 +325,7 @@ function HomeWidgetCard() {
         <button className="btn primary" disabled={sync.state === 'off'} onClick={copy}><Icon name="download" size={16} />스크립트 복사</button>
         {sync.state === 'off' && <span className="small muted">동기화를 먼저 연결하세요</span>}
       </div>
-      <div className="tiny muted" style={{ marginTop: 6 }}>이미 설치했다면 새로 복사해 Scriptable 스크립트 내용을 바꿔 주세요. 갱신 주기는 iOS가 정해요(보통 15분~1시간). 날짜 옆에 시각이 보이면 그때 받은 데이터예요.</div>
+      <div className="tiny muted" style={{ marginTop: 6 }}>스크립트에는 토큰이 들어가지 않아요(위젯 전용 비공개 주소만). 이미 설치했다면 새로 복사해 Scriptable 스크립트 내용을 바꿔 주세요. 갱신 주기는 iOS가 정해요(보통 15분~1시간). 날짜 옆에 시각이 보이면 그때 받은 데이터예요.</div>
     </Card>
   )
 }
