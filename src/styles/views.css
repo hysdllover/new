@@ -288,7 +288,7 @@ details.more[open] > summary::before { content: '▾ '; }
 .wf-bold .card { background: var(--wc); border-color: transparent; color: #fff; }
 .wf-bold .card .muted, .wf-bold .card .tiny, .wf-bold .card h3 { color: rgba(255, 255, 255, .82); }
 .wf-bold .card .chip, .wf-bold .card .input { background: rgba(255, 255, 255, .15); color: #fff; border-color: transparent; }
-.w-badge { position: absolute; top: -8px; left: 8px; z-index: 3; font-size: 10.5px; background: var(--accent); color: #fff; border-radius: 6px; padding: 1px 7px; }
+.w-badge { position: absolute; top: -8px; left: 8px; z-index: 3; height: auto; white-space: nowrap; max-width: calc(100% - 16px); overflow: hidden; text-overflow: ellipsis; font-size: 10.5px; background: var(--accent); color: #fff; border-radius: 6px; padding: 1px 7px; }
 .big-num { font-size: 2.3em; font-weight: var(--fw-b); line-height: 1.15; font-variant-numeric: tabular-nums; }
 .big-num span { font-size: .45em; margin-left: 2px; color: var(--muted); }
 .qr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; }
