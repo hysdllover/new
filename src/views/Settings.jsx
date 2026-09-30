@@ -25,6 +25,7 @@ export default function Settings() {
       <SyncCard />
       <PushCard />
       <HomeWidgetCard />
+      <ShareCaptureCard />
       <Card title="디자인">
         <div className="form">
           <Field label="색상 프리셋">
@@ -120,6 +121,27 @@ export default function Settings() {
         <div className="small">Safari 에서 공유 버튼 → <b>홈 화면에 추가</b>. 전체 화면·오프라인으로 동작합니다. iPhone 과 iPad 모두 같은 방법으로 설치한 뒤 위 동기화에 같은 토큰을 입력하세요.</div>
       </Card>
     </div>
+  )
+}
+
+// 공유 시트로 할 일 추가 (iOS 단축어)
+function ShareCaptureCard() {
+  const base = location.origin + location.pathname
+  const tmpl = base + '?add='
+  return (
+    <Card title="공유 시트로 할 일 추가">
+      <div className="small" style={{ lineHeight: 1.7 }}>
+        사파리·메모 등에서 <b>공유 › 할 일로</b> 를 누르면 받은 편지함에 들어가요.<br />
+        1. <b>단축어</b> 앱 › ＋ 새 단축어 › 이름 ‘할 일로’<br />
+        2. 단축어 설정(ⓘ) › <b>공유 시트에서 보기</b> 켜기 · 받는 유형: 텍스트·URL<br />
+        3. 동작 추가: <b>URL</b> → 아래 주소 붙여넣고 끝에 <b>단축어 입력</b> 변수 넣기 → 이어서 <b>URL 열기</b>
+      </div>
+      <div className="row" style={{ marginTop: 8 }}>
+        <input className="input grow" readOnly value={tmpl} onFocus={(e) => e.target.select()} />
+        <button className="btn" onClick={async () => { try { await navigator.clipboard.writeText(tmpl); toast('주소를 복사했어요') } catch { toast('주소를 길게 눌러 복사해 주세요') } }}>복사</button>
+      </div>
+      <div className="tiny muted" style={{ marginTop: 6 }}>단축어는 사파리로 열려요. 사파리에서도 한 번 동기화를 연결해 두면 홈 화면 앱에 바로 나타나요.</div>
+    </Card>
   )
 }
 

@@ -20,12 +20,40 @@ const LABEL = { title: '제목', due: '마감일', priority: '우선순위', sub
 export function updateTask(id, partial, opt = {}) {
   const prev = find('tasks', id)
   if (!prev) return
+  // 날짜를 정하면 받은 편지함에서 빠짐
+  if (partial.due && prev.inbox && partial.inbox === undefined) partial = { ...partial, inbox: false }
   const next = patch('tasks', id, partial)
   const changed = Object.keys(partial).filter((k) => LABEL[k] && prev[k] !== partial[k])
   if (changed.length && !opt.silentLog) log(id, 'update', changed.map((k) => LABEL[k]).join('·') + ' 변경')
   // 간트: 마감이 늦춰지면 후속 작업을 밀어냄
   if (partial.due && prev.due && partial.due > prev.due) pushDependents(next)
   return next
+}
+
+// 빠른 날짜 목표: 오늘·내일·이번 주말(토)·다음 주 월요일
+export function quickDate(kind) {
+  const d = today(), dow = new Date().getDay()
+  if (kind === 'today') return d
+  if (kind === 'tomorrow') return addDays(d, 1)
+  if (kind === 'weekend') return addDays(d, dow === 6 ? 1 : dow === 0 ? 6 : 6 - dow) // 토요일(토요일이면 일요일)
+  if (kind === 'nextweek') return addDays(d, ((8 - dow) % 7) || 7)
+  return null
+}
+export const QUICK_DATES = [['today', '오늘'], ['tomorrow', '내일'], ['weekend', '이번 주말'], ['nextweek', '다음 주 월'], ['none', '날짜 없음']]
+
+// 여러 할 일을 한 번에 옮기기 (미룬 횟수 +1)
+export function moveTasks(ids, kind) {
+  const date = quickDate(kind)
+  batch(() => {
+    for (const id of ids) {
+      const t = find('tasks', id)
+      if (!t || t.done) continue
+      const later = t.due && date && date > t.due
+      updateTask(id, { due: date, ...(date ? null : { dueTime: null }), ...(later ? { carry: (t.carry || 0) + 1 } : null) }, { silentLog: true })
+      if (later) log(id, 'carry', `${t.due.slice(5)} → ${date.slice(5)} 미룸`)
+    }
+  })
+  return date
 }
 
 function pushDependents(task, depth = 0) {

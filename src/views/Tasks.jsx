@@ -1,13 +1,13 @@
 import { useMemo } from 'react'
 import { useColl, patch, put, remove } from '../store/store.js'
-import { addTask, toggleTask } from '../store/actions.js'
+import { addTask, toggleTask, moveTasks, QUICK_DATES } from '../store/actions.js'
 import TaskQuickInput from '../components/TaskQuickInput.jsx'
-import { AddInput, Empty, Icon, openSheet, openMenu, toast } from '../components/ui.jsx'
+import { AddInput, Empty, Icon, openSheet, openMenu, toast, openDetail } from '../components/ui.jsx'
 import TaskItem from '../components/TaskItem.jsx'
 import { SMART, applyFilter, quadrant, openCount } from './tasks/filter.js'
 import { setParams } from '../nav.js'
 import { longPress } from '../lib/drag.js'
-import { today } from '../engine/date.js'
+import { today, tsToYmd, tsToMin, weekStart, fmtDate, fmtTime, fmtDur } from '../engine/date.js'
 import Gantt from './tasks/Gantt.jsx'
 import Archive from './tasks/Archive.jsx'
 import DBView from './tasks/DBView.jsx'
@@ -60,7 +60,7 @@ function TaskList({ params }) {
 
   return (
     <div className="col">
-      <TaskQuickInput key={f.smart + (f.subjectId || '')} defaultDate={f.smart === 'today' ? 'today' : f.smart === 'tomorrow' ? 'tomorrow' : ''} defaults={{ subjectId: f.subjectId || null, projectId: f.projectId || null }} />
+      <TaskQuickInput key={f.smart + (f.subjectId || '')} defaultDate={f.smart === 'today' ? 'today' : f.smart === 'tomorrow' ? 'tomorrow' : ''} defaults={{ subjectId: f.subjectId || null, projectId: f.projectId || null, ...(f.smart === 'inbox' ? { inbox: true } : null) }} />
       <div className="scroll-x"><div className="row" style={{ gap: 6, paddingBottom: 2 }}>
         {SMART.map(([k, l]) => <button key={k} className={'chip' + ((f.smart || 'all') === k && !view ? ' on' : '')} onClick={() => set({ smart: k })}>{l} <span className="muted tiny">{k === 'done' ? applyFilter(tasks, { smart: k }).length : openCount(applyFilter(tasks, { smart: k }))}</span></button>)}
       </div></div>
@@ -92,15 +92,62 @@ function TaskList({ params }) {
           <button className="btn" onClick={saveView} title="현재 필터를 뷰로 저장"><Icon name="flag" size={15} />뷰 저장</button>
         </div>
       )}
+      {(f.smart === 'today' || f.smart === 'overdue') && openCount(items) > 0 && <BulkMove ids={items.filter((t) => !t.done).map((t) => t.id)} />}
+      {f.smart === 'done' ? <DoneTimeline items={items} subjects={subjects} /> : (
       <div className="card" style={{ padding: '2px 12px' }}>
         <div className="list">
           {items.map((t) => (
-            <div key={t.id} data-drop={'task:' + t.id}><TaskItem t={t} subjects={subjects} projects={projects} drag={dragFor(t)} /></div>
+            <div key={t.id} data-drop={'task:' + t.id}><TaskItem t={t} subjects={subjects} projects={projects} drag={dragFor(t)}
+              extra={f.smart === 'inbox' && <span className="inbox-acts" data-nodrag onClick={(e) => e.stopPropagation()}>{[['today', '오늘'], ['tomorrow', '내일'], ['weekend', '주말']].map(([k, l]) => <button key={k} className="chip sm" onClick={() => moveTasks([t.id], k)}>{l}</button>)}<button className="chip sm" onClick={() => patch('tasks', t.id, { inbox: false })}>정리됨</button></span>} /></div>
           ))}
-          {!items.length && <Empty>할 일이 없어요</Empty>}
+          {!items.length && <Empty>{f.smart === 'inbox' ? '받은 편지함이 비었어요' : '할 일이 없어요'}</Empty>}
         </div>
-      </div>
+      </div>)}
       {manual && items.length > 1 && <div className="tiny muted center">길게 눌러 순서를 바꿀 수 있어요</div>}
+    </div>
+  )
+}
+
+// 남은 할 일 한 번에 옮기기
+function BulkMove({ ids }) {
+  return (
+    <div className="row wrap bulk-move" style={{ gap: 6 }}>
+      <span className="small muted">남은 {ids.length}개 옮기기</span>
+      {QUICK_DATES.filter(([k]) => k !== 'today').map(([k, l]) => <button key={k} className="chip" onClick={() => { const d = moveTasks(ids, k); toast(`${ids.length}개를 ${d ? l : '날짜 없음'}으로 옮겼어요`) }}>{l}</button>)}
+    </div>
+  )
+}
+
+// 완료 기록 타임라인: 날짜별·시간순
+function DoneTimeline({ items, subjects }) {
+  const sessions = useColl('sessions')
+  const done = items.filter((t) => t.doneAt).sort((a, b) => b.doneAt - a.doneAt)
+  const groups = []
+  for (const t of done) { const d = tsToYmd(t.doneAt); let g = groups[groups.length - 1]; if (!g || g.d !== d) groups.push(g = { d, list: [] }); g.list.push(t) }
+  const ws = weekStart(today(), 1)
+  const week = done.filter((t) => tsToYmd(t.doneAt) >= ws).length
+  return (
+    <div className="col">
+      <div className="small muted">이번 주 완료 <b>{week}</b>개 · 전체 {done.length}개</div>
+      {groups.slice(0, 30).map((g) => {
+        const mins = sessions.filter((x) => x.date === g.d).reduce((a, x) => a + x.dur, 0)
+        return (
+          <div key={g.d} className="card" style={{ padding: '10px 14px' }}>
+            <div className="row between small" style={{ marginBottom: 6 }}><b>{g.d === today() ? '오늘' : fmtDate(g.d)}</b><span className="tiny muted">완료 {g.list.length}개{mins ? ` · 공부 ${fmtDur(mins)}` : ''}</span></div>
+            <div className="tl">
+              {g.list.map((t) => { const sub = subjects.find((s) => s.id === t.subjectId); return (
+                <div key={t.id} className="tl-row">
+                  <span className="tiny muted tl-time">{fmtTime(tsToMin(t.doneAt))}</span>
+                  <span className="tl-dot" style={{ background: sub?.color || 'var(--accent)' }} />
+                  <button className="grow ellipsis small" style={{ textAlign: 'left' }} onClick={() => openDetail('task', t.id)}>{t.title}</button>
+                  <button className="tiny muted" onClick={() => toggleTask(t.id)}>되돌리기</button>
+                </div>
+              ) })}
+            </div>
+          </div>
+        )
+      })}
+      {!groups.length && <Empty>완료한 할 일이 여기 날짜별로 쌓여요</Empty>}
     </div>
   )
 }

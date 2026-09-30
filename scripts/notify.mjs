@@ -1,6 +1,7 @@
 // GitHub Actions 에서 5~10분마다 실행: 동기화 Gist 를 읽어 알림 시각이 된 항목을 Web Push 로 발송
 import webpush from 'web-push'
 import { matches } from '../src/engine/recurrence.js'
+import { reminderTimes, reminderBody, absMinutes } from '../src/engine/reminders.js'
 
 const TOKEN = process.env.GIST_TOKEN
 const DESC = 'study-dashboard-sync'
@@ -52,9 +53,13 @@ const due = (at) => at != null && at <= now && at > now - WINDOW
 const out = []
 const add = (key, at, title, body, url = './') => { if (due(at) && !sentFile[key]) out.push({ key, title, body, url }) }
 
+// 할 일 알림: 정시·N분 전·하루 전·당일 아침 (날짜를 넘는 알림도 계산)
+const nowAbs = absMinutes(date, now)
 for (const t of alive(T?.tasks)) {
-  if (t.done || t.archived || t.due !== date || t.dueTime == null) continue
-  add(`t:${t.id}:${date}`, t.dueTime - (t.remind ?? 0), t.title, `${hm(t.dueTime)} 할 일`)
+  for (const r of reminderTimes(t)) {
+    const key = `t:${t.id}:${t.due}:${r.off}`
+    if (r.at <= nowAbs && r.at > nowAbs - WINDOW && !sentFile[key]) out.push({ key, title: t.title, body: reminderBody(t, r.off), url: './' })
+  }
 }
 for (const e of alive(E?.events)) {
   if (e.start == null || e.remind == null) continue

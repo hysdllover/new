@@ -1,7 +1,7 @@
 import { today, addDays, weekStart, tsToYmd } from '../../engine/date.js'
 
 export const SMART = [
-  ['all', '전체'], ['today', '오늘'], ['tomorrow', '내일'], ['week', '이번 주'], ['nodue', '기한 없음'], ['overdue', '지연'], ['done', '완료'],
+  ['inbox', '받은 편지함'], ['all', '전체'], ['today', '오늘'], ['tomorrow', '내일'], ['week', '이번 주'], ['nodue', '기한 없음'], ['overdue', '지연'], ['done', '완료'],
 ]
 
 // 완료한 할 일은 목록에서 사라지지 않고 줄 그은 채로 남음 (보관함으로 옮겨야 사라짐)
@@ -15,6 +15,7 @@ export function smartMatch(t, smart) {
     case 'week': { const ws = weekStart(d); return !!t.due && t.due >= ws && t.due <= addDays(ws, 6) }
     case 'nodue': return !t.due
     case 'overdue': return !t.done && t.due && t.due < d
+    case 'inbox': return !!t.inbox && !t.done
     case 'done': return t.done
     default: return true
   }

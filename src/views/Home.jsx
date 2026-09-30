@@ -8,6 +8,7 @@ import { PALETTE } from '../store/schema.js'
 import { longPress } from '../lib/drag.js'
 import { dayRec, setDay, toggleTask } from '../store/actions.js'
 import { today } from '../engine/date.js'
+import { openPlanDay } from '../components/PlanDay.jsx'
 
 // 위젯 배치: 모든 기기에서 같은 4칸 격자 (아이폰·아이패드 배치가 같게)
 const COLS = [[1, '1/4'], [2, '2/4'], [3, '3/4'], [4, '한 줄']]
@@ -70,6 +71,7 @@ export default function Home() {
   return (
     <div className="col">
       <Greeting />
+      <PlanBanner />
       <TodayOne />
       <div className="row no-print" style={{ gap: 6 }}>
         <div className="scroll-x grow"><div className="row" style={{ gap: 6 }}>
@@ -145,6 +147,21 @@ function Greeting() {
   return (
     <button className="greet" onClick={() => openSheet(() => <QuoteEditor />, { title: '다짐 · 명언' })}>
       <div className="greet-hi">{q ? q.text : '다짐이나 명언을 적어 보세요'}</div>
+    </button>
+  )
+}
+
+// 오늘 계획 세우기 배너: 오늘 계획을 끝내면 사라짐
+function PlanBanner() {
+  useColl('days'); const tasks = useColl('tasks')
+  const d = today()
+  if (dayRec(d).planned) return null
+  const overdue = tasks.filter((t) => !t.done && !t.archived && t.due && t.due < d).length
+  const inbox = tasks.filter((t) => !t.done && !t.archived && t.inbox).length
+  return (
+    <button className="plan-banner no-print" onClick={openPlanDay}>
+      <span>☀</span><span className="grow" style={{ textAlign: 'left' }}><b>오늘 계획 세우기</b><span className="tiny muted">{[overdue && `밀린 일 ${overdue}`, inbox && `받은 편지함 ${inbox}`].filter(Boolean).join(' · ') || '오늘 할 일과 오늘의 하나 정하기'}</span></span>
+      <span className="tiny muted" onClick={(e) => { e.stopPropagation(); setDay(d, { planned: true }) }}>건너뛰기</span>
     </button>
   )
 }

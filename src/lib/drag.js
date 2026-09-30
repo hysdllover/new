@@ -48,27 +48,44 @@ function autoScroll(y) {
 }
 
 // 길게 누르면 드래그 시작 (짧은 터치·스크롤은 그대로 통과). 마우스는 5px 이동 시 시작.
+// getOpts() 가 onHold 를 주면: 길게 누른 뒤 그대로 떼면 onHold(메뉴), 누른 채 움직이면 드래그
 export function longPress(getOpts, delay = 320) {
-  return {
+  const h = {
     onPointerDown: (e) => {
       if (e.button > 0 || e.target.closest('button, input, textarea, select, a, [data-nodrag]')) return
       const target = e.currentTarget
       const x0 = e.clientX, y0 = e.clientY
-      let timer = null, done = false
-      const clear = () => { clearTimeout(timer); window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', clear); window.removeEventListener('pointercancel', clear) }
-      const go = (ev) => { if (done) return; done = true; clear(); startDrag(ev, { source: target, ...getOpts() }) }
+      let timer = null, done = false, held = null
+      const clear = () => { clearTimeout(timer); window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', cancel) }
+      const go = (ev) => { if (done) return; done = true; clear(); const o = held || getOpts(); if (o.onDrop || o.onMove) startDrag(ev, { source: target, ...o }) }
       const mv = (ev) => {
         const d = Math.hypot(ev.clientX - x0, ev.clientY - y0)
+        if (held) { if (d > 8) { if (held.onDrop || held.onMove) go(ev); else { done = true; clear() } } return }
         if (e.pointerType === 'mouse' && d > 5) go(ev)
         else if (e.pointerType !== 'mouse' && d > 8) clear()
       }
-      if (e.pointerType !== 'mouse') timer = setTimeout(() => go({ clientX: x0, clientY: y0 }), delay)
+      const up = () => {
+        clear()
+        if (!held || done) return
+        done = true; target.classList.remove('holding'); target.__held = Date.now()
+        // 손을 뗀 뒤 따라오는 클릭이 방금 연 메뉴를 닫지 않게 한 번 삼킴
+        const eat = (ev) => { ev.stopPropagation(); ev.preventDefault(); window.removeEventListener('click', eat, true) }
+        window.addEventListener('click', eat, true); setTimeout(() => window.removeEventListener('click', eat, true), 700)
+        held.onHold({ x: x0, y: y0 })
+      }
+      const cancel = () => { clear(); target.classList.remove('holding') }
+      if (e.pointerType !== 'mouse') timer = setTimeout(() => {
+        const o = getOpts()
+        if (o.onHold) { held = o; target.classList.add('holding'); try { navigator.vibrate?.(10) } catch {} } else go({ clientX: x0, clientY: y0 })
+      }, delay)
       window.addEventListener('pointermove', mv)
-      window.addEventListener('pointerup', clear)
-      window.addEventListener('pointercancel', clear)
+      window.addEventListener('pointerup', up)
+      window.addEventListener('pointercancel', cancel)
     },
-    onContextMenu: (e) => e.preventDefault(),
+    onContextMenu: (e) => { e.preventDefault(); const o = getOpts(); if (o.onHold && e.nativeEvent?.pointerType !== 'touch' && !('ontouchstart' in window)) o.onHold({ x: e.clientX, y: e.clientY }) },
   }
+  Object.defineProperty(h, 'getOpts', { value: getOpts, enumerable: false })
+  return h
 }
 
 // 드래그 중에는 스크롤 막기 (iOS 는 미리 등록된 non-passive 리스너가 필요)
