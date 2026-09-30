@@ -1,13 +1,17 @@
 import { Check, Icon, openDetail } from './ui.jsx'
 import { DueBadge, SubjectTag, PRI_COLOR } from './common.jsx'
 import { toggleTask } from '../store/actions.js'
+import { longPress } from '../lib/drag.js'
+import { openTaskMenu } from './TaskQuickMenu.jsx'
 
 export default function TaskItem({ t, subjects, projects, drag, compact, extra }) {
   const subs = t.subtasks || []
   const sdone = subs.filter((s) => s.done).length
   const proj = projects?.find((p) => p.id === t.projectId)
+  // 길게 눌러 떼면 빠른 메뉴, 누른 채 움직이면 (있으면) 드래그
+  const hold = longPress(() => ({ ...(drag?.getOpts?.() || null), onHold: () => openTaskMenu(t) }))
   return (
-    <div className={'item task-item draggable' + (t.done ? ' done' : '')} {...drag} onClick={() => openDetail('task', t.id)} data-id={t.id}>
+    <div className={'item task-item draggable' + (t.done ? ' done' : '')} {...hold} onClick={(e) => { if (Date.now() - (e.currentTarget.__held || 0) < 700) return; openDetail('task', t.id) }} data-id={t.id}>
       <Check on={t.done} onClick={() => toggleTask(t.id)} color={subjects?.find((s) => s.id === t.subjectId)?.color} />
       <div className="t">
         <div className="title">{t.priority >= 2 && <span style={{ color: PRI_COLOR[t.priority], marginRight: 4 }}>{t.priority === 3 ? '!!' : '!'}</span>}{t.title || '제목 없음'}</div>

@@ -377,3 +377,28 @@ button.greet { display: block; width: 100%; text-align: left; }
 [data-card="glass"] .stat-tile { background: rgba(255, 255, 255, .35); }
 .stat-tile { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: calc(var(--radius) - 2px); background: var(--surface-2); }
 .stat-tile b { font-size: 1.05em; font-weight: var(--fw-b); }
+
+/* 받은 편지함 · 한 번에 옮기기 · 완료 타임라인 */
+.inbox-acts { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.chip.sm { padding: 2px 8px; min-height: 24px; font-size: .78em; }
+.bulk-move { padding: 8px 10px; border-radius: var(--radius); background: var(--surface-2); align-items: center; }
+.tl { position: relative; display: flex; flex-direction: column; gap: 6px; }
+.tl::before { content: ''; position: absolute; left: 47px; top: 4px; bottom: 4px; width: 1px; background: var(--line); }
+.tl-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.tl-time { width: 38px; flex-shrink: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.tl-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; position: relative; z-index: 1; }
+
+.task-item.holding { background: var(--surface-2); transform: scale(.985); transition: transform .12s; }
+.qmenu { gap: 12px; }
+.qm-row { display: flex; flex-direction: column; gap: 6px; }
+.qm-acts .item { display: flex; align-items: center; gap: 10px; text-align: left; }
+
+/* 오늘 계획 세우기 */
+.plan-banner { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: var(--radius); background: color-mix(in srgb, var(--c3) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--c3) 25%, transparent); }
+.plan-banner b { display: block; font-weight: var(--fw-b); }
+.plan-day { min-height: 60vh; }
+.plan-step { flex: 1; font-size: .72em; padding: 6px 2px; border-bottom: 2px solid var(--line); color: var(--muted); white-space: nowrap; }
+.plan-step.on { color: var(--accent); border-color: var(--accent); font-weight: var(--fw-b); }
+.plan-step.done { color: var(--text); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+.radio { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--line); flex-shrink: 0; }
+.radio.on { border: 5px solid var(--accent); }

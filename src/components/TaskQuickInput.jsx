@@ -20,7 +20,9 @@ export default function TaskQuickInput({ defaults = {}, defaultDate = '', autoFo
   const make = (line) => {
     const p = parseQuick(line)
     if (!p.title) return null
-    return addTask({ ...defaults, title: p.title, due: p.date || dateOf(dk) || defaults.due || null, dueTime: p.time, subjectId: p.subjectId || sub, priority: star ? 3 : defaults.priority || 0, order: Date.now() * -1 })
+    const due = p.date || dateOf(dk) || defaults.due || null
+    // 날짜·프로젝트 없이 적은 할 일은 받은 편지함으로
+    return addTask({ ...defaults, inbox: defaults.inbox ?? (!due && !defaults.projectId), title: p.title, due, dueTime: p.time, subjectId: p.subjectId || sub, priority: star ? 3 : defaults.priority || 0, order: Date.now() * -1 })
   }
   const submit = (e) => {
     e?.preventDefault()

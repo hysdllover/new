@@ -9,6 +9,8 @@ import { loadState, useSettings, settings } from './store/store.js'
 import { applyTheme } from './theme/theme.js'
 import { initFonts } from './lib/fonts.js'
 import { TABS, EXTRA, go } from './nav.js'
+import { addTask } from './store/actions.js'
+import { toast } from './components/ui.jsx'
 import { startServices } from './lib/notify.js'
 import { startSync, restoreSync } from './sync/sync.js'
 
@@ -28,7 +30,18 @@ Promise.all([loadState(), initFonts(), restoreSync()]).then(async () => {
     const [tab, seg] = start.split('.')
     if ([...TABS, ...EXTRA].some((t) => t.id === tab)) go(tab, seg)
   }
-  if (target) history.replaceState(null, '', location.pathname + location.hash)
+  // 공유(단축어)로 들어온 할 일: ?add=내용&url=링크 → 받은 편지함
+  const q = new URLSearchParams(location.search)
+  const added = q.get('add')?.trim(), link = q.get('url')?.trim()
+  if (added || link) {
+    let title = added || link
+    const urlIn = link || (added?.match(/https?:\/\/\S+/) || [])[0]
+    if (urlIn && title.includes(urlIn) && title.trim() !== urlIn) title = title.replace(urlIn, '').trim()
+    addTask({ title: title.slice(0, 200), inbox: true, links: urlIn ? [{ url: urlIn, title: '' }] : [] })
+    go('tasks', 'list', { smart: 'inbox' })
+    setTimeout(() => toast('받은 편지함에 추가했어요'), 600)
+  }
+  if (target || added || link) history.replaceState(null, '', location.pathname + location.hash)
   createRoot(document.getElementById('root')).render(<StrictMode><Root /></StrictMode>)
   startServices()
   startSync()

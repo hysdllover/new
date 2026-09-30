@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { REMINDER_OPTS, taskReminders } from '../engine/reminders.js'
 import { useRec, useColl, useSettings, patch, uid, list } from '../store/store.js'
 import { updateTask, toggleTask, deleteTask, scheduleTask, splitTask, addReview, taskSpent, dayRec, setDay } from '../store/actions.js'
 import { Icon, Check, Field, AutoText, closeDetail, openSheet, toast, Prog } from './ui.jsx'
@@ -96,8 +97,12 @@ export default function TaskEditor({ id }) {
         </div>
         <div className="row">
           <Field label="예상 소요(분)"><input className="input" type="number" min="5" step="5" value={t.estimate || ''} onChange={(e) => up({ estimate: +e.target.value || null })} /></Field>
-          <Field label="알림(분 전)"><input className="input" type="number" min="0" step="5" value={t.remind ?? ''} placeholder="없음" onChange={(e) => up({ remind: e.target.value === '' ? null : +e.target.value })} /></Field>
         </div>
+        <Field label={'알림' + (t.due ? (t.dueTime == null ? ' (시간 없으면 9시 기준)' : '') : ' (날짜를 정하면 울려요)')}>
+          <div className="row wrap" style={{ gap: 6 }}>
+            {REMINDER_OPTS.map(([v, l]) => { const cur = taskReminders(t), on = cur.includes(v); return <button key={v} className={'chip' + (on ? ' on' : '')} onClick={() => up({ reminders: on ? cur.filter((x) => x !== v) : [...cur, v], remind: null })}>{l}</button> })}
+          </div>
+        </Field>
         <Field label="링크"><LinksEditor links={t.links} onChange={(v) => up({ links: v })} /></Field>
         <Field label="첨부 (사진·PDF·HTML)"><FilesEditor ids={t.files} onChange={(v) => up({ files: v })} meta={{ subjectId: t.subjectId, taskId: id }} /></Field>
         <Field label="반복"><RepeatEditor rule={t.repeat} start={t.due} onChange={(r) => up({ repeat: r })} /></Field>
