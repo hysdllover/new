@@ -98,7 +98,7 @@ export default function Home() {
                     onClick={editing ? () => widgetSettings(pi, w) : undefined}
                     {...(editing ? longPress(() => ({ label: WIDGETS[w.type].label, onDrop: (z) => move(w.id, z.dataset.drop.slice(2)) }), 250) : {})}>
                     {editing && <div className="w-badge">{wCols(w)}/4{wRows(w) > 1 ? ` · ${wRows(w)}배` : ''} · 탭해서 설정</div>}
-                    <div style={editing ? { pointerEvents: 'none' } : null}>
+                    <div className="wf-body" style={editing ? { pointerEvents: 'none' } : null}>
                       <W w={w} update={(patchW) => setW(pi, p.widgets.map((x) => (x.id === w.id ? { ...x, ...patchW } : x)))} />
                     </div>
                   </div>

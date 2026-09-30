@@ -209,7 +209,7 @@ input[type="color"] { width: 36px; height: 30px; border: 1px solid var(--line); 
 /* 대시보드 위젯 */
 .widgets { display: grid; gap: var(--gap); grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-flow: row dense; }
 .widgets > * { min-width: 0; }
-.widgets > .wf > div { height: 100%; }
+.widgets > .wf > .wf-body { height: 100%; }
 .w-edit { position: relative; outline: 1.5px dashed var(--line); outline-offset: 2px; }
 .w-tools { position: absolute; top: 6px; right: 6px; display: flex; gap: 2px; background: var(--surface); border-radius: 8px; box-shadow: var(--shadow); z-index: 2; }
 
