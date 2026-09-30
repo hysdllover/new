@@ -143,6 +143,7 @@ function CalendarSubCard() {
         </div>
         <div className="row wrap" style={{ gap: 12, marginTop: 8 }}>
           {[['icsEvents', '일정'], ['icsTasks', '할 일 마감'], ['icsDdays', 'D-day']].map(([k, l]) => <Toggle key={k} label={l} checked={st[k] !== false} onChange={(v) => setSettings({ [k]: v })} />)}
+          <Toggle label="학교 수업 (시간표)" checked={!!st.icsClasses} onChange={(v) => setSettings({ icsClasses: v })} />
         </div>
         <div className="tiny muted" style={{ marginTop: 6 }}>앱에서 바꾸면 몇 분 안에 파일이 갱신되고, 캘린더 앱은 iOS 가 정한 주기(보통 1시간 안팎)로 새로 가져와요. 읽기 전용이라 캘린더 앱에서 고친 내용은 돌아오지 않아요.</div>
       </> : <div className="small muted">{sync.state === 'off' ? '동기화를 연결하면 구독 주소가 생겨요.' : '다음 동기화 뒤에 주소가 나타나요.'}</div>}

@@ -1,5 +1,6 @@
 import { list, settings } from '../store/store.js'
 import { occurrences } from './recurrence.js'
+import { classesFor } from './timetable.js'
 import { addDays, today, nowMin } from './date.js'
 
 // 날짜별 일정(반복 전개 포함)
@@ -15,6 +16,9 @@ export function eventsOn(date, events = list('events')) {
   return out.sort((a, b) => (a.start ?? -1) - (b.start ?? -1))
 }
 
+// 학교 수업 (settings().timetable)
+export const classesOn = (date) => classesFor(settings().timetable, date, list('subjects'))
+
 export const blocksOn = (date, blocks = list('blocks')) => blocks.filter((b) => b.date === date).sort((a, b) => a.start - b.start)
 
 // 바쁜 구간: 일정(+앞뒤 버퍼) + 타임블록
@@ -24,6 +28,7 @@ export function busy(date, excludeId) {
     if (e.start == null) continue
     out.push({ s: e.start - (e.bufferBefore || 0), e: (e.end ?? e.start + 60) + (e.bufferAfter || 0), id: e.id, type: 'event' })
   }
+  for (const c of classesOn(date)) out.push({ s: c.start, e: c.end, id: c.id, type: 'class' })
   for (const b of blocksOn(date)) if (b.id !== excludeId) out.push({ s: b.start, e: b.start + b.dur, id: b.id, type: 'block' })
   return out.sort((a, b) => a.s - b.s)
 }
@@ -68,6 +73,7 @@ export function planSessions(n, dur, fromDate, maxDays = 30) {
 export function cascade(date, moved) {
   const items = blocksOn(date).filter((b) => b.id !== moved.id).map((b) => ({ id: b.id, s: b.start, d: b.dur, title: b.title }))
   const fixed = eventsOn(date).filter((e) => e.start != null && e.id !== moved.id).map((e) => ({ s: e.start - (e.bufferBefore || 0), e: (e.end ?? e.start + 60) + (e.bufferAfter || 0) }))
+  for (const c of classesOn(date)) fixed.push({ s: c.start, e: c.end })
   const occupied = [{ s: moved.start, e: moved.start + moved.dur }, ...fixed]
   const changes = []
   // 옮긴 항목과 겹치거나 그 뒤에 있는 블록만 순서대로 밀기

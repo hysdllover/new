@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useColl, useSettings, put } from '../../store/store.js'
 import { scheduleTask } from '../../store/actions.js'
-import { eventsOn } from '../../engine/scheduler.js'
+import { eventsOn, classesOn } from '../../engine/scheduler.js'
+import { go } from '../../nav.js'
 import { fmtTime, today, nowMin, tsToMin } from '../../engine/date.js'
 import { openDetail, openSheet, useNow, Field } from '../../components/ui.jsx'
 import { SubjectSelect } from '../../components/common.jsx'
@@ -42,7 +43,9 @@ export default function Timeline({ date, showActual = true, dropTarget = true })
   const y = (m) => (m - startH) * PX
 
   const evs = eventsOn(date, events)
+  useSettings(); const classes = classesOn(date)
   const items = lanes([
+    ...classes.map((c) => ({ id: c.id, type: 'class', s: c.start, e: c.end, title: c.title, color: c.color || 'var(--muted)', rec: { location: c.room } })),
     ...evs.filter((e) => e.start != null).map((e) => ({ id: e.id, type: 'event', s: e.start, e: e.end ?? e.start + 60, title: e.title, color: e.color || 'var(--accent)', rec: e, bb: e.bufferBefore || 0, ba: e.bufferAfter || 0 })),
     ...blocks.filter((b) => b.date === date && !(b.carriedTo && b.carriedTo !== 'done')).map((b) => {
       const t = b.taskId && tasks.find((x) => x.id === b.taskId)
@@ -61,6 +64,7 @@ export default function Timeline({ date, showActual = true, dropTarget = true })
   }, [date]) // eslint-disable-line
 
   const onItemDown = (e, it, resize) => {
+    if (it.type === 'class') { e.stopPropagation(); return go('planner', 'timetable') }
     if (it.type === 'event' && it.rec.repeat) return
     if (e.button > 0) return
     e.stopPropagation()

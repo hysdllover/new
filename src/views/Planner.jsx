@@ -7,16 +7,17 @@ import Week from './planner/Week.jsx'
 import Month from './planner/Month.jsx'
 import Circle from './planner/Circle.jsx'
 import Grid from './planner/Grid.jsx'
+import Timetable from './planner/Timetable.jsx'
 
 export default function Planner({ seg, params }) {
   const date = params.date || today()
   const setDate = (d) => setParams('planner', { date: d })
   const step = seg === 'week' ? 7 : seg === 'month' ? 30 : 1
-  const V = { today: Today, week: Week, month: Month, circle: Circle, grid: Grid }[seg] || Today
+  const V = { today: Today, week: Week, month: Month, circle: Circle, grid: Grid, timetable: Timetable }[seg] || Today
   const hol = holiday(date)
   return (
     <div className="col">
-      {seg !== 'month' && (
+      {seg !== 'month' && seg !== 'timetable' && (
         <div className="row between no-print">
           <div className="row">
             <button className="icon-btn" onClick={() => setDate(addDays(date, -step))} aria-label="이전"><Icon name="back" /></button>
