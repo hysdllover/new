@@ -12,7 +12,7 @@ import { today } from '../engine/date.js'
 // 위젯 배치: 모든 기기에서 같은 4칸 격자 (아이폰·아이패드 배치가 같게)
 const COLS = [[1, '1/4'], [2, '2/4'], [3, '3/4'], [4, '한 줄']]
 const ROWS = [[1, '기본'], [2, '2배'], [3, '3배']]
-const STYLES = [['card', '카드'], ['tint', '색채움'], ['plain', '미니멀'], ['bold', '진하게'], ['glass', '유리']]
+const STYLES = [['card', '카드'], ['tint', '색채움'], ['plain', '미니멀'], ['bold', '진하게'], ['glass', '유리'], ['outline', '테두리'], ['gradient', '그라데이션']]
 export const wCols = (w) => w.cols || { s: 2, m: 4, l: 4, t: 2 }[w.size || 's'] || 2
 export const wRows = (w) => w.rows || (w.size === 't' ? 2 : 1)
 const sizeOf = (cols, rows) => (rows >= 2 && cols <= 2 ? 't' : cols >= 4 ? 'l' : cols === 3 ? 'm' : 's')
