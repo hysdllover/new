@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { weekGoals } from '../store/actions.js'
 import { REMINDER_OPTS, taskReminders } from '../engine/reminders.js'
 import { useRec, useColl, useSettings, patch, uid, list } from '../store/store.js'
 import { updateTask, toggleTask, deleteTask, scheduleTask, splitTask, addReview, taskSpent, dayRec, setDay } from '../store/actions.js'
@@ -12,6 +13,7 @@ import { go } from '../nav.js'
 
 export default function TaskEditor({ id }) {
   const t = useRec('tasks', id)
+  useColl('days'); const goals = weekGoals()
   const subjects = useColl('subjects')
   const planning = useSettings().modules.planning !== false
   const logs = useColl('logs')
@@ -94,6 +96,7 @@ export default function TaskEditor({ id }) {
         </div>
         <div className="row">
           <Field label="프로젝트"><ProjectSelect value={t.projectId} onChange={(v) => up({ projectId: v })} /></Field>
+          {goals.length > 0 && <Field label="이번 주 목표"><select className="input" value={t.goalId || ''} onChange={(e) => up({ goalId: e.target.value || null })}><option value="">연결 안 함</option>{goals.map((g) => <option key={g.id} value={g.id}>{g.title}</option>)}</select></Field>}
         </div>
         <div className="row">
           <Field label="예상 소요(분)"><input className="input" type="number" min="5" step="5" value={t.estimate || ''} onChange={(e) => up({ estimate: +e.target.value || null })} /></Field>

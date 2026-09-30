@@ -1,5 +1,5 @@
 import { put, patch, remove, restore, find, list, batch, settings, uid } from './store.js'
-import { today, addDays, diffDays, nowMin, tsToYmd } from '../engine/date.js'
+import { today, addDays, diffDays, nowMin, tsToYmd, weekStart } from '../engine/date.js'
 import { nextOccurrence } from '../engine/recurrence.js'
 import { findSlot, planSessions } from '../engine/scheduler.js'
 import { toast } from '../components/ui.jsx'
@@ -28,6 +28,16 @@ export function updateTask(id, partial, opt = {}) {
   // 간트: 마감이 늦춰지면 후속 작업을 밀어냄
   if (partial.due && prev.due && partial.due > prev.due) pushDependents(next)
   return next
+}
+
+/* ── 주간 목표 (최대 3개, days 컬렉션에 'week:주 시작일' 로 저장) ── */
+export const weekId = (d = today()) => 'week:' + weekStart(d, settings().weekStart ?? 1)
+export const weekGoals = (id = weekId()) => find('days', id)?.goals || []
+export const setWeekGoals = (goals, id = weekId()) => put('days', { ...(find('days', id) || null), id, goals })
+export function goalProgress(g, tasks) {
+  const linked = tasks.filter((t) => t.goalId === g.id && !t.archived)
+  const done = linked.filter((t) => t.done).length
+  return { linked: linked.length, done, ratio: g.done ? 1 : linked.length ? done / linked.length : 0 }
 }
 
 // 빠른 날짜 목표: 오늘·내일·이번 주말(토)·다음 주 월요일

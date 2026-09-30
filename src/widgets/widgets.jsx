@@ -6,6 +6,7 @@ import { WeekBars, MonthHeat } from '../components/charts.jsx'
 import { openRecord } from '../views/study/Log.jsx'
 import { Card, Check, Ring, Empty, Icon, AddInput, openDetail, useNow } from '../components/ui.jsx'
 import TaskItem from '../components/TaskItem.jsx'
+import { WeekGoals } from '../components/WeekGoals.jsx'
 import { LinkPreview } from '../components/Attach.jsx'
 import { CalEmbed } from '../components/BlockEditor.jsx'
 import { Gaps } from '../views/planner/Today.jsx'
@@ -615,6 +616,10 @@ function YearProgress() {
   )
 }
 
+function WeekGoalsW() {
+  return <Card title="이번 주 목표" action={<button className="tiny muted" onClick={goto('tasks', 'list')}>편집 →</button>}><WeekGoals compact /></Card>
+}
+
 export const WIDGETS = {
   now: { label: '지금 (현재·다음 일정)', C: Now, size: 'm' },
   top3: { label: '오늘의 Top 3', C: Top3, size: 'm' },
@@ -652,4 +657,5 @@ export const WIDGETS = {
   ddaylist: { label: 'D-day 목록', C: DdayList, size: 'm' },
   subjectweek: { label: '이번 주 과목별', C: SubjectWeek, size: 'm' },
   yearprog: { label: '올해·이번 달 진행률', C: YearProgress, size: 's' },
+  weekgoals: { label: '이번 주 목표 3개', C: WeekGoalsW, size: 'm' },
 }

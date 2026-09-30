@@ -5,6 +5,7 @@ import { COLLECTIONS, GIST_FILES } from '../store/schema.js'
 import { mergeColl, stableFile } from './merge.js'
 import { blobToDataUrl, setRemoteRaw, MAX_FILE } from '../lib/files.js'
 import { eventsOn } from '../engine/scheduler.js'
+import { buildIcs } from '../lib/ics.js'
 import { listFonts, getFontBlob, importFont, removeFont, markSynced, pendingDeletes, clearDeletes, SYNC_FONT_MAX } from '../lib/fonts.js'
 
 // GitHub Gist 기반 iPhone ↔ iPad 동기화
@@ -159,6 +160,15 @@ function calPayload() {
   }
   return out
 }
+// 진행 중 타이머 (잠금 화면 위젯에서 실시간 표시)
+function timerPayload() {
+  let t = null
+  try { t = JSON.parse(localStorage.getItem('timer')) } catch {}
+  if (!t) return null
+  const sub = getState().subjects?.[t.subjectId]
+  const acc = t.acc || 0
+  return { mode: t.mode, name: sub?.name || '공부', color: sub?.color || null, paused: !!t.paused, acc, start: t.paused ? null : t.segStart - acc, end: t.mode === 'countdown' && !t.paused ? t.segStart + (t.target - acc) : null, target: t.target || null }
+}
 function widgetPayload() {
   const st = getState()
   const keep = (c, fn = () => true) => Object.fromEntries(Object.values(st[c] || {}).filter((r) => !r.deleted && fn(r)).map((r) => [r.id, r]))
@@ -170,25 +180,47 @@ function widgetPayload() {
     tasks: { tasks: keep('tasks', (t) => !t.archived && (!t.done || (t.doneAt && new Date(t.doneAt).getTime() > recent))) },
     study: { subjects: keep('subjects'), sessions: keep('sessions', (x) => x.date >= from), ddays: keep('ddays') },
     cal: calPayload(),
+    timer: timerPayload(),
     settings: { settings: { main: { goalDaily: main.goalDaily, weekStart: main.weekStart, widgetFont: main.widgetFont } }, quotes: keep('quotes') },
   })
 }
 const WIDGET_GAP = 3 * 60000 // 위젯 gist 쓰기 최소 간격 (앱을 나갈 때는 바로)
 let widgetDirty = false
+// 아이폰 캘린더 구독용 .ics (일정·할 일·D-day)
+function calendarIcs() {
+  const st = settings(), ex = excluded()
+  const ymd = (x) => x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0')
+  const d = new Date(); d.setDate(d.getDate() - 30)
+  const from = ymd(d), items = []
+  if (st.icsEvents !== false && !ex.has('events')) {
+    for (let i = 0; i < 150; i++, d.setDate(d.getDate() + 1)) {
+      const k = ymd(d)
+      for (const e of eventsOn(k)) items.push({ uid: `e-${e.id}-${k}`, title: e.title, date: k, start: e.start ?? null, end: e.end ?? null, location: e.location, note: e.note })
+    }
+  }
+  if (st.icsTasks !== false) for (const t of list('tasks')) if (t.due && !t.done && !t.archived && t.due >= from) items.push({ uid: `t-${t.id}`, title: '☐ ' + t.title, date: t.due, start: t.dueTime ?? null, end: t.dueTime != null ? t.dueTime + (t.estimate || 30) : null })
+  if (st.icsDdays !== false) for (const x of list('ddays')) if (x.date >= from) items.push({ uid: `d-${x.id}`, title: '🎯 ' + x.title, date: x.date })
+  const day = new Date(); day.setHours(0, 0, 0, 0)
+  return buildIcs(items, { name: '스터디 일정', stamp: day })
+}
+export const calendarUrl = () => widgetRawUrl()?.replace(/widget\.json$/, 'calendar.ics') || null
+
 async function syncWidget(remoteId, patchFiles, force) {
-  const content = widgetPayload()
+  const content = widgetPayload(), ics = calendarIcs()
   let id = remoteId || widgetGistId()
   if (!id) {
-    const res = await gh('/gists', { method: 'POST', body: JSON.stringify({ description: WIDGET_DESC, public: false, files: { 'widget.json': { content } } }) })
+    const res = await gh('/gists', { method: 'POST', body: JSON.stringify({ description: WIDGET_DESC, public: false, files: { 'widget.json': { content }, 'calendar.ics': { content: ics } } }) })
     id = res.id
-    ls.set('widget_last', content)
-  } else if (ls.get('widget_last') !== content || ls.get('widget_gist') !== id) {
+    ls.set('widget_last', content); ls.set('ics_last', ics)
+  } else if (ls.get('widget_last') !== content || ls.get('ics_last') !== ics || ls.get('widget_gist') !== id) {
     if (!force && ls.get('widget_gist') === id && Date.now() - (+ls.get('widget_at') || 0) < WIDGET_GAP) { widgetDirty = true; return }
     try {
-      await gh(`/gists/${id}`, { method: 'PATCH', body: JSON.stringify({ files: { 'widget.json': { content } } }) })
-      ls.set('widget_last', content); ls.set('widget_at', String(Date.now())); widgetDirty = false
+      const files = { 'widget.json': { content } }
+      if (ls.get('ics_last') !== ics || ls.get('widget_gist') !== id) files['calendar.ics'] = { content: ics }
+      await gh(`/gists/${id}`, { method: 'PATCH', body: JSON.stringify({ files }) })
+      ls.set('widget_last', content); ls.set('ics_last', ics); ls.set('widget_at', String(Date.now())); widgetDirty = false
     } catch (e) {
-      if (/찾을 수 없/.test(e.message)) { ls.set('widget_gist', null); ls.set('widget_last', null); return syncWidget(null, patchFiles, force) }
+      if (/찾을 수 없/.test(e.message)) { ls.set('widget_gist', null); ls.set('widget_last', null); ls.set('ics_last', null); return syncWidget(null, patchFiles, force) }
       throw e
     }
   }
@@ -236,6 +268,7 @@ export async function restoreBackup(b) {
   syncNow()
 }
 
+let againFlush = false
 let running = null, again = false, pausedUntil = 0, resumeTimer = null, lastPush = 0
 const pauseMsg = () => `요청이 많아 잠시 쉬는 중 · ${Math.max(1, Math.ceil((pausedUntil - Date.now()) / 60000))}분 뒤 자동 재시도`
 function pause(until) {
@@ -247,7 +280,7 @@ export async function syncNow({ flush = false } = {}) {
   if (!token()) return
   if (!navigator.onLine) { setStatus({ state: 'pending' }); return }
   if (Date.now() < pausedUntil) { setStatus({ state: 'error', error: pauseMsg() }); return }
-  if (running) { again = true; return running }
+  if (running) { again = true; againFlush = againFlush || flush; return running }
   running = (async () => {
     setStatus({ state: 'syncing', error: null, auth: false })
     try {
@@ -309,7 +342,7 @@ export async function syncNow({ flush = false } = {}) {
   })()
   try { await running } finally {
     running = null
-    if (again) { again = false; syncNow() }
+    if (again) { const f = againFlush; again = false; againFlush = false; syncNow({ flush: f }) }
   }
 }
 
@@ -326,6 +359,8 @@ export function startSync() {
   const flush = () => { if (status.state === 'pending' || widgetDirty) { clearTimeout(timer); syncNow({ flush: true }) } }
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') syncNow(); else flush() })
   window.addEventListener('pagehide', flush)
+  // 타이머 시작·정지는 잠금 화면 위젯에 바로 반영
+  window.addEventListener('timer-change', () => { if (token()) syncNow({ flush: true }) })
   window.addEventListener('online', () => syncNow())
   setInterval(() => { if (document.visibilityState === 'visible') syncNow() }, 60000)
   syncNow()

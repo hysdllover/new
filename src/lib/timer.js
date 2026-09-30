@@ -9,7 +9,12 @@ import { keepAwake } from './notify.js'
 const KEY = 'timer'
 let t = (() => { try { const x = JSON.parse(localStorage.getItem(KEY)); return x?.mode === 'pomodoro' ? { mode: 'stopwatch', subjectId: x.subjectId, taskId: x.taskId, segStart: x.segStart, acc: x.acc || 0, paused: x.paused || x.phase === 'break', pausedAt: x.pausedAt || Date.now() } : x } catch { return null } })()
 const L = new Set()
-const set = (next) => { t = next; try { next ? localStorage.setItem(KEY, JSON.stringify(next)) : localStorage.removeItem(KEY) } catch {} L.forEach((l) => l()) }
+const set = (next) => {
+  const was = t
+  t = next; try { next ? localStorage.setItem(KEY, JSON.stringify(next)) : localStorage.removeItem(KEY) } catch {} L.forEach((l) => l())
+  // 시작·일시정지·종료 때만 알림 (과목 바꿈 등은 제외)
+  if (!was !== !next || was?.paused !== next?.paused) try { window.dispatchEvent(new Event('timer-change')) } catch {}
+}
 export const useTimerState = () => useSyncExternalStore((f) => { L.add(f); return () => L.delete(f) }, () => t)
 export const getTimer = () => t
 
