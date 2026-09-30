@@ -7,6 +7,8 @@ import { openRecord } from '../views/study/Log.jsx'
 import { Card, Check, Ring, Empty, Icon, AddInput, openDetail, useNow } from '../components/ui.jsx'
 import TaskItem from '../components/TaskItem.jsx'
 import { WeekGoals } from '../components/WeekGoals.jsx'
+import { lectureStats } from '../engine/lecture.js'
+import { plusOne, listen, lectureLine } from '../views/study/Lectures.jsx'
 import { LinkPreview } from '../components/Attach.jsx'
 import { CalEmbed } from '../components/BlockEditor.jsx'
 import { Gaps } from '../views/planner/Today.jsx'
@@ -543,6 +545,30 @@ function Textbooks() {
   )
 }
 
+function LecturesW() {
+  const lecs = useColl('lectures'), t = today()
+  const rows = lecs.map((l) => ({ l, s: lectureStats(l, t) })).filter((x) => x.s.left)
+    .sort((a, b) => (b.s.todayLeft || 0) - (a.s.todayLeft || 0) || (a.s.limit || '9').localeCompare(b.s.limit || '9'))
+  return (
+    <Card title="오늘 들을 인강" action={<button className="tiny muted" onClick={goto('study', 'progress')}>전체 →</button>}>
+      <div className="col" style={{ gap: 8 }}>
+        {rows.slice(0, 4).map(({ l, s }) => (
+          <div key={l.id}>
+            <div className="row" style={{ gap: 6 }}>
+              <span className="grow ellipsis small">{l.title} <span className="tiny muted">{s.next}강</span></span>
+              <button className="btn sm" onClick={() => plusOne(l.id)}>＋1</button>
+              <button className="icon-btn" aria-label="듣기" onClick={() => listen(l)}><Icon name="play" size={14} /></button>
+            </div>
+            <div className="bar-t" style={{ marginTop: 4 }}><i style={{ width: (s.doneN / (s.total || 1)) * 100 + '%' }} /></div>
+            <div className={'tiny' + (s.late ? ' lec-late' : ' muted')} style={{ marginTop: 3 }}>{lectureLine(s)} · 남은 {fmtDur(s.leftMin)}</div>
+          </div>
+        ))}
+        {!rows.length && <Empty>{lecs.length ? '모든 강좌를 완강했어요' : '공부 › 진도에서 인강을 추가해 보세요'}</Empty>}
+      </div>
+    </Card>
+  )
+}
+
 function GradesW() {
   const grades = useColl('grades'), subjects = useColl('subjects')
   const rows = subjects.map((s) => { const g = grades.filter((x) => x.subjectId === s.id).sort((a, b) => a.date.localeCompare(b.date)); return { s, last: g[g.length - 1], prev: g[g.length - 2] } }).filter((x) => x.last)
@@ -680,4 +706,5 @@ export const WIDGETS = {
   yearprog: { label: '올해·이번 달 진행률', C: YearProgress, size: 's' },
   weekgoals: { label: '이번 주 목표 3개', C: WeekGoalsW, size: 'm' },
   classes: { label: '오늘 시간표', C: TodayClasses, size: 'm' },
+  lectures: { label: '오늘 들을 인강', C: LecturesW, size: 'm' },
 }

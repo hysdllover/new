@@ -433,3 +433,10 @@ button.greet { display: block; width: 100%; text-align: left; }
 .tt-row { gap: 8px; padding: 3px 6px; border-left: 2.5px solid var(--c); border-radius: 4px; }
 .tt-row.now { background: color-mix(in srgb, var(--c) 16%, transparent); }
 .tt-row.past { opacity: .45; }
+
+/* 인강 */
+.lec-late { color: color-mix(in srgb, var(--c4) 65%, var(--text)); }
+.lec-chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 5px; }
+.lec-chip { height: 40px; border-radius: 8px; border: 1px solid var(--line); font-size: .85em; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; }
+.lec-chip small { font-size: .72em; color: var(--muted); }
+.lec-chip.on { background: color-mix(in srgb, var(--accent) 14%, var(--surface)); border-color: transparent; color: var(--accent); }

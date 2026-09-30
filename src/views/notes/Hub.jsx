@@ -55,7 +55,7 @@ function HubPage({ hubId }) {
   const isP = kind === 'p'
   const projects = useColl('projects'), subjects = useColl('subjects')
   const tasks = useColl('tasks'), events = useColl('events'), notes = useColl('notes'), files = useColl('files')
-  const sessions = useColl('sessions'), textbooks = useColl('textbooks'), reviews = useColl('reviews'), ddays = useColl('ddays')
+  const sessions = useColl('sessions'), textbooks = useColl('textbooks'), lectures = useColl('lectures'), reviews = useColl('reviews'), ddays = useColl('ddays')
   const rec = isP ? projects.find((p) => p.id === id) : subjects.find((s) => s.id === id)
   if (!rec) return <Empty>삭제된 허브입니다</Empty>
   const key = isP ? 'projectId' : 'subjectId'
@@ -99,9 +99,10 @@ function HubPage({ hubId }) {
               <div className="list">{evs.map((e) => <button key={e.id} className="item" style={{ textAlign: 'left' }} onClick={() => openDetail('event', e.id)}><span className="badge">{fmtShort(e.date)}</span><span className="t">{e.title}</span></button>)}</div>
             </Card>
           )}
-          {!isP && (textbooks.some((t) => t.subjectId === id) || ddays.length > 0) && (
+          {!isP && (textbooks.some((t) => t.subjectId === id) || lectures.some((l) => l.subjectId === id) || ddays.length > 0) && (
             <Card title="교재 · 복습">
               {textbooks.filter((t) => t.subjectId === id).map((t) => <div key={t.id} style={{ marginBottom: 8 }}><div className="row between small"><span>{t.title}</span><span>{t.current}/{t.total}{t.unit}</span></div><Prog value={t.current / t.total} color={rec.color} /></div>)}
+              {lectures.filter((l) => l.subjectId === id).map((l) => { const n = Object.keys(l.done || {}).filter((k) => +k <= l.total).length; return <div key={l.id} style={{ marginBottom: 8 }}><div className="row between small"><span>▶ {l.title}</span><span>{n}/{l.total}강</span></div><Prog value={n / (l.total || 1)} color={rec.color} /></div> })}
               <div className="small muted">복습 대기 {reviews.filter((r) => r.subjectId === id && !r.done && r.next <= today()).length}개 · 가까운 D-day {ddays[0] ? `${ddays[0].title} ${dday(ddays[0].date)}` : '-'}</div>
             </Card>
           )}
