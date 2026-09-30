@@ -5,7 +5,7 @@ import './styles/app.css'
 import './styles/views.css'
 import './styles/print.css'
 import App from './App.jsx'
-import { loadState, useSettings } from './store/store.js'
+import { loadState, useSettings, settings } from './store/store.js'
 import { applyTheme } from './theme/theme.js'
 import { initFonts } from './lib/fonts.js'
 import { TABS, EXTRA, go } from './nav.js'
@@ -22,11 +22,13 @@ Promise.all([loadState(), initFonts(), restoreSync()]).then(async () => {
   if (location.search.includes('demo')) (await import('./dev/seed.js')).seed()
   // 홈 화면 위젯에서 연 링크: ?go=탭.세그먼트
   const target = new URLSearchParams(location.search).get('go')
-  if (target) {
-    const [tab, seg] = target.split('.')
+  // 위젯 링크(?go=탭.세그먼트) 또는 설정의 시작 화면
+  const start = target || (settings().startTab && settings().startTab !== 'last' ? settings().startTab : null)
+  if (start) {
+    const [tab, seg] = start.split('.')
     if ([...TABS, ...EXTRA].some((t) => t.id === tab)) go(tab, seg)
-    history.replaceState(null, '', location.pathname + location.hash)
   }
+  if (target) history.replaceState(null, '', location.pathname + location.hash)
   createRoot(document.getElementById('root')).render(<StrictMode><Root /></StrictMode>)
   startServices()
   startSync()

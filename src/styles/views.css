@@ -284,6 +284,7 @@ details.more[open] > summary::before { content: '▾ '; }
 .wf > div > .card { height: 100%; }
 .wf-tint .card { background: color-mix(in srgb, var(--wc) 13%, var(--surface)); border-color: color-mix(in srgb, var(--wc) 25%, transparent); }
 .wf-plain .card { background: transparent; border-color: transparent; box-shadow: none; padding-left: 4px; padding-right: 4px; }
+.wf-glass .card { background: color-mix(in srgb, var(--surface) 55%, transparent); backdrop-filter: blur(18px) saturate(1.5); -webkit-backdrop-filter: blur(18px) saturate(1.5); border: 1px solid color-mix(in srgb, #fff 45%, transparent); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5), 0 8px 24px rgba(0, 0, 0, .06); }
 .wf-bold .card { background: var(--wc); border-color: transparent; color: #fff; }
 .wf-bold .card .muted, .wf-bold .card .tiny, .wf-bold .card h3 { color: rgba(255, 255, 255, .82); }
 .wf-bold .card .chip, .wf-bold .card .input { background: rgba(255, 255, 255, .15); color: #fff; border-color: transparent; }
@@ -361,3 +362,11 @@ button.greet { display: block; width: 100%; text-align: left; }
 .dw-lr .dw-line::before { background: rgba(255, 255, 255, .35); }
 .dw-lr .dw-line i { background: #fff; }
 .dw-li { font-size: 12px; opacity: .9; }
+
+/* 오늘의 하나 */
+.one { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent); }
+.one-t { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 1px; }
+.one-title { font-size: 1.08em; font-weight: var(--fw-b); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.one.done .one-title { text-decoration: line-through; color: var(--muted); }
+.one-empty { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: var(--radius); border: 1px dashed var(--line); color: var(--muted); font-size: .9em; width: 100%; }
+[data-card="glass"] .one { background: color-mix(in srgb, var(--surface) 58%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
