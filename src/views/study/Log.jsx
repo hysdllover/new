@@ -54,7 +54,7 @@ export default function Log({ params = {} }) {
                     <div className="row between"><b>{sub?.name || '과목 없음'}</b><span>{fmtDur(r.dur)}</span></div>
                     <div className="meta">
                       {r.start != null ? <span>{fmtTime(tsToMin(r.start))}–{fmtTime(tsToMin(r.start) + r.dur)}</span> : <span>시각 없음</span>}
-                      <span className="badge">{r.kind === 'manual' ? '직접 입력' : r.kind === 'pomodoro' ? '뽀모도로' : '타이머'}</span>
+                      <span className="badge">{r.kind === 'manual' ? '직접 입력' : r.kind === 'stopwatch' ? '스톱워치' : '타이머'}</span>
                       {r.focus > 0 && <span>{'★'.repeat(r.focus)}</span>}
                     </div>
                     {r.note && <div className="small" style={{ marginTop: 3, whiteSpace: 'pre-wrap' }}>{r.note}</div>}

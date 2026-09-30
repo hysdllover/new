@@ -67,7 +67,7 @@ function Goal() {
   const sessions = useColl('sessions')
   const t = useTimerState()
   useTick(!!t)
-  const live = t && !t.paused && t.phase !== 'break' ? (Date.now() - t.segStart) / 60000 : 0
+  const live = t && !t.paused ? (Date.now() - t.segStart) / 60000 : 0
   const m = sessions.filter((s) => s.date === today()).reduce((a, s) => a + s.dur, 0) + live
   return (
     <Card className="center" onClick={goto('study', 'records')} style={{ cursor: 'pointer' }}>
@@ -256,7 +256,8 @@ function Stopwatch() {
       {t ? (
         <div className="col" style={{ gap: 6 }}>
           <div className="row"><span className="dot" style={{ background: sub?.color }} /><span className="small">{sub?.name}</span></div>
-          <span className="big-clock">{fmtClock(elapsed(t) / 1000)}</span>
+          <span className="big-clock">{fmtClock((t.mode === 'countdown' ? Math.max(0, t.target - elapsed(t)) : elapsed(t)) / 1000)}</span>
+          {t.mode === 'countdown' && <span className="tiny muted">남은 시간 · {Math.round(t.target / 60000)}분 타이머</span>}
           <div className="row">{t.paused ? <button className="btn sm primary" onClick={resume}>계속</button> : <button className="btn sm" onClick={pause}>정지</button>}<button className="btn sm" onClick={stop}>기록</button></div>
         </div>
       ) : (
