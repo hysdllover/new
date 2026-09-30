@@ -408,3 +408,28 @@ button.greet { display: block; width: 100%; text-align: left; }
 .input-plain { border: 0; background: transparent; font: inherit; color: inherit; padding: 2px 0; min-width: 0; outline: none; }
 .input-plain:focus { border-bottom: 1px solid var(--accent); }
 .plan-goals { padding: 8px 10px; border-radius: var(--radius); background: var(--surface-2); display: flex; flex-direction: column; gap: 6px; }
+
+/* 시간표 */
+.tl-item.class { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--c) 12%, var(--surface)) 0 6px, color-mix(in srgb, var(--c) 6%, var(--surface)) 6px 12px); border-left-style: dashed; opacity: .9; }
+.wev.cls { --c: var(--muted); background: transparent; border-left-style: dashed; color: var(--muted); }
+.tt-grid { display: grid; gap: 3px; }
+.tt-h { text-align: center; font-size: .8em; color: var(--muted); padding: 2px 0 4px; }
+.tt-h.on { color: var(--accent); font-weight: 600; }
+.tt-p { display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: .78em; color: var(--muted); line-height: 1.2; }
+.tt-p b { font-weight: 500; color: var(--text); }
+.tt-p span { font-size: .85em; }
+.tt-p.on b { color: var(--accent); }
+.tt-c { min-height: 48px; min-width: 0; border-radius: 8px; border: 1px dashed var(--line); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 3px 2px; font-size: .82em; overflow: hidden; }
+.tt-c > span { max-width: 100%; }
+.tt-c.has { border: 0; background: color-mix(in srgb, var(--c) 16%, var(--surface)); }
+.tt-c.today { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent); }
+.tt-c.now { box-shadow: inset 0 0 0 2px var(--accent); }
+@media (min-width: 700px) { .tt-c { min-height: 58px; font-size: .9em; } }
+@media print {
+  .tt-card { box-shadow: none; border: 0; }
+  .tt-c { min-height: 20mm; font-size: 11pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .tt-c.today, .tt-c.now { box-shadow: none; }
+}
+.tt-row { gap: 8px; padding: 3px 6px; border-left: 2.5px solid var(--c); border-radius: 4px; }
+.tt-row.now { background: color-mix(in srgb, var(--c) 16%, transparent); }
+.tt-row.past { opacity: .45; }

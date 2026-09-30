@@ -1,6 +1,6 @@
 import { useColl, useSettings, put, patch, remove } from '../store/store.js'
 import { dayRec, setDay, toggleTask, completeReview } from '../store/actions.js'
-import { eventsOn } from '../engine/scheduler.js'
+import { eventsOn, classesOn } from '../engine/scheduler.js'
 import { today, nowMin, fmtTime, fmtDur, dday, fmtShort, fmtClock, addDays, weekStart, parseYmd, fmtDate, tsToYmd } from '../engine/date.js'
 import { WeekBars, MonthHeat } from '../components/charts.jsx'
 import { openRecord } from '../views/study/Log.jsx'
@@ -20,9 +20,10 @@ const goto = (tab, seg) => () => go(tab, seg)
 
 function Now() {
   const events = useColl('events'), blocks = useColl('blocks'), tasks = useColl('tasks')
-  useNow(30000)
+  useNow(30000); useSettings(); useColl('subjects')
   const d = today(), m = nowMin()
   const items = [
+    ...classesOn(d).map((c) => ({ id: c.id, t: 'class', s: c.start, e: c.end, title: `${c.period}교시 ${c.title}`, c: c.color, loc: c.room })),
     ...eventsOn(d, events).filter((e) => e.start != null).map((e) => ({ id: e.id, t: 'event', s: e.start, e: e.end ?? e.start + 60, title: e.title, c: e.color, loc: e.location })),
     ...blocks.filter((b) => b.date === d && !(b.carriedTo && b.carriedTo !== 'done')).map((b) => ({ id: b.id, t: 'block', s: b.start, e: b.start + b.dur, title: tasks.find((x) => x.id === b.taskId)?.title || b.title })),
   ].sort((a, b) => a.s - b.s)
@@ -31,13 +32,33 @@ function Now() {
   return (
     <Card title="지금" action={<button className="tiny muted" onClick={goto('planner', 'today')}>캘린더 →</button>}>
       {cur ? (
-        <button className="now-cur" onClick={() => openDetail(cur.t, cur.id, { occ: d })} style={{ '--c': cur.c || 'var(--accent)' }}>
+        <button className="now-cur" onClick={() => cur.t === 'class' ? go('planner', 'timetable') : openDetail(cur.t, cur.id, { occ: d })} style={{ '--c': cur.c || 'var(--accent)' }}>
           <div className="ellipsis"><b>{cur.title}</b></div>
           <div className="tiny muted">{fmtTime(cur.s)}–{fmtTime(cur.e)} · {fmtDur(cur.e - m)} 남음{cur.loc ? ' · ' + cur.loc : ''}</div>
           <div className="prog" style={{ marginTop: 6 }}><i style={{ width: ((m - cur.s) / (cur.e - cur.s)) * 100 + '%', background: 'var(--c)' }} /></div>
         </button>
       ) : <div className="small muted">진행 중인 일정이 없어요</div>}
       {next && <div className="small" style={{ marginTop: 8 }}>다음 <b>{next.title}</b> · {fmtTime(next.s)} <span className="muted">({fmtDur(next.s - m)} 후)</span></div>}
+    </Card>
+  )
+}
+
+function TodayClasses() {
+  useSettings(); useColl('subjects'); useNow(60000)
+  const d = today(), m = nowMin(), cls = classesOn(d)
+  return (
+    <Card title="오늘 시간표" action={<button className="tiny muted" onClick={() => go('planner', 'timetable')}>전체 →</button>}>
+      {cls.length ? (
+        <div className="col" style={{ gap: 3 }}>
+          {cls.map((c) => (
+            <div key={c.id} className={'row tt-row' + (c.end <= m ? ' past' : c.start <= m ? ' now' : '')} style={{ '--c': c.color || 'var(--muted)' }}>
+              <span className="tiny muted nowrap" style={{ width: 16 }}>{c.period}</span>
+              <span className="grow ellipsis small">{c.title}{c.room ? <span className="tiny muted"> · {c.room}</span> : null}</span>
+              <span className="tiny muted nowrap">{fmtTime(c.start)}</span>
+            </div>
+          ))}
+        </div>
+      ) : <div className="small muted">오늘은 수업이 없어요</div>}
     </Card>
   )
 }
@@ -658,4 +679,5 @@ export const WIDGETS = {
   subjectweek: { label: '이번 주 과목별', C: SubjectWeek, size: 'm' },
   yearprog: { label: '올해·이번 달 진행률', C: YearProgress, size: 's' },
   weekgoals: { label: '이번 주 목표 3개', C: WeekGoalsW, size: 'm' },
+  classes: { label: '오늘 시간표', C: TodayClasses, size: 'm' },
 }

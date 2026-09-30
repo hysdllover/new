@@ -4,7 +4,8 @@ import { getState, replaceColl, onChange, patch, settings, list } from '../store
 import { COLLECTIONS, GIST_FILES } from '../store/schema.js'
 import { mergeColl, stableFile } from './merge.js'
 import { blobToDataUrl, setRemoteRaw, MAX_FILE } from '../lib/files.js'
-import { eventsOn } from '../engine/scheduler.js'
+import { eventsOn, classesOn } from '../engine/scheduler.js'
+import { today, addDays } from '../engine/date.js'
 import { buildIcs } from '../lib/ics.js'
 import { listFonts, getFontBlob, importFont, removeFont, markSynced, pendingDeletes, clearDeletes, SYNC_FONT_MAX } from '../lib/fonts.js'
 
@@ -169,6 +170,16 @@ function timerPayload() {
   const acc = t.acc || 0
   return { mode: t.mode, name: sub?.name || '공부', color: sub?.color || null, paused: !!t.paused, acc, start: t.paused ? null : t.segStart - acc, end: t.mode === 'countdown' && !t.paused ? t.segStart + (t.target - acc) : null, target: t.target || null }
 }
+// 앞으로 8일 수업 — 앱을 며칠 안 열어도 위젯이 그날 시간표를 보여 줌
+function classesPayload() {
+  const out = {}
+  for (let i = 0; i < 8; i++) {
+    const k = addDays(today(), i), l = classesOn(k)
+    if (l.length) out[k] = l.map(({ period, title, start, end, room }) => ({ period, title, start, end, room }))
+  }
+  return out
+}
+
 function widgetPayload() {
   const st = getState()
   const keep = (c, fn = () => true) => Object.fromEntries(Object.values(st[c] || {}).filter((r) => !r.deleted && fn(r)).map((r) => [r.id, r]))
@@ -181,6 +192,7 @@ function widgetPayload() {
     study: { subjects: keep('subjects'), sessions: keep('sessions', (x) => x.date >= from), ddays: keep('ddays') },
     cal: calPayload(),
     timer: timerPayload(),
+    classes: classesPayload(),
     settings: { settings: { main: { goalDaily: main.goalDaily, weekStart: main.weekStart, widgetFont: main.widgetFont } }, quotes: keep('quotes') },
   })
 }
@@ -192,10 +204,12 @@ function calendarIcs() {
   const ymd = (x) => x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0')
   const d = new Date(); d.setDate(d.getDate() - 30)
   const from = ymd(d), items = []
-  if (st.icsEvents !== false && !ex.has('events')) {
+  const evOn = st.icsEvents !== false && !ex.has('events'), clOn = !!st.icsClasses
+  if (evOn || clOn) {
     for (let i = 0; i < 150; i++, d.setDate(d.getDate() + 1)) {
       const k = ymd(d)
-      for (const e of eventsOn(k)) items.push({ uid: `e-${e.id}-${k}`, title: e.title, date: k, start: e.start ?? null, end: e.end ?? null, location: e.location, note: e.note })
+      if (evOn) for (const e of eventsOn(k)) items.push({ uid: `e-${e.id}-${k}`, title: e.title, date: k, start: e.start ?? null, end: e.end ?? null, location: e.location, note: e.note })
+      if (clOn) for (const c of classesOn(k)) items.push({ uid: c.id, title: `${c.period}교시 ${c.title}`, date: k, start: c.start, end: c.end, location: c.room })
     }
   }
   if (st.icsTasks !== false) for (const t of list('tasks')) if (t.due && !t.done && !t.archived && t.due >= from) items.push({ uid: `t-${t.id}`, title: '☐ ' + t.title, date: t.due, start: t.dueTime ?? null, end: t.dueTime != null ? t.dueTime + (t.estimate || 30) : null })

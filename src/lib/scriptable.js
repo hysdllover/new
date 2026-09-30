@@ -1,7 +1,7 @@
 import { pickQuote } from './quote.js'
 // iPhone·iPad 홈 화면·잠금 화면 위젯 (Scriptable) — 얇은 단일 서체 · 모노톤
 // 유형: 위젯 편집 › Parameter 에 공부 · 할일 · 디데이 · 달력 · 다짐 (비우면 기본)
-export const WIDGET_KINDS = [['', '기본'], ['공부', '공부'], ['할일', '할 일'], ['디데이', 'D-day'], ['달력', '공부 달력'], ['캘린더', '캘린더'], ['다짐', '다짐']]
+export const WIDGET_KINDS = [['', '기본'], ['공부', '공부'], ['할일', '할 일'], ['디데이', 'D-day'], ['달력', '공부 달력'], ['캘린더', '캘린더'], ['다짐', '다짐'], ['시간표', '시간표']]
 
 export function buildScript({ widgetRaw, appUrl }) {
   return `// Study — 홈 화면·잠금 화면 위젯 (Scriptable)
@@ -28,7 +28,7 @@ const RAWP = String(args.widgetParameter || '').replace(/\\s/g, '').toLowerCase(
 const PARAM = RAWP.split('@')[0] // "공부@2" 처럼 @ 뒤는 배경 구분용
 // 디데이2, 디데이3 … → 두 번째·세 번째 D-day
 const DDI = Math.max(0, (+(PARAM.match(/(\\d)$/) || [])[1] || 1) - 1)
-const KIND = { '공부': 'study', '할일': 'todo', '디데이': 'dday', 'd-day': 'dday', '달력': 'month', '캘린더': 'cal', '일정': 'cal', calendar: 'cal', '다짐': 'quote', study: 'study', todo: 'todo', dday: 'dday', month: 'month', quote: 'quote' }[PARAM.replace(/\\d$/, '')] || 'default'
+const KIND = { '공부': 'study', '할일': 'todo', '디데이': 'dday', 'd-day': 'dday', '달력': 'month', '캘린더': 'cal', '일정': 'cal', calendar: 'cal', '다짐': 'quote', '시간표': 'class', '수업': 'class', class: 'class', study: 'study', todo: 'todo', dday: 'dday', month: 'month', quote: 'quote' }[PARAM.replace(/\\d$/, '')] || 'default'
 const pickQuote = ${pickQuote.toString()}
 const link = (path) => APP + (path ? '?go=' + path : '')
 
@@ -87,7 +87,7 @@ const data = await load()
 const fam = config.widgetFamily || 'large'
 const lock = fam.startsWith('accessory')
 const w = new ListWidget()
-w.url = link(KIND === 'todo' ? 'tasks' : KIND === 'cal' ? 'planner.month' : KIND === 'default' ? '' : 'study.records')
+w.url = link(KIND === 'todo' ? 'tasks' : KIND === 'cal' ? 'planner.month' : KIND === 'class' ? 'planner.timetable' : KIND === 'default' ? '' : 'study.records')
 w.refreshAfterDate = new Date(Date.now() + 15 * 60000)
 const P = fam === 'small' ? 16 : 18
 // 기기별 위젯 크기(pt) — 아이폰은 화면 폭 비례, 아이패드는 고정값
@@ -220,7 +220,36 @@ if (!data) {
     return { total: monthMins.reduce((a, v) => a + v, 0), days: monthMins.filter(Boolean).length, hit: monthMins.filter((v) => v >= goal).length }
   }
 
-  if (lock && KIND === 'dday') {
+  // 오늘 수업 (시간표) — 앱이 앞으로 8일치를 올림
+  const CL = (data.classes && data.classes[today]) || []
+  const nm = new Date().getHours() * 60 + new Date().getMinutes()
+  const clCur = CL.find((c) => c.start <= nm && c.end > nm), clNext = CL.find((c) => c.start > nm)
+  const clk = (m) => pad(Math.floor(m / 60)) + ':' + pad(m % 60)
+  if (CL.length) {
+    const nx = clCur || clNext // 다음 교시 시작·끝에 맞춰 다시 그리기
+    if (nx) { const at = new Date(d0); at.setHours(0, (clCur ? clCur.end : nx.start), 0, 0); if (at > new Date()) w.refreshAfterDate = new Date(Math.min(w.refreshAfterDate.getTime(), at.getTime())) }
+  }
+
+  if (lock && KIND === 'class') {
+    // ── 잠금 화면 · 시간표 ──
+    const c = clCur || clNext
+    if (fam === 'accessoryInline') {
+      t(w, c ? (clCur ? c.period + '교시 ' + c.title + ' ~' + clk(c.end) : '다음 ' + c.period + '교시 ' + c.title + ' ' + clk(c.start)) : CL.length ? '오늘 수업 끝' : '오늘 수업 없음', tw(12))
+    } else if (fam === 'accessoryCircular') {
+      w.addAccessoryWidgetBackground = true
+      const z = w.addStack(); z.size = new Size(60, 60); z.layoutVertically(); z.centerAlignContent()
+      const row = (s, f) => { const a = z.addStack(); a.addSpacer(); t(a, s, f).minimumScaleFactor = 0.6; a.addSpacer() }
+      if (c) { row(c.period + '교시', label(8)); row(c.title, tw(13)); row(clCur ? '~' + clk(c.end) : clk(c.start), label(8)) }
+      else row(CL.length ? '끝' : '—', tw(14))
+    } else {
+      const r = w.addStack(); r.centerAlignContent(); t(r, clCur ? '지금 ' + clCur.period + '교시' : clNext ? '다음 ' + clNext.period + '교시' : '시간표', label(8)); r.addSpacer(); if (c) t(r, clk(c.start) + '–' + clk(c.end), label(8))
+      w.addSpacer(1)
+      t(w, c ? c.title : CL.length ? '오늘 수업 끝' : '오늘 수업 없음', thin(22)).minimumScaleFactor = 0.6
+      w.addSpacer(1)
+      const after = c ? CL.filter((x) => x.start > c.start).slice(0, 3).map((x) => x.title).join(' · ') : ''
+      t(w, c && c.room ? c.room + (after ? ' · ' + after : '') : after || ' ', tw(10))
+    }
+  } else if (lock && KIND === 'dday') {
     // ── 잠금 화면 · D-day 만 ──
     const next = ddAll[DDI + 1]
     if (!dd) t(w, 'No D-day', tw(12))
@@ -325,6 +354,22 @@ if (!data) {
       w.addSpacer(14); rule(w, inner); w.addSpacer(10)
       subBars(w, inner, 3)
     }
+  } else if (KIND === 'class') {
+    // ── 시간표 ──
+    const h = w.addStack(); h.centerAlignContent(); cap(h, 'CLASSES'); h.addSpacer(); t(h, dateStr, label(8), SOFT)
+    w.addSpacer(fam === 'small' ? 8 : 10)
+    const max = fam === 'small' ? 6 : fam === 'medium' ? 5 : 10
+    const start = Math.max(0, Math.min(CL.findIndex((c) => c.end > nm), CL.length - max))
+    for (const c of CL.slice(start < 0 ? 0 : start, (start < 0 ? 0 : start) + max)) {
+      const r = w.addStack(); r.centerAlignContent(); r.spacing = 8
+      const col = c === clCur ? GOLD : c.end <= nm ? SOFT : INK
+      const pn = r.addStack(); pn.size = new Size(12, 0); t(pn, c.period, tw(10), SOFT)
+      t(r, c.title, tw(fam === 'small' ? 13 : 14), col).minimumScaleFactor = 0.8
+      if (fam !== 'small' && c.room) t(r, c.room, tw(10), SOFT)
+      r.addSpacer(); t(r, clk(c.start), tw(10), SOFT)
+      w.addSpacer(fam === 'large' ? 7 : 4)
+    }
+    if (!CL.length) t(w, '오늘은 수업이 없어요', tw(13), SOFT)
   } else if (KIND === 'todo') {
     // ── 할 일 ──
     const h = w.addStack(); h.centerAlignContent(); cap(h, 'TODAY'); h.addSpacer(); t(h, done + ' DONE', label(8), GOLD)
