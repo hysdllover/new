@@ -93,11 +93,6 @@ export default function Settings() {
             <Field label="하루 목표(분)"><input className="input" type="number" step="10" value={st.goalDaily} onChange={(e) => setSettings({ goalDaily: +e.target.value })} /></Field>
             <Field label="주간 목표(분)"><input className="input" type="number" step="30" value={st.goalWeekly} onChange={(e) => setSettings({ goalWeekly: +e.target.value })} /></Field>
           </div>
-          <div className="row">
-            {[['work', '집중'], ['short', '휴식'], ['long', '긴 휴식'], ['every', '긴 휴식 주기']].map(([k, l]) => (
-              <Field key={k} label={l}><input className="input" type="number" min="1" value={st.pomodoro[k]} onChange={(e) => setSettings({ pomodoro: { ...st.pomodoro, [k]: +e.target.value || 1 } })} /></Field>
-            ))}
-          </div>
           <Field label="복습 간격(일, 쉼표)"><input className="input" defaultValue={st.reviewIntervals.join(', ')} onBlur={(e) => { const v = e.target.value.split(/[,\s]+/).map(Number).filter((n) => n > 0); if (v.length) setSettings({ reviewIntervals: v }) }} /></Field>
           <Field label="일정 기본 이동·준비 버퍼(분)"><input className="input" type="number" min="0" step="5" value={st.defaultBuffer} onChange={(e) => setSettings({ defaultBuffer: +e.target.value })} /></Field>
           <Toggle label="요일 템플릿 자동 적용" checked={st.autoTemplate} onChange={(v) => setSettings({ autoTemplate: v })} />

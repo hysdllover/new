@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useColl, useSettings, put, patch, remove } from '../../store/store.js'
-import { useTimerState, useTick, elapsed, startStopwatch, startPomodoro, pause, resume, stop, skipPhase, setTimerTask } from '../../lib/timer.js'
+import { useTimerState, useTick, elapsed, remaining, startStopwatch, startCountdown, pause, resume, stop, setTimerTask } from '../../lib/timer.js'
 import { today, fmtClock, fmtDur, fmtTime, tsToMin } from '../../engine/date.js'
 import { openRecord } from './Log.jsx'
-import { Card, Icon, Ring, Field, openSheet } from '../../components/ui.jsx'
+import { Card, Icon, Ring, Field, Seg, openSheet } from '../../components/ui.jsx'
+import { SubjectSelect } from '../../components/common.jsx'
 import { keepAwake } from '../../lib/notify.js'
 
 export default function Timer() {
@@ -17,12 +18,11 @@ export default function Timer() {
   const todayS = sessions.filter((s) => s.date === d)
   const bySub = {}
   for (const s of todayS) bySub[s.subjectId] = (bySub[s.subjectId] || 0) + s.dur
-  const live = t && !t.paused && t.phase !== 'break' ? Math.floor((Date.now() - t.segStart) / 60000) : 0
+  const live = t && !t.paused ? Math.floor((Date.now() - t.segStart) / 60000) : 0
   const total = todayS.reduce((a, s) => a + s.dur, 0) + live
   const sub = t && subjects.find((s) => s.id === t.subjectId)
-  const isPomo = t?.mode === 'pomodoro'
-  const left = isPomo ? Math.max(0, (t.phaseStart + t.phaseLen - (t.paused ? t.pausedAt : Date.now())) / 1000) : 0
-  const phaseRatio = isPomo ? 1 - left / (t.phaseLen / 1000) : 0
+  const isCd = t?.mode === 'countdown'
+  const left = isCd ? remaining(t) / 1000 : 0
 
   return (
     <div className="grid two">
@@ -31,12 +31,12 @@ export default function Timer() {
           {t ? (
             <div className="col" style={{ alignItems: 'center', gap: 10 }}>
               <div className="row small muted">
-                <span className="dot" style={{ background: sub?.color }} />{sub?.name || '과목 없음'} · {isPomo ? (t.phase === 'work' ? `집중 ${t.cycle}회차` : '휴식') : '스톱워치'}{t.paused ? ' · 일시정지' : ''}
+                <span className="dot" style={{ background: sub?.color }} />{sub?.name || '과목 없음'} · {isCd ? `타이머 ${Math.round(t.target / 60000)}분` : '스톱워치'}{t.paused ? ' · 일시정지' : ''}
               </div>
-              {isPomo ? (
-                <Ring value={phaseRatio} size={190} stroke={7} color={t.phase === 'work' ? sub?.color || 'var(--accent)' : 'var(--c2)'}>
+              {isCd ? (
+                <Ring value={1 - left / (t.target / 1000)} size={190} stroke={7} color={sub?.color || 'var(--accent)'}>
                   <div className="big-clock">{fmtClock(left)}</div>
-                  <div className="tiny muted">누적 {fmtClock(elapsed(t) / 1000)}</div>
+                  <div className="tiny muted">공부 {fmtClock(elapsed(t) / 1000)}</div>
                 </Ring>
               ) : <div className="big-clock xl">{fmtClock(elapsed(t) / 1000)}</div>}
               <select className="input" style={{ maxWidth: 320 }} value={t.taskId || ''} onChange={(e) => setTimerTask(e.target.value || null, tasks.find((x) => x.id === e.target.value)?.subjectId)}>
@@ -45,7 +45,6 @@ export default function Timer() {
               </select>
               <div className="row">
                 {t.paused ? <button className="btn primary" onClick={resume}><Icon name="play" size={16} />계속</button> : <button className="btn" onClick={pause}><Icon name="pause" size={16} />일시정지</button>}
-                {isPomo && <button className="btn" onClick={skipPhase}>건너뛰기</button>}
                 <button className="btn danger" onClick={stop}><Icon name="stop" size={16} />종료·기록</button>
               </div>
             </div>
@@ -55,10 +54,7 @@ export default function Timer() {
                 <div style={{ fontSize: '1.4em', fontWeight: 'var(--fw-b)' }}>{fmtDur(total)}</div>
                 <div className="tiny muted">목표 {fmtDur(st.goalDaily)}</div>
               </Ring>
-              <div className="row">
-                <button className="btn primary" onClick={() => startPomodoro(subjects[0]?.id)}><Icon name="clock" size={16} />뽀모도로 {st.pomodoro.work}분</button>
-              </div>
-              <div className="tiny muted">아래에서 과목을 눌러 스톱워치를 시작하세요</div>
+              <StartPanel subjects={subjects} />
             </div>
           )}
         </Card>
@@ -85,6 +81,31 @@ export default function Timer() {
         {st.modules.mock !== false && <MockExam />}
         <WakeCard />
       </div>
+    </div>
+  )
+}
+
+// 시작: 스톱워치(시간 재기) 또는 타이머(정한 시간 뒤 자동 종료) — 둘 다 공부 기록으로 저장
+const CD_PRESETS = [25, 30, 45, 50, 60, 90, 120]
+function StartPanel({ subjects }) {
+  const ls = (k, d) => { try { return localStorage.getItem(k) ?? d } catch { return d } }
+  const [mode, setMode] = useState(ls('tmMode', 'stopwatch'))
+  const [sub, setSub] = useState(ls('tmSub', null) || subjects[0]?.id)
+  const [min, setMin] = useState(+ls('tmMin', 50))
+  const remember = (k, v) => { try { localStorage.setItem(k, v) } catch {} }
+  const start = () => { remember('tmMode', mode); remember('tmSub', sub || ''); remember('tmMin', min); mode === 'countdown' ? startCountdown(sub, min) : startStopwatch(sub) }
+  return (
+    <div className="col" style={{ gap: 10, width: '100%', maxWidth: 360 }}>
+      <Seg value={mode} onChange={setMode} options={[['stopwatch', '스톱워치'], ['countdown', '타이머']]} />
+      <SubjectSelect value={sub} onChange={setSub} allowEmpty={false} />
+      {mode === 'countdown' && (
+        <div className="row wrap" style={{ gap: 6 }}>
+          {CD_PRESETS.map((m) => <button key={m} className={'chip' + (min === m ? ' on' : '')} onClick={() => setMin(m)}>{m < 60 ? m + '분' : m % 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분` : `${m / 60}시간`}</button>)}
+          <input className="input" type="number" inputMode="numeric" min="1" style={{ width: 80 }} value={min} onChange={(e) => setMin(Math.max(1, +e.target.value || 1))} aria-label="분" />
+        </div>
+      )}
+      <button className="btn primary" onClick={start}><Icon name="play" size={16} fill="currentColor" />{mode === 'countdown' ? `${min}분 타이머 시작` : '스톱워치 시작'}</button>
+      <div className="tiny muted center">{mode === 'countdown' ? '시간이 다 되면 알림과 함께 자동으로 기록돼요' : '종료하면 공부한 시간이 기록돼요'}</div>
     </div>
   )
 }

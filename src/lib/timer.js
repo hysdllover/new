@@ -5,9 +5,9 @@ import { toast } from '../components/ui.jsx'
 import { keepAwake } from './notify.js'
 
 // 진행 중 타이머 (기기별 localStorage 유지 → 새로고침해도 계속)
-// { mode: 'stopwatch'|'pomodoro', subjectId, taskId, segStart, paused, phase: 'work'|'break', phaseStart, phaseLen, cycle }
+// { mode: 'stopwatch'|'countdown', subjectId, taskId, segStart, acc, paused, pausedAt, target(ms, 타이머만) }
 const KEY = 'timer'
-let t = (() => { try { return JSON.parse(localStorage.getItem(KEY)) } catch { return null } })()
+let t = (() => { try { const x = JSON.parse(localStorage.getItem(KEY)); return x?.mode === 'pomodoro' ? { mode: 'stopwatch', subjectId: x.subjectId, taskId: x.taskId, segStart: x.segStart, acc: x.acc || 0, paused: x.paused || x.phase === 'break', pausedAt: x.pausedAt || Date.now() } : x } catch { return null } })()
 const L = new Set()
 const set = (next) => { t = next; try { next ? localStorage.setItem(KEY, JSON.stringify(next)) : localStorage.removeItem(KEY) } catch {} L.forEach((l) => l()) }
 export const useTimerState = () => useSyncExternalStore((f) => { L.add(f); return () => L.delete(f) }, () => t)
@@ -19,11 +19,13 @@ export function useTick(on = true) {
 }
 
 // 누적(ms): 일시정지 전까지 + 현재 구간
-export const elapsed = (x = t) => !x ? 0 : (x.acc || 0) + (x.paused || x.phase === 'break' ? 0 : Date.now() - x.segStart)
+export const elapsed = (x = t) => !x ? 0 : (x.acc || 0) + (x.paused ? 0 : Date.now() - x.segStart)
+// 타이머 남은 시간(ms)
+export const remaining = (x = t) => (x?.mode === 'countdown' ? Math.max(0, x.target - elapsed(x)) : 0)
 
 function flush(x) {
   // 현재 공부 구간을 세션으로 저장
-  if (!x || x.paused || x.phase === 'break') return null
+  if (!x || x.paused) return null
   return addSession({ subjectId: x.subjectId, taskId: x.taskId, start: x.segStart, end: Date.now(), kind: x.mode })
 }
 
@@ -32,10 +34,10 @@ export function startStopwatch(subjectId, taskId) {
   set({ mode: 'stopwatch', subjectId, taskId, segStart: Date.now(), acc: 0 })
   if (settings().wakeLock !== false) keepAwake(true)
 }
-export function startPomodoro(subjectId, taskId) {
+// 타이머: 정한 시간이 지나면 자동으로 멈추고 기록
+export function startCountdown(subjectId, minutes, taskId) {
   if (t) stop()
-  const p = settings().pomodoro
-  set({ mode: 'pomodoro', subjectId, taskId, segStart: Date.now(), acc: 0, phase: 'work', phaseStart: Date.now(), phaseLen: p.work * 60000, cycle: 1 })
+  set({ mode: 'countdown', subjectId, taskId, segStart: Date.now(), acc: 0, target: minutes * 60000 })
   if (settings().wakeLock !== false) keepAwake(true)
 }
 export function pause() {
@@ -45,8 +47,7 @@ export function pause() {
 }
 export function resume() {
   if (!t?.paused) return
-  const shift = Date.now() - t.pausedAt
-  set({ ...t, paused: false, segStart: Date.now(), phaseStart: t.phaseStart ? t.phaseStart + shift : t.phaseStart })
+  set({ ...t, paused: false, segStart: Date.now() })
 }
 export function stop() {
   if (!t) return
@@ -58,28 +59,21 @@ export function stop() {
 }
 export const setTimerTask = (taskId, subjectId) => t && set({ ...t, taskId, subjectId: subjectId ?? t.subjectId })
 
-// 뽀모도로 단계 전환 확인 (1초마다 호출)
-export function pomodoroTick() {
-  if (!t || t.mode !== 'pomodoro' || t.paused) return
-  const left = t.phaseStart + t.phaseLen - Date.now()
-  if (left > 0) return
-  const p = settings().pomodoro
-  if (t.phase === 'work') {
-    flush(t)
-    const long = t.cycle % p.every === 0
-    set({ ...t, acc: elapsed(t), phase: 'break', phaseStart: Date.now(), phaseLen: (long ? p.long : p.short) * 60000 })
-    notifyPhase(long ? '긴 휴식 시간' : '휴식 시간', `${long ? p.long : p.short}분`)
-  } else {
-    set({ ...t, phase: 'work', segStart: Date.now(), phaseStart: Date.now(), phaseLen: p.work * 60000, cycle: t.cycle + 1 })
-    notifyPhase('집중 시작', `${p.work}분`)
-  }
+// 타이머 끝 확인 (1초마다)
+function countdownTick() {
+  if (!t || t.mode !== 'countdown' || t.paused || remaining(t) > 0) return
+  const min = Math.round(t.target / 60000)
+  // 끝난 시각 기준으로 정확히 기록
+  const end = t.segStart + (t.target - (t.acc || 0))
+  addSession({ subjectId: t.subjectId, taskId: t.taskId, start: t.segStart, end, kind: 'countdown' })
+  set(null); keepAwake(false)
+  notify('타이머 끝', `${min}분 공부를 기록했어요`)
 }
-export function skipPhase() { if (t?.mode === 'pomodoro') set({ ...t, phaseStart: Date.now() - t.phaseLen }), pomodoroTick() }
 
-function notifyPhase(title, body) {
+function notify(title, body) {
   toast(`⏱ ${title} · ${body}`)
-  try { navigator.vibrate?.(200) } catch {}
+  try { navigator.vibrate?.([200, 100, 200]) } catch {}
   try { if (Notification.permission === 'granted') navigator.serviceWorker?.ready.then((r) => r.showNotification(title, { body })) } catch {}
 }
 
-setInterval(pomodoroTick, 1000)
+setInterval(countdownTick, 1000)

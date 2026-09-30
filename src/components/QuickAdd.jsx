@@ -6,7 +6,7 @@ import { today, fmtDate, fmtTime } from '../engine/date.js'
 import { parseQuick } from '../lib/quick.js'
 import TaskQuickInput from './TaskQuickInput.jsx'
 import RecordEditor from './RecordEditor.jsx'
-import { startStopwatch, startPomodoro } from '../lib/timer.js'
+import { startStopwatch, startCountdown } from '../lib/timer.js'
 import { go } from '../nav.js'
 
 export { parseQuick }
@@ -62,7 +62,7 @@ export default function QuickAdd({ close, initial = 'task' }) {
         <form className="form" onSubmit={submit}>
           <SubjectSelect value={subject} onChange={setSubject} allowEmpty={false} />
           <div className="row">
-            <button type="button" className="btn grow" onClick={() => { startPomodoro(subject || list('subjects')[0]?.id); go('study', 'timer'); close() }}>뽀모도로</button>
+            <button type="button" className="btn grow" onClick={() => { let m = 50; try { m = +localStorage.getItem('tmMin') || 50 } catch {} startCountdown(subject || list('subjects')[0]?.id, m); go('study', 'timer'); close() }}>타이머</button>
             <button type="submit" className="btn primary grow">스톱워치 시작</button>
           </div>
         </form>
