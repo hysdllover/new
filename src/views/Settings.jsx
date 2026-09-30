@@ -4,7 +4,7 @@ import { PRESETS, FONTS } from '../theme/theme.js'
 import { PALETTE, SOFT_PALETTE } from '../store/schema.js'
 import { Card, Seg, Toggle, Field, Icon, toast, confirmSheet, openSheet } from '../components/ui.jsx'
 import { ColorPick, TimeInput, SubjectSelect } from '../components/common.jsx'
-import { useSyncStatus, connect, disconnect, syncNow, gistInfo, tokenExpiry, listBackups, backupNow, restoreBackup } from '../sync/sync.js'
+import { useSyncStatus, connect, disconnect, syncNow, gistInfo, tokenExpiry, listBackups, backupNow, restoreBackup, calendarUrl } from '../sync/sync.js'
 import { enablePush, disablePush, pushState, testLocal, isStandalone, pushSupported } from '../lib/push.js'
 import { buildScript, WIDGET_KINDS } from '../lib/scriptable.js'
 import { pickQuote } from '../lib/quote.js'
@@ -26,6 +26,7 @@ export default function Settings() {
       <PushCard />
       <HomeWidgetCard />
       <ShareCaptureCard />
+      <CalendarSubCard />
       <Card title="디자인">
         <div className="form">
           <Field label="색상 프리셋">
@@ -121,6 +122,31 @@ export default function Settings() {
         <div className="small">Safari 에서 공유 버튼 → <b>홈 화면에 추가</b>. 전체 화면·오프라인으로 동작합니다. iPhone 과 iPad 모두 같은 방법으로 설치한 뒤 위 동기화에 같은 토큰을 입력하세요.</div>
       </Card>
     </div>
+  )
+}
+
+// 아이폰 캘린더에 구독 (.ics)
+function CalendarSubCard() {
+  const sync = useSyncStatus(), st = useSettings()
+  const url = calendarUrl()
+  return (
+    <Card title="아이폰 캘린더에 구독">
+      {url ? <>
+        <div className="small" style={{ lineHeight: 1.7 }}>
+          일정·할 일 마감·D-day 가 아이폰 기본 캘린더 앱에 보여요.<br />
+          1. 아래 주소 복사<br />
+          2. 아이폰 <b>설정 › 캘린더 › 캘린더 계정 › 계정 추가 › 기타 › 구독 캘린더 추가</b> › 붙여넣기 › 다음 › 저장
+        </div>
+        <div className="row" style={{ marginTop: 8 }}>
+          <input className="input grow" readOnly value={url} onFocus={(e) => e.target.select()} />
+          <button className="btn" onClick={async () => { try { await navigator.clipboard.writeText(url); toast('주소를 복사했어요') } catch { toast('주소를 길게 눌러 복사해 주세요') } }}>복사</button>
+        </div>
+        <div className="row wrap" style={{ gap: 12, marginTop: 8 }}>
+          {[['icsEvents', '일정'], ['icsTasks', '할 일 마감'], ['icsDdays', 'D-day']].map(([k, l]) => <Toggle key={k} label={l} checked={st[k] !== false} onChange={(v) => setSettings({ [k]: v })} />)}
+        </div>
+        <div className="tiny muted" style={{ marginTop: 6 }}>앱에서 바꾸면 몇 분 안에 파일이 갱신되고, 캘린더 앱은 iOS 가 정한 주기(보통 1시간 안팎)로 새로 가져와요. 읽기 전용이라 캘린더 앱에서 고친 내용은 돌아오지 않아요.</div>
+      </> : <div className="small muted">{sync.state === 'off' ? '동기화를 연결하면 구독 주소가 생겨요.' : '다음 동기화 뒤에 주소가 나타나요.'}</div>}
+    </Card>
   )
 }
 

@@ -4,6 +4,7 @@ import { addTask, toggleTask, moveTasks, QUICK_DATES } from '../store/actions.js
 import TaskQuickInput from '../components/TaskQuickInput.jsx'
 import { AddInput, Empty, Icon, openSheet, openMenu, toast, openDetail } from '../components/ui.jsx'
 import TaskItem from '../components/TaskItem.jsx'
+import { WeekGoalsCard } from '../components/WeekGoals.jsx'
 import { SMART, applyFilter, quadrant, openCount } from './tasks/filter.js'
 import { setParams } from '../nav.js'
 import { longPress } from '../lib/drag.js'
@@ -60,6 +61,7 @@ function TaskList({ params }) {
 
   return (
     <div className="col">
+      <WeekGoalsCard />
       <TaskQuickInput key={f.smart + (f.subjectId || '')} defaultDate={f.smart === 'today' ? 'today' : f.smart === 'tomorrow' ? 'tomorrow' : ''} defaults={{ subjectId: f.subjectId || null, projectId: f.projectId || null, ...(f.smart === 'inbox' ? { inbox: true } : null) }} />
       <div className="scroll-x"><div className="row" style={{ gap: 6, paddingBottom: 2 }}>
         {SMART.map(([k, l]) => <button key={k} className={'chip' + ((f.smart || 'all') === k && !view ? ' on' : '')} onClick={() => set({ smart: k })}>{l} <span className="muted tiny">{k === 'done' ? applyFilter(tasks, { smart: k }).length : openCount(applyFilter(tasks, { smart: k }))}</span></button>)}

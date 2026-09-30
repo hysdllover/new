@@ -402,3 +402,9 @@ button.greet { display: block; width: 100%; text-align: left; }
 .plan-step.done { color: var(--text); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
 .radio { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--line); flex-shrink: 0; }
 .radio.on { border: 5px solid var(--accent); }
+
+/* 이번 주 목표 */
+.wgoal.done .wgoal-t { text-decoration: line-through; color: var(--muted); }
+.input-plain { border: 0; background: transparent; font: inherit; color: inherit; padding: 2px 0; min-width: 0; outline: none; }
+.input-plain:focus { border-bottom: 1px solid var(--accent); }
+.plan-goals { padding: 8px 10px; border-radius: var(--radius); background: var(--surface-2); display: flex; flex-direction: column; gap: 6px; }

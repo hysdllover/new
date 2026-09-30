@@ -144,6 +144,18 @@ if (!data) {
   const quote = pickQuote(quotes)?.text ?? null // 3시간마다 무작위 (앱과 같은 문구)
   const dateStr = DAY[d0.getDay()] + ' · ' + d0.getDate() + ' ' + MON[d0.getMonth()] + (STALE ? ' · ' + pad(STALE.getHours()) + ':' + pad(STALE.getMinutes()) : '')
   const pct = Math.round(Math.min(1, mins / goal) * 100)
+  // 진행 중 타이머 (앱에서 시작·정지할 때 올라옴) — 끝났거나 오래된 건 무시
+  const TM = (() => {
+    const x = data.timer
+    if (!x) return null
+    if (x.end && x.end < Date.now()) return null
+    if (x.start && Date.now() - x.start > 12 * 3600000) return null
+    // 일시정지 때 보여 줄 분: 스톱워치는 흐른 시간, 타이머는 남은 시간
+    x.pm = Math.round(Math.max(0, x.mode === 'countdown' && x.target ? x.target - x.acc : x.acc) / 60000)
+    return x
+  })()
+  // 위젯이 다시 그려지지 않아도 초 단위로 흐르는 시간
+  const timerDate = (parent, size, thinFont) => { const d = parent.addDate(new Date(TM.mode === 'countdown' ? TM.end : TM.start)); d.applyTimerStyle(); d.font = thinFont ? thin(size) : tw(size); d.lineLimit = 1; d.minimumScaleFactor = 0.6; return d }
   const subMins = subjects.map((s) => ({ s, m: sessions.filter((x) => x.subjectId === s.id).reduce((a, x) => a + (x.dur || 0), 0) })).filter((x) => x.m).sort((a, b) => b.m - a.m)
 
   const studyBig = (parent, size, width) => {
@@ -226,6 +238,23 @@ if (!data) {
       const r2 = w.addStack(); t(r2, dd.title, tw(12)); r2.addSpacer(6); t(r2, dd.date.slice(5).replace('-', '.'), tw(10)); r2.addSpacer()
       if (next) { w.addSpacer(2); const r3 = w.addStack(); t(r3, next.title + ' ' + ddT(next), tw(10)).textOpacity = 0.7; r3.addSpacer() }
     }
+  } else if (lock && TM) {
+    // ── 잠금 화면 · 진행 중 타이머 (초 단위로 흐름) ──
+    if (fam === 'accessoryInline') {
+      if (TM.paused) t(w, '⏸ ' + TM.name + ' ' + hm(TM.pm), tw(12)); else timerDate(w, 12)
+    } else if (fam === 'accessoryCircular') {
+      w.addAccessoryWidgetBackground = true
+      const z = w.addStack(); z.size = new Size(60, 60); z.layoutVertically(); z.centerAlignContent()
+      const a = z.addStack(); a.addSpacer(); t(a, TM.name, label(8)).minimumScaleFactor = 0.6; a.addSpacer()
+      const b = z.addStack(); b.addSpacer(); if (TM.paused) t(b, hm(TM.pm), tw(13)); else timerDate(b, 12); b.addSpacer()
+      const c = z.addStack(); c.addSpacer(); t(c, TM.paused ? '일시정지' : TM.mode === 'countdown' ? '남음' : '공부 중', label(7)); c.addSpacer()
+    } else {
+      const r = w.addStack(); r.centerAlignContent(); t(r, '● ' + TM.name, tw(11)); r.addSpacer(); t(r, TM.paused ? '일시정지' : TM.mode === 'countdown' ? '타이머' : '공부 중', label(8))
+      w.addSpacer(1)
+      const r2 = w.addStack(); if (TM.paused) t(r2, hm(TM.pm), thin(26)); else timerDate(r2, 26, true); r2.addSpacer()
+      w.addSpacer(1)
+      t(w, '오늘 ' + hm(mins) + ' / ' + hm(goal), tw(10))
+    }
   } else if (lock) {
     // ── 잠금 화면 ──
     if (fam === 'accessoryInline') {
@@ -272,6 +301,7 @@ if (!data) {
     }
     const stat = (parent, k, v, color = INK) => { const c = parent.addStack(); c.layoutVertically(); t(c, k, label(7), SOFT); c.addSpacer(2); t(c, v, tw(13), color).minimumScaleFactor = 0.7 }
     const r = w.addStack(); r.centerAlignContent(); cap(r, 'STUDY'); r.addSpacer(); t(r, dateStr, label(8), SOFT)
+    if (TM) { w.addSpacer(4); const k = w.addStack(); k.centerAlignContent(); t(k, '● ' + TM.name + (TM.paused ? ' 일시정지 ' : ' 공부 중 '), label(8), GOLD); if (TM.paused) t(k, hm(TM.pm), label(8), GOLD); else { const dd2 = timerDate(k, 8); dd2.font = label(8); dd2.textColor = GOLD }; k.addSpacer() }
     w.addSpacer(fam === 'small' ? 8 : 10)
     if (fam === 'small') {
       studyBig(w, 30, inner)
