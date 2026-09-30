@@ -151,7 +151,7 @@
 .bar-row { display: flex; align-items: center; gap: 8px; font-size: .9em; }
 .bar-l { width: 52px; flex-shrink: 0; }
 .bar-t { flex: 1; height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
-.bar-t i { display: block; height: 100%; border-radius: 4px; }
+.bar-t i { display: block; height: 100%; border-radius: 4px; background: var(--accent); }
 .bar-v { width: 72px; text-align: right; color: var(--muted); font-size: .9em; }
 .wbars { display: flex; gap: 8px; height: 110px; align-items: stretch; }
 .wbar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
@@ -284,7 +284,9 @@ details.more[open] > summary::before { content: '▾ '; }
 .wf > div > .card { height: 100%; }
 .wf-tint .card { background: color-mix(in srgb, var(--wc) 13%, var(--surface)); border-color: color-mix(in srgb, var(--wc) 25%, transparent); }
 .wf-plain .card { background: transparent; border-color: transparent; box-shadow: none; padding-left: 4px; padding-right: 4px; }
-.wf-glass .card { background: color-mix(in srgb, var(--surface) 55%, transparent); backdrop-filter: blur(18px) saturate(1.5); -webkit-backdrop-filter: blur(18px) saturate(1.5); border: 1px solid color-mix(in srgb, #fff 45%, transparent); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5), 0 8px 24px rgba(0, 0, 0, .06); }
+.wf-glass .card { background: linear-gradient(135deg, rgba(255, 255, 255, .5), rgba(255, 255, 255, .3) 45%, rgba(255, 255, 255, .18)); backdrop-filter: blur(22px) saturate(1.8); -webkit-backdrop-filter: blur(22px) saturate(1.8); border: 1px solid rgba(255, 255, 255, .7); box-shadow: inset 0 1px 1px rgba(255, 255, 255, .85), 0 8px 32px rgba(40, 45, 70, .08); }
+.wf-outline .card { background: transparent; border: 1.5px solid color-mix(in srgb, var(--wc) 55%, transparent); box-shadow: none; }
+.wf-gradient .card { background: linear-gradient(145deg, color-mix(in srgb, var(--wc) 22%, var(--surface)), color-mix(in srgb, var(--c3) 16%, var(--surface))); border-color: transparent; }
 .wf-bold .card { background: var(--wc); border-color: transparent; color: #fff; }
 .wf-bold .card .muted, .wf-bold .card .tiny, .wf-bold .card h3 { color: rgba(255, 255, 255, .82); }
 .wf-bold .card .chip, .wf-bold .card .input { background: rgba(255, 255, 255, .15); color: #fff; border-color: transparent; }
@@ -369,4 +371,9 @@ button.greet { display: block; width: 100%; text-align: left; }
 .one-title { font-size: 1.08em; font-weight: var(--fw-b); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .one.done .one-title { text-decoration: line-through; color: var(--muted); }
 .one-empty { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: var(--radius); border: 1px dashed var(--line); color: var(--muted); font-size: .9em; width: 100%; }
-[data-card="glass"] .one { background: color-mix(in srgb, var(--surface) 58%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+
+.stat-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); gap: 8px; }
+.stat-tile b { white-space: nowrap; }
+[data-card="glass"] .stat-tile { background: rgba(255, 255, 255, .35); }
+.stat-tile { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: calc(var(--radius) - 2px); background: var(--surface-2); }
+.stat-tile b { font-size: 1.05em; font-weight: var(--fw-b); }

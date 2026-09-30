@@ -91,16 +91,29 @@ svg { display: block; }
 }
 [data-card="shadow"] .card { border-color: transparent; box-shadow: var(--shadow); }
 [data-card="flat"] .card { border-color: transparent; background: var(--surface-2); }
-/* 리퀴드 글래스: 은은한 배경 위 반투명 유리 카드·바 */
-[data-card="glass"] body { background: radial-gradient(120% 80% at 0% 0%, color-mix(in srgb, var(--accent) 16%, var(--bg)) 0%, transparent 60%), radial-gradient(100% 70% at 100% 100%, color-mix(in srgb, var(--c3) 18%, var(--bg)) 0%, transparent 60%), var(--bg); background-attachment: fixed; }
-[data-card="glass"] .card { background: color-mix(in srgb, var(--surface) 58%, transparent); backdrop-filter: blur(20px) saturate(1.6); -webkit-backdrop-filter: blur(20px) saturate(1.6); border: 1px solid color-mix(in srgb, #fff 50%, transparent); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .55), 0 10px 30px rgba(0, 0, 0, .06); }
-[data-card="glass"] .topbar { background: transparent; }
-[data-card="glass"] .tabbar { left: 12px; right: 12px; bottom: calc(var(--sab) + 8px); border: 1px solid color-mix(in srgb, #fff 50%, transparent); border-radius: 26px; background: color-mix(in srgb, var(--surface) 55%, transparent); backdrop-filter: blur(24px) saturate(1.8); -webkit-backdrop-filter: blur(24px) saturate(1.8); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), 0 10px 30px rgba(0, 0, 0, .12); padding-bottom: 2px; }
-[data-card="glass"] .fab { bottom: calc(84px + var(--sab)); background: color-mix(in srgb, var(--accent) 80%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4), 0 8px 22px rgba(0, 0, 0, .18); }
-[data-card="glass"] .sidebar { background: color-mix(in srgb, var(--surface) 50%, transparent); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"])[data-card="glass"] .card, :root:not([data-theme="light"])[data-card="glass"] .tabbar { border-color: rgba(255, 255, 255, .12); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 10px 30px rgba(0, 0, 0, .3); } }
-[data-theme="dark"][data-card="glass"] .card, [data-theme="dark"][data-card="glass"] .tabbar { border-color: rgba(255, 255, 255, .12); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 10px 30px rgba(0, 0, 0, .3); }
-@media print { [data-card="glass"] .card { backdrop-filter: none; background: #fff; box-shadow: none; } }
+/* 리퀴드 글래스: 뒤에 번진 색면 + 반투명·굴절 느낌 카드 (탭바는 제자리 고정, 가리지 않게) */
+[data-card="glass"] body::before { content: ''; position: fixed; inset: -15%; z-index: -1; pointer-events: none;
+  background: radial-gradient(38% 30% at 18% 20%, color-mix(in srgb, var(--accent) 50%, transparent), transparent 70%),
+    radial-gradient(34% 28% at 85% 35%, color-mix(in srgb, var(--c3) 55%, transparent), transparent 70%),
+    radial-gradient(40% 32% at 30% 85%, color-mix(in srgb, var(--c4) 50%, transparent), transparent 70%),
+    radial-gradient(30% 26% at 90% 90%, color-mix(in srgb, var(--c2) 45%, transparent), transparent 70%);
+  filter: blur(40px) saturate(1.3); }
+[data-card="glass"] { --glass: rgba(255, 255, 255, .34); --glass-edge: rgba(255, 255, 255, .7); --glass-shade: rgba(40, 45, 70, .08); }
+[data-card="glass"] .card, [data-card="glass"] .one {
+  background: linear-gradient(135deg, rgba(255, 255, 255, .5), var(--glass) 45%, rgba(255, 255, 255, .22));
+  backdrop-filter: blur(22px) saturate(1.8); -webkit-backdrop-filter: blur(22px) saturate(1.8);
+  border: 1px solid var(--glass-edge);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, .85), inset 0 -1px 1px rgba(255, 255, 255, .2), 0 8px 32px var(--glass-shade); }
+[data-card="glass"] .topbar, [data-card="glass"] .segbar { background: transparent; }
+[data-card="glass"] .tabbar { background: rgba(255, 255, 255, .38); backdrop-filter: blur(26px) saturate(1.9); -webkit-backdrop-filter: blur(26px) saturate(1.9); border-top: 1px solid var(--glass-edge); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8); }
+[data-card="glass"] .sidebar { background: rgba(255, 255, 255, .3); backdrop-filter: blur(26px) saturate(1.8); -webkit-backdrop-filter: blur(26px) saturate(1.8); border-right: 1px solid var(--glass-edge); }
+[data-card="glass"] .chip, [data-card="glass"] .input, [data-card="glass"] .btn:not(.primary) { background: rgba(255, 255, 255, .35); border-color: rgba(255, 255, 255, .6); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"])[data-card="glass"] { --glass: rgba(40, 40, 46, .38); --glass-edge: rgba(255, 255, 255, .14); --glass-shade: rgba(0, 0, 0, .35); } }
+[data-theme="dark"][data-card="glass"] { --glass: rgba(40, 40, 46, .38); --glass-edge: rgba(255, 255, 255, .14); --glass-shade: rgba(0, 0, 0, .35); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"])[data-card="glass"] .card, :root:not([data-theme="light"])[data-card="glass"] .one { background: linear-gradient(135deg, rgba(255, 255, 255, .1), var(--glass) 45%, rgba(255, 255, 255, .03)); box-shadow: inset 0 1px 1px rgba(255, 255, 255, .15), 0 8px 32px var(--glass-shade); } :root:not([data-theme="light"])[data-card="glass"] .tabbar, :root:not([data-theme="light"])[data-card="glass"] .sidebar, :root:not([data-theme="light"])[data-card="glass"] .chip, :root:not([data-theme="light"])[data-card="glass"] .input { background: rgba(40, 40, 46, .4); } }
+[data-theme="dark"][data-card="glass"] .card, [data-theme="dark"][data-card="glass"] .one { background: linear-gradient(135deg, rgba(255, 255, 255, .1), var(--glass) 45%, rgba(255, 255, 255, .03)); box-shadow: inset 0 1px 1px rgba(255, 255, 255, .15), 0 8px 32px var(--glass-shade); }
+[data-theme="dark"][data-card="glass"] .tabbar, [data-theme="dark"][data-card="glass"] .sidebar, [data-theme="dark"][data-card="glass"] .chip, [data-theme="dark"][data-card="glass"] .input { background: rgba(40, 40, 46, .4); }
+@media print { [data-card="glass"] body::before { display: none; } [data-card="glass"] .card { backdrop-filter: none; background: #fff; box-shadow: none; } }
 .card-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
 .card-h h3 { font-size: .95em; }
 .grid { display: grid; gap: var(--gap); }

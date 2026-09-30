@@ -441,6 +441,179 @@ function Sticky({ w, update }) {
   )
 }
 
+
+// ── 추가 위젯 ──
+const sortDd = (a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || a.date.localeCompare(b.date)
+const sumBy = (list) => list.reduce((a, x) => a + (x.dur || 0), 0)
+
+function WeekGoal() {
+  const st = useSettings()
+  const sessions = useColl('sessions')
+  const ws = weekStart(today(), st.weekStart)
+  const m = sumBy(sessions.filter((x) => x.date >= ws))
+  return (
+    <Card className="center" onClick={goto('study', 'records')} style={{ cursor: 'pointer' }}>
+      <div className="col" style={{ alignItems: 'center', gap: 4 }}>
+        <Ring value={m / (st.goalWeekly || 1)} size={78} color="var(--c2)"><b className="small">{Math.round((m / (st.goalWeekly || 1)) * 100)}%</b></Ring>
+        <span className="small">이번 주 {fmtDur(m)}</span><span className="tiny muted">목표 {fmtDur(st.goalWeekly)}</span>
+      </div>
+    </Card>
+  )
+}
+
+function Agenda() {
+  const events = useColl('events'), tasks = useColl('tasks')
+  const days = Array.from({ length: 7 }, (_, i) => addDays(today(), i)).map((d) => ({ d, evs: eventsOn(d, events), ts: tasks.filter((t) => t.due === d && !t.done && !t.archived) })).filter((x) => x.evs.length || x.ts.length)
+  return (
+    <Card title="다가오는 일정" action={<button className="tiny muted" onClick={goto('planner', 'week')}>주간 →</button>}>
+      <div className="col" style={{ gap: 8 }}>
+        {days.slice(0, 5).map(({ d, evs, ts }) => (
+          <div key={d} className="row" style={{ alignItems: 'flex-start', gap: 10 }}>
+            <span className="tiny muted" style={{ width: 52, flexShrink: 0, paddingTop: 2 }}>{d === today() ? '오늘' : fmtDate(d, { wd: true }).replace(/^\d+월 /, '')}</span>
+            <div className="col grow" style={{ gap: 2, minWidth: 0 }}>
+              {evs.map((e) => <span key={e.id + d} className="small ellipsis"><span className="dot" style={{ background: e.color || 'var(--accent)' }} /> {e.start != null ? fmtTime(e.start) + ' ' : ''}{e.title}</span>)}
+              {ts.map((t) => <span key={t.id} className="small ellipsis muted">☐ {t.title}</span>)}
+            </div>
+          </div>
+        ))}
+        {!days.length && <Empty>일주일 동안 일정이 없어요</Empty>}
+      </div>
+    </Card>
+  )
+}
+
+function ExamRangeW() {
+  const dd = useColl('ddays').filter((d) => d.date >= today() && d.units?.length).sort(sortDd)
+  return (
+    <Card title="시험 범위" action={<button className="tiny muted" onClick={goto('study', 'progress')}>진도 →</button>}>
+      <div className="col" style={{ gap: 10 }}>
+        {dd.slice(0, 3).map((d) => {
+          const left = d.units.filter((u) => !u.done).length, days = Math.max(1, Math.round((parseYmd(d.date) - parseYmd(today())) / 86400000))
+          return (
+            <div key={d.id}>
+              <div className="row between small"><span className="ellipsis">{d.title} <span className="muted tiny">{dday(d.date)}</span></span><span className="tiny muted">{d.units.length - left}/{d.units.length}</span></div>
+              <div className="bar-t" style={{ marginTop: 4 }}><i style={{ width: ((d.units.length - left) / d.units.length) * 100 + '%', background: d.color || 'var(--accent)' }} /></div>
+              {left > 0 && <div className="tiny muted" style={{ marginTop: 3 }}>오늘 {Math.ceil(left / days)}단원 · {d.units.find((u) => !u.done)?.name}</div>}
+            </div>
+          )
+        })}
+        {!dd.length && <Empty>기록 › 진도에서 시험 범위를 추가하세요</Empty>}
+      </div>
+    </Card>
+  )
+}
+
+function Textbooks() {
+  const tbs = useColl('textbooks')
+  return (
+    <Card title="교재 진도" action={<button className="tiny muted" onClick={goto('study', 'progress')}>전체 →</button>}>
+      <div className="col" style={{ gap: 8 }}>
+        {tbs.slice(0, 4).map((tb) => { const r = (tb.current || 0) / (tb.total || 1); return (
+          <div key={tb.id}>
+            <div className="row between small"><span className="ellipsis">{tb.title}</span><span className="tiny muted">{Math.round(r * 100)}%</span></div>
+            <div className="bar-t" style={{ marginTop: 4 }}><i style={{ width: r * 100 + '%' }} /></div>
+          </div>
+        ) })}
+        {!tbs.length && <Empty>교재를 추가해 보세요</Empty>}
+      </div>
+    </Card>
+  )
+}
+
+function GradesW() {
+  const grades = useColl('grades'), subjects = useColl('subjects')
+  const rows = subjects.map((s) => { const g = grades.filter((x) => x.subjectId === s.id).sort((a, b) => a.date.localeCompare(b.date)); return { s, last: g[g.length - 1], prev: g[g.length - 2] } }).filter((x) => x.last)
+  return (
+    <Card title="최근 성적" action={<button className="tiny muted" onClick={goto('study', 'records')}>추이 →</button>}>
+      <div className="col" style={{ gap: 6 }}>
+        {rows.map(({ s, last, prev }) => { const p = (g) => Math.round((g.score / (g.max || 100)) * 100), diff = prev ? p(last) - p(prev) : 0; return (
+          <div key={s.id} className="row small"><span className="dot" style={{ background: s.color }} /><span className="grow">{s.name}</span><b>{last.score}</b><span className="tiny muted">/{last.max || 100}</span>
+            {prev && <span className="tiny" style={{ color: diff >= 0 ? 'var(--c2)' : 'var(--c4)', width: 34, textAlign: 'right' }}>{diff >= 0 ? '▲' : '▼'}{Math.abs(diff)}</span>}</div>
+        ) })}
+        {!rows.length && <Empty>통계에서 성적을 기록하세요</Empty>}
+      </div>
+    </Card>
+  )
+}
+
+// 공부 시간대 분포 (최근 30일, 시작 시각 기준)
+function Hours() {
+  const sessions = useColl('sessions')
+  const from = addDays(today(), -30)
+  const h = Array(24).fill(0)
+  for (const x of sessions) if (x.date >= from && x.start) { const d = new Date(x.start); h[d.getHours()] += x.dur || 0 }
+  const max = Math.max(1, ...h), best = h.indexOf(Math.max(...h))
+  return (
+    <Card title="공부 시간대" action={<span className="tiny muted">최근 30일</span>}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 64 }}>
+        {h.map((v, i) => <i key={i} style={{ flex: 1, height: Math.max(2, (v / max) * 64), background: i === best && v ? 'var(--accent)' : 'color-mix(in srgb, var(--accent) 35%, transparent)', borderRadius: 2 }} />)}
+      </div>
+      <div className="row between tiny muted" style={{ marginTop: 4 }}><span>0시</span><span>6</span><span>12</span><span>18</span><span>24</span></div>
+      <div className="small" style={{ marginTop: 6 }}>{h[best] ? <>가장 많이 공부하는 때 <b>{best}시</b></> : <span className="muted">타이머 기록이 쌓이면 보여요</span>}</div>
+    </Card>
+  )
+}
+
+function MonthStats() {
+  const sessions = useColl('sessions'), subjects = useColl('subjects'), st = useSettings()
+  const m0 = today().slice(0, 8)
+  const list = sessions.filter((x) => x.date.startsWith(m0))
+  const total = sumBy(list), days = new Set(list.map((x) => x.date)).size
+  const bySub = subjects.map((s) => ({ s, m: sumBy(list.filter((x) => x.subjectId === s.id)) })).sort((a, b) => b.m - a.m)[0]
+  const hit = [...new Set(list.map((x) => x.date))].filter((d) => sumBy(list.filter((x) => x.date === d)) >= st.goalDaily).length
+  const tile = (k, v) => <div className="stat-tile"><span className="tiny muted">{k}</span><b>{v}</b></div>
+  const hm = (x) => `${Math.floor(x / 60)}:${String(Math.round(x % 60)).padStart(2, '0')}`
+  return (
+    <Card title={`${+m0.slice(5, 7)}월 공부`}>
+      <div className="stat-tiles">{tile('합계', hm(total))}{tile('공부일', days + '일')}{tile('하루 평균', hm(days ? Math.round(total / days) : 0))}{tile('목표 달성', hit + '일')}</div>
+      {bySub?.m > 0 && <div className="tiny muted" style={{ marginTop: 6 }}>가장 많이: {bySub.s.name} {fmtDur(bySub.m)}</div>}
+    </Card>
+  )
+}
+
+function DdayList() {
+  const dd = useColl('ddays').filter((d) => d.date >= today()).sort((a, b) => a.date.localeCompare(b.date))
+  return (
+    <Card title="D-day">
+      <div className="col" style={{ gap: 6 }}>
+        {dd.slice(0, 5).map((d) => <div key={d.id} className="row small"><span className="grow ellipsis">{d.title}</span><span className="tiny muted">{fmtShort(d.date)}</span><b style={{ color: d.color || 'var(--accent)', width: 52, textAlign: 'right' }}>{dday(d.date)}</b></div>)}
+        {!dd.length && <Empty>통계에서 D-day 추가</Empty>}
+      </div>
+    </Card>
+  )
+}
+
+function SubjectWeek() {
+  const st = useSettings(), sessions = useColl('sessions'), subjects = useColl('subjects')
+  const ws = weekStart(today(), st.weekStart)
+  const rows = subjects.map((s) => ({ s, m: sumBy(sessions.filter((x) => x.date >= ws && x.subjectId === s.id)) })).filter((x) => x.m).sort((a, b) => b.m - a.m)
+  const max = Math.max(1, ...rows.map((x) => x.m))
+  return (
+    <Card title="이번 주 과목별">
+      <div className="bars">
+        {rows.map(({ s, m }) => <div key={s.id} className="bar-row"><span className="bar-l ellipsis">{s.name}</span><div className="bar-t"><i style={{ width: (m / max) * 100 + '%', background: s.color }} /></div><span className="bar-v">{fmtDur(m)}</span></div>)}
+        {!rows.length && <Empty>이번 주 기록이 없어요</Empty>}
+      </div>
+    </Card>
+  )
+}
+
+// 올해·이번 달·이번 주·오늘이 얼마나 지났는지
+function YearProgress() {
+  useNow(60000)
+  const n = new Date(), y = n.getFullYear()
+  const frac = (a, b) => Math.min(1, Math.max(0, (n - a) / (b - a)))
+  const ws = parseYmd(weekStart(today(), 1))
+  const rows = [['올해', frac(new Date(y, 0, 1), new Date(y + 1, 0, 1))], ['이번 달', frac(new Date(y, n.getMonth(), 1), new Date(y, n.getMonth() + 1, 1))], ['이번 주', frac(ws, new Date(+ws + 7 * 86400000))], ['오늘', frac(new Date(y, n.getMonth(), n.getDate()), new Date(y, n.getMonth(), n.getDate() + 1))]]
+  return (
+    <Card title="시간은 흐른다">
+      <div className="col" style={{ gap: 6 }}>
+        {rows.map(([k, v]) => <div key={k}><div className="row between tiny"><span className="muted">{k}</span><span>{Math.floor(v * 100)}%</span></div><div className="bar-t" style={{ marginTop: 3 }}><i style={{ width: v * 100 + '%' }} /></div></div>)}
+      </div>
+    </Card>
+  )
+}
+
 export const WIDGETS = {
   now: { label: '지금 (현재·다음 일정)', C: Now, size: 'm' },
   top3: { label: '오늘의 Top 3', C: Top3, size: 'm' },
@@ -468,4 +641,14 @@ export const WIDGETS = {
   bigdday: { label: '큰 D-day', C: BigDday, size: 's' },
   recentrec: { label: '최근 공부 기록', C: RecentRec, size: 'm' },
   sticky: { label: '포스트잇 메모', C: Sticky, size: 's' },
+  weekgoal: { label: '이번 주 목표', C: WeekGoal, size: 's' },
+  agenda: { label: '다가오는 일정 (7일)', C: Agenda, size: 'm' },
+  examrange: { label: '시험 범위 진도', C: ExamRangeW, size: 'm' },
+  textbooks: { label: '교재 진도', C: Textbooks, size: 'm' },
+  grades: { label: '최근 성적', C: GradesW, size: 'm' },
+  hours: { label: '공부 시간대', C: Hours, size: 'm' },
+  monthstats: { label: '이번 달 통계', C: MonthStats, size: 'm' },
+  ddaylist: { label: 'D-day 목록', C: DdayList, size: 'm' },
+  subjectweek: { label: '이번 주 과목별', C: SubjectWeek, size: 'm' },
+  yearprog: { label: '올해·이번 달 진행률', C: YearProgress, size: 's' },
 }
