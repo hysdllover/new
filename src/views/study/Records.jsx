@@ -1,6 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { drawShareCard, shareBlob } from '../../lib/shareCard.js'
+import { pickQuote } from '../../lib/quote.js'
 import { useColl, useSettings, put, patch, remove } from '../../store/store.js'
-import { Card, Ring, Icon, Empty, AddInput, openSheet, Field } from '../../components/ui.jsx'
+import { Card, Ring, Icon, Empty, AddInput, openSheet, Field, toast } from '../../components/ui.jsx'
 import { SubjectSelect } from '../../components/common.jsx'
 import { Heatmap, Bars, WeekBars, LineChart, MonthHeat } from '../../components/charts.jsx'
 import { today, addDays, weekStart, fmtDur, fmtShort, fmtDate, fmtTime, tsToMin, diffDays } from '../../engine/date.js'
@@ -36,7 +38,7 @@ export default function Records() {
   const doneRate = weekTasks.length ? weekTasks.filter((t) => t.done).length / weekTasks.length : 0
   return (
     <div className="grid two">
-      <Card title="목표 달성">
+      <Card title="목표 달성" action={<button className="btn sm" onClick={() => openSheet(() => <ShareCardSheet />, { title: '공부 인증 카드' })}><Icon name="share" size={14} />인증 카드</button>}>
         <div className="row" style={{ justifyContent: 'space-around' }}>
           <div className="col center" style={{ alignItems: 'center', gap: 4 }}>
             <Ring value={s.today / st.goalDaily} size={96}><b>{Math.round(s.today / st.goalDaily * 100)}%</b></Ring>
@@ -63,6 +65,31 @@ export default function Records() {
       <DdayCard />
       <Habits />
       <Grades />
+    </div>
+  )
+}
+
+// 공부 인증 카드 미리보기 + 공유/저장
+function ShareCardSheet() {
+  const st = useSettings(), s = useStudyStats()
+  const sessions = useColl('sessions'), subjects = useColl('subjects'), quotes = useColl('quotes')
+  const [url, setUrl] = useState(null), [blob, setBlob] = useState(null)
+  const d = today()
+  useEffect(() => {
+    const todays = sessions.filter((x) => x.date === d)
+    const subs = subjects.map((sb) => ({ name: sb.name, color: sb.color, m: todays.filter((x) => x.subjectId === sb.id).reduce((a, x) => a + x.dur, 0) })).filter((x) => x.m).sort((a, b) => b.m - a.m)
+    const other = todays.filter((x) => !subjects.some((sb) => sb.id === x.subjectId)).reduce((a, x) => a + x.dur, 0)
+    if (other) subs.push({ name: '기타', m: other })
+    let u
+    drawShareCard({ date: fmtDate(d, { year: true }), mins: s.today, goal: st.goalDaily, subjects: subs, week: s.week, streak: s.streak, quote: pickQuote([...quotes].sort((a, b) => a.id.localeCompare(b.id)))?.text })
+      .then((b) => { setBlob(b); u = URL.createObjectURL(b); setUrl(u) })
+    return () => u && URL.revokeObjectURL(u)
+  }, []) // eslint-disable-line
+  return (
+    <div className="col">
+      {url ? <img src={url} alt="공부 인증 카드" style={{ width: '100%', maxWidth: 420, alignSelf: 'center', borderRadius: 12, boxShadow: 'var(--shadow)' }} /> : <div className="small muted">만드는 중…</div>}
+      <button className="btn primary" disabled={!blob} onClick={async () => { const r = await shareBlob(blob, `study-${d}.png`); if (r === 'saved') toast('이미지를 저장했어요') }}><Icon name="share" size={16} />공유 · 저장</button>
+      <div className="tiny muted center">사진 앱에 저장하려면 공유 › 이미지 저장</div>
     </div>
   )
 }

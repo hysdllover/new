@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { useColl, put, patch, remove } from '../../store/store.js'
+import { useColl, put, patch, remove, uid } from '../../store/store.js'
 import { setTextbookProgress } from '../../store/actions.js'
-import { Card, Icon, Prog, Empty, Field, openSheet, confirmSheet, toast } from '../../components/ui.jsx'
+import { Card, Icon, Prog, Empty, Field, openSheet, confirmSheet, toast, Check, AddInput } from '../../components/ui.jsx'
 import { SubjectSelect, SubjectTag } from '../../components/common.jsx'
 import { Burndown, LineChart } from '../../components/charts.jsx'
 import { fmtShort, diffDays, today } from '../../engine/date.js'
@@ -12,6 +12,7 @@ export default function Progress() {
   const subjects = useColl('subjects')
   return (
     <div className="col">
+      <ExamRanges />
       <div className="row between">
         <h4>교재 진도</h4>
         <button className="btn sm" onClick={() => openSheet((c) => <TbForm close={c} />, { title: '교재 추가' })}><Icon name="plus" size={14} />교재</button>
@@ -41,6 +42,44 @@ export default function Progress() {
         })}
       </div>
     </div>
+  )
+}
+
+// 시험 범위: D-day 별 단원 체크 → 남은 단원 ÷ 남은 날 = 하루 분량
+function ExamRanges() {
+  const ddays = useColl('ddays').filter((d) => d.date >= today()).sort((a, b) => a.date.localeCompare(b.date))
+  const [open, setOpen] = useState(null)
+  return (
+    <>
+      <div className="row between"><h4>시험 범위</h4>{!ddays.length && <span className="tiny muted">통계 › D-day 에서 시험을 먼저 추가하세요</span>}</div>
+      <div className="grid two">
+        {ddays.map((d) => {
+          const units = d.units || []
+          const left = units.filter((u) => !u.done).length
+          const days = Math.max(1, diffDays(d.date, today()))
+          const per = left ? Math.ceil(left / days) : 0
+          const set = (u) => patch('ddays', d.id, { units: u })
+          return (
+            <Card key={d.id} title={<span className="row">{d.title}<span className="tiny muted">D-{diffDays(d.date, today())}</span></span>}
+              action={<span className="small">{units.length - left}/{units.length}</span>}>
+              {units.length > 0 && <Prog value={(units.length - left) / units.length} h={6} />}
+              <div className="small" style={{ margin: '8px 0' }}>{!units.length ? '단원을 추가하면 하루 분량을 계산해요' : left ? <>하루 <b>{per}단원</b>씩 · 남은 {left}단원 · {days}일</> : '범위를 모두 끝냈어요'}</div>
+              <div className="list">
+                {(open === d.id ? units : units.filter((u) => !u.done).slice(0, per || 3)).map((u) => (
+                  <div key={u.id} className={'item' + (u.done ? ' done' : '')} style={{ padding: '4px 0', alignItems: 'center' }}>
+                    <Check on={u.done} onClick={() => set(units.map((x) => (x.id === u.id ? { ...x, done: !x.done } : x)))} />
+                    <span className="title grow">{u.name}</span>
+                    {open === d.id && <button className="icon-btn" aria-label="삭제" onClick={() => set(units.filter((x) => x.id !== u.id))}><Icon name="close" size={12} /></button>}
+                  </div>
+                ))}
+              </div>
+              {open === d.id && <AddInput placeholder="단원 추가 (쉼표로 여러 개)" onAdd={(text) => set([...units, ...text.split(/[\n,]+/).map((n) => n.trim()).filter(Boolean).map((name) => ({ id: uid(), name, done: false }))])} />}
+              <button className="btn sm ghost" style={{ marginTop: 6 }} onClick={() => setOpen(open === d.id ? null : d.id)}>{open === d.id ? '닫기' : units.length ? '전체 보기 · 편집' : '단원 추가'}</button>
+            </Card>
+          )
+        })}
+      </div>
+    </>
   )
 }
 

@@ -341,7 +341,7 @@ function MonthHeatW({ w }) {
   for (const x of sessions) byDay[x.date] = (byDay[x.date] || 0) + x.dur
   return (
     <Card title="공부 달력">
-      <MonthHeat values={byDay} goal={st.goalDaily} weekStartDow={st.weekStart} compact={w.size === 's' || w.size === 'm'} onPick={() => go('study', 'records')} />
+      <MonthHeat values={byDay} goal={st.goalDaily} weekStartDow={st.weekStart} compact={(w.cols || { s: 2, m: 4, l: 4, t: 2 }[w.size || 's']) < 4} onPick={() => go('study', 'records')} />
     </Card>
   )
 }

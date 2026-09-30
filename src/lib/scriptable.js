@@ -12,10 +12,10 @@ const APP = ${JSON.stringify(appUrl)}
 
 const dyn = (l, d, a = 1) => Color.dynamic(new Color(l, a), new Color(d, a))
 const BG = dyn('#f5f3ef', '#161616')
-const INK = dyn('#2b2a28', '#ece8e1')
-const SOFT = dyn('#a19c93', '#7d786f')
+let INK = dyn('#2b2a28', '#ece8e1')
+let SOFT = dyn('#a19c93', '#7d786f')
 const GOLD = dyn('#b39d74', '#c9b489')
-const RULE = dyn('#e2ded6', '#2c2b29')
+let RULE = dyn('#e2ded6', '#2c2b29')
 
 // 폰트 — 한글·영문·숫자 한 서체로 통일. 기본 애플 산돌고딕 얇게, 앱 설정에서 설치한 폰트(PostScript 이름) 지정 가능
 let CUSTOM = ''
@@ -24,7 +24,8 @@ const tw = (s) => F(s, 'Light')
 const thin = (s) => F(s, 'Thin')
 const label = (s) => F(s, 'Regular')
 
-const PARAM = String(args.widgetParameter || '').replace(/\\s/g, '').toLowerCase()
+const RAWP = String(args.widgetParameter || '').replace(/\\s/g, '').toLowerCase()
+const PARAM = RAWP.split('@')[0] // "공부@2" 처럼 @ 뒤는 배경 구분용
 // 디데이2, 디데이3 … → 두 번째·세 번째 D-day
 const DDI = Math.max(0, (+(PARAM.match(/(\\d)$/) || [])[1] || 1) - 1)
 const KIND = { '공부': 'study', '할일': 'todo', '디데이': 'dday', 'd-day': 'dday', '달력': 'month', '캘린더': 'cal', '일정': 'cal', calendar: 'cal', '다짐': 'quote', study: 'study', todo: 'todo', dday: 'dday', month: 'month', quote: 'quote' }[PARAM.replace(/\\d$/, '')] || 'default'
@@ -89,8 +90,25 @@ const w = new ListWidget()
 w.url = link(KIND === 'todo' ? 'tasks' : KIND === 'cal' ? 'planner.month' : KIND === 'default' ? '' : 'study.records')
 w.refreshAfterDate = new Date(Date.now() + 15 * 60000)
 const P = fam === 'small' ? 16 : 18
-if (!lock) { w.backgroundColor = BG; w.setPadding(P, P, P, P) }
-const inner = fam === 'small' ? 170 - P * 2 : 364 - P * 2
+// 기기별 위젯 크기(pt) — 아이폰은 화면 폭 비례, 아이패드는 고정값
+const SZ = (() => {
+  if (Device.isPad()) return { small: 158, medium: 342, large: 342, extraLarge: 715 }
+  const sc = Device.screenSize(), sw = Math.min(sc.width, sc.height)
+  const sm = Math.min(170, Math.round(sw * 0.43)), md = Math.min(364, Math.round(sw * 0.926))
+  return { small: sm, medium: md, large: md, extraLarge: md }
+})()
+const inner = (SZ[fam] || SZ.large) - P * 2
+// 투명 배경(배경화면 잘라 붙이기) · 글자색
+const FM = FileManager.local()
+const bgPath = (f, p) => FM.joinPath(FM.documentsDirectory(), 'study-bg-' + f + '-' + (p || 'default') + '.jpg')
+const inkMode = Keychain.contains('study-ink') ? Keychain.get('study-ink') : 'auto'
+if (inkMode === 'light') { INK = new Color('#ffffff'); SOFT = new Color('#ffffff', 0.72); RULE = new Color('#ffffff', 0.3) }
+if (inkMode === 'dark') { INK = new Color('#1d1c1a'); SOFT = new Color('#1d1c1a', 0.6); RULE = new Color('#1d1c1a', 0.2) }
+if (!lock) {
+  w.setPadding(P, P, P, P)
+  if (FM.fileExists(bgPath(fam, RAWP))) w.backgroundImage = FM.readImage(bgPath(fam, RAWP))
+  else w.backgroundColor = BG
+}
 
 if (!data) {
   t(w, lock ? '동기화 필요' : '앱에서 동기화를 연결하고 스크립트를 다시 복사해 주세요', tw(12), lock ? null : SOFT, 3)
@@ -430,10 +448,56 @@ if (!data) {
   if (!lock) w.addSpacer()
 }
 
+// 앱에서 실행하면 메뉴: 미리보기 · 투명 배경 · 글자색
+async function transparentSetup() {
+  // 스크린샷 해상도(세로 px)별 위젯 위치 — 표에 없는 기기는 비슷한 기기 비율로 추정
+  const T = {
+    2868: { small: 520, medium: 1113, large: 1169, left: 101, right: 694, top: 290, middle: 938, bottom: 1586 },
+    2796: { small: 510, medium: 1092, large: 1146, left: 99, right: 681, top: 282, middle: 918, bottom: 1554 },
+    2778: { small: 510, medium: 1092, large: 1146, left: 96, right: 678, top: 246, middle: 882, bottom: 1518 },
+    2688: { small: 507, medium: 1080, large: 1137, left: 81, right: 654, top: 228, middle: 858, bottom: 1488 },
+    2622: { small: 486, medium: 1041, large: 1089, left: 83, right: 638, top: 277, middle: 880, bottom: 1483 },
+    2556: { small: 474, medium: 1014, large: 1062, left: 82, right: 622, top: 270, middle: 858, bottom: 1446 },
+    2532: { small: 474, medium: 1014, large: 1062, left: 78, right: 618, top: 231, middle: 819, bottom: 1407 },
+    2436: { small: 465, medium: 987, large: 1035, left: 69, right: 591, top: 213, middle: 783, bottom: 1353 },
+    2340: { small: 436, medium: 936, large: 980, left: 72, right: 570, top: 212, middle: 756, bottom: 1300 },
+    2208: { small: 471, medium: 1044, large: 1071, left: 99, right: 672, top: 114, middle: 696, bottom: 1278 },
+    1792: { small: 338, medium: 720, large: 758, left: 54, right: 436, top: 160, middle: 580, bottom: 1000 },
+    1334: { small: 296, medium: 642, large: 648, left: 54, right: 400, top: 60, middle: 412, bottom: 764 },
+  }
+  if (Device.isPad()) { const a = new Alert(); a.title = '아이패드는 지원하지 않아요'; a.message = '화면 방향마다 위치가 달라 아이폰에서만 쓸 수 있어요.'; a.addAction('확인'); await a.present(); return }
+  let a = new Alert(); a.title = '투명 배경'; a.message = '1) 홈 화면 편집(아이콘 흔들림) 상태에서 맨 오른쪽 빈 페이지로 넘겨 스크린샷을 찍어 두세요.\\n2) 다음에서 그 스크린샷을 고르세요.'; a.addAction('스크린샷 고르기'); a.addCancelAction('취소')
+  if (await a.present() === -1) return
+  const img = await Photos.fromLibrary()
+  const h = img.size.height
+  let L = T[h]
+  if (!L) { const k = Object.keys(T).map(Number).sort((x, y) => Math.abs(x - h) - Math.abs(y - h))[0], r = h / k; L = Object.fromEntries(Object.entries(T[k]).map(([n, v]) => [n, Math.round(v * r)])) }
+  a = new Alert(); a.title = '위젯 크기'; ['소', '중', '대'].forEach((x) => a.addAction(x))
+  const size = ['small', 'medium', 'large'][await a.present()]
+  const pos = size === 'small' ? [['왼쪽 위', 'left', 'top'], ['오른쪽 위', 'right', 'top'], ['왼쪽 가운데', 'left', 'middle'], ['오른쪽 가운데', 'right', 'middle'], ['왼쪽 아래', 'left', 'bottom'], ['오른쪽 아래', 'right', 'bottom']]
+    : size === 'medium' ? [['위', 'left', 'top'], ['가운데', 'left', 'middle'], ['아래', 'left', 'bottom']] : [['위', 'left', 'top'], ['아래', 'left', 'middle']]
+  a = new Alert(); a.title = '위젯 위치'; pos.forEach((x) => a.addAction(x[0]))
+  const [, hx, vy] = pos[await a.present()]
+  a = new Alert(); a.title = '어떤 위젯에 쓸까요?'; a.message = '위젯 Parameter 를 적어 주세요 (예: 공부, 캘린더@2). 비우면 기본.'; a.addTextField('Parameter', ''); a.addAction('저장')
+  await a.present()
+  const key = a.textFieldValue(0).replace(/\\s/g, '').toLowerCase()
+  const wpx = size === 'small' ? L.small : L.medium, hpx = size === 'large' ? L.large : L.small
+  const c = new DrawContext(); c.size = new Size(wpx, hpx); c.drawImageAtPoint(img, new Point(-L[hx], -L[vy]))
+  FM.writeImage(bgPath(size, key), c.getImage())
+  a = new Alert(); a.title = '저장했어요'; a.message = '위젯이 곧 새 배경으로 바뀌어요. 글자가 잘 안 보이면 메뉴에서 글자색을 바꿔 보세요.'; a.addAction('확인'); await a.present()
+}
 if (config.runsInWidget) Script.setWidget(w)
-else if (fam === 'small') await w.presentSmall()
-else if (fam === 'medium') await w.presentMedium()
-else await w.presentLarge()
+else {
+  const m = new Alert(); m.title = '스터디 위젯'
+  ;['미리보기 · 소', '미리보기 · 중', '미리보기 · 대', '투명 배경 설정', '투명 배경 모두 지우기', '글자색 · 자동', '글자색 · 밝게', '글자색 · 어둡게'].forEach((x) => m.addAction(x)); m.addCancelAction('닫기')
+  const i = await m.present()
+  if (i === 0) await w.presentSmall()
+  else if (i === 1) await w.presentMedium()
+  else if (i === 2) await w.presentLarge()
+  else if (i === 3) await transparentSetup()
+  else if (i === 4) { for (const f of FM.listContents(FM.documentsDirectory())) if (f.startsWith('study-bg-')) FM.remove(FM.joinPath(FM.documentsDirectory(), f)) }
+  else if (i >= 5) Keychain.set('study-ink', ['auto', 'light', 'dark'][i - 5])
+}
 Script.complete()
 `
 }

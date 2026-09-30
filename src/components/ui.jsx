@@ -8,6 +8,7 @@ const P = {
   study: 'M12 7a8 8 0 1 0 0 14 8 8 0 0 0 0-14zM12 11v3l2 1M10 3h4M12 3v4',
   notes: 'M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h7',
   plus: 'M12 5v14M5 12h14',
+  share: 'M12 3v12M8 7l4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7',
   search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4',
   more: 'M5 12h.01M12 12h.01M19 12h.01',
   close: 'M6 6l12 12M18 6 6 18',

@@ -91,6 +91,16 @@ svg { display: block; }
 }
 [data-card="shadow"] .card { border-color: transparent; box-shadow: var(--shadow); }
 [data-card="flat"] .card { border-color: transparent; background: var(--surface-2); }
+/* 리퀴드 글래스: 은은한 배경 위 반투명 유리 카드·바 */
+[data-card="glass"] body { background: radial-gradient(120% 80% at 0% 0%, color-mix(in srgb, var(--accent) 16%, var(--bg)) 0%, transparent 60%), radial-gradient(100% 70% at 100% 100%, color-mix(in srgb, var(--c3) 18%, var(--bg)) 0%, transparent 60%), var(--bg); background-attachment: fixed; }
+[data-card="glass"] .card { background: color-mix(in srgb, var(--surface) 58%, transparent); backdrop-filter: blur(20px) saturate(1.6); -webkit-backdrop-filter: blur(20px) saturate(1.6); border: 1px solid color-mix(in srgb, #fff 50%, transparent); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .55), 0 10px 30px rgba(0, 0, 0, .06); }
+[data-card="glass"] .topbar { background: transparent; }
+[data-card="glass"] .tabbar { left: 12px; right: 12px; bottom: calc(var(--sab) + 8px); border: 1px solid color-mix(in srgb, #fff 50%, transparent); border-radius: 26px; background: color-mix(in srgb, var(--surface) 55%, transparent); backdrop-filter: blur(24px) saturate(1.8); -webkit-backdrop-filter: blur(24px) saturate(1.8); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), 0 10px 30px rgba(0, 0, 0, .12); padding-bottom: 2px; }
+[data-card="glass"] .fab { bottom: calc(84px + var(--sab)); background: color-mix(in srgb, var(--accent) 80%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4), 0 8px 22px rgba(0, 0, 0, .18); }
+[data-card="glass"] .sidebar { background: color-mix(in srgb, var(--surface) 50%, transparent); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"])[data-card="glass"] .card, :root:not([data-theme="light"])[data-card="glass"] .tabbar { border-color: rgba(255, 255, 255, .12); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 10px 30px rgba(0, 0, 0, .3); } }
+[data-theme="dark"][data-card="glass"] .card, [data-theme="dark"][data-card="glass"] .tabbar { border-color: rgba(255, 255, 255, .12); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 10px 30px rgba(0, 0, 0, .3); }
+@media print { [data-card="glass"] .card { backdrop-filter: none; background: #fff; box-shadow: none; } }
 .card-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
 .card-h h3 { font-size: .95em; }
 .grid { display: grid; gap: var(--gap); }
@@ -197,16 +207,9 @@ input[type="color"] { width: 36px; height: 30px; border: 1px solid var(--line); 
 .menu button:hover { background: var(--surface-2); }
 
 /* 대시보드 위젯 */
-.widgets { display: grid; gap: var(--gap); grid-template-columns: 1fr 1fr; }
-.widgets > .w-s { grid-column: span 1; }
-.widgets > .w-m, .widgets > .w-l { grid-column: span 2; }
-@media (min-width: 768px) {
-  .widgets { grid-template-columns: repeat(4, 1fr); }
-  .widgets > .w-s { grid-column: span 1; }
-  .widgets > .w-m { grid-column: span 2; }
-  .widgets > .w-l { grid-column: span 4; }
-}
-@media (min-width: 1280px) { .widgets { grid-template-columns: repeat(6, 1fr); } .widgets > .w-l { grid-column: span 4; } }
+.widgets { display: grid; gap: var(--gap); grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-flow: row dense; }
+.widgets > * { min-width: 0; }
+.widgets > .wf > div { height: 100%; }
 .w-edit { position: relative; outline: 1.5px dashed var(--line); outline-offset: 2px; }
 .w-tools { position: absolute; top: 6px; right: 6px; display: flex; gap: 2px; background: var(--surface); border-radius: 8px; box-shadow: var(--shadow); z-index: 2; }
 

@@ -4,7 +4,7 @@ import { PRESETS, FONTS } from '../theme/theme.js'
 import { PALETTE, SOFT_PALETTE } from '../store/schema.js'
 import { Card, Seg, Toggle, Field, Icon, toast, confirmSheet, openSheet } from '../components/ui.jsx'
 import { ColorPick, TimeInput, SubjectSelect } from '../components/common.jsx'
-import { useSyncStatus, connect, disconnect, syncNow, gistInfo, tokenExpiry } from '../sync/sync.js'
+import { useSyncStatus, connect, disconnect, syncNow, gistInfo, tokenExpiry, listBackups, backupNow, restoreBackup } from '../sync/sync.js'
 import { enablePush, disablePush, pushState, testLocal, isStandalone, pushSupported } from '../lib/push.js'
 import { buildScript, WIDGET_KINDS } from '../lib/scriptable.js'
 import { pickQuote } from '../lib/quote.js'
@@ -64,7 +64,7 @@ export default function Settings() {
           <Field label={`글자 굵기 ${th.fontWeight}`}><input type="range" min="300" max="500" step="100" value={th.fontWeight} onChange={(e) => setTheme({ fontWeight: +e.target.value })} /></Field>
           <Field label={`모서리 둥글기 ${th.radius}px`}><input type="range" min="0" max="20" value={th.radius} onChange={(e) => setTheme({ radius: +e.target.value })} /></Field>
           <Field label="간격"><Seg value={th.density} onChange={(v) => setTheme({ density: v })} options={[['compact', '촘촘'], ['normal', '보통'], ['relaxed', '여유']]} /></Field>
-          <Field label="카드 스타일"><Seg value={th.card} onChange={(v) => setTheme({ card: v })} options={[['line', '선'], ['shadow', '그림자'], ['flat', '평면']]} /></Field>
+          <Field label="카드 스타일"><Seg value={th.card} onChange={(v) => setTheme({ card: v })} options={[['line', '선'], ['shadow', '그림자'], ['flat', '평면'], ['glass', '유리']]} /></Field>
         </div>
       </Card>
 
@@ -83,6 +83,11 @@ export default function Settings() {
             <Field label="하루 시작"><TimeInput allowEmpty={false} value={st.dayStart} onChange={(v) => v != null && setSettings({ dayStart: v })} /></Field>
             <Field label="하루 끝"><TimeInput allowEmpty={false} value={st.dayEnd % 1440} onChange={(v) => v != null && setSettings({ dayEnd: v === 0 ? 1440 : v })} /></Field>
           </div>
+          <Field label="앱 시작 화면">
+            <select className="input" value={st.startTab || 'last'} onChange={(e) => setSettings({ startTab: e.target.value })}>
+              {[['last', '마지막으로 보던 화면'], ['home', '홈'], ['tasks.list', '할 일'], ['study.timer', '타이머'], ['study.log', '기록 입력'], ['study.records', '공부 통계'], ['planner.today', '캘린더 · 오늘'], ['planner.month', '캘린더 · 월'], ['notes.daily', '노트 · 데일리']].map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+            </select>
+          </Field>
           <Field label="주 시작"><Seg value={st.weekStart} onChange={(v) => setSettings({ weekStart: v })} options={[[1, '월요일'], [0, '일요일']]} /></Field>
           <div className="row">
             <Field label="하루 목표(분)"><input className="input" type="number" step="10" value={st.goalDaily} onChange={(e) => setSettings({ goalDaily: +e.target.value })} /></Field>
@@ -113,6 +118,7 @@ export default function Settings() {
             i.click()
           }}><Icon name="upload" size={16} />JSON 가져오기</button>
         </div>
+        <AutoBackups />
         <div className="tiny muted" style={{ marginTop: 8 }}>첨부 파일 원본은 Gist 동기화로 옮겨집니다. JSON 백업에는 목록만 포함돼요.</div>
       </Card>
       <Card title="홈 화면에 설치">
@@ -121,6 +127,32 @@ export default function Settings() {
     </div>
   )
 }
+
+// 자동 백업 목록 (gist 에 매주 저장, 최근 4개)
+function AutoBackups() {
+  const sync = useSyncStatus()
+  const [list, setList] = useState(null), [busy, setBusy] = useState(false)
+  const load = () => listBackups().then(setList).catch((e) => setList({ error: e.message }))
+  useEffect(() => { if (sync.state !== 'off') load() }, [sync.state === 'off']) // eslint-disable-line
+  if (sync.state === 'off') return <div className="tiny muted" style={{ marginTop: 8 }}>동기화를 연결하면 매주 자동 백업돼요.</div>
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div className="row between"><span className="small">자동 백업 <span className="tiny muted">· 매주 · 최근 4개</span></span>
+        <button className="btn sm" disabled={busy} onClick={async () => { setBusy(true); try { await backupNow(); toast('백업했어요'); load() } catch (e) { toast(e.message) } setBusy(false) }}>지금 백업</button></div>
+      <div className="list">
+        {Array.isArray(list) && list.map((b) => (
+          <div key={b.name} className="item" style={{ padding: '6px 0', alignItems: 'center' }}>
+            <span className="grow small">{fmtDateK(b.date)}</span><span className="tiny muted">{Math.round(b.size / 1024)}KB</span>
+            <button className="btn sm" onClick={() => confirmSheet('되돌리기', `${fmtDateK(b.date)} 백업 내용으로 되돌릴까요? 백업 이후 새로 만든 항목은 그대로 남아요.`, async () => { try { await restoreBackup(b); toast('되돌렸어요') } catch (e) { toast(e.message) } }, '되돌리기')}>되돌리기</button>
+          </div>
+        ))}
+        {Array.isArray(list) && !list.length && <div className="tiny muted">아직 백업이 없어요 · 다음 동기화 때 만들어져요</div>}
+        {list?.error && <div className="tiny muted">{list.error}</div>}
+      </div>
+    </div>
+  )
+}
+const fmtDateK = (s) => { const [y, m, d] = s.split('-'); return `${y}년 ${+m}월 ${+d}일` }
 
 function SyncCard() {
   const s = useSyncStatus()
@@ -318,7 +350,8 @@ function HomeWidgetCard() {
         1. App Store 에서 무료 앱 <b>Scriptable</b> 설치<br />
         2. 아래 <b>스크립트 복사</b> → Scriptable › ＋ › 붙여넣기 → 이름 ‘스터디’<br />
         3. 홈 화면 길게 누르기 › ＋ › Scriptable 위젯(소·중·대) 추가 → 위젯 편집 › Script: ‘스터디’ · Parameter: 위 형태 단어<br />
-        4. 잠금 화면: 잠금 화면 길게 누르기 › 사용자화 › 위젯 추가 › Scriptable → 같은 스크립트 선택 · D-day 만 보려면 Parameter: 디데이 (다음 D-day 는 디데이2)
+        4. 투명 배경(아이폰): Scriptable 에서 ‘스터디’ 스크립트를 눌러 실행 › 투명 배경 설정 › 빈 홈 화면 스크린샷·위젯 크기·위치 선택. 같은 크기 위젯이 여러 개면 Parameter 에 @번호를 붙여 구분 (예: 공부@2). 글자색도 같은 메뉴에서 바꿔요.<br />
+        5. 잠금 화면: 잠금 화면 길게 누르기 › 사용자화 › 위젯 추가 › Scriptable → 같은 스크립트 선택 · D-day 만 보려면 Parameter: 디데이 (다음 D-day 는 디데이2)
       </div>
       <div className="tiny muted" style={{ marginTop: 4 }}>위젯을 누르면 해당 화면(할 일·공부 기록)이 열려요. iOS 제한으로 사파리에서 열리니, 사파리에서도 한 번 동기화를 연결해 두세요.</div>
       <div className="row" style={{ marginTop: 10 }}>
