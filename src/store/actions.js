@@ -188,12 +188,23 @@ export function autoTemplate(date = today()) {
 }
 
 /* ── 공부 세션 ── */
-export function addSession({ subjectId, taskId, start, end, kind = 'stopwatch' }) {
+export function addSession({ subjectId, taskId, lectureId, start, end, kind = 'stopwatch' }) {
   const dur = Math.round((end - start) / 60000)
   if (dur < 1) return null
-  const s = put('sessions', { subjectId, taskId, start, end, dur, date: tsToYmd(start), kind })
+  const s = put('sessions', { subjectId, taskId, ...(lectureId ? { lectureId } : {}), start, end, dur, date: tsToYmd(start), kind })
   if (taskId) log(taskId, 'study', `${dur}분 공부`)
   return s
+}
+
+// 인강: n강 완료 표시/취소 (n 없으면 다음 강 완료)
+export function markLecture(id, n) {
+  const l = find('lectures', id)
+  if (!l) return null
+  const done = { ...(l.done || {}) }
+  if (n == null) { n = 1; while (done[n] && n <= l.total) n++; if (n > l.total) return null }
+  if (done[n]) delete done[n]; else done[n] = today()
+  patch('lectures', id, { done })
+  return n
 }
 
 // 직접 입력한 공부 기록 (시작 시각은 선택)

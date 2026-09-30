@@ -5,6 +5,7 @@ import { Card, Icon, Prog, Empty, Field, openSheet, confirmSheet, toast, Check, 
 import { SubjectSelect, SubjectTag } from '../../components/common.jsx'
 import { Burndown, LineChart } from '../../components/charts.jsx'
 import { fmtShort, diffDays, today } from '../../engine/date.js'
+import Lectures from './Lectures.jsx'
 
 export default function Progress() {
   const textbooks = useColl('textbooks')
@@ -13,6 +14,7 @@ export default function Progress() {
   return (
     <div className="col">
       <ExamRanges />
+      <Lectures />
       <div className="row between">
         <h4>교재 진도</h4>
         <button className="btn sm" onClick={() => openSheet((c) => <TbForm close={c} />, { title: '교재 추가' })}><Icon name="plus" size={14} />교재</button>

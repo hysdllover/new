@@ -1,5 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
-import { addSession } from '../store/actions.js'
+import { addSession, markLecture } from '../store/actions.js'
 import { settings } from '../store/store.js'
 import { toast } from '../components/ui.jsx'
 import { keepAwake } from './notify.js'
@@ -31,12 +31,12 @@ export const remaining = (x = t) => (x?.mode === 'countdown' ? Math.max(0, x.tar
 function flush(x) {
   // 현재 공부 구간을 세션으로 저장
   if (!x || x.paused) return null
-  return addSession({ subjectId: x.subjectId, taskId: x.taskId, start: x.segStart, end: Date.now(), kind: x.mode })
+  return addSession({ subjectId: x.subjectId, taskId: x.taskId, lectureId: x.lectureId, start: x.segStart, end: Date.now(), kind: x.mode })
 }
 
-export function startStopwatch(subjectId, taskId) {
+export function startStopwatch(subjectId, taskId, lectureId) {
   if (t) stop()
-  set({ mode: 'stopwatch', subjectId, taskId, segStart: Date.now(), acc: 0 })
+  set({ mode: 'stopwatch', subjectId, taskId, ...(lectureId ? { lectureId } : {}), segStart: Date.now(), acc: 0 })
   if (settings().wakeLock !== false) keepAwake(true)
 }
 // 타이머: 정한 시간이 지나면 자동으로 멈추고 기록
@@ -56,11 +56,14 @@ export function resume() {
 }
 export function stop() {
   if (!t) return
-  const last = flush(t)
+  const last = flush(t), was = t
   const total = Math.round(elapsed(t) / 60000)
   set(null)
   keepAwake(false)
-  if (total >= 1) toast(`${total}분 기록했어요`, last ? { label: '수정', fn: () => import('../views/study/Log.jsx').then((m) => m.openRecord(last)) } : undefined)
+  const lec = was.lectureId
+  // 인강 듣기로 시작했으면 바로 다음 강 완료 표시
+  if (lec) toast(total >= 1 ? `${total}분 기록했어요` : '인강 듣기를 마쳤어요', { label: '＋1강', fn: () => { const n = markLecture(lec); if (n) toast(`${n}강 완료`) } })
+  else if (total >= 1) toast(`${total}분 기록했어요`, last ? { label: '수정', fn: () => import('../views/study/Log.jsx').then((m) => m.openRecord(last)) } : undefined)
 }
 export const setTimerTask = (taskId, subjectId) => t && set({ ...t, taskId, subjectId: subjectId ?? t.subjectId })
 
@@ -70,7 +73,7 @@ function countdownTick() {
   const min = Math.round(t.target / 60000)
   // 끝난 시각 기준으로 정확히 기록
   const end = t.segStart + (t.target - (t.acc || 0))
-  addSession({ subjectId: t.subjectId, taskId: t.taskId, start: t.segStart, end, kind: 'countdown' })
+  addSession({ subjectId: t.subjectId, taskId: t.taskId, lectureId: t.lectureId, start: t.segStart, end, kind: 'countdown' })
   set(null); keepAwake(false)
   notify('타이머 끝', `${min}분 공부를 기록했어요`)
 }
