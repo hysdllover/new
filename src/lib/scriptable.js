@@ -42,21 +42,31 @@ const alive = (o) => Object.values(o || {}).filter((r) => !r.deleted)
 const hm = (m) => Math.floor(m / 60) + ':' + pad(m % 60)
 
 let STALE = null // 받기 실패로 캐시를 쓸 때 마지막 갱신 시각
+// 캐시는 파일로 (잠금 화면 위젯은 메모리·시간 한도가 작아 Keychain 대용량 저장을 피함)
+const CFM = FileManager.local()
+const cachePath = CFM.joinPath(CFM.documentsDirectory(), 'study-widget-cache.json')
 async function load() {
   const key = 'study-widget-data'
+  const LOCK0 = String(config.widgetFamily || '').startsWith('accessory')
   try {
     if (!SRC) throw new Error('no source')
-    const r = new Request(SRC + '?t=' + Date.now()); r.headers = { 'Cache-Control': 'no-cache' }; r.timeoutInterval = 20
-    const data = JSON.parse(await r.loadString())
+    const r = new Request(SRC + '?t=' + Date.now()); r.headers = { 'Cache-Control': 'no-cache' }; r.timeoutInterval = LOCK0 ? 8 : 20
+    const raw = await r.loadString()
+    const data = JSON.parse(raw)
     if (!data.study) throw new Error('bad data')
     data.at = Date.now()
-    Keychain.set(key, JSON.stringify(data))
+    try { CFM.writeString(cachePath, JSON.stringify(data)) } catch (e) {}
     return data
   } catch (e) {
-    if (!Keychain.contains(key)) return null
-    const data = JSON.parse(Keychain.get(key))
-    STALE = data.at ? new Date(data.at) : new Date(0)
-    return data
+    try {
+      if (CFM.fileExists(cachePath)) { const d = JSON.parse(CFM.readString(cachePath)); STALE = d.at ? new Date(d.at) : new Date(0); return d }
+      if (Keychain.contains(key)) { // 예전 캐시 → 파일로 옮김
+        const d = JSON.parse(Keychain.get(key)); STALE = d.at ? new Date(d.at) : new Date(0)
+        try { CFM.writeString(cachePath, JSON.stringify(d)); Keychain.remove(key) } catch (e2) {}
+        return d
+      }
+    } catch (e3) {}
+    return null
   }
 }
 
@@ -68,25 +78,21 @@ function line(ratio, w, fg, bg) {
   c.setFillColor(new Color(fg || (dark() ? '#c9b489' : '#b39d74'))); c.fillRect(new Rect(0, 0.5, Math.max(2, w * Math.min(1, ratio)), 2))
   return c.getImage()
 }
-// 잠금 화면 원형 링
-function ring(ratio, size) {
-  const c = new DrawContext(); c.size = new Size(size, size); c.opaque = false; c.respectScreenScale = true
-  const r = size / 2 - 3, cx = size / 2, cy = size / 2
-  const arc = (from, to) => { const p = new Path(); const pts = []; for (let a = from; a <= to + 0.001; a += 0.05) pts.push(new Point(cx + r * Math.sin(a), cy - r * Math.cos(a))); p.addLines(pts); return p }
-  c.setLineWidth(3)
-  c.setStrokeColor(new Color('#ffffff', 0.25)); c.addPath(arc(0, Math.PI * 2)); c.strokePath()
-  if (ratio > 0) { c.setStrokeColor(new Color('#ffffff')); c.addPath(arc(0, Math.PI * 2 * Math.min(1, ratio))); c.strokePath() }
-  return c.getImage()
-}
 function rule(parent, w) { const s = parent.addStack(); s.size = new Size(w, 0.6); s.backgroundColor = RULE }
 function vrule(parent, h) { const s = parent.addStack(); s.size = new Size(0.6, h); s.backgroundColor = RULE }
 function t(parent, s, font, color, lines = 1) { const x = parent.addText(String(s)); x.font = font; if (color) x.textColor = color; x.lineLimit = lines; return x }
 function cap(parent, s) { return t(parent, s.split('').join(' '), label(8), SOFT) }
 
 const data = await load()
-const fam = config.widgetFamily || 'large'
+// 투명 배경 파일
+const FM = FileManager.local()
+const bgPath = (f, p) => FM.joinPath(FM.documentsDirectory(), 'study-bg-' + f + '-' + (p || 'default') + '.jpg')
+// 글자 막대 (잠금 화면: 이미지 대신 글자 → 가볍고 확실히 그려짐)
+const bar = (ratio, n = 10) => { const k = Math.round(Math.max(0, Math.min(1, ratio)) * n); return '▰'.repeat(k) + '▱'.repeat(n - k) }
+
+function build(fam) {
 const lock = fam.startsWith('accessory')
-const w = new ListWidget()
+let w = new ListWidget()
 w.url = link(KIND === 'todo' ? 'tasks' : KIND === 'cal' ? 'planner.month' : KIND === 'class' ? 'planner.timetable' : KIND === 'default' ? '' : 'study.records')
 w.refreshAfterDate = new Date(Date.now() + 15 * 60000)
 const P = fam === 'small' ? 16 : 18
@@ -99,8 +105,6 @@ const SZ = (() => {
 })()
 const inner = (SZ[fam] || SZ.large) - P * 2
 // 투명 배경(배경화면 잘라 붙이기) · 글자색
-const FM = FileManager.local()
-const bgPath = (f, p) => FM.joinPath(FM.documentsDirectory(), 'study-bg-' + f + '-' + (p || 'default') + '.jpg')
 const inkMode = Keychain.contains('study-ink') ? Keychain.get('study-ink') : 'auto'
 if (inkMode === 'light') { INK = new Color('#ffffff'); SOFT = new Color('#ffffff', 0.72); RULE = new Color('#ffffff', 0.3) }
 if (inkMode === 'dark') { INK = new Color('#1d1c1a'); SOFT = new Color('#1d1c1a', 0.6); RULE = new Color('#1d1c1a', 0.2) }
@@ -112,7 +116,7 @@ if (!lock) {
 
 if (!data) {
   t(w, lock ? '동기화 필요' : '앱에서 동기화를 연결하고 스크립트를 다시 복사해 주세요', tw(12), lock ? null : SOFT, 3)
-} else {
+} else try {
   const st = data.settings.settings?.main || {}
   CUSTOM = (st.widgetFont || '').trim()
   const goal = st.goalDaily || 240
@@ -129,12 +133,13 @@ if (!data) {
   // 오늘 할 일: 완료해도 자리 그대로, 줄 그어 표시
   const items = tasksAll.filter((x) => x.due && x.due <= today && (!x.done || x.due === today || doneT.includes(x))).sort(byDate)
   // 취소선: 글자는 설정 폰트 그대로, 뒤에 가운데 가는 선 이미지를 깔아 표시 (특수 문자는 폰트가 바뀌어 사용 안 함)
-  const strikeImg = (() => {
+  let strikeImg = null // 필요할 때만 그림 (잠금 화면에선 안 그림)
+  const strikeImage = () => strikeImg || (strikeImg = (() => {
     const c = new DrawContext(); c.size = new Size(240, 24); c.opaque = false; c.respectScreenScale = true
     c.setFillColor(new Color(dark() ? '#7d786f' : '#a19c93')); c.fillRect(new Rect(0, 11.6, 240, 1.2))
     return c.getImage()
-  })()
-  const strike = (parent, s, font) => { const k = parent.addStack(); k.backgroundImage = strikeImg; t(k, s, font, SOFT).minimumScaleFactor = 0.85; return k }
+  })())
+  const strike = (parent, s, font) => { const k = parent.addStack(); k.backgroundImage = strikeImage(); t(k, s, font, SOFT).minimumScaleFactor = 0.85; return k }
   const ddAll = alive(data.study.ddays).filter((d) => d.date >= today).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || a.date.localeCompare(b.date))
   const ddN = (d) => Math.round((new Date(d.date) - new Date(today)) / 86400000)
   const ddT = (d) => (ddN(d) === 0 ? 'D-DAY' : 'D-' + ddN(d))
@@ -290,15 +295,15 @@ if (!data) {
       t(w, hm(mins) + (dd ? ' · ' + ddTxt + ' ' + dd.title : ''), tw(12))
     } else if (fam === 'accessoryCircular') {
       w.addAccessoryWidgetBackground = true
-      const z = w.addStack(); z.size = new Size(60, 60); z.backgroundImage = ring(KIND === 'dday' ? 0 : mins / goal, 60); z.centerAlignContent()
-      const col = z.addStack(); col.layoutVertically(); col.centerAlignContent()
-      if (KIND === 'dday' && dd) { t(col, ddN(dd) === 0 ? 'D' : ddN(dd), thin(20)); t(col, 'D-DAY', label(7)) }
-      else { t(col, hm(mins), tw(13)); t(col, pct + '%', label(8)) }
+      const z = w.addStack(); z.size = new Size(60, 60); z.layoutVertically(); z.centerAlignContent()
+      const row = (s, f) => { const a = z.addStack(); a.addSpacer(); t(a, s, f).minimumScaleFactor = 0.6; a.addSpacer() }
+      if (KIND === 'dday' && dd) { row(ddN(dd) === 0 ? 'D' : String(ddN(dd)), thin(20)); row('D-DAY', label(7)) }
+      else { row(hm(mins), tw(14)); row(pct + '%', label(8)); row(bar(mins / goal, 5), label(6)) }
     } else {
       const r = w.addStack(); r.bottomAlignContent()
       t(r, hm(mins), thin(22)); r.addSpacer(4); t(r, '/ ' + hm(goal), tw(10)); r.addSpacer(); if (dd) t(r, ddTxt, tw(12))
       w.addSpacer(3)
-      const img = w.addImage(line(mins / goal, 150, '#ffffff', '#666666')); img.imageSize = new Size(150, 3)
+      t(w, bar(mins / goal, 14), label(7)).minimumScaleFactor = 0.5
       w.addSpacer(4)
       t(w, KIND === 'dday' && dd ? dd.title : todo[0] ? '– ' + todo[0].title : (dd ? dd.title : 'All clear.'), tw(11))
     }
@@ -521,6 +526,20 @@ if (!data) {
     todoList(T, 6)
   }
   if (!lock) w.addSpacer()
+} catch (e) {
+  // 그리다 실패해도 빈칸 대신 원인을 보여 줌
+  w = new ListWidget()
+  if (!lock) { w.setPadding(16, 16, 16, 16); w.backgroundColor = BG }
+  const msg = String((e && e.message) || e)
+  t(w, '위젯 오류', label(lock ? 10 : 12), lock ? null : INK)
+  t(w, lock ? msg.slice(0, 60) : msg + ' · 스크립트를 앱에서 다시 복사해 보세요', tw(lock ? 9 : 11), lock ? null : SOFT, lock ? 2 : 4)
+}
+return w
+}
+
+let w
+try { w = build(config.widgetFamily || 'large') } catch (e) {
+  w = new ListWidget(); const x = w.addText('위젯 오류 · ' + String((e && e.message) || e).slice(0, 80)); x.font = Font.systemFont(10); x.lineLimit = 3
 }
 
 // 앱에서 실행하면 메뉴: 미리보기 · 투명 배경 · 글자색
@@ -564,14 +583,23 @@ async function transparentSetup() {
 if (config.runsInWidget) Script.setWidget(w)
 else {
   const m = new Alert(); m.title = '스터디 위젯'
-  ;['미리보기 · 소', '미리보기 · 중', '미리보기 · 대', '투명 배경 설정', '투명 배경 모두 지우기', '글자색 · 자동', '글자색 · 밝게', '글자색 · 어둡게'].forEach((x) => m.addAction(x)); m.addCancelAction('닫기')
+  ;['미리보기 · 소', '미리보기 · 중', '미리보기 · 대', '투명 배경 설정', '투명 배경 모두 지우기', '글자색 · 자동', '글자색 · 밝게', '글자색 · 어둡게', '잠금 화면 미리보기 · 원형', '잠금 화면 미리보기 · 직사각형', '잠금 화면 미리보기 · 한 줄'].forEach((x) => m.addAction(x)); m.addCancelAction('닫기')
   const i = await m.present()
   if (i === 0) await w.presentSmall()
   else if (i === 1) await w.presentMedium()
   else if (i === 2) await w.presentLarge()
   else if (i === 3) await transparentSetup()
   else if (i === 4) { for (const f of FM.listContents(FM.documentsDirectory())) if (f.startsWith('study-bg-')) FM.remove(FM.joinPath(FM.documentsDirectory(), f)) }
-  else if (i >= 5) Keychain.set('study-ink', ['auto', 'light', 'dark'][i - 5])
+  else if (i >= 5 && i <= 7) Keychain.set('study-ink', ['auto', 'light', 'dark'][i - 5])
+  else if (i >= 8) {
+    // 잠금 화면 위젯을 앱 안에서 그려 보기 (오류가 있으면 여기서 보임)
+    const f = ['accessoryCircular', 'accessoryRectangular', 'accessoryInline'][i - 8]
+    const lw = build(f)
+    if (f === 'accessoryCircular' && lw.presentAccessoryCircular) await lw.presentAccessoryCircular()
+    else if (f === 'accessoryRectangular' && lw.presentAccessoryRectangular) await lw.presentAccessoryRectangular()
+    else if (f === 'accessoryInline' && lw.presentAccessoryInline) await lw.presentAccessoryInline()
+    else await lw.presentSmall()
+  }
 }
 Script.complete()
 `

@@ -395,7 +395,8 @@ function HomeWidgetCard() {
         2. 아래 <b>스크립트 복사</b> → Scriptable › ＋ › 붙여넣기 → 이름 ‘스터디’<br />
         3. 홈 화면 길게 누르기 › ＋ › Scriptable 위젯(소·중·대) 추가 → 위젯 편집 › Script: ‘스터디’ · Parameter: 위 형태 단어<br />
         4. 투명 배경(아이폰): Scriptable 에서 ‘스터디’ 스크립트를 눌러 실행 › 투명 배경 설정 › 빈 홈 화면 스크린샷·위젯 크기·위치 선택. 같은 크기 위젯이 여러 개면 Parameter 에 @번호를 붙여 구분 (예: 공부@2). 글자색도 같은 메뉴에서 바꿔요.<br />
-        5. 잠금 화면: 잠금 화면 길게 누르기 › 사용자화 › 위젯 추가 › Scriptable → 같은 스크립트 선택 · D-day 만 보려면 Parameter: 디데이 (다음 D-day 는 디데이2)
+        5. 잠금 화면: 잠금 화면 길게 누르기 › 사용자화 › 잠금 화면 › 위젯 추가 › Scriptable → <b>추가한 위젯을 한 번 더 눌러 Script: ‘스터디’ 선택</b> (안 고르면 빈칸) · D-day 만 보려면 Parameter: 디데이 (다음 D-day 는 디데이2)<br />
+        6. 아이패드 잠금 화면은 iPadOS 17 이상. 빈칸·오류가 보이면 Scriptable 에서 스크립트를 실행 › ‘잠금 화면 미리보기’로 오류 문구를 확인하세요.
       </div>
       <div className="tiny muted" style={{ marginTop: 4 }}>위젯을 누르면 해당 화면(할 일·공부 기록)이 열려요. iOS 제한으로 사파리에서 열리니, 사파리에서도 한 번 동기화를 연결해 두세요.</div>
       <div className="row" style={{ marginTop: 10 }}>
