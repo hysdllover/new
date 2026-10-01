@@ -110,3 +110,20 @@ export function toMarkdown(note) {
   }
   return lines.join('\n').replace(/\n{3,}/g, '\n\n')
 }
+
+// 공유 시트(단축어)로 들어온 글·링크 → 새 노트 (?note=내용&url=링크&title=제목)
+export function noteFromShare({ text = '', url = '', title = '' }) {
+  text = text.trim(); url = url.trim(); title = title.trim()
+  const urlIn = url || (text.match(/https?:\/\/\S+/) || [])[0] || ''
+  let body = text
+  if (urlIn && body.includes(urlIn)) body = body.replace(urlIn, '').trim()
+  let host = ''
+  try { host = urlIn ? new URL(urlIn).hostname.replace(/^www\./, '') : '' } catch {}
+  const first = body.split('\n').find((l) => l.trim()) || ''
+  const name = (title || (first.length <= 60 ? first : first.slice(0, 40) + '…') || host || '공유한 내용').slice(0, 80)
+  const blocks = []
+  if (urlIn) blocks.push(newBlock('quote', urlIn))
+  for (const line of body.split('\n')) if (line.trim() && !(line.trim() === name && !title)) blocks.push(newBlock('text', line.trim()))
+  blocks.push(newBlock('h2', '메모'), newBlock('text'))
+  return put('notes', { title: name, type: 'page', icon: '🔖', clip: { url: urlIn, at: Date.now() }, blocks })
+}

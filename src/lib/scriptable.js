@@ -18,8 +18,10 @@ const GOLD = dyn('#b39d74', '#c9b489')
 let RULE = dyn('#e2ded6', '#2c2b29')
 
 // 폰트 — 한글·영문·숫자 한 서체로 통일. 기본 애플 산돌고딕 얇게, 앱 설정에서 설치한 폰트(PostScript 이름) 지정 가능
-let CUSTOM = ''
-const F = (s, wt = 'Light') => new Font(CUSTOM || 'AppleSDGothicNeo-' + wt, s)
+let CUSTOM = '', SCALE = 1, WSHIFT = 0
+// 앱 설정의 위젯 글자 크기(SCALE)·굵기(WSHIFT: -1 얇게 · 0 기본 · 1 보통 · 2 진하게)
+const WTS = ['UltraLight', 'Thin', 'Light', 'Regular', 'Medium', 'SemiBold', 'Bold']
+const F = (s, wt = 'Light') => new Font(CUSTOM || 'AppleSDGothicNeo-' + WTS[Math.max(0, Math.min(6, WTS.indexOf(wt) + WSHIFT))], Math.round(s * SCALE * 2) / 2)
 const tw = (s) => F(s, 'Light')
 const thin = (s) => F(s, 'Thin')
 const label = (s) => F(s, 'Regular')
@@ -129,6 +131,8 @@ if (!data) {
 } else try {
   const st = data.settings.settings?.main || {}
   CUSTOM = (st.widgetFont || '').trim()
+  SCALE = Math.max(0.8, Math.min(1.3, +st.widgetScale || 1)); if (lock) SCALE = Math.min(SCALE, 1.1)
+  WSHIFT = +st.widgetWeight || 0
   const goal = st.goalDaily || 240
   const subjects = alive(data.study.subjects)
   const allSess = alive(data.study.sessions)

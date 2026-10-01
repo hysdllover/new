@@ -193,7 +193,7 @@ function widgetPayload() {
     cal: calPayload(),
     timer: timerPayload(),
     classes: classesPayload(),
-    settings: { settings: { main: { goalDaily: main.goalDaily, weekStart: main.weekStart, widgetFont: main.widgetFont } }, quotes: keep('quotes') },
+    settings: { settings: { main: { goalDaily: main.goalDaily, weekStart: main.weekStart, widgetFont: main.widgetFont, widgetScale: main.widgetScale, widgetWeight: main.widgetWeight } }, quotes: keep('quotes') },
   })
 }
 const WIDGET_GAP = 3 * 60000 // 위젯 gist 쓰기 최소 간격 (앱을 나갈 때는 바로)
