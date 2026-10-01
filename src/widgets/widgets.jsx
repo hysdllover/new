@@ -371,15 +371,16 @@ function MonthHeatW({ w }) {
   )
 }
 
+// 어제 · 이번 주 공부 시간
 function Streak() {
-  const sessions = useColl('sessions')
-  const days = new Set(sessions.map((x) => x.date))
-  let n = 0
-  for (let k = days.has(today()) ? 0 : 1; days.has(addDays(today(), -k)); k++) n++
+  const sessions = useColl('sessions'), st = useSettings()
+  const d = today(), ws = weekStart(d, st.weekStart ?? 1), y = addDays(d, -1)
+  let yd = 0, wk = 0
+  for (const x of sessions) { if (x.date === y) yd += x.dur || 0; if (x.date >= ws && x.date <= d) wk += x.dur || 0 }
   return (
-    <Card className="center">
-      <div className="big-num">{n}<span>일</span></div>
-      <div className="small muted">연속 공부 🔥</div>
+    <Card>
+      <div className="row between"><span className="tiny muted">어제</span><b style={{ fontWeight: 300 }}>{fmtDur(yd) || '0분'}</b></div>
+      <div className="row between" style={{ marginTop: 8 }}><span className="tiny muted">이번 주</span><b style={{ fontWeight: 300 }}>{fmtDur(wk) || '0분'}</b></div>
     </Card>
   )
 }
@@ -686,7 +687,7 @@ export const WIDGETS = {
   quickrec: { label: '빠른 공부 기록', C: QuickRec, size: 'm' },
   donut: { label: '오늘 공부 (과목 비율)', C: Donut, size: 'm' },
   weekstudy: { label: '최근 7일 공부', C: WeekStudy, size: 'm' },
-  streak: { label: '연속 공부일', C: Streak, size: 's' },
+  streak: { label: '어제 · 이번 주 공부', C: Streak, size: 's' },
   monthheat: { label: '공부 달력 (월별)', C: MonthHeatW, size: 'm' },
   clock: { label: '시계', C: Clock, size: 's' },
   weekstrip: { label: '이번 주 달력', C: WeekStrip, size: 'm' },
