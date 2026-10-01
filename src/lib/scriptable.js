@@ -192,6 +192,7 @@ if (!data) {
     if (items.length === n + 1) { n++; gap = Math.max(3, gap - 1) }
     for (const x of items.slice(0, n)) {
       const r = parent.addStack(); r.centerAlignContent(); r.spacing = 8
+      if (x.id) r.url = APP + '?done=' + encodeURIComponent(x.id) // 누르면 앱에서 완료 확인 (중·대 위젯)
       if (x.done) { t(r, '✓', tw(TS - 2), SOFT); strike(r, x.title, tw(TS)) }
       else { t(r, x.priority >= 3 ? '•' : '–', tw(TS - 1), x.priority >= 3 ? GOLD : SOFT); t(r, x.title, tw(TS), INK).minimumScaleFactor = 0.85 }
       r.addSpacer() // 줄을 꽉 채워 왼쪽 정렬 (스택은 기본 가운데 정렬)

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useColl, put, patch } from '../store/store.js'
-import { Card, Icon, Empty, Seg, openDetail, openSheet } from '../components/ui.jsx'
+import { Card, Icon, Empty, Seg, openDetail, openSheet, toast } from '../components/ui.jsx'
 import TemplatePicker from '../components/TemplatePicker.jsx'
 import BlockEditor from '../components/BlockEditor.jsx'
 import NotePage from './notes/NotePage.jsx'
@@ -87,7 +87,10 @@ function Daily({ date }) {
           <label className="date-label"><b>{fmtDate(date)}</b><input type="date" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} /></label>
           <button className="icon-btn" onClick={() => setDate(addDays(date, 1))} aria-label="다음"><Icon name="next" /></button>
         </div>
-        {date !== today() && <button className="btn sm" onClick={() => setDate(today())}>오늘</button>}
+        <div className="row" style={{ gap: 6 }}>
+          <button className="btn sm" onClick={() => import('../lib/daylog.js').then((m) => { const r = m.writeDayLog(date); toast(r ? '오늘 기록을 노트에 채웠어요' : '채울 기록이 없어요') })}>기록 채우기</button>
+          {date !== today() && <button className="btn sm" onClick={() => setDate(today())}>오늘</button>}
+        </div>
       </div>
       <div className="today-grid">
         <Card className="daily-note">

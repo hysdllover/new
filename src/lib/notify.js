@@ -58,6 +58,7 @@ function dayTick() {
   lastDay = d
   carryOver()
   autoTemplate(d)
+  import('./daylog.js').then((m) => m.autoDayLog()).catch(() => {})
 }
 
 export function startServices() {
