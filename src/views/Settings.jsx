@@ -85,9 +85,11 @@ export default function Settings() {
       <Card title="플래너 · 공부">
         <div className="form">
           <div className="row">
-            <Field label="하루 시작"><TimeInput allowEmpty={false} value={st.dayStart} onChange={(v) => v != null && setSettings({ dayStart: v })} /></Field>
-            <Field label="하루 끝"><TimeInput allowEmpty={false} value={st.dayEnd % 1440} onChange={(v) => v != null && setSettings({ dayEnd: v === 0 ? 1440 : v })} /></Field>
+            <Field label="기상 (하루 시작)"><TimeInput allowEmpty={false} value={st.dayStart} onChange={(v) => v != null && setSettings({ dayStart: v })} /></Field>
+            <Field label="취침 (하루 끝)"><TimeInput allowEmpty={false} value={st.dayEnd % 1440} onChange={(v) => v != null && setSettings({ dayEnd: v === 0 ? 1440 : v })} /></Field>
           </div>
+          <Toggle label="자는 시간엔 알림 보내지 않기 · 기상 때 밤사이 할 일 알림을 한 번에" checked={st.quietNight !== false} onChange={(v) => setSettings({ quietNight: v })} />
+          <div className="tiny muted" style={{ marginTop: -6 }}>타임라인·빈 시간 추천·자동 배정도 이 시간 안에서만 해요.</div>
           <Field label="앱 시작 화면">
             <select className="input" value={st.startTab || 'last'} onChange={(e) => setSettings({ startTab: e.target.value })}>
               {[['last', '마지막으로 보던 화면'], ['home', '홈'], ['tasks.list', '할 일'], ['study.timer', '타이머'], ['study.log', '기록 입력'], ['study.records', '공부 통계'], ['planner.today', '캘린더 · 오늘'], ['planner.month', '캘린더 · 월'], ['notes.daily', '노트 · 데일리']].map(([k, l]) => <option key={k} value={k}>{l}</option>)}
@@ -526,7 +528,7 @@ function WidgetPreview() {
   const ddRow = dd && <div className="dw-ddrow"><span className="dw-gold">{ddTxt}</span><span className="dw-soft">{dd.title}</span></div>
   const list = (n0) => { const n = items.length === n0 + 1 ? n0 + 1 : n0; return <>{items.slice(0, n).map((t) => t.done
     ? <div key={t.id} className="dw-todo dw-soft"><span>✓</span><span className="ellipsis" style={{ textDecoration: 'line-through' }}>{t.title}</span></div>
-    : <div key={t.id} className="dw-todo"><span className={t.priority >= 3 ? 'dw-gold' : 'dw-soft'}>{t.priority >= 3 ? '•' : '–'}</span><span className="ellipsis">{t.title}</span></div>)}
+    : <div key={t.id} className="dw-todo"><span className={t.priority >= 3 ? 'dw-gold' : 'dw-soft'}>{t.priority >= 3 ? '•' : '–'}</span><span className="ellipsis" style={t.priority >= 3 ? { fontWeight: 500 } : null}>{t.title}</span></div>)}
     {!items.length && <div className="dw-soft">All clear.</div>}{items.length > n && <div className="dw-soft" style={{ fontSize: 11 }}>+ {items.length - n} more</div>}</> }
   const [kind, setKind] = useState('')
   const ddList = ddays.filter((x) => x.date >= d).sort((a, b) => a.date.localeCompare(b.date))

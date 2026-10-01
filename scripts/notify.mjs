@@ -1,7 +1,7 @@
 // GitHub Actions 에서 5~10분마다 실행: 동기화 Gist 를 읽어 알림 시각이 된 항목을 Web Push 로 발송
 import webpush from 'web-push'
 import { matches } from '../src/engine/recurrence.js'
-import { reminderTimes, reminderBody, absMinutes, digestDue, digestText } from '../src/engine/reminders.js'
+import { reminderTimes, reminderBody, absMinutes, digestDue, digestText, isQuiet, nightMissed } from '../src/engine/reminders.js'
 
 const TOKEN = process.env.GIST_TOKEN
 const DESC = 'study-dashboard-sync'
@@ -96,6 +96,15 @@ const evening = parseT(settings.notifyEvening ?? '21:00')
 const goal = settings.goalDaily || 240
 if (evening != null && studied < goal) add(`pm:${date}`, evening, '오늘 공부 기록', `지금까지 ${studied}분 · 목표까지 ${goal - studied}분`, './')
 
+// 자는 시간(취침~기상)엔 보내지 않음 · 기상 때 밤사이 할 일 알림을 한 번에
+const wake = settings.dayStart ?? 7 * 60, sleep = settings.dayEnd ?? 1440
+if (settings.quietNight !== false) {
+  if (isQuiet(now, wake, sleep)) { console.log(`${date} ${hm(now)} 자는 시간 · 보류`); process.exit(0) }
+  if (now >= wake && now < wake + WINDOW && !sentFile[`night:${date}`]) {
+    const miss = nightMissed(alive(T?.tasks), date, wake, sleep)
+    if (miss.length) { const x = digestText(miss); out.push({ key: `night:${date}`, title: '자는 동안 · ' + x.title, body: x.body, url: './' }) }
+  }
+}
 if (!out.length) { console.log(`${date} ${hm(now)} 보낼 알림 없음`); process.exit(0) }
 
 webpush.setVapidDetails('mailto:study-dashboard@users.noreply.github.com', push.vapid.publicKey, push.vapid.privateKey)

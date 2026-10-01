@@ -4,6 +4,7 @@ import { RepeatEditor, TimeInput, ColorPick, SubjectSelect, ProjectSelect } from
 import { PALETTE } from '../store/schema.js'
 import { openNote } from '../nav.js'
 import { fmtDate } from '../engine/date.js'
+import { saveEventTemplate } from '../lib/eventTemplates.js'
 
 export function eventNote(ev, occ) {
   const date = occ || ev.date
@@ -32,7 +33,10 @@ export default function EventEditor({ id, occ }) {
       </div>
       <div className="pane-b form">
         <AutoText className="input title-input" value={e.title} onChange={(v) => up({ title: v })} placeholder="일정 제목" />
-        <button className="btn" onClick={() => { const n = eventNote(e, occ); closeDetail(); openNote(n.id) }}><Icon name="notes" size={16} />일정 노트 {occ && e.repeat ? `(${fmtDate(occ, { wd: false })})` : ''}</button>
+        <div className="row wrap" style={{ gap: 6 }}>
+          <button className="btn" onClick={() => { const n = eventNote(e, occ); closeDetail(); openNote(n.id) }}><Icon name="notes" size={16} />일정 노트 {occ && e.repeat ? `(${fmtDate(occ, { wd: false })})` : ''}</button>
+          <button className="btn" onClick={() => { const name = prompt('템플릿 이름', e.title || ''); if (name) { saveEventTemplate(e, name.trim()); toast('템플릿 저장 · 빠른 추가 › 일정에서 골라 쓰기') } }}><Icon name="layers" size={16} />템플릿으로 저장</button>
+        </div>
         <div className="row">
           <Field label="날짜"><input className="input" type="date" value={e.date} onChange={(ev) => up({ date: ev.target.value })} /></Field>
           <Field label="종료일(여러 날)"><input className="input" type="date" value={e.endDate || ''} min={e.date} onChange={(ev) => up({ endDate: ev.target.value || null })} /></Field>
@@ -63,6 +67,8 @@ export default function EventEditor({ id, occ }) {
           <Field label="과목"><SubjectSelect value={e.subjectId} onChange={(v) => up({ subjectId: v })} /></Field>
           <Field label="프로젝트"><ProjectSelect value={e.projectId} onChange={(v) => up({ projectId: v })} /></Field>
         </div>
+        {!allDay && <Toggle label="끝나면 공부 기록으로 (학원·인강·과외)" checked={!!e.studyLog} onChange={(v) => up({ studyLog: v })} />}
+        {e.studyLog && !allDay && <div className="tiny muted" style={{ marginTop: -6 }}>일정이 끝나면 {e.subjectId ? '이 과목' : '과목 없이'} {e.end - e.start}분이 공부 기록에 자동으로 들어가요 (반복 일정은 매번). 기록을 지우면 다시 넣지 않아요.</div>}
         <Field label="색상"><ColorPick value={e.color} onChange={(c) => up({ color: c })} colors={PALETTE} /></Field>
         <Field label="반복"><RepeatEditor rule={e.repeat} start={e.date} onChange={(r) => up({ repeat: r })} /></Field>
         {e.repeat && occ && <button className="btn danger sm" onClick={delOcc}>이 날({occ.slice(5)})만 삭제</button>}

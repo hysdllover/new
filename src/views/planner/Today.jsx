@@ -9,6 +9,7 @@ import Timeline from './Timeline.jsx'
 import { applyCascadeChange } from './timeline.js'
 import { longPress } from '../../lib/drag.js'
 import { find } from '../../store/store.js'
+import { useTidy, setTidy } from '../../lib/tidy.js'
 
 export const STICKERS = ['⭐', '🔥', '📚', '✏️', '☕', '🌱', '💪', '🎯', '😴', '🌧', '🎉', '❤️', '🍀', '🧠', '🏃', '🎧']
 export const HIGHLIGHTS = ['#e8d98a', '#b9d4a8', '#c9bde6', '#f0c2c8', '#b8cbe6']
@@ -19,6 +20,7 @@ export default function Today({ date }) {
   const subjects = useColl('subjects')
   const projects = useColl('projects')
   useNow(60000)
+  const tidy = useTidy()
   const scheduledIds = new Set(blocks.filter((b) => b.date === date && b.taskId).map((b) => b.taskId))
   const planning = useSettings().modules.planning !== false
   const dayTasks = tasks.filter((t) => !t.archived && (t.due === date || (date === today() && !t.done && t.due && t.due < date)))
@@ -40,7 +42,8 @@ export default function Today({ date }) {
       <div className="col">
         <DayCard date={date} tasks={tasks} />
         <Card className="tl-card">
-          <div className="tl-scroll"><Timeline date={date} /></div>
+          {date === today() && <div className="row" style={{ justifyContent: 'flex-end', marginBottom: 4 }}><button className={'btn sm' + (tidy ? ' on-acc' : '')} onClick={() => setTidy(!tidy)}>{tidy ? '모두 보기' : '끝난 것 접기'}</button></div>}
+          <div className="tl-scroll"><Timeline date={date} hidePast={tidy} /></div>
         </Card>
       </div>
       <div className="col">

@@ -8,6 +8,8 @@ import TaskQuickInput from './TaskQuickInput.jsx'
 import RecordEditor from './RecordEditor.jsx'
 import { startStopwatch, startCountdown } from '../lib/timer.js'
 import { go } from '../nav.js'
+import { eventTemplates, addFromTemplate, removeEventTemplate } from '../lib/eventTemplates.js'
+import { useSettings } from '../store/store.js'
 
 export { parseQuick }
 
@@ -17,6 +19,9 @@ export default function QuickAdd({ close, initial = 'task' }) {
   const [subject, setSubject] = useState(null)
   const [added, setAdded] = useState([])
   const p = parseQuick(text)
+  useSettings()
+  const tpls = eventTemplates()
+  const useTpl = (tpl) => { const date = p.date || today(); const e2 = addFromTemplate(tpl, { date, start: p.time, title: p.title && p.title !== tpl.name ? p.title : null }); toast(`${fmtDate(date)} ${tpl.name} 추가`, { label: '열기', fn: () => openDetail('event', e2.id) }); close() }
 
   const submit = (e) => {
     e?.preventDefault()
@@ -55,6 +60,13 @@ export default function QuickAdd({ close, initial = 'task' }) {
             ? <textarea className="input" autoFocus value={text} onChange={(e) => setText(e.target.value)} placeholder="빠른 메모" style={{ minHeight: 120 }} />
             : <input className="input" autoFocus value={text} onChange={(e) => setText(e.target.value)} placeholder="예: 스터디 모임 @9/30 15:00" />}
           {type === 'event' && p.date && <div className="row small"><span className="badge acc">{fmtDate(p.date)}{p.time != null ? ' ' + fmtTime(p.time) : ''}</span></div>}
+          {type === 'event' && (tpls.length ? (
+            <div className="col" style={{ gap: 4 }}>
+              <span className="tiny muted">템플릿 · 날짜·시간을 적고 누르면 그대로 넣어요 (예: @내일 18:00)</span>
+              <div className="row wrap" style={{ gap: 6 }}>{tpls.map((t) => <button key={t.id} type="button" className="chip" onClick={() => useTpl(t)}
+                onContextMenu={(e) => { e.preventDefault(); if (confirm(`'${t.name}' 템플릿을 지울까요?`)) removeEventTemplate(t.id) }}><span className="dot" style={{ background: t.color || 'var(--accent)' }} />{t.name} <span className="tiny muted">{t.dur}분</span></button>)}</div>
+            </div>
+          ) : <span className="tiny muted">일정 화면의 ‘템플릿으로 저장’으로 자주 쓰는 일정을 저장할 수 있어요</span>)}
           <button className="btn primary" type="submit">추가</button>
         </form>
       )}

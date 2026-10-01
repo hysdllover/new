@@ -5,6 +5,7 @@ import { holiday } from '../../engine/holidays.js'
 import { openDetail, Check } from '../../components/ui.jsx'
 import { toggleTask } from '../../store/actions.js'
 import { go, setParams } from '../../nav.js'
+import { spanOn } from '../tasks/filter.js'
 
 export default function Week({ date }) {
   const st = useSettings()
@@ -23,6 +24,7 @@ export default function Week({ date }) {
         const cls = classesOn(d)
         const bl = blocks.filter((b) => b.date === d && !(b.carriedTo && b.carriedTo !== 'done')).sort((a, b) => a.start - b.start)
         const due = tasks.filter((t) => t.due === d && !t.archived)
+        const spans = tasks.filter((t) => !t.done && spanOn(t, d))
         const mins = sessions.filter((s) => s.date === d).reduce((a, s) => a + s.dur, 0)
         const hol = holiday(d)
         const wd = parseYmd(d).getDay()
@@ -34,6 +36,7 @@ export default function Week({ date }) {
               {mins > 0 && <span className="tiny muted" style={{ marginLeft: 'auto' }}>{fmtDur(mins)}</span>}
             </button>
             <div className="wday-b">
+              {spans.map((t) => <button key={'s' + t.id} className="wev span" style={{ '--c': color(t.subjectId) || 'var(--accent)' }} onClick={() => openDetail('task', t.id)}><span className="tiny">▸</span> <span className="ellipsis">{t.title}</span></button>)}
               {cls.length > 0 && (
                 <button className="wev cls" onClick={() => go('planner', 'timetable')}>
                   <span className="tiny">{fmtTime(cls[0].start)}</span> <span className="ellipsis">수업 {cls.length} · ~{fmtTime(cls.at(-1).end)}</span>
@@ -58,7 +61,7 @@ export default function Week({ date }) {
                   <button className={'ellipsis grow' + (t.done ? ' muted' : '')} style={{ textAlign: 'left' }} onClick={() => openDetail('task', t.id)}>{t.title}</button>
                 </div>
               ))}
-              {!cls.length && !evs.length && !bl.length && !due.length && <div className="tiny muted" style={{ padding: '4px 0' }}>—</div>}
+              {!spans.length && !cls.length && !evs.length && !bl.length && !due.length && <div className="tiny muted" style={{ padding: '4px 0' }}>—</div>}
             </div>
           </div>
         )

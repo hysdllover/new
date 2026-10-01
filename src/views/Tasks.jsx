@@ -11,7 +11,8 @@ import { longPress } from '../lib/drag.js'
 import { useRef } from 'react'
 import { today, tsToYmd, tsToMin, weekStart, fmtDate, fmtTime, fmtDur, addDays, parseYmd, WD } from '../engine/date.js'
 import { useSettings } from '../store/store.js'
-import { doneToday } from './tasks/filter.js'
+import { doneToday, spanOn, spanInfo } from './tasks/filter.js'
+import { useTidy, setTidy } from '../lib/tidy.js'
 import Gantt from './tasks/Gantt.jsx'
 import Archive from './tasks/Archive.jsx'
 import DBView from './tasks/DBView.jsx'
@@ -124,9 +125,12 @@ function DayView({ params }) {
   const live = tasks.filter((t) => !t.archived)
   const ofDay = (d) => live.filter((t) => t.due === d) // 완료한 것도 줄 그은 채 제자리
   const order = (a, b) => (a.dueTime == null) - (b.dueTime == null) || (a.dueTime ?? 0) - (b.dueTime ?? 0) || (a.order ?? 0) - (b.order ?? 0)
-  const items = ofDay(date).sort(order)
+  const tidy = useTidy()
+  const all = ofDay(date).sort(order)
+  const items = tidy ? all.filter((t) => !t.done) : all
+  const spans = live.filter((t) => !t.done && spanOn(t, date))
   // 오늘: 지난 날짜의 남은 할 일 (오늘 완료한 것은 줄 그은 채 제자리)
-  const overdue = isToday ? live.filter((t) => t.due && t.due < t0 && (!t.done || doneToday(t))).sort((a, b) => a.due.localeCompare(b.due) || order(a, b)) : []
+  const overdue = isToday ? live.filter((t) => t.due && t.due < t0 && (!t.done || (!tidy && doneToday(t)))).sort((a, b) => a.due.localeCompare(b.due) || order(a, b)) : []
   const ws = weekStart(date, st.weekStart ?? 1)
   const strip = Array.from({ length: 7 }, (_, i) => addDays(ws, i))
   const dragFor = (t) => t.dueTime != null ? {} : longPress(() => ({
@@ -168,7 +172,10 @@ function DayView({ params }) {
           </label>
           <button className="icon-btn" onClick={() => go(addDays(date, 1))} aria-label="다음날"><Icon name="next" /></button>
         </div>
-        {!isToday && <button className="btn sm" onClick={() => go(t0)}>오늘</button>}
+        <div className="row" style={{ gap: 6 }}>
+          <button className={'btn sm' + (tidy ? ' on-acc' : '')} onClick={() => setTidy(!tidy)}>{tidy ? '모두 보기' : '끝난 것 접기'}</button>
+          {!isToday && <button className="btn sm" onClick={() => go(t0)}>오늘</button>}
+        </div>
       </div>
       <div className="day-strip">
         {strip.map((d) => {
@@ -192,11 +199,21 @@ function DayView({ params }) {
           <div className="list">{overdue.map((t) => <div key={t.id}><TaskItem t={t} subjects={subjects} projects={projects} /></div>)}</div>
         </div>
       )}
+      {spans.length > 0 && (
+        <div className="card" style={{ padding: '6px 12px' }}>
+          <div className="small muted" style={{ padding: '4px 0' }}>진행 중 · 기간 할 일</div>
+          {spans.map((t) => { const s = spanInfo(t, date); return (
+            <button key={t.id} className="span-row" onClick={() => openDetail('task', t.id)} style={{ '--c': subjects.find((x) => x.id === t.subjectId)?.color || 'var(--accent)' }}>
+              <span className="ellipsis grow">{t.title}</span><span className="tiny muted nowrap">{s.n}/{s.total}일 · 마감 {t.due.slice(5).replace('-', '/')}</span>
+              <i style={{ width: (s.n / s.total) * 100 + '%' }} />
+            </button>) })}
+        </div>
+      )}
       <div className="card" style={{ padding: '2px 12px' }}>
-        <div className="row between" style={{ padding: '8px 0 2px' }}><span className="small muted">{rel(date) || fmtDate(date)} 할 일 {items.length ? `${items.length - left}/${items.length}` : ''}</span></div>
+        <div className="row between" style={{ padding: '8px 0 2px' }}><span className="small muted">{rel(date) || fmtDate(date)} 할 일 {all.length ? `${all.filter((t) => t.done).length}/${all.length}` : ''}{tidy && all.length > items.length ? ` · 완료 ${all.length - items.length}개 접음` : ''}</span></div>
         <div className="list">
           {items.map(row)}
-          {!items.length && <Empty>{isToday ? '오늘 할 일이 없어요' : '이날 할 일이 없어요'}</Empty>}
+          {!items.length && <Empty>{all.length ? '모두 끝냈어요' : isToday ? '오늘 할 일이 없어요' : '이날 할 일이 없어요'}</Empty>}
         </div>
       </div>
       {left > 0 && <BulkMove ids={items.filter((t) => !t.done).map((t) => t.id)} />}

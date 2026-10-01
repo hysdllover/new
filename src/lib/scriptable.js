@@ -47,15 +47,30 @@ let STALE = null // 받기 실패로 캐시를 쓸 때 마지막 갱신 시각
 // 캐시는 파일로 (잠금 화면 위젯은 메모리·시간 한도가 작아 Keychain 대용량 저장을 피함)
 const CFM = FileManager.local()
 const cachePath = CFM.joinPath(CFM.documentsDirectory(), 'study-widget-cache.json')
+// 최신 데이터 받기: GitHub API(캐시 없이 바로 최신, 시간당 60회) → 안 되면 raw 주소(최대 몇 분 캐시)
+async function fetchFresh(timeout) {
+  const m = SRC.match(/gist\\.githubusercontent\\.com\\/[^/]+\\/(\\w+)\\//)
+  if (m) {
+    try {
+      const r = new Request('https://api.github.com/gists/' + m[1]); r.headers = { Accept: 'application/vnd.github+json' }; r.timeoutInterval = timeout
+      const g = await r.loadJSON()
+      const f = g && g.files && g.files['widget.json']
+      if (f && f.content && !f.truncated) return JSON.parse(f.content)
+      if (f && f.raw_url) { const r2 = new Request(f.raw_url); r2.timeoutInterval = timeout; return JSON.parse(await r2.loadString()) }
+    } catch (e) {}
+  }
+  const r = new Request(SRC + '?t=' + Date.now()); r.headers = { 'Cache-Control': 'no-cache' }; r.timeoutInterval = timeout
+  return JSON.parse(await r.loadString())
+}
 async function load() {
   const key = 'study-widget-data'
   const LOCK0 = String(config.widgetFamily || '').startsWith('accessory')
   try {
     if (!SRC) throw new Error('no source')
-    const r = new Request(SRC + '?t=' + Date.now()); r.headers = { 'Cache-Control': 'no-cache' }; r.timeoutInterval = LOCK0 ? 8 : 20
-    const raw = await r.loadString()
-    const data = JSON.parse(raw)
-    if (!data.study) throw new Error('bad data')
+    // 여러 위젯이 한꺼번에 새로 그려질 때: 40초 안에 받아 둔 게 있으면 그대로 (요청 절약)
+    try { if (CFM.fileExists(cachePath)) { const c = JSON.parse(CFM.readString(cachePath)); if (c.at && Date.now() - c.at < 40000) return c } } catch (e0) {}
+    const data = await fetchFresh(LOCK0 ? 6 : 15)
+    if (!data || !data.study) throw new Error('bad data')
     data.at = Date.now()
     try { CFM.writeString(cachePath, JSON.stringify(data)) } catch (e) {}
     return data
@@ -105,7 +120,7 @@ let w = new ListWidget()
 // 한 줄(시계 위) 위젯: iOS 가 텍스트 하나만 시스템 서체로 그림 → 서체·색 지정 없이 짧게 하나만
 const inline = (s) => { s = String(s); const x = w.addText(s.length > 26 ? s.slice(0, 25) + '…' : s); x.lineLimit = 1; return x }
 w.url = link(KIND === 'todo' ? 'tasks' : KIND === 'cal' ? 'planner.month' : KIND === 'class' ? 'planner.timetable' : KIND === 'default' ? '' : 'study.records')
-w.refreshAfterDate = new Date(Date.now() + 15 * 60000)
+w.refreshAfterDate = new Date(Date.now() + 10 * 60000) // 10분 뒤 다시 그려 달라고 요청 (실제 시점은 iOS 가 정함)
 const P = fam === 'small' ? 16 : 18
 // 기기별 위젯 크기(pt) — 아이폰은 화면 폭 비례, 아이패드는 고정값
 const SZ = (() => {
@@ -173,6 +188,7 @@ if (!data) {
     x.pm = Math.round(Math.max(0, x.mode === 'countdown' && x.target ? x.target - x.acc : x.acc) / 60000)
     return x
   })()
+  if (TM) w.refreshAfterDate = new Date(Math.min(w.refreshAfterDate.getTime(), Date.now() + 5 * 60000)) // 타이머 중엔 더 자주
   // 위젯이 다시 그려지지 않아도 초 단위로 흐르는 시간
   const timerDate = (parent, size, thinFont) => { const d = parent.addDate(new Date(TM.mode === 'countdown' ? TM.end : TM.start)); d.applyTimerStyle(); d.font = thinFont ? thin(size) : tw(size); d.lineLimit = 1; d.minimumScaleFactor = 0.6; return d }
   const subMins = subjects.map((s) => ({ s, m: sessions.filter((x) => x.subjectId === s.id).reduce((a, x) => a + (x.dur || 0), 0) })).filter((x) => x.m).sort((a, b) => b.m - a.m)
@@ -194,7 +210,7 @@ if (!data) {
       const r = parent.addStack(); r.centerAlignContent(); r.spacing = 8
       if (x.id) r.url = APP + '?done=' + encodeURIComponent(x.id) // 누르면 앱에서 완료 확인 (중·대 위젯)
       if (x.done) { t(r, '✓', tw(TS - 2), SOFT); strike(r, x.title, tw(TS)) }
-      else { t(r, x.priority >= 3 ? '•' : '–', tw(TS - 1), x.priority >= 3 ? GOLD : SOFT); t(r, x.title, tw(TS), INK).minimumScaleFactor = 0.85 }
+      else { const imp = x.priority >= 3; t(r, imp ? '•' : '–', tw(TS - 1), imp ? GOLD : SOFT); t(r, x.title, imp ? F(TS, 'Medium') : tw(TS), INK).minimumScaleFactor = 0.85 } // 중요는 진하게
       r.addSpacer() // 줄을 꽉 채워 왼쪽 정렬 (스택은 기본 가운데 정렬)
       parent.addSpacer(gap)
     }
@@ -336,7 +352,7 @@ if (!data) {
       else if (circ) cRows([[String(left.length), thin(24)], ['할 일', label(7)], [done + '/' + (done + left.length), label(7)]])
       else {
         rRow('T O D A Y', done + '/' + items.length, label(7), label(7))
-        for (const x of items.slice(0, 3)) { const a = w.addStack(); a.centerAlignContent(); const s1 = t(a, (x.done ? '✓ ' : '– ') + x.title, tw(11)); s1.minimumScaleFactor = 0.8; if (x.done) s1.textOpacity = 0.45; a.addSpacer() }
+        for (const x of items.slice(0, 3)) { const a = w.addStack(); a.centerAlignContent(); const imp = !x.done && x.priority >= 3; const s1 = t(a, (x.done ? '✓ ' : imp ? '• ' : '– ') + x.title, imp ? F(11, 'Medium') : tw(11)); s1.minimumScaleFactor = 0.8; if (x.done) s1.textOpacity = 0.45; a.addSpacer() }
         if (!items.length) t(w, 'All clear.', tw(11))
         else if (items.length > 3) t(w, '+ ' + (items.length - 3) + ' more', label(7)).textOpacity = 0.7
       }
@@ -546,11 +562,15 @@ if (!data) {
     }
     const agendaList = (parent, count) => {
       let last = ''
+      // 다음 일정(오늘 아직 안 지난 첫 일정) 강조
+      const nowHM = pad(new Date().getHours()) + ':' + pad(new Date().getMinutes())
+      const nextA = agenda.find((a) => !a.task && (a.k > today || (a.k === today && (a.time === 'ALL' || a.time >= nowHM))))
       for (const a of agenda.slice(0, count)) {
         if (a.k !== last) { last = a.k; const h = parent.addStack(); t(h, a.k === today ? 'TODAY' : DAY[a.dt.getDay()] + ' ' + a.dt.getDate(), label(8), a.k === today ? GOLD : SOFT); h.addSpacer(); parent.addSpacer(3) }
         const r = parent.addStack(); r.centerAlignContent(); r.spacing = 8
-        const tm = r.addStack(); tm.size = new Size(34, 0); t(tm, a.time, tw(10), SOFT); tm.addSpacer()
-        t(r, a.title, tw(fam === 'large' ? 14 : 13), a.task ? SOFT : INK).minimumScaleFactor = 0.85; r.addSpacer()
+        const hot = a === nextA
+        const tm = r.addStack(); tm.size = new Size(34, 0); t(tm, a.time, hot ? label(10) : tw(10), hot ? GOLD : SOFT); tm.addSpacer()
+        t(r, a.title, hot ? F(fam === 'large' ? 14 : 13, 'Medium') : tw(fam === 'large' ? 14 : 13), a.task ? SOFT : INK).minimumScaleFactor = 0.85; r.addSpacer()
         parent.addSpacer(5)
       }
       if (!agenda.length) t(parent, 'No plans.', tw(13), SOFT)
