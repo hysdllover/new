@@ -29,6 +29,7 @@ export const SEGMENTS = {
 
 export const useNav = () => useSyncExternalStore((f) => { L.add(f); return () => L.delete(f) }, () => nav)
 export const getNav = () => nav
+export const onNav = (f) => { L.add(f); return () => L.delete(f) }
 export function go(tab, seg, params) {
   nav = { ...nav, tab, seg: seg ? { ...nav.seg, [tab]: seg } : nav.seg, params: params !== undefined ? { ...nav.params, [tab]: params } : nav.params }
   save(); L.forEach((l) => l())

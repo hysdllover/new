@@ -471,3 +471,14 @@ button.greet { display: block; width: 100%; text-align: left; }
 .day-cell.on { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
 .day-cell .day-n { font-size: 10px; color: var(--muted); min-height: 12px; }
 .day-cell .sun { color: var(--c4); } .day-cell .sat { color: var(--accent); }
+
+/* 물어보기 */
+.ask-ans { padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+.ask-ans b { font-weight: 500; }
+.ask-ans ul { margin: 4px 0 0; padding-left: 18px; font-size: .92em; color: var(--muted); }
+
+/* 교재 PDF */
+.pdf-reader { gap: 8px; }
+.pdf-pg { width: 58px; padding: 4px 6px; text-align: center; display: inline-block; }
+.pdf-page { background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0, 0, 0, .08); touch-action: pan-y pinch-zoom; }
+.pdf-page canvas { display: block; }

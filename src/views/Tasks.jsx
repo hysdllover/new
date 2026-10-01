@@ -68,7 +68,7 @@ function TaskList({ params }) {
       <WeekGoalsCard />
       <TaskQuickInput key={f.smart + (f.subjectId || '')} defaultDate={f.smart === 'today' ? 'today' : f.smart === 'tomorrow' ? 'tomorrow' : ''} defaults={{ subjectId: f.subjectId || null, projectId: f.projectId || null, ...(f.smart === 'inbox' ? { inbox: true } : null) }} />
       <div className="scroll-x"><div className="row" style={{ gap: 6, paddingBottom: 2 }}>
-        {SMART.map(([k, l]) => <button key={k} className={'chip' + ((f.smart || 'all') === k && !view ? ' on' : '')} onClick={() => set({ smart: k })}>{l} <span className="muted tiny">{k === 'done' ? applyFilter(tasks, { smart: k }).length : openCount(applyFilter(tasks, { smart: k }))}</span></button>)}
+        {SMART.map(([k, l]) => <button key={k} className={'chip' + ((f.smart || 'all') === k && !view ? ' on' : '')} onClick={() => set({ smart: k })}>{l} <span className="muted tiny cnt">{k === 'done' ? applyFilter(tasks, { smart: k }).length : openCount(applyFilter(tasks, { smart: k }))}</span></button>)}
       </div></div>
       {views.length > 0 && (
         <div className="scroll-x"><div className="row" style={{ gap: 6 }}>
@@ -178,7 +178,7 @@ function DayView({ params }) {
             <button key={d} className={'day-cell' + (d === date ? ' on' : '') + (d === t0 ? ' today' : '')} onClick={() => go(d)}>
               <span className={'tiny' + (wd === 0 ? ' sun' : wd === 6 ? ' sat' : '')}>{WD[wd]}</span>
               <b>{parseYmd(d).getDate()}</b>
-              <span className="day-n">{n || ''}</span>
+              <span className="day-n cnt">{n || ''}</span>
             </button>
           )
         })}
@@ -186,7 +186,7 @@ function DayView({ params }) {
       <TaskQuickInput key={date} fixedDate={date} />
       {overdue.length > 0 && (
         <div className="card" style={{ padding: '6px 12px' }}>
-          <div className="row between" style={{ padding: '4px 0' }}><span className="small muted">지난 할 일 {overdue.filter((t) => !t.done).length}</span>
+          <div className="row between" style={{ padding: '4px 0' }}><span className="small muted">지난 할 일 <span className="cnt">{overdue.filter((t) => !t.done).length}</span></span>
             {overdue.some((t) => !t.done) && <button className="chip sm" onClick={() => { const ids = overdue.filter((t) => !t.done).map((t) => t.id); moveTasks(ids, 'today'); toast(`${ids.length}개를 오늘로 옮겼어요`) }}>모두 오늘로</button>}
           </div>
           <div className="list">{overdue.map((t) => <div key={t.id}><TaskItem t={t} subjects={subjects} projects={projects} /></div>)}</div>

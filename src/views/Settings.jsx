@@ -14,6 +14,7 @@ import { download } from '../lib/files.js'
 import { useMyFonts, addFont, removeFont, fontFamily, loadAllFonts, SYNC_FONT_MAX } from '../lib/fonts.js'
 import { requestPermission } from '../lib/notify.js'
 import { fmtTime, today, WD } from '../engine/date.js'
+import { DIGEST_TIMES } from '../engine/reminders.js'
 
 export default function Settings() {
   const st = useSettings()
@@ -53,6 +54,7 @@ export default function Settings() {
               </div>
             </Field>
           ))}
+          <Toggle label="조용한 모드 · 개수·지연 빨간 표시·이월 횟수 숨기기" checked={!!st.calm} onChange={(v) => setSettings({ calm: v })} />
           <Field label="화면 모드"><Seg value={th.mode} onChange={(v) => setTheme({ mode: v })} options={[['system', '시스템'], ['light', '라이트'], ['dark', '다크']]} /></Field>
           <Field label="폰트">
             <select className="input" value={th.font} onChange={(e) => setTheme({ font: e.target.value })}>
@@ -374,6 +376,21 @@ function PushCard() {
           <Field label="아침 요약"><TimeInput value={t2m(st.notifyMorning ?? '07:30')} onChange={(v) => setSettings({ notifyMorning: m2t(v) })} defaultValue={450} /></Field>
           <Field label="저녁 목표 알림"><TimeInput value={t2m(st.notifyEvening ?? '21:00')} onChange={(v) => setSettings({ notifyEvening: m2t(v) })} defaultValue={1260} /></Field>
         </div>
+        <Toggle label="할 일 알림 요약해서 받기" checked={!!st.digest?.on} onChange={(v) => setSettings({ digest: { times: DIGEST_TIMES, ...(st.digest || {}), on: v } })} />
+        {st.digest?.on && (
+          <div className="col" style={{ gap: 6 }}>
+            <div className="tiny muted">할 일 알림을 바로 보내지 않고, 아래 시각마다 다음 요약 전까지 예정된 것을 한 번에 보내요. 일정·약 알림은 그대로 바로 와요.</div>
+            <div className="row wrap" style={{ gap: 6 }}>
+              {(st.digest.times || DIGEST_TIMES).map((tm, i) => (
+                <div key={i} className="row" style={{ gap: 2 }}>
+                  <TimeInput value={t2m(tm)} allowEmpty={false} onChange={(v) => setSettings({ digest: { ...st.digest, times: (st.digest.times || DIGEST_TIMES).map((x, j) => (j === i ? m2t(v) : x)) } })} />
+                  {(st.digest.times || DIGEST_TIMES).length > 1 && <button className="icon-btn" aria-label="삭제" onClick={() => setSettings({ digest: { ...st.digest, times: (st.digest.times || DIGEST_TIMES).filter((_, j) => j !== i) } })}><Icon name="close" size={12} /></button>}
+                </div>
+              ))}
+              {(st.digest.times || DIGEST_TIMES).length < 6 && <button className="chip" onClick={() => setSettings({ digest: { ...st.digest, times: [...(st.digest.times || DIGEST_TIMES), '21:00'] } })}>＋ 시각</button>}
+            </div>
+          </div>
+        )}
         <details className="more">
           <summary>처음 한 번만: GitHub 설정</summary>
           <div className="small" style={{ marginTop: 6, lineHeight: 1.7 }}>

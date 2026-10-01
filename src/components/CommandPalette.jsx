@@ -17,6 +17,7 @@ const ACTIONS = [
   ['데일리 노트', () => go('notes', 'daily')], ['노트 페이지', () => go('notes', 'pages')], ['프로젝트 허브', () => go('notes', 'hub')],
   ['개념 그래프', () => go('notes', 'graph')], ['자료 라이브러리', () => go('notes', 'library')],
   ['건강', () => go('health')], ['설정', () => go('settings')],
+  ['기록에 물어보기', () => import('./AskSheet.jsx').then((m) => import('./ui.jsx').then((u) => u.openSheet(() => <m.default />, { title: '내 기록에 물어보기' })))],
 ]
 
 export default function CommandPalette({ close }) {

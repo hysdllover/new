@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useColl, put, patch, remove, uid } from '../../store/store.js'
 import { setTextbookProgress } from '../../store/actions.js'
 import { Card, Icon, Prog, Empty, Field, openSheet, confirmSheet, toast, Check, AddInput } from '../../components/ui.jsx'
@@ -37,6 +37,7 @@ export default function Progress() {
               <div className="row between small"><span>{tb.current || 0} / {tb.total}{tb.unit}</span><b>{Math.round(ratio * 100)}%</b></div>
               <Prog value={ratio} h={7} />
               <ProgressInput tb={tb} />
+              <PdfRow tb={tb} />
               {plan ? <div style={{ marginTop: 8 }}><div className="tiny muted">번다운 · {plan.title}</div><Burndown plan={plan} textbook={tb} /></div>
                 : hist.length > 1 && <LineChart height={100} yMax={tb.total} series={[{ points: hist.map((h) => [diffDays(h.date, first) / span, h.value]), color: 'var(--accent)' }]} labels={[[0, fmtShort(first)], [1, '오늘']]} />}
             </Card>
@@ -108,6 +109,24 @@ function TbForm({ close, tb }) {
         <Field label="단위"><select className="input" value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })}><option value="p">쪽(p)</option><option value="강">강</option><option value="단원">단원</option><option value="문제">문제</option></select></Field>
       </div>
       <button className="btn primary" onClick={() => { if (!f.title) return; tb ? patch('textbooks', tb.id, f) : put('textbooks', { ...f, history: [] }); close() }}>저장</button>
+    </div>
+  )
+}
+
+// 교재 PDF: 넣기·읽기 (PDF 는 이 기기에만, 진도는 동기화)
+function PdfRow({ tb }) {
+  const [has, setHas] = useState(null)
+  const ref = useRef(null)
+  useEffect(() => { import('./PdfReader.jsx').then((m) => m.hasPdf(tb.id)).then(setHas) }, [tb.id])
+  const open = () => import('./PdfReader.jsx').then((m) => openSheet(() => <m.default id={tb.id} />, { title: tb.title, full: true }))
+  const add = async (f) => { if (!f) return; try { const m = await import('./PdfReader.jsx'); await m.savePdf(tb.id, f); setHas(true); toast('PDF 를 넣었어요 · 읽으면 진도가 기록돼요'); open() } catch (e) { toast(e.message) } }
+  return (
+    <div className="row" style={{ marginTop: 6, gap: 6 }}>
+      <input ref={ref} type="file" accept="application/pdf" hidden onChange={(e) => add(e.target.files?.[0])} />
+      {has ? <>
+        <button className="btn sm" onClick={open}><Icon name="book" size={14} />PDF 읽기{tb.pdf?.page ? ` · ${tb.pdf.page}쪽부터` : ''}</button>
+        <button className="btn sm ghost" onClick={() => confirmSheet('PDF 빼기', '이 기기에서 PDF 를 지울까요? 진도 기록은 그대로예요.', async () => { (await import('./PdfReader.jsx')).removePdf(tb.id); setHas(false) }, '빼기')}>빼기</button>
+      </> : has === false && <button className="btn sm ghost" onClick={() => ref.current?.click()}><Icon name="book" size={14} />{tb.pdf ? '이 기기에 PDF 넣기' : 'PDF 넣기'}</button>}
     </div>
   )
 }
