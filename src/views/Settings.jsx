@@ -512,7 +512,7 @@ function WidgetPreview() {
       </div>
     )
   }
-  // 공부 유형: 이번 주·연속·최근 7일
+  // 공부 유형: 이번 주·어제·최근 7일
   const sw = (() => {
     const byDay = {}
     for (const x of sessions) byDay[x.date] = (byDay[x.date] || 0) + x.dur
@@ -520,8 +520,7 @@ function WidgetPreview() {
     const last7 = [6, 5, 4, 3, 2, 1, 0].map((k) => ({ m: byDay[off(k)] || 0, wd: (now.getDay() - k + 7) % 7 }))
     const back = (now.getDay() - (st.weekStart ?? 1) + 7) % 7
     let week = 0; for (let k = 0; k <= back; k++) week += byDay[off(k)] || 0
-    let streak = 0; for (let k = byDay[d] ? 0 : 1; byDay[off(k)]; k++) streak++
-    return { last7, week, streak, avg: Math.round(last7.reduce((a, x) => a + x.m, 0) / 7) }
+    return { last7, week, yday: byDay[off(1)] || 0, avg: Math.round(last7.reduce((a, x) => a + x.m, 0) / 7) }
   })()
   const stat = (k, v, gold) => <div className="col" style={{ gap: 2 }}><span className="dw-cap">{k}</span><span className={gold ? 'dw-gold' : ''} style={{ fontSize: 13 }}>{v}</span></div>
   const bars7 = (h) => {
@@ -575,9 +574,9 @@ function WidgetPreview() {
         {list(6)}</>,
     ],
     공부: [
-      <><div className="row between"><span className="dw-cap sp">STUDY</span></div><div style={{ height: 8 }} />{big(30)}<div className="grow" /><div className="row between">{stat('WEEK', hm(sw.week))}{stat('STREAK', sw.streak + 'd', true)}</div></>,
-      <><div className="col" style={{ gap: 0, width: 150, flexShrink: 0 }}><span className="dw-cap sp">STUDY</span><div style={{ height: 8 }} />{big(34)}<div className="grow" /><div className="row between">{stat('WEEK', hm(sw.week))}{stat('STREAK', sw.streak + 'd', true)}</div></div><div className="dw-vr" /><div className="col" style={{ gap: 0, flex: 1, minWidth: 0, justifyContent: 'flex-end' }}>{bars7(78)}</div></>,
-      <><div className="row between"><span className="dw-cap sp">STUDY</span><span className="dw-cap">{dateStr}</span></div><div style={{ height: 10 }} />{big(44)}<div style={{ height: 14 }} /><div className="row between">{stat('WEEK', hm(sw.week))}{stat('7-DAY AVG', hm(sw.avg))}{stat('STREAK', sw.streak + ' days', true)}</div><div style={{ height: 14 }} />{bars7(70)}<div className="dw-hr" />{subBars(3)}</>,
+      <><div className="row between"><span className="dw-cap sp">STUDY</span></div><div style={{ height: 8 }} />{big(30)}<div className="grow" /><div className="row between">{stat('WEEK', hm(sw.week))}{stat('YESTERDAY', hm(sw.yday), true)}</div></>,
+      <><div className="col" style={{ gap: 0, width: 150, flexShrink: 0 }}><span className="dw-cap sp">STUDY</span><div style={{ height: 8 }} />{big(34)}<div className="grow" /><div className="row between">{stat('WEEK', hm(sw.week))}{stat('YESTERDAY', hm(sw.yday), true)}</div></div><div className="dw-vr" /><div className="col" style={{ gap: 0, flex: 1, minWidth: 0, justifyContent: 'flex-end' }}>{bars7(78)}</div></>,
+      <><div className="row between"><span className="dw-cap sp">STUDY</span><span className="dw-cap">{dateStr}</span></div><div style={{ height: 10 }} />{big(44)}<div style={{ height: 14 }} /><div className="row between">{stat('WEEK', hm(sw.week))}{stat('7-DAY AVG', hm(sw.avg))}{stat('YESTERDAY', hm(sw.yday), true)}</div><div style={{ height: 14 }} />{bars7(70)}<div className="dw-hr" />{subBars(3)}</>,
     ],
     할일: [4, 5, 12].map((n) => <><div className="row between"><span className="dw-cap sp">TODAY</span><span className="dw-cap dw-gold">{done} DONE</span></div><div style={{ height: 10 }} />{list(n)}</>),
     디데이: [40, 52, 52].map((sz, i) => <><div className="dw-cap">{dateStr}</div><div className="grow" />
@@ -606,7 +605,7 @@ function WidgetPreview() {
   const L = (() => {
     const left = items.filter((t) => !t.done)
     if (kind === '디데이') return { c: [[dd ? (ddN === 0 ? 'D' : ddN) : '–', B], ['D-DAY', S]], r: [[ddTxt || 'No D-day', { fontSize: 24, fontWeight: 100 }], [dd ? `${dd.title}  ${dd.date.slice(5).replace('-', '.')}` : ''], [ddNext ? `${ddNext.title} D-${Math.round((new Date(ddNext.date) - new Date(d)) / 86400000)}` : '', { ...DIM, fontSize: 10 }]], i: dd ? `${ddTxt} ${dd.title}` : 'No D-day' }
-    if (kind === '공부') return { c: [[hm(mins), { fontSize: 14 }], [pct + '%', S], [bar(mins / goal, 34)]], r: [[<><b>{hm(mins)}</b> / {hm(goal)}<span className="grow" />{pct}%</>], [bar(mins / goal, 150)], [<span style={ROW}><span>이번 주 {hm(sw.week)}</span><span>{sw.streak}일 연속</span></span>]], i: `공부 ${hm(mins)} / ${hm(goal)} · ${pct}%` }
+    if (kind === '공부') return { c: [[hm(mins), { fontSize: 14 }], [pct + '%', S], [bar(mins / goal, 34)]], r: [[<><b>{hm(mins)}</b> / {hm(goal)}<span className="grow" />{pct}%</>], [bar(mins / goal, 150)], [<span style={ROW}><span>이번 주 {hm(sw.week)}</span><span>어제 {hm(sw.yday)}</span></span>]], i: `공부 ${hm(mins)} / ${hm(goal)} · ${pct}%` }
     if (kind === '할일') return { c: [[left.length, { fontSize: 24, fontWeight: 100 }], ['할 일', S], [`${done}/${done + left.length}`, S]], r: [[<span style={{ ...ROW, fontSize: 8, letterSpacing: 2 }}><span>TODAY</span><span>{done}/{items.length}</span></span>], ...items.slice(0, 3).map((t) => [(t.done ? '✓ ' : '– ') + t.title, t.done ? DIM : null]), ...(items.length ? [] : [['All clear.']])], i: left.length ? `할 일 ${left.length}개 · ${left[0].title}` : '오늘 할 일 끝' }
     if (kind === '달력') {
       const byDay = {}; for (const x of sessions) byDay[x.date] = (byDay[x.date] || 0) + x.dur

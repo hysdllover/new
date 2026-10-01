@@ -315,13 +315,13 @@ if (!data) {
     if (KIND === 'study') {
       const ws = st.weekStart ?? 1, back = (d0.getDay() - ws + 7) % 7
       let week = 0; for (let k = 0; k <= back; k++) week += dayMins[ymdOff(k)] || 0
-      let streak = 0; for (let k = dayMins[today] ? 0 : 1; dayMins[ymdOff(k)]; k++) streak++
+      const yday = dayMins[ymdOff(1)] || 0
       if (inl) inline('공부 ' + hm(mins) + ' / ' + hm(goal) + ' · ' + pct + '%')
       else if (circ) cRows([[hm(mins), tw(14)], [pct + '%', label(8)]], mins / goal)
       else {
         const r = w.addStack(); r.bottomAlignContent(); t(r, hm(mins), thin(22)); r.addSpacer(4); t(r, '/ ' + hm(goal), tw(10)); r.addSpacer(); t(r, pct + '%', tw(11))
         w.addSpacer(3); lbar(w, mins / goal, 150); w.addSpacer(4)
-        rRow('이번 주 ' + hm(week), streak + '일 연속', tw(10), tw(10))
+        rRow('이번 주 ' + hm(week), '어제 ' + hm(yday), tw(10), tw(10))
       }
     } else if (KIND === 'todo') {
       const left = items.filter((x) => !x.done)
@@ -400,7 +400,7 @@ if (!data) {
     const last7 = [6, 5, 4, 3, 2, 1, 0].map((k) => ({ d: ymdOff(k), m: dayMins[ymdOff(k)] || 0, wd: new Date(ymdOff(k) + 'T00:00').getDay() }))
     const ws = st.weekStart ?? 1, back = (d0.getDay() - ws + 7) % 7
     let week = 0; for (let k = 0; k <= back; k++) week += dayMins[ymdOff(k)] || 0
-    let streak = 0; for (let k = dayMins[today] ? 0 : 1; dayMins[ymdOff(k)]; k++) streak++
+    const yday = dayMins[ymdOff(1)] || 0
     const avg = Math.round(last7.reduce((a, x) => a + x.m, 0) / 7)
     // 최근 7일 막대 (오늘은 진하게, 목표선 점선)
     const bars = (parent, width, height) => {
@@ -425,12 +425,12 @@ if (!data) {
     if (fam === 'small') {
       studyBig(w, 30, inner)
       w.addSpacer()
-      const s2 = w.addStack(); stat(s2, 'WEEK', hm(week)); s2.addSpacer(); stat(s2, 'STREAK', streak + 'd', GOLD)
+      const s2 = w.addStack(); stat(s2, 'WEEK', hm(week)); s2.addSpacer(); stat(s2, 'YESTERDAY', hm(yday), GOLD)
     } else if (fam === 'medium') {
       const row = w.addStack()
       const L = row.addStack(); L.layoutVertically(); L.size = new Size(150, 104)
       studyBig(L, 34, 150); L.addSpacer()
-      const s2 = L.addStack(); stat(s2, 'WEEK', hm(week)); s2.addSpacer(); stat(s2, 'STREAK', streak + 'd', GOLD); s2.addSpacer()
+      const s2 = L.addStack(); stat(s2, 'WEEK', hm(week)); s2.addSpacer(); stat(s2, 'YESTERDAY', hm(yday), GOLD); s2.addSpacer()
       row.addSpacer(16); vrule(row, 104); row.addSpacer(16)
       const R = row.addStack(); R.layoutVertically()
       bars(R, inner - 183, 78); R.addSpacer()
@@ -438,7 +438,7 @@ if (!data) {
     } else {
       studyBig(w, 44, inner)
       w.addSpacer(14)
-      const s2 = w.addStack(); stat(s2, 'WEEK', hm(week)); s2.addSpacer(); stat(s2, '7-DAY AVG', hm(avg)); s2.addSpacer(); stat(s2, 'STREAK', streak + ' days', GOLD)
+      const s2 = w.addStack(); stat(s2, 'WEEK', hm(week)); s2.addSpacer(); stat(s2, '7-DAY AVG', hm(avg)); s2.addSpacer(); stat(s2, 'YESTERDAY', hm(yday), GOLD)
       w.addSpacer(14)
       bars(w, inner, 70)
       w.addSpacer(14); rule(w, inner); w.addSpacer(10)

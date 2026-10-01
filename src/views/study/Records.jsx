@@ -19,9 +19,7 @@ export function useStudyStats() {
     const ws = weekStart(d, st.weekStart)
     let week = 0
     for (let i = 0; i < 7; i++) week += byDay[addDays(ws, i)] || 0
-    let streak = 0
-    for (let k = byDay[d] ? 0 : 1; byDay[addDays(d, -k)]; k++) streak++
-    return { byDay, today: byDay[d] || 0, week, streak, ws }
+    return { byDay, today: byDay[d] || 0, yesterday: byDay[addDays(d, -1)] || 0, week, ws }
   }, [sessions, st.weekStart])
 }
 
@@ -53,7 +51,7 @@ export default function Records() {
             <span className="small">주간 할 일</span>
           </div>
         </div>
-        <div className="small muted center" style={{ marginTop: 8 }}>연속 공부 {s.streak}일 🔥</div>
+        <div className="small muted center" style={{ marginTop: 8 }}>어제 {fmtDur(s.yesterday) || '0분'} · 이번 주 {fmtDur(s.week) || '0분'}</div>
       </Card>
       <Card title="최근 7일">
         <WeekBars values={s.byDay} goal={st.goalDaily} />
@@ -81,7 +79,7 @@ function ShareCardSheet() {
     const other = todays.filter((x) => !subjects.some((sb) => sb.id === x.subjectId)).reduce((a, x) => a + x.dur, 0)
     if (other) subs.push({ name: '기타', m: other })
     let u
-    drawShareCard({ date: fmtDate(d, { year: true }), mins: s.today, goal: st.goalDaily, subjects: subs, week: s.week, streak: s.streak, quote: pickQuote([...quotes].sort((a, b) => a.id.localeCompare(b.id)))?.text })
+    drawShareCard({ date: fmtDate(d, { year: true }), mins: s.today, goal: st.goalDaily, subjects: subs, week: s.week, yesterday: s.yesterday, quote: pickQuote([...quotes].sort((a, b) => a.id.localeCompare(b.id)))?.text })
       .then((b) => { setBlob(b); u = URL.createObjectURL(b); setUrl(u) })
     return () => u && URL.revokeObjectURL(u)
   }, []) // eslint-disable-line
@@ -125,14 +123,14 @@ function Habits() {
       <div className="col">
         {habits.map((h) => {
           const days = h.days || {}
-          let streak = 0
-          for (let k = days[d] ? 0 : 1; days[addDays(d, -k)]; k++) streak++
+          let wk = 0 // 최근 7일 체크 수
+          for (let k = 0; k < 7; k++) if (days[addDays(d, -k)]) wk++
           return (
             <div key={h.id}>
               <div className="row" style={{ marginBottom: 4 }}>
                 <button className={'check' + (days[d] ? ' on' : '')} style={{ borderColor: h.color, background: days[d] ? h.color : null }} onClick={() => patch('habits', h.id, { days: { ...days, [d]: !days[d] } })} aria-label="오늘 체크" />
                 <span className="grow">{h.title}</span>
-                <span className="tiny muted">{streak}일 연속</span>
+                <span className="tiny muted">최근 7일 {wk}/7</span>
                 <button className="icon-btn" onClick={() => remove('habits', h.id)} aria-label="삭제"><Icon name="close" size={14} /></button>
               </div>
               <Heatmap values={Object.fromEntries(Object.entries(days).filter(([, v]) => v).map(([k]) => [k, 1]))} max={1} color={h.color} weeks={15} onPick={(day) => patch('habits', h.id, { days: { ...days, [day]: !days[day] } })} />

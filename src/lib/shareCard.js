@@ -2,7 +2,7 @@
 const css = (name, fb) => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fb
 const hm = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`
 
-export async function drawShareCard({ date, mins, goal, subjects, week, streak, quote }) {
+export async function drawShareCard({ date, mins, goal, subjects, week, yesterday = 0, quote }) {
   await document.fonts.ready.catch(() => {})
   const W = 1080, H = 1350, P = 96
   const c = document.createElement('canvas'); c.width = W; c.height = H
@@ -42,11 +42,11 @@ export async function drawShareCard({ date, mins, goal, subjects, week, streak, 
   }
   if (!subjects.length) { g.fillStyle = soft; g.font = f(36, 300); g.fillText('오늘도 시작해 볼까요', P, y) }
 
-  // 이번 주 · 연속
+  // 이번 주 · 어제
   const by = H - P - 250
   g.fillStyle = line; g.fillRect(P, by, W - P * 2, 2)
   const stat = (x, k, v) => { g.fillStyle = soft; g.font = f(26, 400); g.fillText(k, x, by + 36); g.fillStyle = ink; g.font = f(56, 300); g.fillText(v, x, by + 76) }
-  stat(P, 'THIS WEEK', hm(week)); stat(P + 360, 'STREAK', `${streak} days`)
+  stat(P, 'THIS WEEK', hm(week)); stat(P + 360, 'YESTERDAY', hm(yesterday))
   // 다짐
   if (quote) {
     g.fillStyle = soft; g.font = f(34, 300)
