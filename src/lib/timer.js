@@ -1,20 +1,40 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { addSession, markLecture } from '../store/actions.js'
-import { settings } from '../store/store.js'
+import { settings, put, find, subscribe, deviceId } from '../store/store.js'
 import { toast } from '../components/ui.jsx'
 import { keepAwake } from './notify.js'
 
-// 진행 중 타이머 (기기별 localStorage 유지 → 새로고침해도 계속)
+// 진행 중 타이머 — localStorage(새로고침해도 계속) + 동기화 문서 live.timer(아이폰↔아이패드 연동)
 // { mode: 'stopwatch'|'countdown', subjectId, taskId, segStart, acc, paused, pausedAt, target(ms, 타이머만) }
-const KEY = 'timer'
+const KEY = 'timer', AT = 'timer_at'
 let t = (() => { try { const x = JSON.parse(localStorage.getItem(KEY)); return x?.mode === 'pomodoro' ? { mode: 'stopwatch', subjectId: x.subjectId, taskId: x.taskId, segStart: x.segStart, acc: x.acc || 0, paused: x.paused || x.phase === 'break', pausedAt: x.pausedAt || Date.now() } : x } catch { return null } })()
 const L = new Set()
+// 마지막으로 반영한 다른 기기 문서 (기기 + 시각) — 기기 간 시계 차이와 무관하게 비교
+let seen = (() => { try { return localStorage.getItem(AT) || '' } catch { return '' } })()
+const save = (next) => { try { next ? localStorage.setItem(KEY, JSON.stringify(next)) : localStorage.removeItem(KEY); localStorage.setItem(AT, seen) } catch {} }
 const set = (next) => {
   const was = t
-  t = next; try { next ? localStorage.setItem(KEY, JSON.stringify(next)) : localStorage.removeItem(KEY) } catch {} L.forEach((l) => l())
+  t = next
+  // 다른 기기로 전달 (동기화되는 문서)
+  put('live', { id: 'timer', state: next || null, by: deviceId })
+  save(next)
+  L.forEach((l) => l())
   // 시작·일시정지·종료 때만 알림 (과목 바꿈 등은 제외)
   if (!was !== !next || was?.paused !== next?.paused) try { window.dispatchEvent(new Event('timer-change')) } catch {}
 }
+// 다른 기기에서 시작·정지한 타이머 받기 (내가 쓴 건 무시, 더 새로운 것만)
+function applyRemote() {
+  const r = find('live', 'timer')
+  if (!r || r.deviceId === deviceId) return
+  const key = r.deviceId + ':' + r.updatedAt
+  if (key === seen) return
+  seen = key
+  t = r.state || null
+  save(t)
+  L.forEach((l) => l())
+}
+subscribe(applyRemote)
+
 export const useTimerState = () => useSyncExternalStore((f) => { L.add(f); return () => L.delete(f) }, () => t)
 export const getTimer = () => t
 
@@ -31,7 +51,7 @@ export const remaining = (x = t) => (x?.mode === 'countdown' ? Math.max(0, x.tar
 function flush(x) {
   // 현재 공부 구간을 세션으로 저장
   if (!x || x.paused) return null
-  return addSession({ subjectId: x.subjectId, taskId: x.taskId, lectureId: x.lectureId, start: x.segStart, end: Date.now(), kind: x.mode })
+  return addSession({ id: 'tm-' + x.segStart, subjectId: x.subjectId, taskId: x.taskId, lectureId: x.lectureId, start: x.segStart, end: Date.now(), kind: x.mode })
 }
 
 export function startStopwatch(subjectId, taskId, lectureId) {
@@ -73,7 +93,7 @@ function countdownTick() {
   const min = Math.round(t.target / 60000)
   // 끝난 시각 기준으로 정확히 기록
   const end = t.segStart + (t.target - (t.acc || 0))
-  addSession({ subjectId: t.subjectId, taskId: t.taskId, lectureId: t.lectureId, start: t.segStart, end, kind: 'countdown' })
+  addSession({ id: 'tm-' + t.segStart, subjectId: t.subjectId, taskId: t.taskId, lectureId: t.lectureId, start: t.segStart, end, kind: 'countdown' })
   set(null); keepAwake(false)
   notify('타이머 끝', `${min}분 공부를 기록했어요`)
 }

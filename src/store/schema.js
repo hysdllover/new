@@ -6,7 +6,7 @@ export const COLLECTIONS = {
   subjects: 'study', sessions: 'study', ddays: 'study', plans: 'study', textbooks: 'study', lectures: 'study',
   reviews: 'study', grades: 'study', habits: 'study', mocks: 'study',
   conditions: 'health', meds: 'health', medLogs: 'health',
-  settings: 'settings', links: 'settings', quotes: 'settings',
+  settings: 'settings', links: 'settings', quotes: 'settings', live: 'settings',
 }
 export const COLL_NAMES = Object.keys(COLLECTIONS)
 export const GIST_FILES = [...new Set(Object.values(COLLECTIONS))]
