@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Icon, UiLayer, useUi, closeDetail, openSheet, openMenu, useMedia } from './components/ui.jsx'
-import { TABS, EXTRA, SEGMENTS, useNav, go, segOf } from './nav.js'
+import { TABS, EXTRA, SEGMENTS, useNav, go, segOf, tabOpt, DEFAULT_TABBAR } from './nav.js'
 import { useColl, useSettings } from './store/store.js'
 import { useSyncStatus, syncNow } from './sync/sync.js'
 import { fmtDate, today } from './engine/date.js'
@@ -46,8 +46,14 @@ export default function App() {
   }, [])
 
   const extra = EXTRA.filter((x) => !x.module || st.modules[x.module] !== false)
+  // 하단 탭: 설정에서 고른 화면 (순서·숨기기)
+  const bar = (st.tabBar?.length ? st.tabBar : DEFAULT_TABBAR).map(tabOpt).filter(Boolean)
+  const hiddenTabs = TABS.filter((t) => !bar.some((b) => b.tab === t.id))
+  // 같은 탭의 특정 화면(예: 타이머)이 따로 있으면, 그냥 탭은 그 화면이 아닌 곳으로
+  const freeSeg = (tb) => { const claimed = bar.filter((b) => b.tab === tb && b.seg).map((b) => b.seg); if (!claimed.includes(segOf(tb))) return undefined; return (SEGMENTS[tb] || []).map((x) => x[0]).find((x) => !claimed.includes(x)) }
   const moreMenu = (e) => openMenu(e, [
-    ...extra.map((x) => ({ label: x.label, icon: x.icon, onClick: () => go(x.id) })),
+    ...hiddenTabs.map((x) => ({ label: x.label, icon: x.icon, onClick: () => go(x.id) })),
+    ...extra.filter((x) => !bar.some((b) => b.tab === x.id)).map((x) => ({ label: x.label, icon: x.icon, onClick: () => go(x.id) })),
     { label: '기록에 물어보기', icon: 'search', onClick: () => import('./components/AskSheet.jsx').then((m) => openSheet(() => <m.default />, { title: '내 기록에 물어보기' })) },
     { label: '보관함·휴지통', icon: 'archive', onClick: () => go('tasks', 'archive') },
     { label: '인쇄 (A4)', icon: 'print', onClick: () => window.print() },
@@ -111,8 +117,8 @@ export default function App() {
       )}
 
       <nav className="tabbar no-print">
-        {TABS.map((t) => (
-          <button key={t.id} className={tab === t.id ? 'on' : ''} onClick={() => go(t.id)}>
+        {bar.map((t) => (
+          <button key={t.key} className={tab === t.tab && (t.seg ? seg === t.seg : !bar.some((b) => b.tab === t.tab && b.seg && b.seg === seg)) ? 'on' : ''} onClick={() => go(t.tab, t.seg || freeSeg(t.tab))}>
             <Icon name={t.icon} size={22} stroke={1.4} />{t.label}
           </button>
         ))}

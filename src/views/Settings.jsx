@@ -7,7 +7,9 @@ import { ColorPick, TimeInput, SubjectSelect } from '../components/common.jsx'
 import { useSyncStatus, connect, disconnect, syncNow, gistInfo, tokenExpiry, listBackups, backupNow, restoreBackup, calendarUrl } from '../sync/sync.js'
 import { enablePush, disablePush, pushState, testLocal, isStandalone, pushSupported } from '../lib/push.js'
 import { buildScript, WIDGET_KINDS } from '../lib/scriptable.js'
+import { TAB_OPTIONS, DEFAULT_TABBAR, tabOpt } from '../nav.js'
 import { pickQuote } from '../lib/quote.js'
+import { pickColor, harmonize } from '../lib/colors.js'
 import { eventsOn, classesOn } from '../engine/scheduler.js'
 import { sortTasks } from './tasks/filter.js'
 import { download } from '../lib/files.js'
@@ -28,6 +30,7 @@ export default function Settings() {
       <HomeWidgetCard />
       <ShareCaptureCard />
       <CalendarSubCard />
+      <TabBarCard />
       <Card title="디자인">
         <div className="form">
           <Field label="색상 프리셋">
@@ -261,7 +264,10 @@ function SyncCard() {
 function SubjectsCard() {
   const subjects = useColl('subjects')
   return (
-    <Card title="과목" action={<button className="btn sm" onClick={() => put('subjects', { name: '새 과목', color: PALETTE[subjects.length % PALETTE.length] })}><Icon name="plus" size={14} />추가</button>}>
+    <Card title="과목" action={<div className="row" style={{ gap: 4 }}>
+      <button className="btn sm ghost" onClick={() => confirmSheet('과목 색 정리', '모든 과목 색을 서로 어울리는 저채도 색으로 다시 정할까요?', () => { const cs = harmonize(subjects.length); subjects.forEach((s, i) => patch('subjects', s.id, { color: cs[i] })); toast('과목 색을 정리했어요') }, '정리')}>색 정리</button>
+      <button className="btn sm" onClick={() => put('subjects', { name: '새 과목', color: pickColor(subjects.map((s) => s.color)) })}><Icon name="plus" size={14} />추가</button>
+    </div>}>
       <div className="list">
         {subjects.map((s) => (
           <div key={s.id} className="row" style={{ padding: '6px 0' }}>
@@ -694,5 +700,34 @@ function WidgetPreview() {
         </div>
       </div>
     </>
+  )
+}
+
+// 하단 탭 직접 정하기 (아이폰 하단 탭 · 아이패드는 사이드바 그대로)
+function TabBarCard() {
+  const st = useSettings()
+  const cur = st.tabBar?.length ? st.tabBar : DEFAULT_TABBAR
+  const set = (v) => setSettings({ tabBar: v })
+  const move = (i, d) => { const a = [...cur]; const j = i + d; if (j < 0 || j >= a.length) return; [a[i], a[j]] = [a[j], a[i]]; set(a) }
+  return (
+    <Card title="하단 탭" action={<button className="tiny muted" onClick={() => set(null)}>기본으로</button>}>
+      <div className="tiny muted" style={{ marginBottom: 6 }}>아이폰 아래 탭에 둘 화면을 2~5개 골라 순서를 정해요. 뺀 화면은 오른쪽 위 ⋯ 메뉴에 있어요.</div>
+      <div className="tabpick-bar">
+        {cur.map((k, i) => { const o = tabOpt(k); return o && (
+          <div key={k} className="tabpick">
+            <Icon name={o.icon} size={18} /><span className="tiny">{o.label}</span>
+            <div className="row" style={{ gap: 0 }}>
+              <button className="icon-btn" aria-label="앞으로" disabled={i === 0} onClick={() => move(i, -1)}>‹</button>
+              {cur.length > 2 && <button className="icon-btn" aria-label="빼기" onClick={() => set(cur.filter((x) => x !== k))}><Icon name="close" size={11} /></button>}
+              <button className="icon-btn" aria-label="뒤로" disabled={i === cur.length - 1} onClick={() => move(i, 1)}>›</button>
+            </div>
+          </div>) })}
+      </div>
+      {cur.length < 5 && (
+        <div className="row wrap" style={{ gap: 6, marginTop: 8 }}>
+          {TAB_OPTIONS.filter((o) => !cur.includes(o.key)).map((o) => <button key={o.key} className="chip" onClick={() => set([...cur, o.key])}><Icon name={o.icon} size={13} />{o.label}</button>)}
+        </div>
+      )}
+    </Card>
   )
 }
