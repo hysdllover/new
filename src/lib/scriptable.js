@@ -100,6 +100,8 @@ const cline = (z, ratio, wd = 34) => { z.addSpacer(4); const a = z.addStack(); a
 function build(fam) {
 const lock = fam.startsWith('accessory')
 let w = new ListWidget()
+// 한 줄(시계 위) 위젯: iOS 가 텍스트 하나만 시스템 서체로 그림 → 서체·색 지정 없이 짧게 하나만
+const inline = (s) => { s = String(s); const x = w.addText(s.length > 26 ? s.slice(0, 25) + '…' : s); x.lineLimit = 1; return x }
 w.url = link(KIND === 'todo' ? 'tasks' : KIND === 'cal' ? 'planner.month' : KIND === 'class' ? 'planner.timetable' : KIND === 'default' ? '' : 'study.records')
 w.refreshAfterDate = new Date(Date.now() + 15 * 60000)
 const P = fam === 'small' ? 16 : 18
@@ -122,7 +124,8 @@ if (!lock) {
 }
 
 if (!data) {
-  t(w, lock ? '동기화 필요' : '앱에서 동기화를 연결하고 스크립트를 다시 복사해 주세요', tw(12), lock ? null : SOFT, 3)
+  if (fam === 'accessoryInline') inline('동기화 필요')
+  else t(w, lock ? '동기화 필요' : '앱에서 동기화를 연결하고 스크립트를 다시 복사해 주세요', tw(12), lock ? null : SOFT, 3)
 } else try {
   const st = data.settings.settings?.main || {}
   CUSTOM = (st.widgetFont || '').trim()
@@ -246,7 +249,7 @@ if (!data) {
     // ── 잠금 화면 · 시간표 ──
     const c = clCur || clNext
     if (fam === 'accessoryInline') {
-      t(w, c ? (clCur ? c.period + '교시 ' + c.title + ' ~' + clk(c.end) : '다음 ' + c.period + '교시 ' + c.title + ' ' + clk(c.start)) : CL.length ? '오늘 수업 끝' : '오늘 수업 없음', tw(12))
+      inline(c ? (clCur ? c.period + '교시 ' + c.title + ' ~' + clk(c.end) : '다음 ' + c.period + '교시 ' + c.title + ' ' + clk(c.start)) : CL.length ? '오늘 수업 끝' : '오늘 수업 없음')
     } else if (fam === 'accessoryCircular') {
       w.addAccessoryWidgetBackground = true
       const z = w.addStack(); z.size = new Size(60, 60); z.layoutVertically(); z.centerAlignContent()
@@ -264,9 +267,9 @@ if (!data) {
   } else if (lock && KIND === 'dday') {
     // ── 잠금 화면 · D-day 만 ──
     const next = ddAll[DDI + 1]
-    if (!dd) t(w, 'No D-day', tw(12))
+    if (!dd) inline('No D-day')
     else if (fam === 'accessoryInline') {
-      t(w, ddTxt + ' ' + dd.title, tw(12))
+      inline(ddTxt + ' ' + dd.title)
     } else if (fam === 'accessoryCircular') {
       w.addAccessoryWidgetBackground = true
       const z = w.addStack(); z.size = new Size(60, 60); z.layoutVertically(); z.centerAlignContent()
@@ -282,7 +285,7 @@ if (!data) {
   } else if (lock && TM && (KIND === 'default' || KIND === 'study')) {
     // ── 잠금 화면 · 진행 중 타이머 (초 단위로 흐름) ──
     if (fam === 'accessoryInline') {
-      if (TM.paused) t(w, '⏸ ' + TM.name + ' ' + hm(TM.pm), tw(12)); else timerDate(w, 12)
+      if (TM.paused) inline('일시정지 ' + TM.name + ' ' + hm(TM.pm)); else { const d = w.addDate(new Date(TM.mode === 'countdown' ? TM.end : TM.start)); d.applyTimerStyle(); d.lineLimit = 1 }
     } else if (fam === 'accessoryCircular') {
       w.addAccessoryWidgetBackground = true
       const z = w.addStack(); z.size = new Size(60, 60); z.layoutVertically(); z.centerAlignContent()
@@ -313,7 +316,7 @@ if (!data) {
       const ws = st.weekStart ?? 1, back = (d0.getDay() - ws + 7) % 7
       let week = 0; for (let k = 0; k <= back; k++) week += dayMins[ymdOff(k)] || 0
       let streak = 0; for (let k = dayMins[today] ? 0 : 1; dayMins[ymdOff(k)]; k++) streak++
-      if (inl) t(w, '공부 ' + hm(mins) + ' / ' + hm(goal) + ' · ' + pct + '%', tw(12))
+      if (inl) inline('공부 ' + hm(mins) + ' / ' + hm(goal) + ' · ' + pct + '%')
       else if (circ) cRows([[hm(mins), tw(14)], [pct + '%', label(8)]], mins / goal)
       else {
         const r = w.addStack(); r.bottomAlignContent(); t(r, hm(mins), thin(22)); r.addSpacer(4); t(r, '/ ' + hm(goal), tw(10)); r.addSpacer(); t(r, pct + '%', tw(11))
@@ -322,7 +325,7 @@ if (!data) {
       }
     } else if (KIND === 'todo') {
       const left = items.filter((x) => !x.done)
-      if (inl) t(w, left.length ? '할 일 ' + left.length + '개 · ' + left[0].title : '오늘 할 일 끝 ✓', tw(12))
+      if (inl) inline(left.length ? '할 일 ' + left.length + '개 · ' + left[0].title : '오늘 할 일 끝')
       else if (circ) cRows([[String(left.length), thin(24)], ['할 일', label(7)], [done + '/' + (done + left.length), label(7)]])
       else {
         rRow('T O D A Y', done + '/' + items.length, label(7), label(7))
@@ -336,7 +339,7 @@ if (!data) {
       const total = mv.reduce((a, v) => a + v, 0), days = mv.filter(Boolean).length, hit = mv.filter((v) => v >= goal).length
       const L7 = [6, 5, 4, 3, 2, 1, 0].map((k) => dayMins[ymdOff(k)] || 0)
       const mx = Math.max(goal, ...L7)
-      if (inl) t(w, MON[d0.getMonth()] + ' ' + hm(total) + ' · ' + days + '일', tw(12))
+      if (inl) inline(MON[d0.getMonth()] + ' ' + hm(total) + ' · ' + days + '일')
       else if (circ) cRows([[String(days), thin(22)], ['DAYS', label(7)]], days / new Date(d0.getFullYear(), d0.getMonth() + 1, 0).getDate())
       else {
         rRow(MON[d0.getMonth()] + ' · ' + hm(total), days + '일 · 달성 ' + hit, tw(12), label(8))
@@ -359,7 +362,7 @@ if (!data) {
       const when = (a) => (a.i === 0 && a.s == null ? '오늘' : (a.i === 0 ? '' : a.i === 1 ? '내일 ' : DAY[(d0.getDay() + a.i) % 7] + ' ') + (a.s == null ? '종일' : clk(a.s % 1440)))
       const nx = ag.find((a) => a.i > 0 || a.s == null || a.s >= nm) || ag[0]
       if (nx && nx.i === 0 && nx.s != null && nx.s > nm) { const at = new Date(d0); at.setHours(0, nx.s, 0, 0); w.refreshAfterDate = new Date(Math.min(w.refreshAfterDate.getTime(), at.getTime())) }
-      if (inl) t(w, nx ? (nx.i === 0 && nx.s == null ? '' : '다음 ') + when(nx) + ' ' + nx.title : '다가오는 일정 없음', tw(12))
+      if (inl) inline(nx ? (nx.i === 0 && nx.s == null ? '' : '다음 ') + when(nx) + ' ' + nx.title : '다가오는 일정 없음')
       else if (circ) cRows(nx ? [[nx.s == null ? '종일' : clk(nx.s % 1440), tw(13)], [nx.title, label(8)], [nx.i ? (nx.i === 1 ? '내일' : DAY[(d0.getDay() + nx.i) % 7]) : 'TODAY', label(6)]] : [['—', tw(14)]])
       else {
         for (const a of ag.slice(0, 3)) rRow(a.title, when(a), tw(11), label(8))
@@ -367,14 +370,14 @@ if (!data) {
       }
     } else if (KIND === 'quote') {
       const q = quote || '앱에서 다짐을 적어 보세요'
-      if (inl) t(w, q, tw(12))
+      if (inl) inline(q)
       else if (circ) { w.addAccessoryWidgetBackground = true; const z = w.addStack(); z.size = new Size(60, 60); z.setPadding(4, 4, 4, 4); z.centerAlignContent(); const x = t(z, q, tw(9), null, 4); x.centerAlignText(); x.minimumScaleFactor = 0.5 }
       else { t(w, q, tw(12), null, 3).minimumScaleFactor = 0.7; if (dd) { w.addSpacer(2); t(w, ddTxt + ' ' + dd.title, label(8)).textOpacity = 0.7 } }
     }
   } else if (lock) {
     // ── 잠금 화면 ──
     if (fam === 'accessoryInline') {
-      t(w, hm(mins) + (dd ? ' · ' + ddTxt + ' ' + dd.title : ''), tw(12))
+      inline(hm(mins) + (dd ? ' · ' + ddTxt + ' ' + dd.title : ''))
     } else if (fam === 'accessoryCircular') {
       w.addAccessoryWidgetBackground = true
       const z = w.addStack(); z.size = new Size(60, 60); z.layoutVertically(); z.centerAlignContent()
@@ -613,6 +616,7 @@ if (!data) {
   w = new ListWidget()
   if (!lock) { w.setPadding(16, 16, 16, 16); w.backgroundColor = BG }
   const msg = String((e && e.message) || e)
+  if (fam === 'accessoryInline') { inline('위젯 오류 · ' + msg); return w }
   t(w, '위젯 오류', label(lock ? 10 : 12), lock ? null : INK)
   t(w, lock ? msg.slice(0, 60) : msg + ' · 스크립트를 앱에서 다시 복사해 보세요', tw(lock ? 9 : 11), lock ? null : SOFT, lock ? 2 : 4)
 }
