@@ -379,7 +379,6 @@ if (!data) {
       for (let i = 0; i < 14 && ag.length < 6; i++) {
         const dt = new Date(d0); dt.setDate(dt.getDate() + i); const k = ymd(dt)
         for (const e of cal[k] || []) if (!(i === 0 && e.s != null && (e.e ?? e.s + 60) <= nm)) ag.push({ i, s: e.s, title: e.t })
-        for (const x of tasksAll.filter((x) => x.due === k && !x.done)) if (x.dueTime != null) ag.push({ i, s: x.dueTime, title: '☐ ' + x.title })
       }
       ag.sort((a, b) => a.i - b.i || (a.s ?? -1) - (b.s ?? -1))
       const when = (a) => (a.i === 0 && a.s == null ? '오늘' : (a.i === 0 ? '' : a.i === 1 ? '내일 ' : DAY[(d0.getDay() + a.i) % 7] + ' ') + (a.s == null ? '종일' : clk(a.s % 1440)))
@@ -525,12 +524,11 @@ if (!data) {
       t(r, 'TOTAL ' + hm(sum.total), label(8), INK); r.addSpacer(); t(r, sum.days + ' DAYS', label(8), SOFT); r.addSpacer(); t(r, sum.hit + ' GOAL', label(8), GOLD)
     }
   } else if (KIND === 'cal') {
-    // ── 캘린더: 이번 달 + 다가오는 일정 ──
+    // ── 캘린더: 이번 달 + 아래(중형은 옆) 다가오는 일정 · 할 일은 넣지 않음 ──
     const cal = data.cal || {}
     const y = d0.getFullYear(), m = d0.getMonth(), n = new Date(y, m + 1, 0).getDate()
     const ws = st.weekStart ?? 1, lead = (new Date(y, m, 1).getDay() - ws + 7) % 7
     const key = (dd2) => y + '-' + pad(m + 1) + '-' + pad(dd2)
-    const dueOn = (k) => tasksAll.filter((x) => x.due === k && !x.done)
     const rows = Math.ceil((lead + n) / 7)
     const grid = (parent, cell, cellH, gap, numSize, showWd = true) => {
       if (showWd) {
@@ -544,36 +542,37 @@ if (!data) {
         for (let i = 0; i < 7; i++, day++) {
           const c = row.addStack(); c.size = new Size(cell, cellH); c.layoutVertically(); c.centerAlignContent()
           if (day < 1 || day > n) continue
-          const k = key(day), evs = cal[k] || [], has = evs.length || dueOn(k).length
+          const k = key(day), evs = cal[k] || [], has = evs.length
           // 오늘: 채우기 대신 테두리 — 틴트/투명 홈 화면에서도 숫자가 보이게
           if (k === today) { c.borderWidth = 1; c.borderColor = INK; c.cornerRadius = Math.min(cell, cellH) / 2 }
           const a = c.addStack(); a.addSpacer(); t(a, day, k === today ? F(numSize, 'SemiBold') : label(numSize), k === today || has ? INK : SOFT); a.addSpacer()
-          const b = c.addStack(); b.addSpacer(); t(b, has ? '•' : ' ', label(numSize - 2), GOLD); b.addSpacer()
+          const b = c.addStack(); b.addSpacer(); t(b, has ? '•' : ' ', label(numSize - 2), has && evs[0].c ? new Color(evs[0].c) : GOLD); b.addSpacer()
         }
         parent.addSpacer(gap)
       }
     }
-    // 다가오는 일정·할 일 (오늘부터 14일)
-    const agenda = []
-    for (let i = 0; i < 14 && agenda.length < 12; i++) {
+    // 다가오는 일정 (오늘부터 30일, 오늘 이미 끝난 일정은 빼고)
+    const agenda = [], nowM = new Date().getHours() * 60 + new Date().getMinutes()
+    for (let i = 0; i < 30 && agenda.length < 12; i++) {
       const dt = new Date(d0); dt.setDate(dt.getDate() + i); const k = ymd(dt)
-      for (const e of cal[k] || []) agenda.push({ k, dt, time: e.s == null ? 'ALL' : pad(Math.floor(e.s / 60) % 24) + ':' + pad(e.s % 60), title: e.t })
-      for (const x of dueOn(k)) agenda.push({ k, dt, time: x.dueTime == null ? '–' : pad(Math.floor(x.dueTime / 60)) + ':' + pad(x.dueTime % 60), title: x.title, task: true })
+      const evs = (cal[k] || []).slice().sort((a, b) => (a.s ?? -1) - (b.s ?? -1))
+      for (const e of evs) { if (i === 0 && e.s != null && e.s + 60 <= nowM) continue; agenda.push({ k, dt, time: e.s == null ? '종일' : pad(Math.floor(e.s / 60) % 24) + ':' + pad(e.s % 60), title: e.t, c: e.c }) }
     }
     const agendaList = (parent, count) => {
       let last = ''
       // 다음 일정(오늘 아직 안 지난 첫 일정) 강조
       const nowHM = pad(new Date().getHours()) + ':' + pad(new Date().getMinutes())
-      const nextA = agenda.find((a) => !a.task && (a.k > today || (a.k === today && (a.time === 'ALL' || a.time >= nowHM))))
+      const nextA = agenda.find((a) => a.k > today || (a.k === today && (a.time === '종일' || a.time >= nowHM)))
       for (const a of agenda.slice(0, count)) {
-        if (a.k !== last) { last = a.k; const h = parent.addStack(); t(h, a.k === today ? 'TODAY' : DAY[a.dt.getDay()] + ' ' + a.dt.getDate(), label(8), a.k === today ? GOLD : SOFT); h.addSpacer(); parent.addSpacer(3) }
+        if (a.k !== last) { last = a.k; const h = parent.addStack(); t(h, a.k === today ? 'TODAY' : DAY[a.dt.getDay()] + ' ' + (a.dt.getMonth() + 1) + '/' + a.dt.getDate(), label(8), a.k === today ? GOLD : SOFT); h.addSpacer(); parent.addSpacer(3) }
         const r = parent.addStack(); r.centerAlignContent(); r.spacing = 8
         const hot = a === nextA
         const tm = r.addStack(); tm.size = new Size(34, 0); t(tm, a.time, hot ? label(10) : tw(10), hot ? GOLD : SOFT); tm.addSpacer()
-        t(r, a.title, hot ? F(fam === 'large' ? 14 : 13, 'Medium') : tw(fam === 'large' ? 14 : 13), a.task ? SOFT : INK).minimumScaleFactor = 0.85; r.addSpacer()
+        const bar = r.addStack(); bar.size = new Size(2, 12); bar.cornerRadius = 1; bar.backgroundColor = a.c ? new Color(a.c) : RULE
+        t(r, a.title, hot ? F(fam === 'large' ? 14 : 13, 'Medium') : tw(fam === 'large' ? 14 : 13), INK).minimumScaleFactor = 0.85; r.addSpacer()
         parent.addSpacer(5)
       }
-      if (!agenda.length) t(parent, 'No plans.', tw(13), SOFT)
+      if (!agenda.length) t(parent, '다가오는 일정 없음', tw(13), SOFT)
     }
     const h = w.addStack(); h.centerAlignContent(); t(h, MON[m] + ' ' + y, label(9), SOFT); h.addSpacer(); if (fam !== 'small') t(h, dateStr, label(8), SOFT)
     w.addSpacer(8)
@@ -586,9 +585,9 @@ if (!data) {
       const R = row.addStack(); R.layoutVertically(); agendaList(R, 4); R.addSpacer()
       row.addSpacer()
     } else {
-      grid(w, (inner - 6 * 4) / 7, rows > 5 ? 23 : 26, 3, 10)
+      grid(w, (inner - 6 * 4) / 7, rows > 5 ? 21 : 24, 3, 10)
       w.addSpacer(4); rule(w, inner); w.addSpacer(8)
-      agendaList(w, rows > 5 ? 3 : 4)
+      agendaList(w, fam === 'extraLarge' ? 8 : rows > 5 ? 4 : 5)
     }
   } else if (KIND === 'quote') {
     // ── 다짐 ──
