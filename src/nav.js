@@ -3,6 +3,8 @@ import { useSyncExternalStore } from 'react'
 // 탭·세그먼트 탐색 상태 (기기별 localStorage)
 const load = () => { try { return JSON.parse(localStorage.getItem('nav')) || null } catch { return null } }
 let nav = load() || { tab: 'home', seg: {}, params: {} }
+// 할 일 기본 보기를 '일별'로 (한 번만 전환, 이후엔 마지막 선택 유지)
+try { if (!localStorage.getItem('navDay')) { nav.seg = { ...(nav.seg || {}), tasks: 'day' }; localStorage.setItem('navDay', '1') } } catch {}
 const L = new Set()
 const save = () => { try { localStorage.setItem('nav', JSON.stringify(nav)) } catch {} }
 
@@ -20,7 +22,7 @@ export const EXTRA = [
 
 export const SEGMENTS = {
   planner: [['today', '오늘'], ['week', '주'], ['month', '월'], ['timetable', '시간표'], ['circle', '원형', 'planning'], ['grid', '10분', 'planning']],
-  tasks: [['list', '리스트'], ['matrix', '매트릭스', 'matrix'], ['kanban', '칸반', 'kanban'], ['gantt', '간트', 'gantt'], ['table', '표', 'db'], ['archive', '보관함']],
+  tasks: [['day', '일별'], ['list', '리스트'], ['matrix', '매트릭스', 'matrix'], ['kanban', '칸반', 'kanban'], ['gantt', '간트', 'gantt'], ['table', '표', 'db'], ['archive', '보관함']],
   study: [['log', '기록 입력'], ['timer', '타이머'], ['records', '통계'], ['review', '복습'], ['progress', '진도'], ['plan', '계획', 'planning']],
   notes: [['daily', '데일리'], ['pages', '페이지'], ['hub', '허브'], ['graph', '그래프', 'graph'], ['library', '자료']],
 }

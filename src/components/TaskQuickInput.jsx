@@ -9,7 +9,7 @@ const DATES = [['', '날짜 없음'], ['today', '오늘'], ['tomorrow', '내일'
 const dateOf = (k) => k === 'today' ? today() : k === 'tomorrow' ? addDays(today(), 1) : k === 'week' ? addDays(weekStart(today()), 6) : null
 
 // 한 줄 입력 + 칩: 엔터로 연속 추가, 여러 줄 붙여넣기 → 여러 할 일
-export default function TaskQuickInput({ defaults = {}, defaultDate = '', autoFocus, onAdded }) {
+export default function TaskQuickInput({ defaults = {}, defaultDate = '', fixedDate = null, autoFocus, onAdded }) {
   const subjects = useColl('subjects')
   const [text, setText] = useState('')
   const [dk, setDk] = useState(defaultDate)
@@ -20,7 +20,7 @@ export default function TaskQuickInput({ defaults = {}, defaultDate = '', autoFo
   const make = (line) => {
     const p = parseQuick(line)
     if (!p.title) return null
-    const due = p.date || dateOf(dk) || defaults.due || null
+    const due = p.date || fixedDate || dateOf(dk) || defaults.due || null
     // 날짜·프로젝트 없이 적은 할 일은 받은 편지함으로
     return addTask({ ...defaults, inbox: defaults.inbox ?? (!due && !defaults.projectId), title: p.title, due, dueTime: p.time, subjectId: p.subjectId || sub, priority: star ? 3 : defaults.priority || 0, order: Date.now() * -1 })
   }
@@ -49,8 +49,8 @@ export default function TaskQuickInput({ defaults = {}, defaultDate = '', autoFo
         <button className="btn primary" type="submit" aria-label="추가"><Icon name="plus" size={16} /></button>
       </div>
       <div className="tqi-chips">
-        {DATES.map(([k, l]) => <button key={k} type="button" className={'chip' + (dk === k ? ' on' : '')} onClick={() => setDk(k)}>{l}</button>)}
-        <span className="tqi-sep" />
+        {!fixedDate && <>{DATES.map(([k, l]) => <button key={k} type="button" className={'chip' + (dk === k ? ' on' : '')} onClick={() => setDk(k)}>{l}</button>)}
+        <span className="tqi-sep" /></>}
         <button type="button" className={'chip' + (star ? ' on' : '')} onClick={() => setStar(!star)}>★ 중요</button>
         <span className="tqi-sep" />
         {subjects.map((s) => (

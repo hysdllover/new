@@ -461,3 +461,13 @@ button.greet { display: block; width: 100%; text-align: left; }
 .tpl b { font-weight: 500; font-size: .92em; max-width: 100%; }
 .tpl-i { font-size: 18px; }
 .tpl-x { position: absolute; top: 4px; right: 4px; }
+
+/* 할 일 · 일별 */
+.day-title b { font-weight: 500; font-size: 1.05em; }
+.day-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.day-cell { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 0 4px; border-radius: 10px; min-width: 0; }
+.day-cell b { font-weight: 400; font-size: 1em; }
+.day-cell.today b { color: var(--accent); font-weight: 600; }
+.day-cell.on { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.day-cell .day-n { font-size: 10px; color: var(--muted); min-height: 12px; }
+.day-cell .sun { color: var(--c4); } .day-cell .sat { color: var(--accent); }
