@@ -250,7 +250,7 @@ export function CalEmbed({ onPick }) {
         {['월', '화', '수', '목', '금', '토', '일'].map((w) => <span key={w} className="tiny muted">{w}</span>)}
         {Array.from({ length: 42 }, (_, i) => {
           const d = addDays(start, i)
-          const has = events.some((e) => e.date === d) || tasks.some((t) => t.due === d && !t.done)
+          const has = events.some((e) => e.date === d)
           return (
             <button key={d} className={'mc-d' + (parseYmd(d).getMonth() !== mo ? ' out' : '') + (d === today() ? ' is-today' : '')}
               onClick={() => onPick ? onPick(d) : (setParams('planner', { date: d }), go('planner', 'today'))}>

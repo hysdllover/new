@@ -573,7 +573,7 @@ function WidgetPreview() {
   // 캘린더 유형: 이번 달 + 다가오는 일정
   const MONS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
   const ymdOf = (x) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`
-  const hasPlan = (k) => eventsOn(k).length > 0 || tasks.some((t) => t.due === k && !t.done && !t.archived)
+  const hasPlan = (k) => eventsOn(k).length > 0 // 캘린더 위젯: 일정만
   const calGrid = (cell, cellH, gap, wd) => {
     const y = now.getFullYear(), mo = now.getMonth(), n = new Date(y, mo + 1, 0).getDate(), ws = st.weekStart ?? 1
     const lead = (new Date(y, mo, 1).getDay() - ws + 7) % 7
@@ -588,15 +588,14 @@ function WidgetPreview() {
   }
   const agenda = (count) => {
     const out = []
-    for (let i = 0; i < 14 && out.length < count; i++) {
+    for (let i = 0; i < 30 && out.length < count; i++) {
       const x = new Date(); x.setDate(x.getDate() + i); const k = ymdOf(x)
-      for (const e of eventsOn(k)) out.push({ k, x, time: e.start == null ? 'ALL' : fmtTime(e.start), title: e.title })
-      for (const t of tasks.filter((t) => t.due === k && !t.done && !t.archived)) out.push({ k, x, time: t.dueTime == null ? '–' : fmtTime(t.dueTime), title: t.title, task: true })
+      for (const e of eventsOn(k)) { if (i === 0 && e.start != null && (e.end ?? e.start + 60) <= nm) continue; out.push({ k, x, time: e.start == null ? '종일' : fmtTime(e.start), title: e.title, c: e.color }) }
     }
     let last = ''
-    return <>{out.slice(0, count).map((a, i) => <div key={i}>{a.k !== last && (last = a.k) && <div className={'dw-cap' + (a.k === d ? ' dw-gold' : '')} style={{ margin: '2px 0 3px' }}>{a.k === d ? 'TODAY' : ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][a.x.getDay()] + ' ' + a.x.getDate()}</div>}
-      <div className="dw-todo"><span className="dw-soft" style={{ width: 30, flexShrink: 0 }}>{a.time}</span><span className="ellipsis" style={a.task ? { color: 'var(--soft)' } : null}>{a.title}</span></div></div>)}
-      {!out.length && <div className="dw-soft">No plans.</div>}</>
+    return <>{out.slice(0, count).map((a, i) => <div key={i}>{a.k !== last && (last = a.k) && <div className={'dw-cap' + (a.k === d ? ' dw-gold' : '')} style={{ margin: '2px 0 3px' }}>{a.k === d ? 'TODAY' : ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][a.x.getDay()] + ' ' + (a.x.getMonth() + 1) + '/' + a.x.getDate()}</div>}
+      <div className="dw-todo"><span className="dw-soft" style={{ width: 30, flexShrink: 0 }}>{a.time}</span><i style={{ width: 2, height: 12, borderRadius: 1, flexShrink: 0, background: a.c || 'var(--rule)' }} /><span className="ellipsis">{a.title}</span></div></div>)}
+      {!out.length && <div className="dw-soft">다가오는 일정 없음</div>}</>
   }
   const V = {
     '': [
@@ -634,7 +633,7 @@ function WidgetPreview() {
     캘린더: [
       <><div className="dw-cap">{MONS[now.getMonth()]} {now.getFullYear()}</div><div style={{ height: 6 }} />{calGrid(16, 13, 2, true)}</>,
       <><div className="col" style={{ gap: 0, flexShrink: 0 }}><div className="dw-cap">{MONS[now.getMonth()]} {now.getFullYear()}</div><div style={{ height: 6 }} />{calGrid(17, 14, 2, false)}</div><div className="dw-vr" /><div className="col" style={{ gap: 0, flex: 1, minWidth: 0 }}>{agenda(4)}</div></>,
-      <><div className="row between"><span className="dw-cap">{MONS[now.getMonth()]} {now.getFullYear()}</span><span className="dw-cap">{dateStr}</span></div><div style={{ height: 6 }} />{calGrid(39, 24, 3, true)}<div className="dw-hr" style={{ margin: '6px 0 8px' }} />{agenda(3)}</>,
+      <><div className="row between"><span className="dw-cap">{MONS[now.getMonth()]} {now.getFullYear()}</span><span className="dw-cap">{dateStr}</span></div><div style={{ height: 6 }} />{calGrid(39, 24, 3, true)}<div className="dw-hr" style={{ margin: '6px 0 8px' }} />{agenda(5)}</>,
     ],
     시간표: [6, 5, 10].map((n, vi) => { const cls = classesOn(d); return <><div className="row between"><span className="dw-cap sp">CLASSES</span>{vi > 0 && <span className="dw-cap">{dateStr}</span>}</div><div style={{ height: 8 }} />
       {cls.slice(0, n).map((c) => <div key={c.id} className="dw-todo" style={c.end <= nm ? { color: 'var(--soft)' } : c.start <= nm ? { color: 'var(--gold)' } : null}><span className="dw-soft" style={{ width: 12 }}>{c.period}</span><span className="ellipsis grow">{c.title}</span>{vi > 0 && c.room && <span className="dw-soft">{c.room}</span>}<span className="dw-soft">{fmtTime(c.start)}</span></div>)}
