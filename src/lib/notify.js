@@ -1,7 +1,7 @@
 import { list, settings, find } from '../store/store.js'
 import { today, nowMin, fmtTime, parseTime } from '../engine/date.js'
 import { eventsOn } from '../engine/scheduler.js'
-import { reminderTimes, reminderBody, absMinutes } from '../engine/reminders.js'
+import { reminderTimes, reminderBody, absMinutes, digestDue, digestText } from '../engine/reminders.js'
 import { toast } from '../components/ui.jsx'
 import { carryOver, autoTemplate } from '../store/actions.js'
 
@@ -34,7 +34,11 @@ export function checkReminders() {
     if (m >= at && m < e.start) fire(`ev:${e.id}:${d}`, e.title, `${fmtTime(e.start)} 시작${e.location ? ' · ' + e.location : ''}`)
   }
   const nowAbs = absMinutes(d, m)
-  for (const t of list('tasks')) {
+  const dg = settings().digest
+  if (dg?.on) {
+    const x = digestDue(list('tasks'), d, m, dg.times, 30)
+    if (x?.items.length) { const tx = digestText(x.items); fire(x.key, tx.title, tx.body) }
+  } else for (const t of list('tasks')) {
     for (const r of reminderTimes(t)) if (nowAbs >= r.at && nowAbs < r.at + 30) fire(`task:${t.id}:${t.due}:${r.off}`, t.title, reminderBody(t, r.off))
   }
   for (const med of list('meds')) {

@@ -5,6 +5,7 @@ import { useColl, useSettings } from './store/store.js'
 import { useSyncStatus, syncNow } from './sync/sync.js'
 import { fmtDate, today } from './engine/date.js'
 import QuickAdd from './components/QuickAdd.jsx'
+import { useResume } from './lib/resume.js'
 import CommandPalette from './components/CommandPalette.jsx'
 import TaskEditor from './components/TaskEditor.jsx'
 import EventEditor from './components/EventEditor.jsx'
@@ -47,6 +48,7 @@ export default function App() {
   const extra = EXTRA.filter((x) => !x.module || st.modules[x.module] !== false)
   const moreMenu = (e) => openMenu(e, [
     ...extra.map((x) => ({ label: x.label, icon: x.icon, onClick: () => go(x.id) })),
+    { label: '기록에 물어보기', icon: 'search', onClick: () => import('./components/AskSheet.jsx').then((m) => openSheet(() => <m.default />, { title: '내 기록에 물어보기' })) },
     { label: '보관함·휴지통', icon: 'archive', onClick: () => go('tasks', 'archive') },
     { label: '인쇄 (A4)', icon: 'print', onClick: () => window.print() },
   ])
@@ -91,6 +93,7 @@ export default function App() {
             </div>
           </div>
         )}
+        <ResumeBanner />
         <main className="content" id="content">
           <div className="content-inner"><View seg={seg} params={nav.params[tab] || {}} /></div>
         </main>
@@ -132,3 +135,15 @@ const fabPress = {
   onContextMenu: (e) => e.preventDefault(),
 }
 function openSearch() { openSheet((close) => <CommandPalette close={close} />, { title: null, full: true }) }
+
+// 다른 기기에서 보던 화면 이어 보기
+function ResumeBanner() {
+  const r = useResume()
+  if (!r) return null
+  return (
+    <div className="resume-bar no-print">
+      <button className="grow ellipsis" style={{ textAlign: 'left' }} onClick={r.open}><span className="muted">{r.dev}에서 보던</span> <b>{r.label}</b> <span className="muted">이어 보기 →</span></button>
+      <button className="icon-btn" aria-label="닫기" onClick={r.dismiss}><Icon name="close" size={12} /></button>
+    </div>
+  )
+}

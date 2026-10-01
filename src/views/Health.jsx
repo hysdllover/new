@@ -11,6 +11,7 @@ export default function Health() {
     <div className="grid two">
       <Condition />
       <Meds />
+      <HealthLinkCard />
     </div>
   )
 }
@@ -39,6 +40,7 @@ function Condition() {
   return (
     <Card title="오늘 컨디션">
       <div className="form">
+        {c.steps != null && <div className="small muted">걸음 {c.steps.toLocaleString()}{c.healthAt ? ' · 건강 앱에서 가져옴' : ''}</div>}
         <Field label={`수면 ${c.sleep ?? '-'}시간`}><input type="range" min="0" max="12" step="0.5" value={c.sleep ?? 7} onChange={(e) => up({ sleep: +e.target.value })} /></Field>
         <Field label="기분"><MoodPicker value={c.mood} onChange={(v) => up({ mood: v })} /></Field>
         <Field label="에너지">
@@ -104,6 +106,27 @@ function Meds() {
         ))}
       </div>
       <AddInput placeholder="약·영양제 추가" onAdd={(name) => { const r = put('meds', { name, times: ['08:00'], active: true }); setEdit(r.id) }} />
+    </Card>
+  )
+}
+
+// 건강 앱 연동 안내 (단축어 자동화)
+export function HealthLinkCard() {
+  const url = location.origin + location.pathname + '?health=1&sleep='
+  return (
+    <Card title="건강 앱에서 수면·걸음 가져오기">
+      <div className="small" style={{ lineHeight: 1.75 }}>
+        매일 아침 자동으로 어젯밤 수면 시간과 걸음 수를 오늘 컨디션에 넣어요 (단축어 자동화).<br />
+        1. <b>단축어</b> › 자동화 › 새로 만들기 › <b>특정 시간</b> (예: 매일 8:00) · <b>즉시 실행</b><br />
+        2. <b>건강 샘플 찾기</b>: 유형 ‘수면 분석’, 시작 날짜 ‘지난 1일’, 값 ‘수면 중’ → <b>계산 통계</b> 합계<br />
+        3. <b>건강 샘플 찾기</b>: 유형 ‘걸음’, 시작 날짜 ‘어제’ → <b>계산 통계</b> 합계 (선택)<br />
+        4. <b>텍스트</b>: 아래 주소 + 수면 합계 + <code>&amp;steps=</code> + 걸음 합계 → <b>URL 열기</b>
+      </div>
+      <div className="row" style={{ marginTop: 8 }}>
+        <input className="input grow" readOnly value={url} onFocus={(e) => e.target.select()} />
+        <button className="btn" onClick={async () => { try { await navigator.clipboard.writeText(url); toast('주소를 복사했어요') } catch { toast('주소를 길게 눌러 복사해 주세요') } }}>복사</button>
+      </div>
+      <div className="tiny muted" style={{ marginTop: 6 }}>수면 값은 시간·분·초 어느 단위든 알아서 바꿔요. 실행되면 앱이 잠깐 열리며 기록돼요.</div>
     </Card>
   )
 }

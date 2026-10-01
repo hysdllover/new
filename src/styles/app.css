@@ -237,3 +237,8 @@ input[type="color"] { width: 36px; height: 30px; border: 1px solid var(--line); 
 .sync-dot.ok { background: var(--ok); }
 .sync-dot.pending, .sync-dot.syncing { background: var(--warn); }
 .sync-dot.error { background: var(--danger); }
+/* 조용한 모드: 압박 주는 숫자·강조 숨김 */
+[data-calm] .cnt, [data-calm] .carry { display: none !important; }
+[data-calm] .badge.warn { background: color-mix(in srgb, var(--muted) 14%, transparent); color: var(--muted); }
+.resume-bar { display: flex; align-items: center; gap: 6px; margin: 0 16px 6px; padding: 7px 10px 7px 14px; border-radius: 12px; font-size: 13px; background: color-mix(in srgb, var(--accent) 9%, var(--surface)); }
+.resume-bar b { font-weight: 500; }
