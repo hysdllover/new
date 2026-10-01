@@ -8,7 +8,7 @@ import { useSyncStatus, connect, disconnect, syncNow, gistInfo, tokenExpiry, lis
 import { enablePush, disablePush, pushState, testLocal, isStandalone, pushSupported } from '../lib/push.js'
 import { buildScript, WIDGET_KINDS } from '../lib/scriptable.js'
 import { pickQuote } from '../lib/quote.js'
-import { eventsOn } from '../engine/scheduler.js'
+import { eventsOn, classesOn } from '../engine/scheduler.js'
 import { sortTasks } from './tasks/filter.js'
 import { download } from '../lib/files.js'
 import { useMyFonts, addFont, removeFont, fontFamily, loadAllFonts, SYNC_FONT_MAX } from '../lib/fonts.js'
@@ -480,6 +480,7 @@ function WidgetPreview() {
   const qs = [...quotes].sort((a, b) => a.id.localeCompare(b.id))
   const quote = pickQuote(qs)?.text ?? null
   const now = new Date()
+  const nm = now.getHours() * 60 + now.getMinutes()
   const dateStr = `${['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][now.getDay()]} · ${now.getDate()} ${['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][now.getMonth()]}`
   const hm = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`
   const big = (size) => (
@@ -594,8 +595,48 @@ function WidgetPreview() {
       <><div className="col" style={{ gap: 0, flexShrink: 0 }}><div className="dw-cap">{MONS[now.getMonth()]} {now.getFullYear()}</div><div style={{ height: 6 }} />{calGrid(17, 14, 2, false)}</div><div className="dw-vr" /><div className="col" style={{ gap: 0, flex: 1, minWidth: 0 }}>{agenda(4)}</div></>,
       <><div className="row between"><span className="dw-cap">{MONS[now.getMonth()]} {now.getFullYear()}</span><span className="dw-cap">{dateStr}</span></div><div style={{ height: 6 }} />{calGrid(39, 24, 3, true)}<div className="dw-hr" style={{ margin: '6px 0 8px' }} />{agenda(3)}</>,
     ],
+    시간표: [6, 5, 10].map((n, vi) => { const cls = classesOn(d); return <><div className="row between"><span className="dw-cap sp">CLASSES</span>{vi > 0 && <span className="dw-cap">{dateStr}</span>}</div><div style={{ height: 8 }} />
+      {cls.slice(0, n).map((c) => <div key={c.id} className="dw-todo" style={c.end <= nm ? { color: 'var(--soft)' } : c.start <= nm ? { color: 'var(--gold)' } : null}><span className="dw-soft" style={{ width: 12 }}>{c.period}</span><span className="ellipsis grow">{c.title}</span>{vi > 0 && c.room && <span className="dw-soft">{c.room}</span>}<span className="dw-soft">{fmtTime(c.start)}</span></div>)}
+      {!cls.length && <div className="dw-soft">오늘은 수업이 없어요</div>}</> }),
     다짐: [14, 17, 22].map((sz) => <><div className="dw-cap">{dateStr}</div><div className="grow" /><div style={{ fontSize: sz, lineHeight: 1.45 }}>{quote || '앱에서 다짐을 적어 보세요'}</div><div className="grow" />{ddRow}</>),
   }
+  // 잠금 화면 미리보기 — 위젯 스크립트(scriptable.js)의 잠금 화면 분기와 같은 내용
+  const bar = (r, n) => { const k = Math.round(Math.max(0, Math.min(1, r)) * n); return '▰'.repeat(k) + '▱'.repeat(n - k) }
+  const B = { fontSize: 22, fontWeight: 100 }, S = { fontSize: 8 }, X = { fontSize: 7, letterSpacing: '-1px' }, DIM = { opacity: .55 }, ROW = { display: 'flex', justifyContent: 'space-between', gap: 6, width: '100%', minWidth: 0 }
+  const L = (() => {
+    const left = items.filter((t) => !t.done)
+    if (kind === '디데이') return { c: [[dd ? (ddN === 0 ? 'D' : ddN) : '–', B], ['D-DAY', S]], r: [[ddTxt || 'No D-day', { fontSize: 24, fontWeight: 100 }], [dd ? `${dd.title}  ${dd.date.slice(5).replace('-', '.')}` : ''], [ddNext ? `${ddNext.title} D-${Math.round((new Date(ddNext.date) - new Date(d)) / 86400000)}` : '', { ...DIM, fontSize: 10 }]], i: dd ? `${ddTxt} ${dd.title}` : 'No D-day' }
+    if (kind === '공부') return { c: [[hm(mins), { fontSize: 14 }], [pct + '%', S], [bar(mins / goal, 5), X]], r: [[<><b>{hm(mins)}</b> / {hm(goal)}<span className="grow" />{pct}%</>], [bar(mins / goal, 14), X], [<span style={ROW}><span>이번 주 {hm(sw.week)}</span><span>{sw.streak}일 연속</span></span>]], i: `공부 ${hm(mins)} / ${hm(goal)} · ${pct}%` }
+    if (kind === '할일') return { c: [[left.length, { fontSize: 24, fontWeight: 100 }], ['할 일', S], [`${done}/${done + left.length}`, S]], r: [[<span style={{ ...ROW, fontSize: 8, letterSpacing: 2 }}><span>TODAY</span><span>{done}/{items.length}</span></span>], ...items.slice(0, 3).map((t) => [(t.done ? '✓ ' : '– ') + t.title, t.done ? DIM : null]), ...(items.length ? [] : [['All clear.']])], i: left.length ? `할 일 ${left.length}개 · ${left[0].title}` : '오늘 할 일 끝 ✓' }
+    if (kind === '달력') {
+      const byDay = {}; for (const x of sessions) byDay[x.date] = (byDay[x.date] || 0) + x.dur
+      const pre = d.slice(0, 7), mv = Object.entries(byDay).filter(([k]) => k.startsWith(pre)).map(([, v]) => v)
+      const total = mv.reduce((a, v) => a + v, 0), days = mv.filter(Boolean).length, hit = mv.filter((v) => v >= goal).length
+      const mx = Math.max(goal, ...sw.last7.map((x) => x.m)), BL = '▁▂▃▄▅▆▇█'
+      const spark = sw.last7.map((x) => (x.m ? BL[Math.min(7, Math.round((x.m / mx) * 7))] : '·')).join('')
+      return { c: [[days, B], ['DAYS', S], ['✓' + hit, S]], r: [[<span style={ROW}><span>{MONS[now.getMonth()]} · {hm(total)}</span><span style={{ fontSize: 9 }}>{days}일 · 달성 {hit}</span></span>], [spark, { fontSize: 16, letterSpacing: 2 }], [<span style={{ ...ROW, fontSize: 8 }}><span>최근 7일</span><span>평균 {hm(sw.avg)}</span></span>]], i: `${MONS[now.getMonth()]} ${hm(total)} · ${days}일` }
+    }
+    if (kind === '캘린더') {
+      const ag = []
+      for (let i = 0; i < 14 && ag.length < 6; i++) {
+        const x = new Date(); x.setDate(x.getDate() + i); const k = ymdOf(x)
+        for (const e of eventsOn(k)) if (!(i === 0 && e.start != null && (e.end ?? e.start + 60) <= nm)) ag.push({ i, s: e.start, title: e.title })
+        for (const t of tasks.filter((t) => t.due === k && !t.done && !t.archived && t.dueTime != null)) ag.push({ i, s: t.dueTime, title: '☐ ' + t.title })
+      }
+      ag.sort((a, b) => a.i - b.i || (a.s ?? -1) - (b.s ?? -1))
+      const wd = (i) => ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][(now.getDay() + i) % 7]
+      const when = (a) => (a.i === 0 && a.s == null ? '오늘' : (a.i === 0 ? '' : a.i === 1 ? '내일 ' : wd(a.i) + ' ') + (a.s == null ? '종일' : fmtTime(a.s)))
+      const nx = ag.find((a) => a.i > 0 || a.s == null || a.s >= nm) || ag[0]
+      return { c: nx ? [[nx.s == null ? '종일' : fmtTime(nx.s), { fontSize: 13 }], [nx.title, S], [nx.i ? (nx.i === 1 ? '내일' : wd(nx.i)) : 'TODAY', { fontSize: 6 }]] : [['—', B]], r: ag.length ? ag.slice(0, 3).map((a) => [<span style={ROW}><span className="ellipsis">{a.title}</span><span style={{ fontSize: 8, flexShrink: 0 }}>{when(a)}</span></span>]) : [['다가오는 일정 없음']], i: nx ? (nx.i === 0 && nx.s == null ? '' : '다음 ') + when(nx) + ' ' + nx.title : '다가오는 일정 없음' }
+    }
+    if (kind === '다짐') { const q = quote || '앱에서 다짐을 적어 보세요'; return { c: [[q, { fontSize: 9, textAlign: 'center', padding: '0 6px', lineHeight: 1.2 }]], r: [[q, { fontSize: 12, whiteSpace: 'normal' }], [dd ? `${ddTxt} ${dd.title}` : '', { ...DIM, fontSize: 8 }]], i: q } }
+    if (kind === '시간표') {
+      const cls = classesOn(d), cur = cls.find((c) => c.start <= nm && c.end > nm), next = cls.find((c) => c.start > nm), c = cur || next
+      const after = c ? cls.filter((x) => x.start > c.start).slice(0, 3).map((x) => x.title).join(' · ') : ''
+      return { c: c ? [[c.period + '교시', S], [c.title, { fontSize: 13 }], [cur ? '~' + fmtTime(c.end) : fmtTime(c.start), S]] : [[cls.length ? '끝' : '—', B]], r: [[<span style={{ ...ROW, fontSize: 8 }}><span>{cur ? `지금 ${cur.period}교시` : next ? `다음 ${next.period}교시` : '시간표'}</span><span>{c ? `${fmtTime(c.start)}–${fmtTime(c.end)}` : ''}</span></span>], [c ? c.title : cls.length ? '오늘 수업 끝' : '오늘 수업 없음', { fontSize: 20, fontWeight: 100 }], [c?.room ? c.room + (after ? ' · ' + after : '') : after, { fontSize: 10 }]], i: c ? (cur ? `${c.period}교시 ${c.title} ~${fmtTime(c.end)}` : `다음 ${c.period}교시 ${c.title} ${fmtTime(c.start)}`) : cls.length ? '오늘 수업 끝' : '오늘 수업 없음' }
+    }
+    return { c: [[hm(mins), { fontSize: 14 }], [pct + '%', S], [bar(mins / goal, 5), X]], r: [[<><b>{hm(mins)}</b> / {hm(goal)}<span className="grow" />{ddTxt}</>], [bar(mins / goal, 14), X], [todo[0] ? '– ' + todo[0].title : dd?.title || 'All clear.']], i: hm(mins) + (dd ? ` · ${ddTxt} ${dd.title}` : '') }
+  })()
   const [vs, vm, vl] = V[kind]
   return (
     <>
@@ -608,16 +649,14 @@ function WidgetPreview() {
         <div className="dw dw-m" style={ff}>{vm}</div>
         <div className="dw dw-l" style={ff}>{vl}</div>
       </div>
+      <div className="tiny muted" style={{ marginTop: 8 }}>잠금 화면 · 원형 · 직사각형 · 한 줄 (Parameter 같음, 아이폰·아이패드 공통)</div>
       <div className="dw-lock" style={ff}>
-        {kind === '디데이' ? <>
-          <div className="dw-lc"><b style={{ fontSize: 22, fontWeight: 100 }}>{dd ? (ddN === 0 ? 'D' : ddN) : '–'}</b><span>{dd?.title || 'No D-day'}</span></div>
-          <div className="dw-lr"><div><b style={{ fontSize: 24 }}>{ddTxt || 'No D-day'}</b></div>{dd && <div>{dd.title}  <span style={{ opacity: .7 }}>{dd.date.slice(5).replace('-', '.')}</span></div>}{ddNext && <div style={{ opacity: .7, fontSize: 10 }}>{ddNext.title} D-{Math.round((new Date(ddNext.date) - new Date(d)) / 86400000)}</div>}</div>
-          <div className="dw-li">{dd ? `${ddTxt} ${dd.title}` : 'No D-day'}</div>
-        </> : <>
-        <div className="dw-lc"><b>{hm(mins)}</b><span>{pct}%</span><svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="27" /><circle cx="30" cy="30" r="27" className="on" style={{ strokeDasharray: `${2 * Math.PI * 27 * pct / 100} 999` }} /></svg></div>
-        <div className="dw-lr"><div><b>{hm(mins)}</b> / {hm(goal)}<span className="grow" />{ddTxt}</div><div className="dw-line"><i style={{ width: pct + '%' }} /></div><div className="ellipsis">{todo[0] ? '– ' + todo[0].title : dd?.title || 'All clear.'}</div></div>
-        <div className="dw-li">{hm(mins)}{dd ? ` · ${ddTxt} ${dd.title}` : ''}</div>
-        </>}
+        <div className="dw-li">{['일', '월', '화', '수', '목', '금', '토'][now.getDay()]} {now.getMonth() + 1}월 {now.getDate()}일 · {L.i}</div>
+        <div className="dw-clock">{now.getHours()}:{String(now.getMinutes()).padStart(2, '0')}</div>
+        <div className="row" style={{ gap: 12, alignItems: 'center' }}>
+          <div className="dw-lc">{L.c.map((x, k) => <span key={k} style={x[1]}>{x[0]}</span>)}</div>
+          <div className="dw-lr">{L.r.map((x, k) => <div key={k} style={x[1]}>{x[0]}</div>)}</div>
+        </div>
       </div>
     </>
   )

@@ -440,3 +440,9 @@ button.greet { display: block; width: 100%; text-align: left; }
 .lec-chip { height: 40px; border-radius: 8px; border: 1px solid var(--line); font-size: .85em; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; }
 .lec-chip small { font-size: .72em; color: var(--muted); }
 .lec-chip.on { background: color-mix(in srgb, var(--accent) 14%, var(--surface)); border-color: transparent; color: var(--accent); }
+.dw-lock { flex-direction: column; align-items: flex-start; gap: 6px; }
+.dw-clock { font-size: 56px; font-weight: 200; line-height: 1; margin: 0 0 6px; letter-spacing: -1px; }
+.dw-lc { overflow: hidden; text-align: center; }
+.dw-lc span { display: block; max-width: 54px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dw-lr > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dw-li { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
