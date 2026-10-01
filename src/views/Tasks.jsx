@@ -8,7 +8,10 @@ import { WeekGoalsCard } from '../components/WeekGoals.jsx'
 import { SMART, applyFilter, quadrant, openCount } from './tasks/filter.js'
 import { setParams } from '../nav.js'
 import { longPress } from '../lib/drag.js'
-import { today, tsToYmd, tsToMin, weekStart, fmtDate, fmtTime, fmtDur } from '../engine/date.js'
+import { useRef } from 'react'
+import { today, tsToYmd, tsToMin, weekStart, fmtDate, fmtTime, fmtDur, addDays, parseYmd, WD } from '../engine/date.js'
+import { useSettings } from '../store/store.js'
+import { doneToday } from './tasks/filter.js'
 import Gantt from './tasks/Gantt.jsx'
 import Archive from './tasks/Archive.jsx'
 import DBView from './tasks/DBView.jsx'
@@ -19,7 +22,8 @@ export default function Tasks({ seg, params }) {
   if (seg === 'gantt') return <Gantt />
   if (seg === 'table') return <DBView />
   if (seg === 'archive') return <Archive />
-  return <TaskList params={params} />
+  if (seg === 'list') return <TaskList params={params} />
+  return <DayView params={params} />
 }
 
 function TaskList({ params }) {
@@ -106,6 +110,97 @@ function TaskList({ params }) {
         </div>
       </div>)}
       {manual && items.length > 1 && <div className="tiny muted center">길게 눌러 순서를 바꿀 수 있어요</div>}
+    </div>
+  )
+}
+
+// 일별 보기: 날짜를 넘기며 그날 할 일만 (시간 있는 것은 시간순, 나머지는 내가 정한 순서)
+function DayView({ params }) {
+  const tasks = useColl('tasks'), subjects = useColl('subjects'), projects = useColl('projects')
+  const st = useSettings()
+  const t0 = today(), date = params.day || t0
+  const go = (d) => setParams('tasks', { day: d === t0 ? null : d })
+  const isToday = date === t0
+  const live = tasks.filter((t) => !t.archived)
+  const ofDay = (d) => live.filter((t) => t.due === d) // 완료한 것도 줄 그은 채 제자리
+  const order = (a, b) => (a.dueTime == null) - (b.dueTime == null) || (a.dueTime ?? 0) - (b.dueTime ?? 0) || (a.order ?? 0) - (b.order ?? 0)
+  const items = ofDay(date).sort(order)
+  // 오늘: 지난 날짜의 남은 할 일 (오늘 완료한 것은 줄 그은 채 제자리)
+  const overdue = isToday ? live.filter((t) => t.due && t.due < t0 && (!t.done || doneToday(t))).sort((a, b) => a.due.localeCompare(b.due) || order(a, b)) : []
+  const ws = weekStart(date, st.weekStart ?? 1)
+  const strip = Array.from({ length: 7 }, (_, i) => addDays(ws, i))
+  const dragFor = (t) => t.dueTime != null ? {} : longPress(() => ({
+    label: t.title,
+    onDrop: (zone, pt) => {
+      const target = zone.dataset.drop
+      if (!target?.startsWith('task:')) return
+      const tid = target.slice(5)
+      if (tid === t.id) return
+      const idx = items.findIndex((x) => x.id === tid)
+      if (idx < 0) return
+      const r = zone.getBoundingClientRect(), before = pt.y < r.top + r.height / 2
+      const nb = before ? items[idx - 1] : items[idx + 1]
+      const o = items[idx].order ?? 0
+      const other = nb && nb.id !== t.id ? (nb.order ?? 0) : o + (before ? -1000 : 1000)
+      patch('tasks', t.id, { order: (o + other) / 2 })
+    },
+  }))
+  // 좌우로 밀어 날짜 넘기기
+  const sw = useRef(null)
+  const onTouchStart = (e) => { const p = e.touches[0]; sw.current = { x: p.clientX, y: p.clientY } }
+  const onTouchEnd = (e) => {
+    const s = sw.current; sw.current = null
+    if (!s) return
+    const p = e.changedTouches[0], dx = p.clientX - s.x, dy = p.clientY - s.y
+    if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.8) go(addDays(date, dx < 0 ? 1 : -1))
+  }
+  const rel = (d) => { const n = Math.round((parseYmd(d) - parseYmd(t0)) / 86400000); return n === 0 ? '오늘' : n === 1 ? '내일' : n === -1 ? '어제' : n === 2 ? '모레' : null }
+  const left = items.filter((t) => !t.done).length
+  const row = (t) => <div key={t.id} data-drop={'task:' + t.id}><TaskItem t={t} subjects={subjects} projects={projects} drag={dragFor(t)} /></div>
+  return (
+    <div className="col" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      <div className="row between">
+        <div className="row">
+          <button className="icon-btn" onClick={() => go(addDays(date, -1))} aria-label="전날"><Icon name="back" /></button>
+          <label className="date-label day-title">
+            <b>{rel(date) || fmtDate(date, { wd: false })}</b><span className="muted small"> {rel(date) ? fmtDate(date) : WD[parseYmd(date).getDay()] + '요일'}</span>
+            <input type="date" value={date} onChange={(e) => e.target.value && go(e.target.value)} />
+          </label>
+          <button className="icon-btn" onClick={() => go(addDays(date, 1))} aria-label="다음날"><Icon name="next" /></button>
+        </div>
+        {!isToday && <button className="btn sm" onClick={() => go(t0)}>오늘</button>}
+      </div>
+      <div className="day-strip">
+        {strip.map((d) => {
+          const n = ofDay(d).filter((t) => !t.done).length + (d === t0 ? live.filter((t) => t.due && t.due < t0 && !t.done).length : 0)
+          const wd = parseYmd(d).getDay()
+          return (
+            <button key={d} className={'day-cell' + (d === date ? ' on' : '') + (d === t0 ? ' today' : '')} onClick={() => go(d)}>
+              <span className={'tiny' + (wd === 0 ? ' sun' : wd === 6 ? ' sat' : '')}>{WD[wd]}</span>
+              <b>{parseYmd(d).getDate()}</b>
+              <span className="day-n">{n || ''}</span>
+            </button>
+          )
+        })}
+      </div>
+      <TaskQuickInput key={date} fixedDate={date} />
+      {overdue.length > 0 && (
+        <div className="card" style={{ padding: '6px 12px' }}>
+          <div className="row between" style={{ padding: '4px 0' }}><span className="small muted">지난 할 일 {overdue.filter((t) => !t.done).length}</span>
+            {overdue.some((t) => !t.done) && <button className="chip sm" onClick={() => { const ids = overdue.filter((t) => !t.done).map((t) => t.id); moveTasks(ids, 'today'); toast(`${ids.length}개를 오늘로 옮겼어요`) }}>모두 오늘로</button>}
+          </div>
+          <div className="list">{overdue.map((t) => <div key={t.id}><TaskItem t={t} subjects={subjects} projects={projects} /></div>)}</div>
+        </div>
+      )}
+      <div className="card" style={{ padding: '2px 12px' }}>
+        <div className="row between" style={{ padding: '8px 0 2px' }}><span className="small muted">{rel(date) || fmtDate(date)} 할 일 {items.length ? `${items.length - left}/${items.length}` : ''}</span></div>
+        <div className="list">
+          {items.map(row)}
+          {!items.length && <Empty>{isToday ? '오늘 할 일이 없어요' : '이날 할 일이 없어요'}</Empty>}
+        </div>
+      </div>
+      {left > 0 && <BulkMove ids={items.filter((t) => !t.done).map((t) => t.id)} />}
+      <div className="tiny muted center">좌우로 밀어 날짜 이동 · 길게 눌러 순서 변경 (시간 있는 할 일은 시간순)</div>
     </div>
   )
 }
