@@ -188,10 +188,11 @@ export function autoTemplate(date = today()) {
 }
 
 /* ── 공부 세션 ── */
-export function addSession({ subjectId, taskId, lectureId, start, end, kind = 'stopwatch' }) {
+export function addSession({ id, subjectId, taskId, lectureId, start, end, kind = 'stopwatch' }) {
   const dur = Math.round((end - start) / 60000)
   if (dur < 1) return null
-  const s = put('sessions', { subjectId, taskId, ...(lectureId ? { lectureId } : {}), start, end, dur, date: tsToYmd(start), kind })
+  // id 를 구간 시작으로 고정하면 두 기기가 같은 구간을 기록해도 하나로 합쳐짐
+  const s = put('sessions', { ...(id ? { id } : {}), subjectId, taskId, ...(lectureId ? { lectureId } : {}), start, end, dur, date: tsToYmd(start), kind })
   if (taskId) log(taskId, 'study', `${dur}분 공부`)
   return s
 }

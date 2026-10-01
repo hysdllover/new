@@ -377,6 +377,8 @@ export function startSync() {
   window.addEventListener('timer-change', () => { if (token()) syncNow({ flush: true }) })
   window.addEventListener('online', () => syncNow())
   setInterval(() => { if (document.visibilityState === 'visible') syncNow() }, 60000)
+  // 타이머가 도는 동안엔 다른 기기의 정지·기록을 빨리 받도록 20초마다
+  setInterval(() => { if (document.visibilityState === 'visible' && localStorage.getItem('timer')) syncNow() }, 20000)
   syncNow()
 }
 
