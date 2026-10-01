@@ -33,7 +33,7 @@ Promise.all([loadState(), initFonts(), restoreSync()]).then(async () => {
   // 공유(단축어)로 들어온 할 일: ?add=내용&url=링크 → 받은 편지함
   const q = new URLSearchParams(location.search)
   const added = q.get('add')?.trim(), link = q.get('url')?.trim()
-  if (added || link) {
+  if ((added || link) && q.get('note') == null) {
     let title = added || link
     const urlIn = link || (added?.match(/https?:\/\/\S+/) || [])[0]
     if (urlIn && title.includes(urlIn) && title.trim() !== urlIn) title = title.replace(urlIn, '').trim()
@@ -41,7 +41,16 @@ Promise.all([loadState(), initFonts(), restoreSync()]).then(async () => {
     go('tasks', 'list', { smart: 'inbox' })
     setTimeout(() => toast('받은 편지함에 추가했어요'), 600)
   }
-  if (target || added || link) history.replaceState(null, '', location.pathname + location.hash)
+  // 공유(단축어)로 들어온 노트: ?note=내용&url=링크&title=제목 → 새 노트 열기
+  const noteIn = q.get('note'), noteTitleIn = q.get('title') || ''
+  if (noteIn != null && (noteIn.trim() || link)) {
+    const { noteFromShare } = await import('./lib/notes.js')
+    const { openNote } = await import('./nav.js')
+    const n = noteFromShare({ text: noteIn, url: link || '', title: noteTitleIn })
+    openNote(n.id)
+    setTimeout(() => toast('노트로 저장했어요'), 600)
+  }
+  if (target || added || link || noteIn != null) history.replaceState(null, '', location.pathname + location.hash)
   createRoot(document.getElementById('root')).render(<StrictMode><Root /></StrictMode>)
   startServices()
   startSync()

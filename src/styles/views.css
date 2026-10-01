@@ -451,3 +451,13 @@ button.greet { display: block; width: 100%; text-align: left; }
 .dw-lbar b { display: block; height: 100%; background: #fff; border-radius: 1px; }
 .dw-lspark { display: flex; align-items: flex-end; gap: 5px; height: 18px; width: 150px; margin: 2px 0; }
 .dw-lspark i { width: 17px; background: #fff; border-radius: 1px; }
+/* 위젯 글자 크기 미리보기: 내용만 확대·축소 (위젯 칸 크기는 그대로) */
+.dw-in { zoom: var(--dw-scale, 1); width: calc(100% / var(--dw-scale, 1)); height: calc(100% / var(--dw-scale, 1)); display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.dw-m .dw-in { flex-direction: row; gap: 16px; }
+
+/* 노트 템플릿 */
+.tpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.tpl { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; text-align: left; background: var(--surface); cursor: pointer; min-width: 0; }
+.tpl b { font-weight: 500; font-size: .92em; max-width: 100%; }
+.tpl-i { font-size: 18px; }
+.tpl-x { position: absolute; top: 4px; right: 4px; }

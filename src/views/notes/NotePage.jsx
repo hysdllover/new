@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { useRec, useColl, patch, remove, restore } from '../../store/store.js'
 import { addReview } from '../../store/actions.js'
 import BlockEditor from '../../components/BlockEditor.jsx'
-import { Icon, openMenu, toast, Seg, AutoText, openDetail } from '../../components/ui.jsx'
+import { Icon, openMenu, toast, Seg, AutoText, openDetail, openSheet } from '../../components/ui.jsx'
+import TemplatePicker from '../../components/TemplatePicker.jsx'
+import { blocksOf } from '../../lib/noteTemplates.js'
 import { SubjectSelect, ProjectSelect } from '../../components/common.jsx'
 import { backlinks, toMarkdown, noteTitle } from '../../lib/notes.js'
 import { download } from '../../lib/files.js'
@@ -25,6 +27,8 @@ export default function NotePage({ id }) {
     { label: 'PDF (A4 인쇄)', icon: 'print', onClick: () => window.print() },
     { label: '노트 전체 복습 등록', icon: 'brain', onClick: () => addReview({ title: noteTitle(n), subjectId: n.subjectId, sourceType: 'note', sourceId: n.id }) },
     { label: n.pinned ? '고정 해제' : '상단 고정', icon: 'star', onClick: () => up({ pinned: !n.pinned }) },
+    { label: n.isTemplate ? '템플릿에서 빼기' : '템플릿으로 저장', icon: 'layers', onClick: () => { up({ isTemplate: !n.isTemplate }); toast(n.isTemplate ? '템플릿에서 뺐어요' : '새 페이지에서 이 양식을 고를 수 있어요') } },
+    { label: '템플릿 붙이기', icon: 'plus', onClick: () => openSheet((c) => <TemplatePicker close={c} onPick={(tpl) => { up({ blocks: [...(n.blocks || []).filter((b) => b.type !== 'text' || b.text), ...blocksOf(tpl)] }); toast('양식을 아래에 붙였어요') }} />, { title: '템플릿 붙이기' }) },
     { label: '삭제', icon: 'trash', danger: true, onClick: () => { remove('notes', id); setParams('notes', { noteId: null }); toast('노트 삭제됨', { label: '되돌리기', fn: () => { restore('notes', id); openNote(id) } }) } },
   ])
   return (

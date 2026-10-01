@@ -156,7 +156,7 @@ function ShareCaptureCard() {
   const base = location.origin + location.pathname
   const tmpl = base + '?add='
   return (
-    <Card title="공유 시트로 할 일 추가">
+    <Card title="공유 시트로 할 일 · 노트 추가">
       <div className="small" style={{ lineHeight: 1.7 }}>
         사파리·메모 등에서 <b>공유 › 할 일로</b> 를 누르면 받은 편지함에 들어가요.<br />
         1. <b>단축어</b> 앱 › ＋ 새 단축어 › 이름 ‘할 일로’<br />
@@ -168,6 +168,19 @@ function ShareCaptureCard() {
         <button className="btn" onClick={async () => { try { await navigator.clipboard.writeText(tmpl); toast('주소를 복사했어요') } catch { toast('주소를 길게 눌러 복사해 주세요') } }}>복사</button>
       </div>
       <div className="tiny muted" style={{ marginTop: 6 }}>단축어는 사파리로 열려요. 사파리에서도 한 번 동기화를 연결해 두면 홈 화면 앱에 바로 나타나요.</div>
+      <div style={{ borderTop: '1px solid var(--line)', margin: '12px 0' }} />
+      <b className="small">노트로 저장</b>
+      <div className="small" style={{ lineHeight: 1.7, marginTop: 4 }}>
+        기사·블로그·메모 글을 <b>공유 › 노트로</b> 로 저장해요. 링크·고른 글이 담긴 노트가 바로 열려요.<br />
+        1. 위와 같이 새 단축어 ‘노트로’ (공유 시트에서 보기 · 텍스트·URL·사파리 웹 페이지)<br />
+        2. (선택) 동작 <b>웹 페이지 세부 정보 가져오기 › 이름</b> → 제목으로 씀<br />
+        3. 동작 <b>URL</b>: 아래 주소 + <b>단축어 입력</b> (제목을 넣으려면 끝에 <code>&amp;title=</code> + 이름) → <b>URL 열기</b>
+      </div>
+      <div className="row" style={{ marginTop: 8 }}>
+        <input className="input grow" readOnly value={base + '?note='} onFocus={(e) => e.target.select()} />
+        <button className="btn" onClick={async () => { try { await navigator.clipboard.writeText(base + '?note='); toast('주소를 복사했어요') } catch { toast('주소를 길게 눌러 복사해 주세요') } }}>복사</button>
+      </div>
+      <div className="tiny muted" style={{ marginTop: 6 }}>PDF·사진 파일은 단축어로 넘길 수 없어요. 노트에서 파일 첨부로 추가해 주세요.</div>
     </Card>
   )
 }
@@ -454,6 +467,9 @@ function WidgetFontField() {
         <input className="input" placeholder="PostScript 이름 (예: NanumMyeongjo)" defaultValue={st.widgetFont} onBlur={(e) => setSettings({ widgetFont: e.target.value.trim() })} autoCapitalize="off" autoCorrect="off" spellCheck={false} />
         <div className="tiny muted" style={{ lineHeight: 1.6 }}>타자기체·손글씨체 등 한글 폰트를 폰트 앱(예: iFont)으로 설치한 뒤, 그 폰트의 PostScript 이름을 적어 주세요. 이름이 틀리거나 설치되지 않은 기기에서는 시스템 폰트로 보여요. 스크립트를 다시 복사할 필요 없어요.</div>
       </>}
+      <Field label="위젯 글자 크기"><Seg value={String(st.widgetScale || 1)} onChange={(v) => setSettings({ widgetScale: +v })} options={[['0.9', '작게'], ['1', '기본'], ['1.1', '크게'], ['1.2', '더 크게']]} /></Field>
+      <Field label="위젯 글자 굵기"><Seg value={String(st.widgetWeight || 0)} onChange={(v) => setSettings({ widgetWeight: +v })} options={[['-1', '더 얇게'], ['0', '기본'], ['1', '보통'], ['2', '진하게']]} /></Field>
+      <div className="tiny muted">미리보기에 바로 보여요. 위젯에는 다음 동기화 뒤 반영돼요 (설치한 폰트는 굵기 대신 그 폰트 그대로). 잠금 화면은 ‘크게’까지만 커져요.</div>
     </div>
   )
 }
@@ -462,7 +478,7 @@ function WidgetFontField() {
 function WidgetPreview() {
   const st = useSettings()
   useEffect(() => { loadAllFonts() }, [])
-  const ff = st.widgetFont ? { fontFamily: `"${st.widgetFont}", "Apple SD Gothic Neo", sans-serif` } : null
+  const ff = { ...(st.widgetFont ? { fontFamily: `"${st.widgetFont}", "Apple SD Gothic Neo", sans-serif` } : null), '--dw-scale': st.widgetScale || 1, fontWeight: [200, 300, 400, 500][(+st.widgetWeight || 0) + 1] }
   const tasks = useColl('tasks'), sessions = useColl('sessions'), ddays = useColl('ddays'), quotes = useColl('quotes'), subjects = useColl('subjects')
   const d = today()
   const today0 = sessions.filter((x) => x.date === d)
@@ -644,9 +660,9 @@ function WidgetPreview() {
       </div></div>
       <div className="tiny muted">{kind ? <>위젯 편집 › Parameter 에 <b>{kind}</b> 입력</> : '위젯 편집 › Parameter 를 비워 두면 기본 형태'}</div>
       <div className="dw-row">
-        <div className="dw dw-s" style={ff}>{vs}</div>
-        <div className="dw dw-m" style={ff}>{vm}</div>
-        <div className="dw dw-l" style={ff}>{vl}</div>
+        <div className="dw dw-s" style={ff}><div className="dw-in">{vs}</div></div>
+        <div className="dw dw-m" style={ff}><div className="dw-in">{vm}</div></div>
+        <div className="dw dw-l" style={ff}><div className="dw-in">{vl}</div></div>
       </div>
       <div className="tiny muted" style={{ marginTop: 8 }}>잠금 화면 · 원형 · 직사각형 · 한 줄 (Parameter 같음, 아이폰·아이패드 공통)</div>
       <div className="dw-lock" style={ff}>

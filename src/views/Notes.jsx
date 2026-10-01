@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useColl, put, patch } from '../store/store.js'
-import { Card, Icon, Empty, Seg, openDetail } from '../components/ui.jsx'
+import { Card, Icon, Empty, Seg, openDetail, openSheet } from '../components/ui.jsx'
+import TemplatePicker from '../components/TemplatePicker.jsx'
 import BlockEditor from '../components/BlockEditor.jsx'
 import NotePage from './notes/NotePage.jsx'
 import Hub from './notes/Hub.jsx'
@@ -29,10 +30,10 @@ function Pages({ params }) {
   const [mode, setMode] = useState(params.mode || 'list')
   const [type, setType] = useState('all')
   const [q, setQ] = useState('')
-  const list = notes.filter((n) => n.type !== 'daily' && (type === 'all' || (n.type || 'page') === type))
+  const list = notes.filter((n) => n.type !== 'daily' && (type === 'template' ? n.isTemplate : type === 'all' || (n.type || 'page') === type))
     .filter((n) => !q || (n.title || '').includes(q) || noteText(n).includes(q))
     .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || b.updatedAt - a.updatedAt)
-  const create = () => openNote(put('notes', { title: '', type: 'page', blocks: [newBlock()] }).id)
+  const create = () => openSheet((c) => <TemplatePicker close={c} />, { title: '새 페이지 · 템플릿' })
   return (
     <div className="col">
       <div className="row wrap">
@@ -44,7 +45,7 @@ function Pages({ params }) {
         <>
           <div className="row wrap" style={{ gap: 6 }}>
             <input className="input grow" style={{ minWidth: 140 }} placeholder="노트 검색" value={q} onChange={(e) => setQ(e.target.value)} />
-            {[['all', '전체'], ['page', '페이지'], ['memo', '메모'], ['event', '일정 노트']].map(([k, l]) => <button key={k} className={'chip' + (type === k ? ' on' : '')} onClick={() => setType(k)}>{l}</button>)}
+            {[['all', '전체'], ['page', '페이지'], ['memo', '메모'], ['event', '일정 노트'], ['template', '템플릿']].map(([k, l]) => <button key={k} className={'chip' + (type === k ? ' on' : '')} onClick={() => setType(k)}>{l}</button>)}
           </div>
           <div className="note-grid">
             {list.map((n) => (
