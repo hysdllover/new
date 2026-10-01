@@ -52,6 +52,12 @@ Promise.all([loadState(), initFonts(), restoreSync()]).then(async () => {
     openNote(n.id)
     setTimeout(() => toast('노트로 저장했어요'), 600)
   }
+  // 위젯에서 누른 할 일: ?done=할일id → 완료 확인
+  const doneIn = q.get('done')
+  if (doneIn) {
+    const [{ default: DoneConfirm }, { openSheet }] = await Promise.all([import('./components/DoneConfirm.jsx'), import('./components/ui.jsx')])
+    setTimeout(() => openSheet((c) => <DoneConfirm id={doneIn} close={c} />, { title: '할 일' }), 300)
+  }
   // 단축어(애플 인텔리전스)가 돌려준 답: ?ai=답
   const aiIn = q.get('ai')
   if (aiIn != null) {
@@ -67,7 +73,7 @@ Promise.all([loadState(), initFonts(), restoreSync()]).then(async () => {
     const r = importHealth(q)
     if (r) { go('health'); setTimeout(() => toast(`건강 기록 · ${[r.sleep != null && `수면 ${r.sleep}시간`, r.steps != null && `걸음 ${r.steps.toLocaleString()}`].filter(Boolean).join(' · ')}`), 600) }
   }
-  if (target || added || link || noteIn != null || healthIn || aiIn != null) history.replaceState(null, '', location.pathname + location.hash)
+  if (target || added || link || noteIn != null || healthIn || aiIn != null || doneIn) history.replaceState(null, '', location.pathname + location.hash)
   createRoot(document.getElementById('root')).render(<StrictMode><Root /></StrictMode>)
   startServices()
   import('./lib/resume.js').then((m) => m.startResume())
