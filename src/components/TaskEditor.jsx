@@ -55,6 +55,13 @@ export default function TaskEditor({ id }) {
           </div>
         </Field>
         {t.due && <Field label="시간 (선택)"><TimeInput value={t.dueTime} onChange={(v) => up({ dueTime: v })} /></Field>}
+        {t.due && <Field label="시작일 (기간 할 일 · 선택)">
+          <div className="row" style={{ gap: 6 }}>
+            <input className="input" type="date" max={t.due} value={t.start || ''} onChange={(e) => up({ start: e.target.value || null })} />
+            {t.start && <button className="icon-btn" aria-label="시작일 지우기" onClick={() => up({ start: null })}>✕</button>}
+          </div>
+          {t.start && t.start < t.due && <div className="tiny muted">{t.start.slice(5).replace('-', '/')}~{t.due.slice(5).replace('-', '/')} 동안 일별·주간 보기에 ‘진행 중’으로 보여요</div>}
+        </Field>}
         <Field label="과목">
           <div className="row wrap" style={{ gap: 6 }}>
             {subjects.map((s) => <button key={s.id} className={'chip' + (t.subjectId === s.id ? ' on' : '')} style={t.subjectId === s.id ? { borderColor: s.color, color: s.color } : null} onClick={() => up({ subjectId: t.subjectId === s.id ? null : s.id })}><span className="dot" style={{ background: s.color }} />{s.name}</button>)}

@@ -1,7 +1,7 @@
 import { list, settings, find } from '../store/store.js'
 import { today, nowMin, fmtTime, parseTime } from '../engine/date.js'
 import { eventsOn } from '../engine/scheduler.js'
-import { reminderTimes, reminderBody, absMinutes, digestDue, digestText } from '../engine/reminders.js'
+import { reminderTimes, reminderBody, absMinutes, digestDue, digestText, isQuiet } from '../engine/reminders.js'
 import { toast } from '../components/ui.jsx'
 import { carryOver, autoTemplate } from '../store/actions.js'
 
@@ -28,6 +28,8 @@ function fire(key, title, body) {
 export function checkReminders() {
   if (!settings().notify) return
   const d = today(), m = nowMin()
+  const st = settings()
+  if (st.quietNight !== false && isQuiet(m, st.dayStart ?? 420, st.dayEnd ?? 1440)) return // 자는 시간
   for (const e of eventsOn(d)) {
     if (e.start == null || e.remind == null) continue
     const at = e.start - e.remind - (e.bufferBefore || 0)
@@ -61,10 +63,12 @@ function dayTick() {
   import('./daylog.js').then((m) => m.autoDayLog()).catch(() => {})
 }
 
+const evStudy = () => import('./eventStudy.js').then((m) => m.eventStudyLogs()).catch(() => {})
 export function startServices() {
   dayTick()
   checkReminders()
-  setInterval(() => { dayTick(); checkReminders() }, 30000)
+  setTimeout(evStudy, 3000) // 동기화로 받은 기록을 먼저 보고 판단
+  setInterval(() => { dayTick(); checkReminders(); evStudy() }, 30000)
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { dayTick(); checkReminders() } })
 }
 

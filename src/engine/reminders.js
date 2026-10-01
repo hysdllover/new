@@ -50,3 +50,17 @@ export function digestText(items) {
   if (items.length > 5) lines.push(`외 ${items.length - 5}개`)
   return { title: `할 일 알림 ${items.length}개`, body: lines.join('\n') }
 }
+
+// 기상·취침: 자는 시간(취침~기상)엔 알림을 보내지 않음, 기상 때 자는 동안 쌓인 할 일 알림을 한 번에
+export function isQuiet(now, wake, sleep) {
+  if (wake == null || sleep == null) return false
+  sleep = sleep % 1440 || 1440
+  return sleep > wake ? now < wake || now >= sleep : now >= sleep && now < wake
+}
+export function nightMissed(tasks, date, wake, sleep) {
+  const s = sleep % 1440 || 1440
+  const from = absMinutes(date, s > wake ? s - 1440 : s), to = absMinutes(date, wake)
+  const seen = new Set(), items = []
+  for (const t of tasks) for (const r of reminderTimes(t)) if (r.at >= from && r.at < to && !seen.has(t.id)) { seen.add(t.id); items.push({ t, off: r.off, at: r.at }) }
+  return items.sort((a, b) => a.at - b.at)
+}

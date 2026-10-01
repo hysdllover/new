@@ -8,12 +8,13 @@ import Month from './planner/Month.jsx'
 import Circle from './planner/Circle.jsx'
 import Grid from './planner/Grid.jsx'
 import Timetable from './planner/Timetable.jsx'
+import Days3 from './planner/Days3.jsx'
 
 export default function Planner({ seg, params }) {
   const date = params.date || today()
   const setDate = (d) => setParams('planner', { date: d })
   const step = seg === 'week' ? 7 : seg === 'month' ? 30 : 1
-  const V = { today: Today, week: Week, month: Month, circle: Circle, grid: Grid, timetable: Timetable }[seg] || Today
+  const V = { today: Today, week: Week, month: Month, circle: Circle, grid: Grid, timetable: Timetable, days3: Days3 }[seg] || Today
   const hol = holiday(date)
   return (
     <div className="col">

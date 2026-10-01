@@ -50,3 +50,7 @@ export function quadrant(t) {
   const urgent = t.due && t.due <= addDays(today(), 2)
   return important && urgent ? 1 : important ? 2 : urgent ? 3 : 4
 }
+
+// 기간 할 일: 시작일~마감일 사이(마감일 전날까지) 진행 중
+export const spanOn = (t, d) => !!(t.start && t.due && t.start < t.due && t.start <= d && d < t.due && !t.archived)
+export const spanInfo = (t, d) => { const total = Math.round((Date.parse(t.due) - Date.parse(t.start)) / 86400000) + 1, n = Math.round((Date.parse(d) - Date.parse(t.start)) / 86400000) + 1; return { n, total } }

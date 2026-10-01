@@ -27,7 +27,7 @@ function lanes(items) {
   return sorted
 }
 
-export default function Timeline({ date, showActual = true, dropTarget = true }) {
+export default function Timeline({ date, showActual = true, dropTarget = true, hidePast = false }) {
   const st = useSettings()
   const events = useColl('events')
   const blocks = useColl('blocks')
@@ -52,7 +52,7 @@ export default function Timeline({ date, showActual = true, dropTarget = true })
       const sub = subjects.find((s) => s.id === (b.subjectId || t?.subjectId))
       return { id: b.id, type: 'block', s: b.start, e: b.start + b.dur, title: t?.title || b.title || '블록', color: b.kind === 'break' ? 'var(--muted)' : sub?.color || 'var(--c2)', rec: b, done: t?.done }
     }),
-  ].map((x) => (drag?.id === x.id ? { ...x, s: drag.start, e: drag.start + drag.dur } : x)))
+  ].filter((x) => !(hidePast && date === today() && x.e <= nowMin())).map((x) => (drag?.id === x.id ? { ...x, s: drag.start, e: drag.start + drag.dur } : x)))
   const actual = showActual ? sessions.filter((s) => s.date === date && s.start != null) : []
   const allDay = evs.filter((e) => e.start == null)
 
