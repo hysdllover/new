@@ -14,7 +14,7 @@ export default function TaskItem({ t, subjects, projects, drag, compact, extra }
     <div className={'item task-item draggable' + (t.done ? ' done' : '')} {...hold} onClick={(e) => { if (Date.now() - (e.currentTarget.__held || 0) < 700) return; openDetail('task', t.id) }} data-id={t.id}>
       <Check on={t.done} onClick={() => toggleTask(t.id)} color={subjects?.find((s) => s.id === t.subjectId)?.color} />
       <div className="t">
-        <div className="title">{t.priority >= 2 && <span style={{ color: PRI_COLOR[t.priority], marginRight: 4 }}>{t.priority === 3 ? '!!' : '!'}</span>}{t.title || '제목 없음'}</div>
+        <div className="title">{t.priority >= 2 && <span style={{ color: PRI_COLOR[t.priority], marginRight: 4 }}>{t.priority === 3 ? '!!' : '!'}</span>}<span className="ttl">{t.title || '제목 없음'}</span></div>
         {!compact && (
           <div className="meta">
             <DueBadge task={t} />

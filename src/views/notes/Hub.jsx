@@ -1,10 +1,11 @@
-import { useColl } from '../../store/store.js'
+import { useColl, useSettings, settings } from '../../store/store.js'
+import { classesOn } from '../../engine/scheduler.js'
 import { projectProgress, taskProgress, addTask } from '../../store/actions.js'
 import { Card, Prog, Empty, Icon, AddInput, openDetail } from '../../components/ui.jsx'
 import TaskItem from '../../components/TaskItem.jsx'
 import { FileThumb } from '../../components/Attach.jsx'
 import { setParams, openNote } from '../../nav.js'
-import { fmtDur, fmtShort, today, dday } from '../../engine/date.js'
+import { fmtDur, fmtShort, today, dday, weekStart, addDays, nowMin, fmtTime } from '../../engine/date.js'
 import { noteTitle, newBlock } from '../../lib/notes.js'
 import { put } from '../../store/store.js'
 
@@ -83,6 +84,7 @@ function HubPage({ hubId }) {
         <div><b>{ns.length}</b><span>노트</span></div>
       </div>
       <Prog value={prog} color={rec.color} h={6} />
+      {!isP && <SubjectSummary id={id} color={rec.color} sessions={ss} open={open} textbooks={textbooks} lectures={lectures} />}
       <div className="grid two">
         <Card title={`할 일 ${open.length}`}>
           <div className="list">{open.map((t) => <TaskItem key={t.id} t={t} subjects={subjects} projects={projects} />)}</div>
@@ -111,6 +113,36 @@ function HubPage({ hubId }) {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+// 과목 한눈에: 이번 주 시간(지난주 대비)·다음 마감·다음 수업·교재·인강·최근 성적
+function SubjectSummary({ id, color, sessions, open, textbooks, lectures }) {
+  const grades = useColl('grades'); useSettings()
+  const t = today(), ws = weekStart(t, settings().weekStart ?? 1), pws = addDays(ws, -7)
+  const sum = (a, b) => sessions.filter((s) => s.date >= a && s.date <= b).reduce((x, s) => x + (s.dur || 0), 0)
+  const week = sum(ws, t), last = sum(pws, addDays(pws, (Math.round((Date.parse(t) - Date.parse(ws)) / 86400000))))
+  const next = open.find((x) => x.due)
+  let cls = null
+  for (let i = 0; i < 8 && !cls; i++) { const d = addDays(t, i); const c = classesOn(d).find((x) => x.subjectId === id && (i > 0 || x.end > nowMin())); if (c) cls = { d, c } }
+  const tb = textbooks.find((x) => x.subjectId === id), lec = lectures.find((x) => x.subjectId === id)
+  const lecN = lec ? Object.keys(lec.done || {}).filter((k) => +k <= lec.total).length : 0
+  const g = grades.filter((x) => x.subjectId === id).sort((a, b) => (a.date || '').localeCompare(b.date || '')).at(-1)
+  const diff = week - last
+  const rows = [
+    ['이번 주', `${fmtDur(week) || '0분'}`, last || week ? (diff >= 0 ? `지난주 같은 때보다 +${fmtDur(diff) || '0분'}` : `지난주 같은 때보다 −${fmtDur(-diff)}`) : ''],
+    next && ['다음 마감', next.title, fmtShort(next.due) + (next.dueTime != null ? ' ' + fmtTime(next.dueTime) : '')],
+    cls && ['다음 수업', `${cls.c.period}교시${cls.c.room ? ' · ' + cls.c.room : ''}`, (cls.d === t ? '오늘 ' : fmtShort(cls.d) + ' ') + fmtTime(cls.c.start)],
+    tb && ['교재', tb.title, `${tb.current || 0}/${tb.total}${tb.unit || ''}`],
+    lec && ['인강', lec.title, `${lecN}/${lec.total}강`],
+    g && ['최근 성적', g.name || '시험', `${g.score}${g.max ? '/' + g.max : ''}${g.target ? ' · 목표 ' + g.target : ''}`],
+  ].filter(Boolean)
+  return (
+    <div className="card subj-sum" style={{ '--c': color || 'var(--accent)' }}>
+      {rows.map(([k, v, r]) => (
+        <div key={k} className="row subj-row"><span className="tiny muted subj-k">{k}</span><span className="grow ellipsis small">{v}</span><span className="tiny muted nowrap">{r}</span></div>
+      ))}
     </div>
   )
 }
