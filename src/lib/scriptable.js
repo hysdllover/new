@@ -184,6 +184,8 @@ if (!data) {
   // 할 일 글자 크기: 소 13 · 중 14 · 대 15
   const TS = fam === 'small' ? 13 : fam === 'medium' ? 14 : 15
   const todoList = (parent, n, gap = fam === 'large' ? 7 : 5) => {
+    // 하나만 넘치면 '+1 more' 줄 대신 그 할 일을 보여 줌 (같은 한 줄)
+    if (items.length === n + 1) { n++; gap = Math.max(3, gap - 1) }
     for (const x of items.slice(0, n)) {
       const r = parent.addStack(); r.centerAlignContent(); r.spacing = 8
       if (x.done) { t(r, '✓', tw(TS - 2), SOFT); strike(r, x.title, tw(TS)) }
@@ -464,7 +466,7 @@ if (!data) {
     // ── 할 일 ──
     const h = w.addStack(); h.centerAlignContent(); cap(h, 'TODAY'); h.addSpacer(); t(h, done + ' DONE', label(8), GOLD)
     w.addSpacer(10)
-    todoList(w, fam === 'small' ? 4 : fam === 'medium' ? 5 : 10, fam === 'large' ? 8 : 4)
+    todoList(w, fam === 'small' ? 4 : fam === 'medium' ? 5 : 11, fam === 'large' ? 7 : 4)
   } else if (KIND === 'dday') {
     // ── D-day ──
     t(w, dateStr, label(9), SOFT)
