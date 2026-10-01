@@ -597,7 +597,7 @@ function WidgetPreview() {
     시간표: [6, 5, 10].map((n, vi) => { const cls = classesOn(d); return <><div className="row between"><span className="dw-cap sp">CLASSES</span>{vi > 0 && <span className="dw-cap">{dateStr}</span>}</div><div style={{ height: 8 }} />
       {cls.slice(0, n).map((c) => <div key={c.id} className="dw-todo" style={c.end <= nm ? { color: 'var(--soft)' } : c.start <= nm ? { color: 'var(--gold)' } : null}><span className="dw-soft" style={{ width: 12 }}>{c.period}</span><span className="ellipsis grow">{c.title}</span>{vi > 0 && c.room && <span className="dw-soft">{c.room}</span>}<span className="dw-soft">{fmtTime(c.start)}</span></div>)}
       {!cls.length && <div className="dw-soft">오늘은 수업이 없어요</div>}</> }),
-    다짐: [14, 17, 22].map((sz) => <><div className="dw-cap">{dateStr}</div><div className="grow" /><div style={{ fontSize: sz, lineHeight: 1.45 }}>{quote || '앱에서 다짐을 적어 보세요'}</div><div className="grow" />{ddRow}</>),
+    다짐: [14, 17, 22].map((sz) => <><div className="dw-cap">{dateStr}</div><div className="grow" /><div style={{ fontSize: sz, lineHeight: 1.45 }}>{quote || '앱에서 다짐을 적어 보세요'}</div><div className="grow" /></>),
   }
   // 잠금 화면 미리보기 — 위젯 스크립트(scriptable.js)의 잠금 화면 분기와 같은 내용
   const bar = (r, wd) => <i className="dw-lbar" style={{ width: wd }}><b style={{ width: Math.max(0, Math.min(1, r)) * 100 + '%' }} /></i>
@@ -628,7 +628,7 @@ function WidgetPreview() {
       const nx = ag.find((a) => a.i > 0 || a.s == null || a.s >= nm) || ag[0]
       return { c: nx ? [[nx.s == null ? '종일' : fmtTime(nx.s), { fontSize: 13 }], [nx.title, S], [nx.i ? (nx.i === 1 ? '내일' : wd(nx.i)) : 'TODAY', { fontSize: 6 }]] : [['—', B]], r: ag.length ? ag.slice(0, 3).map((a) => [<span style={ROW}><span className="ellipsis">{a.title}</span><span style={{ fontSize: 8, flexShrink: 0 }}>{when(a)}</span></span>]) : [['다가오는 일정 없음']], i: nx ? (nx.i === 0 && nx.s == null ? '' : '다음 ') + when(nx) + ' ' + nx.title : '다가오는 일정 없음' }
     }
-    if (kind === '다짐') { const q = quote || '앱에서 다짐을 적어 보세요'; return { c: [[q, { fontSize: 9, textAlign: 'center', padding: '0 6px', lineHeight: 1.2 }]], r: [[q, { fontSize: 12, whiteSpace: 'normal' }], [dd ? `${ddTxt} ${dd.title}` : '', { ...DIM, fontSize: 8 }]], i: q } }
+    if (kind === '다짐') { const q = quote || '앱에서 다짐을 적어 보세요'; return { c: [[q, { fontSize: 9, textAlign: 'center', padding: '0 6px', lineHeight: 1.2 }]], r: [[q, { fontSize: 12, whiteSpace: 'normal' }]], i: q } }
     if (kind === '시간표') {
       const cls = classesOn(d), cur = cls.find((c) => c.start <= nm && c.end > nm), next = cls.find((c) => c.start > nm), c = cur || next
       const after = c ? cls.filter((x) => x.start > c.start).slice(0, 3).map((x) => x.title).join(' · ') : ''

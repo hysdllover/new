@@ -372,7 +372,7 @@ if (!data) {
       const q = quote || '앱에서 다짐을 적어 보세요'
       if (inl) inline(q)
       else if (circ) { w.addAccessoryWidgetBackground = true; const z = w.addStack(); z.size = new Size(60, 60); z.setPadding(4, 4, 4, 4); z.centerAlignContent(); const x = t(z, q, tw(9), null, 4); x.centerAlignText(); x.minimumScaleFactor = 0.5 }
-      else { t(w, q, tw(12), null, 3).minimumScaleFactor = 0.7; if (dd) { w.addSpacer(2); t(w, ddTxt + ' ' + dd.title, label(8)).textOpacity = 0.7 } }
+      else t(w, q, tw(12), null, 3).minimumScaleFactor = 0.7
     }
   } else if (lock) {
     // ── 잠금 화면 ──
@@ -569,7 +569,6 @@ if (!data) {
     w.addSpacer()
     t(w, quote || '앱에서 다짐을 적어 보세요', tw(fam === 'small' ? 14 : fam === 'medium' ? 17 : 22), INK, fam === 'large' ? 8 : 4)
     w.addSpacer()
-    if (dd) ddRow(w, 11)
   } else if (fam === 'small') {
     // ── 기본 ──
     t(w, dateStr, label(9), SOFT)
