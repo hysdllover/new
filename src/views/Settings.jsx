@@ -601,20 +601,20 @@ function WidgetPreview() {
     다짐: [14, 17, 22].map((sz) => <><div className="dw-cap">{dateStr}</div><div className="grow" /><div style={{ fontSize: sz, lineHeight: 1.45 }}>{quote || '앱에서 다짐을 적어 보세요'}</div><div className="grow" />{ddRow}</>),
   }
   // 잠금 화면 미리보기 — 위젯 스크립트(scriptable.js)의 잠금 화면 분기와 같은 내용
-  const bar = (r, n) => { const k = Math.round(Math.max(0, Math.min(1, r)) * n); return '▰'.repeat(k) + '▱'.repeat(n - k) }
-  const B = { fontSize: 22, fontWeight: 100 }, S = { fontSize: 8 }, X = { fontSize: 7, letterSpacing: '-1px' }, DIM = { opacity: .55 }, ROW = { display: 'flex', justifyContent: 'space-between', gap: 6, width: '100%', minWidth: 0 }
+  const bar = (r, wd) => <i className="dw-lbar" style={{ width: wd }}><b style={{ width: Math.max(0, Math.min(1, r)) * 100 + '%' }} /></i>
+  const B = { fontSize: 22, fontWeight: 100 }, S = { fontSize: 8 }, DIM = { opacity: .55 }, ROW = { display: 'flex', justifyContent: 'space-between', gap: 6, width: '100%', minWidth: 0 }
   const L = (() => {
     const left = items.filter((t) => !t.done)
     if (kind === '디데이') return { c: [[dd ? (ddN === 0 ? 'D' : ddN) : '–', B], ['D-DAY', S]], r: [[ddTxt || 'No D-day', { fontSize: 24, fontWeight: 100 }], [dd ? `${dd.title}  ${dd.date.slice(5).replace('-', '.')}` : ''], [ddNext ? `${ddNext.title} D-${Math.round((new Date(ddNext.date) - new Date(d)) / 86400000)}` : '', { ...DIM, fontSize: 10 }]], i: dd ? `${ddTxt} ${dd.title}` : 'No D-day' }
-    if (kind === '공부') return { c: [[hm(mins), { fontSize: 14 }], [pct + '%', S], [bar(mins / goal, 5), X]], r: [[<><b>{hm(mins)}</b> / {hm(goal)}<span className="grow" />{pct}%</>], [bar(mins / goal, 14), X], [<span style={ROW}><span>이번 주 {hm(sw.week)}</span><span>{sw.streak}일 연속</span></span>]], i: `공부 ${hm(mins)} / ${hm(goal)} · ${pct}%` }
+    if (kind === '공부') return { c: [[hm(mins), { fontSize: 14 }], [pct + '%', S], [bar(mins / goal, 34)]], r: [[<><b>{hm(mins)}</b> / {hm(goal)}<span className="grow" />{pct}%</>], [bar(mins / goal, 150)], [<span style={ROW}><span>이번 주 {hm(sw.week)}</span><span>{sw.streak}일 연속</span></span>]], i: `공부 ${hm(mins)} / ${hm(goal)} · ${pct}%` }
     if (kind === '할일') return { c: [[left.length, { fontSize: 24, fontWeight: 100 }], ['할 일', S], [`${done}/${done + left.length}`, S]], r: [[<span style={{ ...ROW, fontSize: 8, letterSpacing: 2 }}><span>TODAY</span><span>{done}/{items.length}</span></span>], ...items.slice(0, 3).map((t) => [(t.done ? '✓ ' : '– ') + t.title, t.done ? DIM : null]), ...(items.length ? [] : [['All clear.']])], i: left.length ? `할 일 ${left.length}개 · ${left[0].title}` : '오늘 할 일 끝 ✓' }
     if (kind === '달력') {
       const byDay = {}; for (const x of sessions) byDay[x.date] = (byDay[x.date] || 0) + x.dur
       const pre = d.slice(0, 7), mv = Object.entries(byDay).filter(([k]) => k.startsWith(pre)).map(([, v]) => v)
       const total = mv.reduce((a, v) => a + v, 0), days = mv.filter(Boolean).length, hit = mv.filter((v) => v >= goal).length
-      const mx = Math.max(goal, ...sw.last7.map((x) => x.m)), BL = '▁▂▃▄▅▆▇█'
-      const spark = sw.last7.map((x) => (x.m ? BL[Math.min(7, Math.round((x.m / mx) * 7))] : '·')).join('')
-      return { c: [[days, B], ['DAYS', S], ['✓' + hit, S]], r: [[<span style={ROW}><span>{MONS[now.getMonth()]} · {hm(total)}</span><span style={{ fontSize: 9 }}>{days}일 · 달성 {hit}</span></span>], [spark, { fontSize: 16, letterSpacing: 2 }], [<span style={{ ...ROW, fontSize: 8 }}><span>최근 7일</span><span>평균 {hm(sw.avg)}</span></span>]], i: `${MONS[now.getMonth()]} ${hm(total)} · ${days}일` }
+      const mx = Math.max(goal, ...sw.last7.map((x) => x.m))
+      const spark = <span className="dw-lspark">{sw.last7.map((x, k) => <i key={k} style={{ height: Math.max(2, Math.round((x.m / mx) * 18)), opacity: !x.m ? .25 : k === 6 ? 1 : .6 }} />)}</span>
+      return { c: [[days, B], ['DAYS', S], [bar(days / new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate(), 34)]], r: [[<span style={ROW}><span>{MONS[now.getMonth()]} · {hm(total)}</span><span style={{ fontSize: 9 }}>{days}일 · 달성 {hit}</span></span>], [spark], [<span style={{ ...ROW, fontSize: 8 }}><span>최근 7일</span><span>평균 {hm(sw.avg)}</span></span>]], i: `${MONS[now.getMonth()]} ${hm(total)} · ${days}일` }
     }
     if (kind === '캘린더') {
       const ag = []
@@ -635,7 +635,7 @@ function WidgetPreview() {
       const after = c ? cls.filter((x) => x.start > c.start).slice(0, 3).map((x) => x.title).join(' · ') : ''
       return { c: c ? [[c.period + '교시', S], [c.title, { fontSize: 13 }], [cur ? '~' + fmtTime(c.end) : fmtTime(c.start), S]] : [[cls.length ? '끝' : '—', B]], r: [[<span style={{ ...ROW, fontSize: 8 }}><span>{cur ? `지금 ${cur.period}교시` : next ? `다음 ${next.period}교시` : '시간표'}</span><span>{c ? `${fmtTime(c.start)}–${fmtTime(c.end)}` : ''}</span></span>], [c ? c.title : cls.length ? '오늘 수업 끝' : '오늘 수업 없음', { fontSize: 20, fontWeight: 100 }], [c?.room ? c.room + (after ? ' · ' + after : '') : after, { fontSize: 10 }]], i: c ? (cur ? `${c.period}교시 ${c.title} ~${fmtTime(c.end)}` : `다음 ${c.period}교시 ${c.title} ${fmtTime(c.start)}`) : cls.length ? '오늘 수업 끝' : '오늘 수업 없음' }
     }
-    return { c: [[hm(mins), { fontSize: 14 }], [pct + '%', S], [bar(mins / goal, 5), X]], r: [[<><b>{hm(mins)}</b> / {hm(goal)}<span className="grow" />{ddTxt}</>], [bar(mins / goal, 14), X], [todo[0] ? '– ' + todo[0].title : dd?.title || 'All clear.']], i: hm(mins) + (dd ? ` · ${ddTxt} ${dd.title}` : '') }
+    return { c: [[hm(mins), { fontSize: 14 }], [pct + '%', S], [bar(mins / goal, 34)]], r: [[<><b>{hm(mins)}</b> / {hm(goal)}<span className="grow" />{ddTxt}</>], [bar(mins / goal, 150)], [todo[0] ? '– ' + todo[0].title : dd?.title || 'All clear.']], i: hm(mins) + (dd ? ` · ${ddTxt} ${dd.title}` : '') }
   })()
   const [vs, vm, vl] = V[kind]
   return (

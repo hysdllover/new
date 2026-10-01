@@ -87,8 +87,15 @@ const data = await load()
 // 투명 배경 파일
 const FM = FileManager.local()
 const bgPath = (f, p) => FM.joinPath(FM.documentsDirectory(), 'study-bg-' + f + '-' + (p || 'default') + '.jpg')
-// 글자 막대 (잠금 화면: 이미지 대신 글자 → 가볍고 확실히 그려짐)
-const bar = (ratio, n = 10) => { const k = Math.round(Math.max(0, Math.min(1, ratio)) * n); return '▰'.repeat(k) + '▱'.repeat(n - k) }
+// 잠금 화면 진행선: 이미지 대신 색 채운 스택 두 겹 (가볍고 확실히 그려짐)
+function lbar(parent, ratio, wd, h = 2) {
+  const o = parent.addStack(); o.size = new Size(wd, h); o.cornerRadius = h / 2; o.backgroundColor = new Color('#ffffff', 0.3)
+  const k = Math.max(0, Math.min(1, ratio || 0))
+  if (k > 0) { const i = o.addStack(); i.size = new Size(Math.max(h, Math.round(wd * k)), h); i.cornerRadius = h / 2; i.backgroundColor = new Color('#ffffff') }
+  o.addSpacer()
+  return o
+}
+const cline = (z, ratio, wd = 34) => { z.addSpacer(4); const a = z.addStack(); a.addSpacer(); lbar(a, ratio, wd); a.addSpacer() }
 
 function build(fam) {
 const lock = fam.startsWith('accessory')
@@ -292,10 +299,11 @@ if (!data) {
   } else if (lock && KIND !== 'default') {
     // ── 잠금 화면 · 유형별 (글자·스택만, 이미지 없음) ──
     const inl = fam === 'accessoryInline', circ = fam === 'accessoryCircular'
-    const cRows = (rows) => { // 원형: 가운데 정렬 줄들
+    const cRows = (rows, ratio) => { // 원형: 가운데 정렬 줄들 (+ 진행선)
       w.addAccessoryWidgetBackground = true
       const z = w.addStack(); z.size = new Size(60, 60); z.layoutVertically(); z.centerAlignContent()
       for (const [s, f] of rows) { const a = z.addStack(); a.addSpacer(); const x = t(a, s, f); x.minimumScaleFactor = 0.5; a.addSpacer() }
+      if (ratio != null) cline(z, ratio)
     }
     const rRow = (l, r, lf = tw(11), rf = label(8)) => { const a = w.addStack(); a.centerAlignContent(); t(a, l, lf).minimumScaleFactor = 0.7; a.addSpacer(4); if (r) t(a, r, rf); else a.addSpacer(); return a }
     const dayMins = {}
@@ -306,10 +314,10 @@ if (!data) {
       let week = 0; for (let k = 0; k <= back; k++) week += dayMins[ymdOff(k)] || 0
       let streak = 0; for (let k = dayMins[today] ? 0 : 1; dayMins[ymdOff(k)]; k++) streak++
       if (inl) t(w, '공부 ' + hm(mins) + ' / ' + hm(goal) + ' · ' + pct + '%', tw(12))
-      else if (circ) cRows([[hm(mins), tw(14)], [pct + '%', label(8)], [bar(mins / goal, 5), label(6)]])
+      else if (circ) cRows([[hm(mins), tw(14)], [pct + '%', label(8)]], mins / goal)
       else {
         const r = w.addStack(); r.bottomAlignContent(); t(r, hm(mins), thin(22)); r.addSpacer(4); t(r, '/ ' + hm(goal), tw(10)); r.addSpacer(); t(r, pct + '%', tw(11))
-        t(w, bar(mins / goal, 14), label(7)).minimumScaleFactor = 0.5
+        w.addSpacer(3); lbar(w, mins / goal, 150); w.addSpacer(4)
         rRow('이번 주 ' + hm(week), streak + '일 연속', tw(10), tw(10))
       }
     } else if (KIND === 'todo') {
@@ -327,14 +335,16 @@ if (!data) {
       const mv = Object.entries(dayMins).filter(([k]) => k.startsWith(pre)).map(([, v]) => v)
       const total = mv.reduce((a, v) => a + v, 0), days = mv.filter(Boolean).length, hit = mv.filter((v) => v >= goal).length
       const L7 = [6, 5, 4, 3, 2, 1, 0].map((k) => dayMins[ymdOff(k)] || 0)
-      const mx = Math.max(goal, ...L7), BL = '▁▂▃▄▅▆▇█'
-      const spark = L7.map((v) => (v ? BL[Math.min(7, Math.round((v / mx) * 7))] : '·')).join('')
+      const mx = Math.max(goal, ...L7)
       if (inl) t(w, MON[d0.getMonth()] + ' ' + hm(total) + ' · ' + days + '일', tw(12))
-      else if (circ) cRows([[String(days), thin(22)], ['DAYS', label(7)], ['✓' + hit, label(7)]])
+      else if (circ) cRows([[String(days), thin(22)], ['DAYS', label(7)]], days / new Date(d0.getFullYear(), d0.getMonth() + 1, 0).getDate())
       else {
         rRow(MON[d0.getMonth()] + ' · ' + hm(total), days + '일 · 달성 ' + hit, tw(12), label(8))
         w.addSpacer(2)
-        t(w, spark, label(14)).minimumScaleFactor = 0.6
+        // 최근 7일 막대 (오늘은 진하게)
+        const sp = w.addStack(); sp.size = new Size(150, 18); sp.bottomAlignContent(); sp.spacing = 5
+        L7.forEach((v, k) => { const b = sp.addStack(); b.size = new Size(17, Math.max(2, Math.round((v / mx) * 18))); b.cornerRadius = 1; b.backgroundColor = new Color('#ffffff', !v ? 0.25 : k === 6 ? 1 : 0.6) })
+        w.addSpacer(2)
         rRow('최근 7일', '평균 ' + hm(Math.round(L7.reduce((a, v) => a + v, 0) / 7)), label(7), label(7))
       }
     } else if (KIND === 'cal') {
@@ -370,13 +380,13 @@ if (!data) {
       const z = w.addStack(); z.size = new Size(60, 60); z.layoutVertically(); z.centerAlignContent()
       const row = (s, f) => { const a = z.addStack(); a.addSpacer(); t(a, s, f).minimumScaleFactor = 0.6; a.addSpacer() }
       if (KIND === 'dday' && dd) { row(ddN(dd) === 0 ? 'D' : String(ddN(dd)), thin(20)); row('D-DAY', label(7)) }
-      else { row(hm(mins), tw(14)); row(pct + '%', label(8)); row(bar(mins / goal, 5), label(6)) }
+      else { row(hm(mins), tw(14)); row(pct + '%', label(8)); cline(z, mins / goal) }
     } else {
       const r = w.addStack(); r.bottomAlignContent()
       t(r, hm(mins), thin(22)); r.addSpacer(4); t(r, '/ ' + hm(goal), tw(10)); r.addSpacer(); if (dd) t(r, ddTxt, tw(12))
-      w.addSpacer(3)
-      t(w, bar(mins / goal, 14), label(7)).minimumScaleFactor = 0.5
       w.addSpacer(4)
+      lbar(w, mins / goal, 150)
+      w.addSpacer(5)
       t(w, KIND === 'dday' && dd ? dd.title : todo[0] ? '– ' + todo[0].title : (dd ? dd.title : 'All clear.'), tw(11))
     }
   } else if (KIND === 'study') {
