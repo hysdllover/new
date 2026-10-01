@@ -272,7 +272,7 @@ if (!data) {
       const r2 = w.addStack(); t(r2, dd.title, tw(12)); r2.addSpacer(6); t(r2, dd.date.slice(5).replace('-', '.'), tw(10)); r2.addSpacer()
       if (next) { w.addSpacer(2); const r3 = w.addStack(); t(r3, next.title + ' ' + ddT(next), tw(10)).textOpacity = 0.7; r3.addSpacer() }
     }
-  } else if (lock && TM) {
+  } else if (lock && TM && (KIND === 'default' || KIND === 'study')) {
     // ── 잠금 화면 · 진행 중 타이머 (초 단위로 흐름) ──
     if (fam === 'accessoryInline') {
       if (TM.paused) t(w, '⏸ ' + TM.name + ' ' + hm(TM.pm), tw(12)); else timerDate(w, 12)
@@ -288,6 +288,78 @@ if (!data) {
       const r2 = w.addStack(); if (TM.paused) t(r2, hm(TM.pm), thin(26)); else timerDate(r2, 26, true); r2.addSpacer()
       w.addSpacer(1)
       t(w, '오늘 ' + hm(mins) + ' / ' + hm(goal), tw(10))
+    }
+  } else if (lock && KIND !== 'default') {
+    // ── 잠금 화면 · 유형별 (글자·스택만, 이미지 없음) ──
+    const inl = fam === 'accessoryInline', circ = fam === 'accessoryCircular'
+    const cRows = (rows) => { // 원형: 가운데 정렬 줄들
+      w.addAccessoryWidgetBackground = true
+      const z = w.addStack(); z.size = new Size(60, 60); z.layoutVertically(); z.centerAlignContent()
+      for (const [s, f] of rows) { const a = z.addStack(); a.addSpacer(); const x = t(a, s, f); x.minimumScaleFactor = 0.5; a.addSpacer() }
+    }
+    const rRow = (l, r, lf = tw(11), rf = label(8)) => { const a = w.addStack(); a.centerAlignContent(); t(a, l, lf).minimumScaleFactor = 0.7; a.addSpacer(4); if (r) t(a, r, rf); else a.addSpacer(); return a }
+    const dayMins = {}
+    for (const x of allSess) dayMins[x.date] = (dayMins[x.date] || 0) + (x.dur || 0)
+    const ymdOff = (k) => { const d = new Date(d0); d.setDate(d.getDate() - k); return ymd(d) }
+    if (KIND === 'study') {
+      const ws = st.weekStart ?? 1, back = (d0.getDay() - ws + 7) % 7
+      let week = 0; for (let k = 0; k <= back; k++) week += dayMins[ymdOff(k)] || 0
+      let streak = 0; for (let k = dayMins[today] ? 0 : 1; dayMins[ymdOff(k)]; k++) streak++
+      if (inl) t(w, '공부 ' + hm(mins) + ' / ' + hm(goal) + ' · ' + pct + '%', tw(12))
+      else if (circ) cRows([[hm(mins), tw(14)], [pct + '%', label(8)], [bar(mins / goal, 5), label(6)]])
+      else {
+        const r = w.addStack(); r.bottomAlignContent(); t(r, hm(mins), thin(22)); r.addSpacer(4); t(r, '/ ' + hm(goal), tw(10)); r.addSpacer(); t(r, pct + '%', tw(11))
+        t(w, bar(mins / goal, 14), label(7)).minimumScaleFactor = 0.5
+        rRow('이번 주 ' + hm(week), streak + '일 연속', tw(10), tw(10))
+      }
+    } else if (KIND === 'todo') {
+      const left = items.filter((x) => !x.done)
+      if (inl) t(w, left.length ? '할 일 ' + left.length + '개 · ' + left[0].title : '오늘 할 일 끝 ✓', tw(12))
+      else if (circ) cRows([[String(left.length), thin(24)], ['할 일', label(7)], [done + '/' + (done + left.length), label(7)]])
+      else {
+        rRow('T O D A Y', done + '/' + items.length, label(7), label(7))
+        for (const x of items.slice(0, 3)) { const a = w.addStack(); a.centerAlignContent(); const s1 = t(a, (x.done ? '✓ ' : '– ') + x.title, tw(11)); s1.minimumScaleFactor = 0.8; if (x.done) s1.textOpacity = 0.45; a.addSpacer() }
+        if (!items.length) t(w, 'All clear.', tw(11))
+        else if (items.length > 3) t(w, '+ ' + (items.length - 3) + ' more', label(7)).textOpacity = 0.7
+      }
+    } else if (KIND === 'month') {
+      const pre = d0.getFullYear() + '-' + pad(d0.getMonth() + 1)
+      const mv = Object.entries(dayMins).filter(([k]) => k.startsWith(pre)).map(([, v]) => v)
+      const total = mv.reduce((a, v) => a + v, 0), days = mv.filter(Boolean).length, hit = mv.filter((v) => v >= goal).length
+      const L7 = [6, 5, 4, 3, 2, 1, 0].map((k) => dayMins[ymdOff(k)] || 0)
+      const mx = Math.max(goal, ...L7), BL = '▁▂▃▄▅▆▇█'
+      const spark = L7.map((v) => (v ? BL[Math.min(7, Math.round((v / mx) * 7))] : '·')).join('')
+      if (inl) t(w, MON[d0.getMonth()] + ' ' + hm(total) + ' · ' + days + '일', tw(12))
+      else if (circ) cRows([[String(days), thin(22)], ['DAYS', label(7)], ['✓' + hit, label(7)]])
+      else {
+        rRow(MON[d0.getMonth()] + ' · ' + hm(total), days + '일 · 달성 ' + hit, tw(12), label(8))
+        w.addSpacer(2)
+        t(w, spark, label(14)).minimumScaleFactor = 0.6
+        rRow('최근 7일', '평균 ' + hm(Math.round(L7.reduce((a, v) => a + v, 0) / 7)), label(7), label(7))
+      }
+    } else if (KIND === 'cal') {
+      const cal = data.cal || {}
+      const ag = []
+      for (let i = 0; i < 14 && ag.length < 6; i++) {
+        const dt = new Date(d0); dt.setDate(dt.getDate() + i); const k = ymd(dt)
+        for (const e of cal[k] || []) if (!(i === 0 && e.s != null && (e.e ?? e.s + 60) <= nm)) ag.push({ i, s: e.s, title: e.t })
+        for (const x of tasksAll.filter((x) => x.due === k && !x.done)) if (x.dueTime != null) ag.push({ i, s: x.dueTime, title: '☐ ' + x.title })
+      }
+      ag.sort((a, b) => a.i - b.i || (a.s ?? -1) - (b.s ?? -1))
+      const when = (a) => (a.i === 0 && a.s == null ? '오늘' : (a.i === 0 ? '' : a.i === 1 ? '내일 ' : DAY[(d0.getDay() + a.i) % 7] + ' ') + (a.s == null ? '종일' : clk(a.s % 1440)))
+      const nx = ag.find((a) => a.i > 0 || a.s == null || a.s >= nm) || ag[0]
+      if (nx && nx.i === 0 && nx.s != null && nx.s > nm) { const at = new Date(d0); at.setHours(0, nx.s, 0, 0); w.refreshAfterDate = new Date(Math.min(w.refreshAfterDate.getTime(), at.getTime())) }
+      if (inl) t(w, nx ? (nx.i === 0 && nx.s == null ? '' : '다음 ') + when(nx) + ' ' + nx.title : '다가오는 일정 없음', tw(12))
+      else if (circ) cRows(nx ? [[nx.s == null ? '종일' : clk(nx.s % 1440), tw(13)], [nx.title, label(8)], [nx.i ? (nx.i === 1 ? '내일' : DAY[(d0.getDay() + nx.i) % 7]) : 'TODAY', label(6)]] : [['—', tw(14)]])
+      else {
+        for (const a of ag.slice(0, 3)) rRow(a.title, when(a), tw(11), label(8))
+        if (!ag.length) t(w, '다가오는 일정 없음', tw(11))
+      }
+    } else if (KIND === 'quote') {
+      const q = quote || '앱에서 다짐을 적어 보세요'
+      if (inl) t(w, q, tw(12))
+      else if (circ) { w.addAccessoryWidgetBackground = true; const z = w.addStack(); z.size = new Size(60, 60); z.setPadding(4, 4, 4, 4); z.centerAlignContent(); const x = t(z, q, tw(9), null, 4); x.centerAlignText(); x.minimumScaleFactor = 0.5 }
+      else { t(w, q, tw(12), null, 3).minimumScaleFactor = 0.7; if (dd) { w.addSpacer(2); t(w, ddTxt + ' ' + dd.title, label(8)).textOpacity = 0.7 } }
     }
   } else if (lock) {
     // ── 잠금 화면 ──
