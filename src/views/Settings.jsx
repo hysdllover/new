@@ -663,7 +663,10 @@ function WidgetPreview() {
   const V = {
     대시보드: [
       M(<><div className="grow" />{tileGrid(2, 19)}<div className="grow" /></>),
-      M(<>{hdr('TODAY', dateStr)}<div className="grow" />{tileGrid(4, 22)}<div className="grow" /></>),
+      <><div className="col" style={{ gap: 0, width: '45%', flexShrink: 0, minWidth: 0 }}>
+        <div className="row" style={{ gap: 6, alignItems: 'baseline', flexWrap: 'nowrap' }}><span style={{ fontSize: 26, fontWeight: 100, lineHeight: 1 }}>{dd ? ddTxt : '—'}</span><span className="dw-gold ellipsis" style={{ fontSize: 11 }}>{dd ? dd.title : 'No D-day'}</span></div>
+        <div className="grow" /><div className="dw-todo"><span className="dw-gold" style={{ fontSize: 11 }}>{nC ? (nCur ? '지금 ' : '') + fmtTime(nC.s) : '—'}</span><span className="ellipsis">{nC ? nC.t : '남은 일정 없음'}</span></div><div className="grow" />{big(22)}</div>
+        <div className="dw-vr" /><div className="col" style={{ gap: 0, flex: 1, minWidth: 0 }}>{hdr('TO DO', dateStr)}{items.filter((t) => !t.done).slice(0, 5).map((t) => <div key={t.id} className="dw-todo"><span className={t.priority >= 3 ? 'dw-gold' : 'dw-soft'}>{t.priority >= 3 ? '•' : '–'}</span><span className="ellipsis" style={t.priority >= 3 ? { fontWeight: 500 } : null}>{t.title}</span></div>)}{!leftN && <div className="dw-soft">All clear.</div>}</div></>,
       M(<>{hdr('TODAY', dateStr)}{tileGrid(2, 36)}<div className="grow" /><div className="dw-hr" />{hdr('THIS WEEK', `${hm(sw.week)} · 하루 ${hm(sw.avg)}`)}{bars7(60)}</>),
     ],
     내일: [0, 1, 2].map((i) => { const none = !tmrEv.length && !tmrTk.length && !tmrCl.length
