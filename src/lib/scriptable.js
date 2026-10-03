@@ -357,7 +357,7 @@ if (!data) {
     week7.forEach((x, i) => { const b = row.addStack(); b.size = new Size(bw, Math.max(2, Math.round((x.m / mx) * h))); b.cornerRadius = Math.min(3, bw / 3); b.backgroundColor = x.m ? (i === 6 ? fg : dyn('#b39d74', '#c9b489', 0.5)) : bg })
     return row
   }
-  const wdRow = (parent, wd, size = 7) => { const gap = 4, bw = Math.floor((wd - gap * 6) / 7); const r = parent.addStack(); r.spacing = gap; week7.forEach((x, i) => { const c = r.addStack(); c.size = new Size(bw, 10); c.centerAlignContent(); t(c, ['S', 'M', 'T', 'W', 'T', 'F', 'S'][x.wd], label(size), i === 6 ? GOLD : SOFT) }) }
+  const wdRow = (parent, wd, size = 7) => { const gap = 4, bw = Math.floor((wd - gap * 6) / 7); const r = parent.addStack(); r.spacing = gap; week7.forEach((x, i) => { const c = r.addStack(); c.size = new Size(bw, Math.max(10, size + 4)); c.centerAlignContent(); t(c, ['S', 'M', 'T', 'W', 'T', 'F', 'S'][x.wd], label(size), i === 6 ? GOLD : SOFT) }) }
   let FILL = false // true: 내용이 위젯 높이를 스스로 채움 (끝의 빈칸 밀기 안 함)
   const pbar = (parent, r, wd, c) => { const img = parent.addImage(line(r, wd, c ? c : null)); img.imageSize = new Size(wd, 3) }
   // ── 내일 · 마감 · 7일 일정 · 바로 시작 공용 ──
@@ -922,37 +922,38 @@ if (!data) {
   } else if (KIND === 'dash') {
     // ── 대시보드: D-day · 일정 · 공부 시간(타이머 중이면 흐르는 시간) · 할 일 (중·대는 칸마다 누르면 해당 화면) ──
     const left = items.filter((x) => !x.done).length, c = nCur || nNext
+    const LG = fam === 'large' || fam === 'extraLarge' // 대형은 글자 크게
     const tiles = [
       ['D-DAY', dd ? ddTxt : '—', dd ? dd.title : '없음', null, 'study.progress', GOLD],
       [nCur ? 'NOW' : 'NEXT', c ? clk(c.s) : '—', c ? c.t : '남은 일정 없음', null, 'planner.today', SOFT],
       // 할 일: 개수 대신 남은 할 일 제목 (위에서 두 개)
       ['TO DO', (b) => {
         // 칸 높이에 들어가는 만큼 (소 3 · 중 5 · 대 5 안팎, 글자 크기에 맞춰 계산)
-        const fs = fam === 'large' || fam === 'extraLarge' ? 12 : 11, rowH = (fs * 1.3 + 2) * SCALE
-        const room = fam === 'small' ? innerH - 74 * SCALE : fam === 'medium' ? innerH - 20 - 11 * SCALE : innerH - 20 - 86 * SCALE - innerH * 0.2 - 55 * SCALE - 14
-        const L = items.filter((x) => !x.done).slice(0, Math.max(2, Math.min(6, Math.floor(room / rowH))))
+        const fs = LG ? 15 : 11, rowH = (fs * 1.3 + (LG ? 3 : 2)) * SCALE
+        const room = fam === 'small' ? innerH - 74 * SCALE : fam === 'medium' ? innerH - 20 - 11 * SCALE : innerH - 180 * SCALE - innerH * 0.16 - 6
+        const L = items.filter((x) => !x.done).slice(0, Math.max(2, Math.min(LG ? 7 : 6, Math.floor(room / rowH))))
         if (!L.length) t(b, 'All clear.', tw(fs + 1), SOFT)
-        L.forEach((x, k) => { if (k) b.addSpacer(2); const imp = x.priority >= 3; t(b, (imp ? '• ' : '– ') + x.title, imp ? F(fs, 'Medium') : tw(fs), INK).minimumScaleFactor = 0.8 })
+        L.forEach((x, k) => { if (k) b.addSpacer(LG ? 3 : 2); const imp = x.priority >= 3; t(b, (imp ? '• ' : '– ') + x.title, imp ? F(fs, 'Medium') : tw(fs), INK).minimumScaleFactor = 0.8 })
       }, '', null, 'tasks', SOFT],
       TM ? ['● ' + TM.name, (b, f) => { if (TM.paused) t(b, hm(TM.pm), f, INK); else { const d = timerDate(b, 10); d.font = f; d.textColor = INK } }, (TM.paused ? '일시정지 · ' : '오늘 ') + hm(mins), mins / goal, 'study.timer', GOLD]
         : ['STUDY', hm(mins), pct + '%', mins / goal, 'study.records', GOLD],
     ]
-    const cols = fam === 'medium' ? 4 : 2, gap = 12, wd = Math.floor((inner - gap * (cols - 1)) / cols), big = fam === 'small' ? 19 : fam === 'medium' ? 22 : 30
-    if (fam !== 'small') { const h = w.addStack(); h.centerAlignContent(); cap(h, 'TODAY'); h.addSpacer(); t(h, dateStr, label(8), SOFT); if (fam === 'medium') w.addSpacer(); else w.addSpacer(12) }
+    const cols = fam === 'medium' ? 4 : 2, gap = 12, wd = Math.floor((inner - gap * (cols - 1)) / cols), big = fam === 'small' ? 19 : fam === 'medium' ? 22 : 36
+    if (fam !== 'small') { const h = w.addStack(); h.centerAlignContent(); cap(h, 'TODAY'); h.addSpacer(); t(h, dateStr, label(LG ? 9 : 8), SOFT); if (fam === 'medium') w.addSpacer(); else w.addSpacer(12) }
     if (fam === 'small') w.addSpacer() // 소형: 두 줄을 알맞은 간격으로 묶어 세로 가운데
     for (let i = 0; i < 4; i += cols) {
       const r = w.addStack(); r.spacing = gap
       for (const x of tiles.slice(i, i + cols)) {
         const b = r.addStack(); b.layoutVertically(); b.size = new Size(wd, 0); if (fam !== 'small') b.url = link(x[4])
-        t(b, x[0], label(7), x[0][0] === '●' ? GOLD : SOFT).minimumScaleFactor = 0.7; b.addSpacer(2)
+        t(b, x[0], label(LG ? 9 : 7), x[0][0] === '●' ? GOLD : SOFT).minimumScaleFactor = 0.7; b.addSpacer(2)
         if (typeof x[1] === 'function') { if (x[0] === 'TO DO') b.addSpacer(3); x[1](b, thin(big)) } else t(b, x[1], thin(big), INK).minimumScaleFactor = 0.5
-        if (x[2]) t(b, x[2], tw(10), x[5]).minimumScaleFactor = 0.7
+        if (x[2]) t(b, x[2], tw(LG ? 12 : 10), x[5]).minimumScaleFactor = 0.7
         if (x[3] != null) { b.addSpacer(4); pbar(b, x[3], wd) }
       }
       if (i + cols < 4) w.addSpacer(fam === 'small' ? Math.round(16 * SCALE) : 14)
     }
     // 대형: 아래에 이번 주 공부 (할 일은 위 칸에 있으니 겹치지 않게)
-    if (fam === 'large' || fam === 'extraLarge') { w.addSpacer(); rule(w, inner); w.addSpacer(10); const s2 = w.addStack(); s2.centerAlignContent(); cap(s2, 'THIS WEEK'); s2.addSpacer(); t(s2, hm(weekTot) + ' · 하루 ' + hm(weekAvg), label(8), SOFT); w.addSpacer(8); bars7(w, inner, Math.round(innerH * 0.2), GOLD, RULE); w.addSpacer(3); wdRow(w, inner); FILL = true }
+    if (fam === 'large' || fam === 'extraLarge') { w.addSpacer(); rule(w, inner); w.addSpacer(10); const s2 = w.addStack(); s2.centerAlignContent(); cap(s2, 'THIS WEEK'); s2.addSpacer(); t(s2, hm(weekTot) + ' · 하루 ' + hm(weekAvg), label(10), SOFT); w.addSpacer(8); bars7(w, inner, Math.round(innerH * 0.16), GOLD, RULE); w.addSpacer(3); wdRow(w, inner, 9); FILL = true }
   } else if (KIND === 'tmrw') {
     // ── 내일 준비: 수업 · 일정 · 할 일 ──
     const td = new Date(d0.getTime() + 86400000)
