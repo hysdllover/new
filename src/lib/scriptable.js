@@ -128,14 +128,17 @@ const inline = (s) => { s = String(s); const x = w.addText(s.length > 26 ? s.sli
 w.url = link({ todo: 'tasks', due: 'tasks', cal: 'planner.month', week7: 'planner.week', tmrw: 'planner.week', class: 'planner.timetable', default: '', dash: '', quick: 'study.timer', ddl: 'study.progress', prog: 'study.progress' }[KIND] ?? 'study.records')
 w.refreshAfterDate = new Date(Date.now() + 5 * 60000) // 5분 뒤 다시 그려 달라고 요청 (실제 시점은 iOS 가 정함)
 const P = fam === 'small' ? 16 : 18
-// 기기별 위젯 크기(pt) — 아이폰은 화면 폭 비례, 아이패드는 고정값
+// 기기별 위젯 크기(pt) — 아이폰은 화면 폭별 실제 크기표(가장 가까운 폭), 아이패드는 고정값
 const SZ = (() => {
-  if (Device.isPad()) return { small: 158, medium: 342, large: 342, extraLarge: 715 }
+  if (Device.isPad()) return { small: 158, medium: 342, large: 342, extraLarge: 715, h: { small: 158, medium: 158, large: 342, extraLarge: 342 } }
   const sc = Device.screenSize(), sw = Math.min(sc.width, sc.height)
-  const sm = Math.min(170, Math.round(sw * 0.43)), md = Math.min(364, Math.round(sw * 0.926))
-  return { small: sm, medium: md, large: md, extraLarge: md }
+  const T = { 440: [170, 364, 382], 430: [170, 364, 382], 428: [170, 364, 382], 414: [169, 360, 379], 402: [164, 348, 366], 393: [158, 338, 354], 390: [158, 338, 354], 375: [155, 329, 345], 360: [155, 329, 345], 320: [141, 292, 311] }
+  const k = Object.keys(T).map(Number).sort((a, b) => Math.abs(a - sw) - Math.abs(b - sw))[0], [sm, md, lh] = T[k]
+  return { small: sm, medium: md, large: md, extraLarge: md, h: { small: sm, medium: sm, large: lh, extraLarge: lh } }
 })()
 const inner = (SZ[fam] || SZ.large) - P * 2
+const innerH = (SZ.h[fam] || SZ.h.large) - P * 2 // 세로 안쪽 높이
+let MH = innerH - 21 // 중형: 머리줄(제목 + 간격) 아래 남는 높이 (글자 크기 정해진 뒤 다시 계산)
 // 투명 배경(배경화면 잘라 붙이기) · 글자색
 const inkMode = Keychain.contains('study-ink') ? Keychain.get('study-ink') : 'auto'
 if (inkMode === 'light') { INK = new Color('#ffffff'); SOFT = new Color('#ffffff', 0.72); RULE = new Color('#ffffff', 0.3) }
@@ -154,6 +157,7 @@ if (!data) {
   CUSTOM = (st.widgetFont || '').trim()
   SCALE = Math.max(0.8, Math.min(1.3, +st.widgetScale || 1)); if (lock) SCALE = Math.min(1.25, SCALE * 1.18) // 잠금 화면은 꽉 차게 (기본 1.18배)
   WSHIFT = +st.widgetWeight || 0
+  MH = innerH - Math.round(11 * SCALE) - 10
   const goal = st.goalDaily || 240
   const subjects = alive(data.study.subjects)
   const allSess = alive(data.study.sessions)
@@ -627,7 +631,7 @@ if (!data) {
       studyBig(L, 34, 150); L.addSpacer()
       const s2 = L.addStack(); stat(s2, 'WEEK', hm(week)); s2.addSpacer(); stat(s2, 'YESTERDAY', hm(yday), GOLD); s2.addSpacer()
       row.addSpacer(16); vrule(row, 104); row.addSpacer(16)
-      const R = row.addStack(); R.layoutVertically()
+      const R = row.addStack(); R.layoutVertically(); R.size = new Size(inner - 182.6, 0)
       bars(R, inner - 183, 78); R.addSpacer()
       row.addSpacer()
     } else {
@@ -755,7 +759,7 @@ if (!data) {
       const row = w.addStack()
       const L = row.addStack(); L.layoutVertically(); grid(L, 17, rows > 5 ? 14 : 16, 2, 7, false)
       row.addSpacer(14); vrule(row, 110); row.addSpacer(14)
-      const R = row.addStack(); R.layoutVertically(); agendaList(R, 4); R.addSpacer()
+      const R = row.addStack(); R.layoutVertically(); R.size = new Size(inner - 7 * 17 - 12 - 28.6, 0); agendaList(R, 4); R.addSpacer()
       row.addSpacer()
     } else {
       grid(w, (inner - 6 * 4) / 7, rows > 5 ? 21 : 24, 3, 10)
@@ -848,9 +852,10 @@ if (!data) {
       t(w, '할 일 ' + items.filter((x) => !x.done).length + '개 남음', tw(11), SOFT)
     } else if (fam === 'medium') {
       const row = w.addStack()
-      const L = row.addStack(); L.layoutVertically(); L.size = new Size(Math.round(inner * 0.42), 0); evLine(L, 12); L.addSpacer(); studyBig(L, 26, Math.round(inner * 0.42))
-      row.addSpacer(12); vrule(row, 100); row.addSpacer(12)
-      const R = row.addStack(); R.layoutVertically(); todoList(R, 4, 4); R.addSpacer()
+      const lw = Math.round(inner * 0.42)
+      const L = row.addStack(); L.layoutVertically(); L.size = new Size(lw, MH); evLine(L, 12); L.addSpacer(); studyBig(L, 26, lw)
+      row.addSpacer(12); vrule(row, MH); row.addSpacer(12)
+      const R = row.addStack(); R.layoutVertically(); R.size = new Size(inner - lw - 24.6, MH); todoList(R, 4, 4); R.addSpacer()
     } else {
       evLine(w, 14); w.addSpacer(10); studyBig(w, 36, inner)
       w.addSpacer(12); rule(w, inner); w.addSpacer(10)
@@ -908,9 +913,10 @@ if (!data) {
     else if (fam === 'small') { clLine(w); const k = TMR.cl.length ? 2 : 3, kt = Math.max(0, k - TMR.ev.length); evRows(w, k, 12); if (kt) tkRows(w, kt, 12); w.addSpacer(); if (TMR.tk.length && !kt) t(w, '할 일 ' + TMR.tk.length + '개', tw(10), GOLD) }
     else if (fam === 'medium') {
       const row = w.addStack()
-      const L = row.addStack(); L.layoutVertically(); L.size = new Size(Math.round(inner * 0.54), 0); clLine(L); evRows(L, TMR.cl.length ? 3 : 4, 12); if (!TMR.ev.length) t(L, '일정 없음', tw(12), SOFT); L.addSpacer()
-      row.addSpacer(12); vrule(row, 96); row.addSpacer(12)
-      const R = row.addStack(); R.layoutVertically(); tkRows(R, 4, 12); if (!TMR.tk.length) t(R, '할 일 없음', tw(12), SOFT); R.addSpacer()
+      const lw = Math.round(inner * 0.54)
+      const L = row.addStack(); L.layoutVertically(); L.size = new Size(lw, MH); clLine(L); evRows(L, TMR.cl.length ? 3 : 4, 12); if (!TMR.ev.length) t(L, '일정 없음', tw(12), SOFT); L.addSpacer()
+      row.addSpacer(12); vrule(row, MH); row.addSpacer(12)
+      const R = row.addStack(); R.layoutVertically(); R.size = new Size(inner - lw - 24.6, MH); tkRows(R, 4, 12); if (!TMR.tk.length) t(R, '할 일 없음', tw(12), SOFT); R.addSpacer()
       row.addSpacer()
     } else {
       if (TMR.cl.length) { cap(w, 'CLASSES'); w.addSpacer(5); t(w, TMR.cl.map((c) => c.period + ' ' + c.title).join(' · '), tw(12), INK, 2); w.addSpacer(12) }
@@ -940,7 +946,7 @@ if (!data) {
     if (fam === 'medium') {
       const gap = 4, cw = Math.floor((inner - gap * 6) / 7), row = w.addStack(); row.spacing = gap
       for (const d of DAYS7) {
-        const c = row.addStack(); c.layoutVertically(); c.size = new Size(cw, 94)
+        const c = row.addStack(); c.layoutVertically(); c.size = new Size(cw, MH)
         const a = c.addStack(); t(a, ['S', 'M', 'T', 'W', 'T', 'F', 'S'][d.x.getDay()], label(7), d.i === 0 ? GOLD : SOFT); a.addSpacer()
         const b = c.addStack(); t(b, d.x.getDate(), d.i === 0 ? F(13, 'SemiBold') : tw(13), d.i === 0 ? GOLD : INK); b.addSpacer()
         c.addSpacer(4)
@@ -974,10 +980,11 @@ if (!data) {
     if (!ddAll.length) t(w, 'No D-day.', tw(13), SOFT)
     else if (fam === 'medium') {
       const row = w.addStack()
-      const L = row.addStack(); L.layoutVertically(); L.size = new Size(Math.round(inner * 0.38), 0)
+      const lw = Math.round(inner * 0.38)
+      const L = row.addStack(); L.layoutVertically(); L.size = new Size(lw, MH)
       t(L, ddT(ddAll[0]), thin(34), INK).minimumScaleFactor = 0.5; L.addSpacer(2); t(L, ddAll[0].title, tw(12), GOLD).minimumScaleFactor = 0.7; t(L, ddAll[0].date.slice(5).replace('-', '.'), tw(10), SOFT); L.addSpacer()
-      row.addSpacer(12); vrule(row, 92); row.addSpacer(12)
-      const R = row.addStack(); R.layoutVertically()
+      row.addSpacer(12); vrule(row, MH); row.addSpacer(12)
+      const R = row.addStack(); R.layoutVertically(); R.size = new Size(inner - lw - 24.6, MH)
       for (const x of ddAll.slice(1, 5)) { const r = R.addStack(); r.centerAlignContent(); t(r, x.title, tw(12), INK).minimumScaleFactor = 0.8; r.addSpacer(6); t(r, ddT(x), tw(12), GOLD); R.addSpacer(7) }
       if (ddAll.length === 1) t(R, '다른 D-day 없음', tw(11), SOFT)
       R.addSpacer()
@@ -1022,13 +1029,13 @@ if (!data) {
     ddRow(w)
   } else if (fam === 'medium') {
     const row = w.addStack()
-    const L = row.addStack(); L.layoutVertically(); L.size = new Size(140, 134); L.url = link('study.records')
+    const L = row.addStack(); L.layoutVertically(); L.size = new Size(140, innerH); L.url = link('study.records')
     t(L, dateStr, label(9), SOFT); L.addSpacer()
     studyBig(L, 28, 140)
     L.addSpacer()
     ddRow(L, 12)
-    row.addSpacer(16); vrule(row, 134); row.addSpacer(16)
-    const R = row.addStack(); R.layoutVertically(); R.url = link('tasks')
+    row.addSpacer(16); vrule(row, innerH); row.addSpacer(16)
+    const R = row.addStack(); R.layoutVertically(); R.size = new Size(inner - 172.6, innerH); R.url = link('tasks')
     cap(R, 'TODAY'); R.addSpacer(10)
     todoList(R, 4)
     R.addSpacer()
