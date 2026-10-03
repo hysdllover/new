@@ -8,6 +8,7 @@ import { eventsOn, classesOn } from '../engine/scheduler.js'
 import { weekGoals, goalProgress } from '../store/actions.js'
 import { today, addDays } from '../engine/date.js'
 import { buildIcs } from '../lib/ics.js'
+import { SCRIPT_VER } from '../lib/scriptable.js'
 import { listFonts, getFontBlob, importFont, removeFont, markSynced, pendingDeletes, clearDeletes, SYNC_FONT_MAX } from '../lib/fonts.js'
 
 // GitHub Gist 기반 iPhone ↔ iPad 동기화
@@ -209,6 +210,7 @@ function widgetPayload() {
     classes: classesPayload(),
     prog: progPayload(),
     goals: goalsPayload(),
+    sv: SCRIPT_VER,
     settings: { settings: { main: { goalDaily: main.goalDaily, weekStart: main.weekStart, widgetFont: main.widgetFont, widgetScale: main.widgetScale, widgetWeight: main.widgetWeight } }, quotes: keep('quotes') },
   })
 }
