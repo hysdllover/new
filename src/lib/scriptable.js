@@ -72,11 +72,16 @@ const tw = (s) => F(s, 'Light')
 const thin = (s) => F(s, 'Thin')
 const label = (s) => F(s, 'Regular')
 
-const RAWP = String(args.widgetParameter || '').replace(/\\s/g, '').toLowerCase()
-const PARAM = RAWP.split('@')[0] // "공부@2" 처럼 @ 뒤는 배경 구분용
-// 디데이2, 디데이3 … → 두 번째·세 번째 D-day
-const DDI = Math.max(0, (+(PARAM.match(/(\\d)$/) || [])[1] || 1) - 1)
-const KIND = { '공부': 'study', '할일': 'todo', '디데이': 'dday', 'd-day': 'dday', '달력': 'month', '캘린더': 'cal', '일정': 'cal', calendar: 'cal', '다짐': 'quote', '시간표': 'class', '수업': 'class', class: 'class', '주간': 'week', week: 'week', '과목': 'subj', subj: 'subj', '지금': 'now', '다음': 'now', now: 'now', '진도': 'prog', prog: 'prog', '목표': 'goals', goals: 'goals', '오늘': 'today', today: 'today', '대시보드': 'dash', dash: 'dash', '내일': 'tmrw', tomorrow: 'tmrw', '마감': 'due', due: 'due', '일주일': 'week7', '7일': 'week7', week7: 'week7', '디데이목록': 'ddl', ddl: 'ddl', '바로가기': 'quick', '시작': 'quick', quick: 'quick', study: 'study', todo: 'todo', dday: 'dday', month: 'month', quote: 'quote' }[PARAM.replace(/\\d$/, '')] || 'default'
+// Parameter → 유형 (앱에서 미리보기할 땐 고른 Parameter 로 다시 정함)
+const KINDS = { '공부': 'study', '할일': 'todo', '디데이': 'dday', 'd-day': 'dday', '달력': 'month', '캘린더': 'cal', '일정': 'cal', calendar: 'cal', '다짐': 'quote', '시간표': 'class', '수업': 'class', class: 'class', '주간': 'week', week: 'week', '과목': 'subj', subj: 'subj', '지금': 'now', '다음': 'now', now: 'now', '진도': 'prog', prog: 'prog', '목표': 'goals', goals: 'goals', '오늘': 'today', today: 'today', '대시보드': 'dash', dash: 'dash', '내일': 'tmrw', tomorrow: 'tmrw', '마감': 'due', due: 'due', '일주일': 'week7', '7일': 'week7', week7: 'week7', '디데이목록': 'ddl', ddl: 'ddl', '바로가기': 'quick', '시작': 'quick', quick: 'quick', study: 'study', todo: 'todo', dday: 'dday', month: 'month', quote: 'quote' }
+let RAWP, PARAM, DDI, KIND
+function setParam(raw) {
+  RAWP = String(raw || '').replace(/\\s/g, '').toLowerCase()
+  PARAM = RAWP.split('@')[0] // "공부@2" 처럼 @ 뒤는 배경 구분용
+  DDI = Math.max(0, (+(PARAM.match(/(\\d)$/) || [])[1] || 1) - 1) // 디데이2 → 두 번째 D-day
+  KIND = KINDS[PARAM.replace(/\\d$/, '')] || 'default'
+}
+setParam(args.widgetParameter)
 const pickQuote = ${pickQuote.toString()}
 const link = (path) => APP + (path ? '?go=' + path : '')
 
@@ -178,7 +183,7 @@ const P = fam === 'small' ? 16 : 18
 const SZ = (() => {
   if (Device.isPad()) return { small: 158, medium: 342, large: 342, extraLarge: 715, h: { small: 158, medium: 158, large: 342, extraLarge: 342 } }
   const sc = Device.screenSize(), sw = Math.min(sc.width, sc.height)
-  const T = { 440: [170, 364, 382], 430: [170, 364, 382], 428: [170, 364, 382], 414: [169, 360, 379], 402: [164, 348, 366], 393: [158, 338, 354], 390: [158, 338, 354], 375: [155, 329, 345], 360: [155, 329, 345], 320: [141, 292, 311] }
+  const T = { 440: [176, 376, 392], 430: [170, 364, 382], 428: [170, 364, 382], 414: [169, 360, 379], 402: [162, 345, 362], 393: [158, 338, 354], 390: [158, 338, 354], 375: [155, 329, 345], 360: [155, 329, 345], 320: [141, 292, 311] }
   const k = Object.keys(T).map(Number).sort((a, b) => Math.abs(a - sw) - Math.abs(b - sw))[0], [sm, md, lh] = T[k]
   return { small: sm, medium: md, large: md, extraLarge: md, h: { small: sm, medium: sm, large: lh, extraLarge: lh } }
 })()
@@ -907,7 +912,7 @@ if (!data) {
       const lw = Math.round(inner * 0.42)
       const L = row.addStack(); L.layoutVertically(); L.size = new Size(lw, innerH); cap(L, 'TODAY'); L.addSpacer(8); evLine(L, 12); L.addSpacer(); studyBig(L, 26, lw)
       row.addSpacer(12); vrule(row, innerH); row.addSpacer(12)
-      const R = row.addStack(); R.layoutVertically(); R.size = new Size(inner - lw - 24.6, innerH); todoList(R, 4, 4); R.addSpacer(); if (data.sv && data.sv > VER) t(R, '스크립트 업데이트 · 앱에서 다시 복사', label(8), GOLD)
+      const R = row.addStack(); R.layoutVertically(); R.size = new Size(inner - lw - 24.6, innerH); todoList(R, Math.max(3, Math.floor((innerH - 16 * SCALE) / ((TS * 1.3 + 4) * SCALE)) - 1), 4); R.addSpacer(); if (data.sv && data.sv > VER) t(R, '스크립트 업데이트 · 앱에서 다시 복사', label(8), GOLD)
     } else {
       evLine(w, 14); w.addSpacer(10); studyBig(w, 36, inner)
       w.addSpacer(12); rule(w, inner); w.addSpacer(10)
@@ -1173,9 +1178,16 @@ else {
   const m = new Alert(); m.title = '스터디 위젯'
   ;['미리보기 · 소', '미리보기 · 중', '미리보기 · 대', '투명 배경 설정', '투명 배경 모두 지우기', '글자색 · 자동', '글자색 · 밝게', '글자색 · 어둡게', '잠금 화면 미리보기 · 원형', '잠금 화면 미리보기 · 직사각형', '잠금 화면 미리보기 · 한 줄'].forEach((x) => m.addAction(x)); m.addCancelAction('닫기')
   const i = await m.present()
-  if (i === 0) await w.presentSmall()
-  else if (i === 1) await w.presentMedium()
-  else if (i === 2) await w.presentLarge()
+  // 미리보기: 위젯과 같은 Parameter 를 골라 그 크기로 그림 (기존엔 대형을 잘라 보여 줌)
+  if (i <= 2 || i >= 8) {
+    const last = Keychain.contains('study-preview-param') ? Keychain.get('study-preview-param') : ''
+    const a = new Alert(); a.title = 'Parameter'; a.message = '위젯 편집의 Parameter 와 같게 (예: 오늘, 대시보드, 캘린더). 비우면 기본.'; a.addTextField('Parameter', last); a.addAction('보기')
+    await a.present()
+    const pv = a.textFieldValue(0); Keychain.set('study-preview-param', pv); setParam(pv)
+  }
+  if (i === 0) await build('small').presentSmall()
+  else if (i === 1) await build('medium').presentMedium()
+  else if (i === 2) await build('large').presentLarge()
   else if (i === 3) await transparentSetup()
   else if (i === 4) { for (const f of FM.listContents(FM.documentsDirectory())) if (f.startsWith('study-bg-')) FM.remove(FM.joinPath(FM.documentsDirectory(), f)) }
   else if (i >= 5 && i <= 7) Keychain.set('study-ink', ['auto', 'light', 'dark'][i - 5])
