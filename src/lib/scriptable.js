@@ -930,6 +930,7 @@ if (!data) {
     ]
     const cols = fam === 'medium' ? 4 : 2, gap = 12, wd = Math.floor((inner - gap * (cols - 1)) / cols), big = fam === 'small' ? 19 : fam === 'medium' ? 22 : 30
     if (fam !== 'small') { const h = w.addStack(); h.centerAlignContent(); cap(h, 'TODAY'); h.addSpacer(); t(h, dateStr, label(8), SOFT); if (fam === 'medium') w.addSpacer(); else w.addSpacer(12) }
+    if (fam === 'small') w.addSpacer() // 소형: 두 줄을 알맞은 간격으로 묶어 세로 가운데
     for (let i = 0; i < 4; i += cols) {
       const r = w.addStack(); r.spacing = gap
       for (const x of tiles.slice(i, i + cols)) {
@@ -939,7 +940,7 @@ if (!data) {
         t(b, x[2], tw(10), x[5]).minimumScaleFactor = 0.7
         if (x[3] != null) { b.addSpacer(4); pbar(b, x[3], wd) }
       }
-      if (i + cols < 4) { if (fam === 'small') { w.addSpacer(); FILL = true } else w.addSpacer(14) }
+      if (i + cols < 4) w.addSpacer(fam === 'small' ? Math.round(16 * SCALE) : 14)
     }
     if (fam === 'large' || fam === 'extraLarge') { w.addSpacer(14); rule(w, inner); w.addSpacer(10); todoList(w, Math.max(3, Math.floor((innerH - 20 - 2 * Math.round(70 * SCALE) - 14 - 34) / Math.round(22 * SCALE))), 5) }
   } else if (KIND === 'tmrw') {
