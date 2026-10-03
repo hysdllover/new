@@ -6,7 +6,7 @@ import { Card, Seg, Toggle, Field, Icon, toast, confirmSheet, openSheet } from '
 import { ColorPick, TimeInput, SubjectSelect } from '../components/common.jsx'
 import { useSyncStatus, connect, disconnect, syncNow, gistInfo, tokenExpiry, listBackups, backupNow, restoreBackup, calendarUrl, readGistFile } from '../sync/sync.js'
 import { enablePush, disablePush, pushState, testLocal, isStandalone, pushSupported } from '../lib/push.js'
-import { buildScript, WIDGET_KINDS } from '../lib/scriptable.js'
+import { buildLoader, WIDGET_KINDS } from '../lib/scriptable.js'
 import { TAB_OPTIONS, DEFAULT_TABBAR, tabOpt } from '../nav.js'
 import { pickQuote } from '../lib/quote.js'
 import { pickColor, harmonize } from '../lib/colors.js'
@@ -450,7 +450,7 @@ function HomeWidgetCard() {
     if (!gistInfo().widgetRaw) await syncNow({ flush: true })
     const { widgetRaw } = gistInfo()
     if (!widgetRaw) { toast('동기화가 끝난 뒤 다시 눌러 주세요'); return }
-    const script = buildScript({ widgetRaw, appUrl })
+    const script = buildLoader({ widgetRaw, appUrl })
     try { await navigator.clipboard.writeText(script); toast('스크립트를 복사했어요') }
     catch { openSheet(() => <textarea className="input" readOnly value={script} style={{ minHeight: 300, fontFamily: 'monospace', fontSize: 11 }} onFocus={(e) => e.target.select()} />, { title: '스크립트 (전체 선택 후 복사)', full: true }) }
   }
@@ -471,7 +471,7 @@ function HomeWidgetCard() {
         <button className="btn primary" disabled={sync.state === 'off'} onClick={copy}><Icon name="download" size={16} />스크립트 복사</button>
         {sync.state === 'off' && <span className="small muted">동기화를 먼저 연결하세요</span>}
       </div>
-      <div className="tiny muted" style={{ marginTop: 6 }}>스크립트에는 토큰이 들어가지 않아요(위젯 전용 비공개 주소만). 이미 설치했다면 새로 복사해 Scriptable 스크립트 내용을 바꿔 주세요. 갱신 주기는 iOS가 정해요(보통 15분~1시간). 날짜 옆에 시각이 보이면 그때 받은 데이터예요.</div>
+      <div className="tiny muted" style={{ marginTop: 6 }}>스크립트에는 토큰이 들어가지 않아요(위젯 전용 비공개 주소만). 자동 업데이트 방식이라 한 번만 붙여 넣으면 앱이 바뀔 때 위젯도 같이 바뀌어요(예전 긴 스크립트를 쓰고 있다면 이번에 한 번만 새로 복사해 바꿔 주세요). 갱신 주기는 iOS가 정해요(보통 15분~1시간). 날짜 옆에 시각이 보이면 그때 받은 데이터예요.</div>
     </Card>
   )
 }
