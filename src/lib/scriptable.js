@@ -1,7 +1,7 @@
 import { pickQuote } from './quote.js'
 // iPhone·iPad 홈 화면·잠금 화면 위젯 (Scriptable) — 얇은 단일 서체 · 모노톤
 // 유형: 위젯 편집 › Parameter 에 공부 · 할일 · 디데이 · 달력 · 다짐 (비우면 기본)
-export const WIDGET_KINDS = [['', '기본'], ['공부', '공부'], ['할일', '할 일'], ['디데이', 'D-day'], ['달력', '공부 달력'], ['캘린더', '캘린더'], ['다짐', '다짐'], ['시간표', '시간표'], ['주간', '주간 공부'], ['과목', '과목별'], ['지금', '지금·다음'], ['진도', '진도'], ['목표', '이번 주 목표'], ['오늘', '오늘 한눈에']]
+export const WIDGET_KINDS = [['', '기본'], ['공부', '공부'], ['할일', '할 일'], ['디데이', 'D-day'], ['달력', '공부 달력'], ['캘린더', '캘린더'], ['다짐', '다짐'], ['시간표', '시간표'], ['주간', '주간 공부'], ['과목', '과목별'], ['지금', '지금·다음'], ['진도', '진도'], ['목표', '이번 주 목표'], ['오늘', '오늘 한눈에'], ['대시보드', '대시보드'], ['내일', '내일 준비'], ['마감', '마감 임박'], ['일주일', '7일 일정'], ['디데이목록', 'D-day 목록'], ['바로가기', '바로 시작']]
 
 export function buildScript({ widgetRaw, appUrl }) {
   return `// Study — 홈 화면·잠금 화면 위젯 (Scriptable)
@@ -30,7 +30,7 @@ const RAWP = String(args.widgetParameter || '').replace(/\\s/g, '').toLowerCase(
 const PARAM = RAWP.split('@')[0] // "공부@2" 처럼 @ 뒤는 배경 구분용
 // 디데이2, 디데이3 … → 두 번째·세 번째 D-day
 const DDI = Math.max(0, (+(PARAM.match(/(\\d)$/) || [])[1] || 1) - 1)
-const KIND = { '공부': 'study', '할일': 'todo', '디데이': 'dday', 'd-day': 'dday', '달력': 'month', '캘린더': 'cal', '일정': 'cal', calendar: 'cal', '다짐': 'quote', '시간표': 'class', '수업': 'class', class: 'class', '주간': 'week', week: 'week', '과목': 'subj', subj: 'subj', '지금': 'now', '다음': 'now', now: 'now', '진도': 'prog', prog: 'prog', '목표': 'goals', goals: 'goals', '오늘': 'today', today: 'today', study: 'study', todo: 'todo', dday: 'dday', month: 'month', quote: 'quote' }[PARAM.replace(/\\d$/, '')] || 'default'
+const KIND = { '공부': 'study', '할일': 'todo', '디데이': 'dday', 'd-day': 'dday', '달력': 'month', '캘린더': 'cal', '일정': 'cal', calendar: 'cal', '다짐': 'quote', '시간표': 'class', '수업': 'class', class: 'class', '주간': 'week', week: 'week', '과목': 'subj', subj: 'subj', '지금': 'now', '다음': 'now', now: 'now', '진도': 'prog', prog: 'prog', '목표': 'goals', goals: 'goals', '오늘': 'today', today: 'today', '대시보드': 'dash', dash: 'dash', '내일': 'tmrw', tomorrow: 'tmrw', '마감': 'due', due: 'due', '일주일': 'week7', '7일': 'week7', week7: 'week7', '디데이목록': 'ddl', ddl: 'ddl', '바로가기': 'quick', '시작': 'quick', quick: 'quick', study: 'study', todo: 'todo', dday: 'dday', month: 'month', quote: 'quote' }[PARAM.replace(/\\d$/, '')] || 'default'
 const pickQuote = ${pickQuote.toString()}
 const link = (path) => APP + (path ? '?go=' + path : '')
 
@@ -67,8 +67,8 @@ async function load() {
   const LOCK0 = String(config.widgetFamily || '').startsWith('accessory')
   try {
     if (!SRC) throw new Error('no source')
-    // 여러 위젯이 한꺼번에 새로 그려질 때: 40초 안에 받아 둔 게 있으면 그대로 (요청 절약)
-    try { if (CFM.fileExists(cachePath)) { const c = JSON.parse(CFM.readString(cachePath)); if (c.at && Date.now() - c.at < 40000) return c } } catch (e0) {}
+    // 여러 위젯이 한꺼번에 새로 그려질 때: 25초 안에 받아 둔 게 있으면 그대로 (요청 절약)
+    try { if (CFM.fileExists(cachePath)) { const c = JSON.parse(CFM.readString(cachePath)); if (c.at && Date.now() - c.at < 25000) return c } } catch (e0) {}
     const data = await fetchFresh(LOCK0 ? 6 : 15)
     if (!data || !data.study) throw new Error('bad data')
     data.at = Date.now()
@@ -119,8 +119,8 @@ const lock = fam.startsWith('accessory')
 let w = new ListWidget()
 // 한 줄(시계 위) 위젯: iOS 가 텍스트 하나만 시스템 서체로 그림 → 서체·색 지정 없이 짧게 하나만
 const inline = (s) => { s = String(s); const x = w.addText(s.length > 26 ? s.slice(0, 25) + '…' : s); x.lineLimit = 1; return x }
-w.url = link(KIND === 'todo' ? 'tasks' : KIND === 'cal' ? 'planner.month' : KIND === 'class' ? 'planner.timetable' : KIND === 'default' ? '' : 'study.records')
-w.refreshAfterDate = new Date(Date.now() + 10 * 60000) // 10분 뒤 다시 그려 달라고 요청 (실제 시점은 iOS 가 정함)
+w.url = link({ todo: 'tasks', due: 'tasks', cal: 'planner.month', week7: 'planner.week', tmrw: 'planner.week', class: 'planner.timetable', default: '', dash: '', quick: 'study.timer', ddl: 'study.progress', prog: 'study.progress' }[KIND] ?? 'study.records')
+w.refreshAfterDate = new Date(Date.now() + 5 * 60000) // 5분 뒤 다시 그려 달라고 요청 (실제 시점은 iOS 가 정함)
 const P = fam === 'small' ? 16 : 18
 // 기기별 위젯 크기(pt) — 아이폰은 화면 폭 비례, 아이패드는 고정값
 const SZ = (() => {
@@ -188,7 +188,7 @@ if (!data) {
     x.pm = Math.round(Math.max(0, x.mode === 'countdown' && x.target ? x.target - x.acc : x.acc) / 60000)
     return x
   })()
-  if (TM) w.refreshAfterDate = new Date(Math.min(w.refreshAfterDate.getTime(), Date.now() + 5 * 60000)) // 타이머 중엔 더 자주
+  if (TM) w.refreshAfterDate = new Date(Math.min(w.refreshAfterDate.getTime(), Date.now() + 3 * 60000)) // 타이머 중엔 더 자주
   // 위젯이 다시 그려지지 않아도 초 단위로 흐르는 시간
   const timerDate = (parent, size, thinFont) => { const d = parent.addDate(new Date(TM.mode === 'countdown' ? TM.end : TM.start)); d.applyTimerStyle(); d.font = thinFont ? thin(size) : tw(size); d.lineLimit = 1; d.minimumScaleFactor = 0.6; return d }
   const subMins = subjects.map((s) => ({ s, m: sessions.filter((x) => x.subjectId === s.id).reduce((a, x) => a + (x.dur || 0), 0) })).filter((x) => x.m).sort((a, b) => b.m - a.m)
@@ -298,6 +298,25 @@ if (!data) {
   }
   const wdRow = (parent, wd, size = 7) => { const gap = 4, bw = Math.floor((wd - gap * 6) / 7); const r = parent.addStack(); r.spacing = gap; week7.forEach((x, i) => { const c = r.addStack(); c.size = new Size(bw, 10); c.centerAlignContent(); t(c, ['S', 'M', 'T', 'W', 'T', 'F', 'S'][x.wd], label(size), i === 6 ? GOLD : SOFT) }) }
   const pbar = (parent, r, wd, c) => { const img = parent.addImage(line(r, wd, c ? c : null)); img.imageSize = new Size(wd, 3) }
+  // ── 내일 · 마감 · 7일 일정 · 바로 시작 공용 ──
+  const dOff = (k) => { const x = new Date(d0); x.setDate(x.getDate() + k); return ymd(x) }
+  const evDay = (k) => ((data.cal && data.cal[k]) || []).slice().sort((a, b) => (a.s ?? -1) - (b.s ?? -1))
+  const TMR = { ev: evDay(tmr), cl: (data.classes && data.classes[tmr]) || [], tk: tasksAll.filter((x) => !x.done && x.due === tmr).sort(byDate) }
+  const tmrN = TMR.ev.length + TMR.tk.length
+  const dueIn = (x) => Math.round((new Date(x.due + 'T00:00') - new Date(today + 'T00:00')) / 86400000)
+  const DUE = tasksAll.filter((x) => !x.done && x.due && x.due <= dOff(14)).sort(byDate)
+  const dueTxt = (x) => { const n = dueIn(x); return n < 0 ? -n + '일 지남' : n === 0 ? '오늘' : n === 1 ? '내일' : 'D-' + n }
+  const DAYS7 = [0, 1, 2, 3, 4, 5, 6].map((i) => { const x = new Date(d0); x.setDate(x.getDate() + i); const k = ymd(x); return { i, x, k, ev: evDay(k).filter((e) => !(i === 0 && e.s != null && (e.e != null ? e.e : e.s + 60) <= nm)) } })
+  const ev7 = DAYS7.reduce((a, d) => a + d.ev.length, 0)
+  const nextEv7 = (() => { for (const d of DAYS7) if (d.ev[0]) return { d, e: d.ev[0] }; return null })()
+  const dayName = (d) => (d.i === 0 ? 'TODAY' : d.i === 1 ? 'TMRW' : DAY[d.x.getDay()])
+  // 바로 시작: 최근 공부한 과목 먼저
+  const recent = allSess.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)) || +new Date(b.updatedAt || 0) - +new Date(a.updatedAt || 0))
+  const QS = []
+  for (const x of recent) { const s = subjects.find((y) => y.id === x.subjectId); if (s && !QS.includes(s)) QS.push(s); if (QS.length >= 8) break }
+  for (const s of subjects) if (QS.length < 8 && !QS.includes(s)) QS.push(s)
+  const startUrl = (s) => APP + '?timer=' + encodeURIComponent(s ? s.id : '')
+  const newUrl = (k) => APP + '?new=' + k
 
   if (lock && KIND === 'class') {
     // ── 잠금 화면 · 시간표 ──
@@ -336,7 +355,7 @@ if (!data) {
       const r2 = w.addStack(); t(r2, dd.title, tw(12)); r2.addSpacer(6); t(r2, dd.date.slice(5).replace('-', '.'), tw(10)); r2.addSpacer()
       if (next) { w.addSpacer(2); const r3 = w.addStack(); t(r3, next.title + ' ' + ddT(next), tw(10)).textOpacity = 0.7; r3.addSpacer() }
     }
-  } else if (lock && TM && (KIND === 'default' || KIND === 'study')) {
+  } else if (lock && TM && (KIND === 'default' || KIND === 'study' || KIND === 'quick')) {
     // ── 잠금 화면 · 진행 중 타이머 (초 단위로 흐름) ──
     if (fam === 'accessoryInline') {
       if (TM.paused) inline('일시정지 ' + TM.name + ' ' + hm(TM.pm)); else { const d = w.addDate(new Date(TM.mode === 'countdown' ? TM.end : TM.start)); d.applyTimerStyle(); d.lineLimit = 1 }
@@ -486,6 +505,61 @@ if (!data) {
         rRow(DAY[d0.getDay()] + ' ' + d0.getDate(), '할 일 ' + left, label(8), label(8))
         rRow(c ? clk(c.s) + ' ' + c.t : '남은 일정 없음', '', tw(11), label(8))
         rRow('공부 ' + hm(mins) + ' / ' + hm(goal), pct + '%', tw(11), label(8))
+        lbar(w, mins / goal, 150)
+      }
+    } else if (KIND === 'dash') {
+      const left = items.filter((x) => !x.done).length, c = nCur || nNext
+      if (inl) inline(hm(mins) + ' · 할 일 ' + left + (dd ? ' · ' + ddTxt : ''))
+      else if (circ) cRows([[hm(mins), tw(14)], ['할 일 ' + left, label(7)]], mins / goal)
+      else {
+        rRow('공부 ' + hm(mins), '할 일 ' + left, tw(11), label(8))
+        rRow(c ? clk(c.s) + ' ' + c.t : '남은 일정 없음', '', tw(11), label(8))
+        rRow(dd ? dd.title : 'No D-day', dd ? ddTxt : '', tw(11), label(8))
+        lbar(w, mins / goal, 150)
+      }
+    } else if (KIND === 'tmrw') {
+      const f = TMR.ev[0], c1 = TMR.cl[0]
+      if (inl) inline(f ? '내일 ' + (f.s == null ? '' : clk(f.s % 1440) + ' ') + f.t : c1 ? '내일 ' + clk(c1.start) + ' ' + c1.title : TMR.tk.length ? '내일 할 일 ' + TMR.tk.length + '개' : '내일은 비어 있어요')
+      else if (circ) cRows([['내일', label(7)], [String(tmrN), thin(22)], ['일정·할 일', label(6)]])
+      else {
+        rRow('내일 ' + DAY[(d0.getDay() + 1) % 7], TMR.cl.length ? '수업 ' + TMR.cl.length + '교시' : '', label(8), label(8))
+        const rows = [...TMR.ev.map((e) => [e.t, e.s == null ? '종일' : clk(e.s % 1440)]), ...TMR.tk.map((x) => ['– ' + x.title, ''])]
+        for (const x of rows.slice(0, 3)) rRow(x[0], x[1], tw(11), label(8))
+        if (!rows.length) t(w, c1 ? '첫 수업 ' + clk(c1.start) + ' ' + c1.title : '내일은 비어 있어요', tw(11))
+      }
+    } else if (KIND === 'due') {
+      const over = DUE.filter((x) => dueIn(x) < 0).length
+      if (inl) inline(DUE[0] ? dueTxt(DUE[0]) + ' ' + DUE[0].title : '2주 안에 마감 없음')
+      else if (circ) cRows([[String(DUE.length), thin(22)], ['마감', label(7)], [over ? over + ' 지남' : '2주', label(6)]])
+      else {
+        for (const x of DUE.slice(0, 3)) rRow(x.title, dueTxt(x), tw(11), label(8))
+        if (!DUE.length) t(w, '2주 안에 마감 없음', tw(11))
+        else if (DUE.length > 3) t(w, '+ ' + (DUE.length - 3) + ' more', label(7)).textOpacity = 0.7
+      }
+    } else if (KIND === 'week7') {
+      const nx = nextEv7
+      if (inl) inline(nx ? (nx.d.i === 0 ? '' : nx.d.i === 1 ? '내일 ' : DAY[nx.d.x.getDay()] + ' ') + (nx.e.s == null ? '종일' : clk(nx.e.s % 1440)) + ' ' + nx.e.t : '7일 안에 일정 없음')
+      else if (circ) cRows([[String(ev7), thin(22)], ['7 DAYS', label(7)]])
+      else {
+        const ds = DAYS7.filter((d) => d.ev.length).slice(0, 3)
+        for (const d of ds) rRow(dayName(d) + '  ' + d.ev[0].t, d.ev.length > 1 ? '+' + (d.ev.length - 1) : (d.ev[0].s == null ? '종일' : clk(d.ev[0].s % 1440)), tw(11), label(8))
+        if (!ds.length) t(w, '7일 안에 일정 없음', tw(11))
+      }
+    } else if (KIND === 'ddl') {
+      if (inl) inline(ddAll.length ? ddAll.slice(0, 2).map((x) => ddT(x) + ' ' + x.title).join(' · ') : 'No D-day')
+      else if (circ) cRows(dd ? [[ddN(dd) === 0 ? 'D' : String(ddN(dd)), thin(22)], [dd.title, label(7)]] : [['—', tw(14)]])
+      else {
+        for (const x of ddAll.slice(0, 3)) rRow(x.title, ddT(x), tw(11), label(9))
+        if (!ddAll.length) t(w, 'No D-day', tw(11))
+      }
+    } else if (KIND === 'quick') {
+      const s0 = QS[0]
+      w.url = startUrl(s0)
+      if (inl) inline(s0 ? '공부 시작 · ' + s0.name + ' · 오늘 ' + hm(mins) : '공부 시작')
+      else if (circ) cRows([['시작', label(7)], [s0 ? s0.name : '공부', tw(13)], [hm(mins), label(7)]], mins / goal)
+      else {
+        rRow('공부 시작', '오늘 ' + hm(mins), label(8), label(8))
+        t(w, s0 ? s0.name : '공부', thin(22)).minimumScaleFactor = 0.6
         lbar(w, mins / goal, 150)
       }
     }
@@ -776,6 +850,156 @@ if (!data) {
       w.addSpacer(12); rule(w, inner); w.addSpacer(10)
       todoList(w, 6, 6)
       w.addSpacer(); if (dd) ddRow(w, 12)
+    }
+  } else if (KIND === 'dash') {
+    // ── 대시보드: 공부 · 할 일 · 다음 일정 · D-day 칸 (중·대는 칸마다 누르면 해당 화면) ──
+    const left = items.filter((x) => !x.done).length, c = nCur || nNext
+    const tiles = [
+      ['STUDY', hm(mins), pct + '%', mins / goal, 'study.records', GOLD],
+      ['TO DO', String(left), done + ' done', items.length ? done / items.length : 0, 'tasks', SOFT],
+      ['NEXT', c ? clk(c.s) : '—', c ? c.t : '남은 일정 없음', null, 'planner.today', SOFT],
+      ['D-DAY', dd ? ddTxt : '—', dd ? dd.title : '없음', null, 'study.progress', GOLD],
+    ]
+    const cols = fam === 'medium' ? 4 : 2, gap = 12, wd = Math.floor((inner - gap * (cols - 1)) / cols), big = fam === 'small' ? 19 : fam === 'medium' ? 22 : 30
+    if (fam !== 'small') { const h = w.addStack(); h.centerAlignContent(); cap(h, 'TODAY'); h.addSpacer(); t(h, dateStr, label(8), SOFT); w.addSpacer(fam === 'medium' ? 14 : 12) }
+    for (let i = 0; i < 4; i += cols) {
+      const r = w.addStack(); r.spacing = gap
+      for (const x of tiles.slice(i, i + cols)) {
+        const b = r.addStack(); b.layoutVertically(); b.size = new Size(wd, 0); if (fam !== 'small') b.url = link(x[4])
+        t(b, x[0], label(7), SOFT); b.addSpacer(2)
+        t(b, x[1], thin(big), INK).minimumScaleFactor = 0.5
+        t(b, x[2], tw(10), x[5]).minimumScaleFactor = 0.7
+        if (x[3] != null) { b.addSpacer(4); pbar(b, x[3], wd) }
+      }
+      if (i + cols < 4) w.addSpacer(fam === 'small' ? 10 : 14)
+    }
+    if (fam === 'large' || fam === 'extraLarge') { w.addSpacer(14); rule(w, inner); w.addSpacer(10); todoList(w, 5, 5) }
+  } else if (KIND === 'tmrw') {
+    // ── 내일 준비: 수업 · 일정 · 할 일 ──
+    const td = new Date(d0.getTime() + 86400000)
+    const h = w.addStack(); h.centerAlignContent(); cap(h, 'TOMORROW'); h.addSpacer(); t(h, DAY[td.getDay()] + ' ' + (td.getMonth() + 1) + '/' + td.getDate(), label(8), GOLD)
+    w.addSpacer(fam === 'small' ? 8 : 10)
+    const clLine = (parent) => { if (!TMR.cl.length) return; const r = parent.addStack(); r.centerAlignContent(); t(r, '수업 ' + TMR.cl.length + '교시', tw(10), SOFT); r.addSpacer(6); t(r, clk(TMR.cl[0].start) + '–' + clk(TMR.cl[TMR.cl.length - 1].end), tw(10), SOFT); r.addSpacer(); parent.addSpacer(6) }
+    const evRows = (parent, n, size) => {
+      for (const e of TMR.ev.slice(0, n)) {
+        const r = parent.addStack(); r.centerAlignContent(); r.spacing = 6
+        const tm = r.addStack(); tm.size = new Size(34, 0); t(tm, e.s == null ? '종일' : clk(e.s % 1440), tw(10), SOFT); tm.addSpacer()
+        const bar = r.addStack(); bar.size = new Size(2, 12); bar.cornerRadius = 1; bar.backgroundColor = e.c ? new Color(e.c) : RULE
+        t(r, e.t, tw(size), INK).minimumScaleFactor = 0.8; r.addSpacer(); parent.addSpacer(5)
+      }
+      if (TMR.ev.length > n) t(parent, '+ ' + (TMR.ev.length - n) + ' more', tw(10), SOFT)
+    }
+    const tkRows = (parent, n, size) => {
+      for (const x of TMR.tk.slice(0, n)) {
+        const r = parent.addStack(); r.centerAlignContent(); r.spacing = 6; if (x.id) r.url = APP + '?done=' + encodeURIComponent(x.id)
+        const imp = x.priority >= 3; t(r, imp ? '•' : '–', tw(size - 1), imp ? GOLD : SOFT); t(r, x.title, imp ? F(size, 'Medium') : tw(size), INK).minimumScaleFactor = 0.85; r.addSpacer()
+        if (x.dueTime != null) t(r, clk(x.dueTime), tw(10), SOFT)
+        parent.addSpacer(5)
+      }
+      if (TMR.tk.length > n) t(parent, '+ ' + (TMR.tk.length - n) + ' more', tw(10), SOFT)
+    }
+    if (!TMR.ev.length && !TMR.tk.length && !TMR.cl.length) t(w, '내일은 비어 있어요', tw(13), SOFT)
+    else if (fam === 'small') { clLine(w); const k = TMR.cl.length ? 2 : 3, kt = Math.max(0, k - TMR.ev.length); evRows(w, k, 12); if (kt) tkRows(w, kt, 12); w.addSpacer(); if (TMR.tk.length && !kt) t(w, '할 일 ' + TMR.tk.length + '개', tw(10), GOLD) }
+    else if (fam === 'medium') {
+      const row = w.addStack()
+      const L = row.addStack(); L.layoutVertically(); L.size = new Size(Math.round(inner * 0.54), 0); clLine(L); evRows(L, TMR.cl.length ? 3 : 4, 12); if (!TMR.ev.length) t(L, '일정 없음', tw(12), SOFT); L.addSpacer()
+      row.addSpacer(12); vrule(row, 96); row.addSpacer(12)
+      const R = row.addStack(); R.layoutVertically(); tkRows(R, 4, 12); if (!TMR.tk.length) t(R, '할 일 없음', tw(12), SOFT); R.addSpacer()
+      row.addSpacer()
+    } else {
+      if (TMR.cl.length) { cap(w, 'CLASSES'); w.addSpacer(5); t(w, TMR.cl.map((c) => c.period + ' ' + c.title).join(' · '), tw(12), INK, 2); w.addSpacer(12) }
+      cap(w, 'EVENTS'); w.addSpacer(5); evRows(w, 4, 13); if (!TMR.ev.length) t(w, '일정 없음', tw(12), SOFT)
+      w.addSpacer(10); cap(w, 'TO DO'); w.addSpacer(5); tkRows(w, TMR.cl.length ? 4 : 6, 13); if (!TMR.tk.length) t(w, '할 일 없음', tw(12), SOFT)
+    }
+  } else if (KIND === 'due') {
+    // ── 마감 임박: 지난 것 + 2주 안 (누르면 완료 확인) ──
+    const over = DUE.filter((x) => dueIn(x) < 0).length
+    const h = w.addStack(); h.centerAlignContent(); cap(h, 'DUE'); h.addSpacer(); t(h, over ? over + '개 지남' : '2주 ' + DUE.length + '개', label(8), over ? GOLD : SOFT)
+    w.addSpacer(10)
+    const n0 = fam === 'small' ? 4 : fam === 'medium' ? 5 : 11, n = DUE.length === n0 + 1 ? n0 + 1 : n0
+    for (const x of DUE.slice(0, n)) {
+      const r = w.addStack(); r.centerAlignContent(); r.spacing = 8; if (x.id) r.url = APP + '?done=' + encodeURIComponent(x.id)
+      const tg = r.addStack(); tg.size = new Size(fam === 'small' ? 36 : 42, 0); t(tg, dueTxt(x), tw(10), dueIn(x) <= 0 ? GOLD : SOFT).minimumScaleFactor = 0.7; tg.addSpacer()
+      t(r, x.title, x.priority >= 3 ? F(TS, 'Medium') : tw(TS), INK).minimumScaleFactor = 0.85; r.addSpacer()
+      if (fam !== 'small' && x.dueTime != null) t(r, clk(x.dueTime), tw(10), SOFT)
+      w.addSpacer(fam === 'large' ? 7 : 4)
+    }
+    if (!DUE.length) t(w, '2주 안에 마감 없음', tw(TS), SOFT)
+    else if (DUE.length > n) t(w, '+ ' + (DUE.length - n) + ' more', tw(11), SOFT)
+  } else if (KIND === 'week7') {
+    // ── 7일 일정: 중형은 7칸, 소·대형은 날짜별 줄 ──
+    const h = w.addStack(); h.centerAlignContent(); cap(h, 'NEXT 7 DAYS'); h.addSpacer(); t(h, ev7 + '개', label(8), SOFT)
+    w.addSpacer(fam === 'small' ? 8 : 10)
+    const evBar = (parent, e, hgt) => { const b = parent.addStack(); b.size = new Size(2, hgt); b.cornerRadius = 1; b.backgroundColor = e.c ? new Color(e.c) : GOLD }
+    if (fam === 'medium') {
+      const gap = 4, cw = Math.floor((inner - gap * 6) / 7), row = w.addStack(); row.spacing = gap
+      for (const d of DAYS7) {
+        const c = row.addStack(); c.layoutVertically(); c.size = new Size(cw, 94)
+        const a = c.addStack(); t(a, ['S', 'M', 'T', 'W', 'T', 'F', 'S'][d.x.getDay()], label(7), d.i === 0 ? GOLD : SOFT); a.addSpacer()
+        const b = c.addStack(); t(b, d.x.getDate(), d.i === 0 ? F(13, 'SemiBold') : tw(13), d.i === 0 ? GOLD : INK); b.addSpacer()
+        c.addSpacer(4)
+        for (const e of d.ev.slice(0, 3)) { const r = c.addStack(); r.centerAlignContent(); r.spacing = 2; evBar(r, e, 9); t(r, e.t, tw(8), INK); r.addSpacer(); c.addSpacer(3) }
+        if (d.ev.length > 3) t(c, '+' + (d.ev.length - 3), label(7), SOFT)
+        c.addSpacer()
+      }
+    } else {
+      const nd = fam === 'small' ? 3 : 7, ne = fam === 'small' ? 1 : 2
+      for (const d of DAYS7.slice(0, nd)) {
+        const r = w.addStack(); r.topAlignContent(); r.spacing = 8
+        const L = r.addStack(); L.size = new Size(fam === 'small' ? 34 : 44, 0); L.layoutVertically(); t(L, dayName(d), label(7), d.i === 0 ? GOLD : SOFT); t(L, (d.x.getMonth() + 1) + '/' + d.x.getDate(), tw(10), SOFT)
+        const R = r.addStack(); R.layoutVertically()
+        d.ev.slice(0, ne).forEach((e, j) => {
+          const q = R.addStack(); q.centerAlignContent(); q.spacing = 5
+          if (fam !== 'small') { const tm = q.addStack(); tm.size = new Size(32, 0); t(tm, e.s == null ? '종일' : clk(e.s % 1440), tw(10), SOFT); tm.addSpacer() }
+          evBar(q, e, 11); t(q, e.t, tw(fam === 'small' ? 11 : 12), INK).minimumScaleFactor = 0.8; q.addSpacer()
+          if (j === ne - 1 && d.ev.length > ne) t(q, '+' + (d.ev.length - ne), label(7), SOFT)
+          R.addSpacer(2)
+        })
+        if (!d.ev.length) t(R, '—', tw(11), SOFT)
+        r.addSpacer()
+        w.addSpacer(fam === 'small' ? 5 : 7)
+      }
+    }
+  } else if (KIND === 'ddl') {
+    // ── D-day 목록 ──
+    const h = w.addStack(); h.centerAlignContent(); cap(h, 'D-DAYS'); h.addSpacer(); if (fam !== 'small') t(h, dateStr, label(8), SOFT)
+    w.addSpacer(fam === 'small' ? 8 : 10)
+    const ddLine = (parent, x, size) => { const r = parent.addStack(); r.centerAlignContent(); t(r, x.title, tw(size), INK).minimumScaleFactor = 0.8; r.addSpacer(6); if (fam !== 'small') { t(r, x.date.slice(5).replace('-', '.'), tw(10), SOFT); r.addSpacer(8) } t(r, ddT(x), tw(size), GOLD) }
+    if (!ddAll.length) t(w, 'No D-day.', tw(13), SOFT)
+    else if (fam === 'medium') {
+      const row = w.addStack()
+      const L = row.addStack(); L.layoutVertically(); L.size = new Size(Math.round(inner * 0.38), 0)
+      t(L, ddT(ddAll[0]), thin(34), INK).minimumScaleFactor = 0.5; L.addSpacer(2); t(L, ddAll[0].title, tw(12), GOLD).minimumScaleFactor = 0.7; t(L, ddAll[0].date.slice(5).replace('-', '.'), tw(10), SOFT); L.addSpacer()
+      row.addSpacer(12); vrule(row, 92); row.addSpacer(12)
+      const R = row.addStack(); R.layoutVertically()
+      for (const x of ddAll.slice(1, 5)) { const r = R.addStack(); r.centerAlignContent(); t(r, x.title, tw(12), INK).minimumScaleFactor = 0.8; r.addSpacer(6); t(r, ddT(x), tw(12), GOLD); R.addSpacer(7) }
+      if (ddAll.length === 1) t(R, '다른 D-day 없음', tw(11), SOFT)
+      R.addSpacer()
+    } else {
+      const n = fam === 'small' ? 4 : 10
+      for (const x of ddAll.slice(0, n)) { ddLine(w, x, fam === 'small' ? 12 : 14); w.addSpacer(fam === 'small' ? 6 : 10) }
+    }
+  } else if (KIND === 'quick') {
+    // ── 바로 시작: 과목 누르면 스톱워치 시작 · 빠른 추가 (소형은 최근 과목 하나) ──
+    const s0 = QS[0]
+    const h = w.addStack(); h.centerAlignContent(); cap(h, 'START'); h.addSpacer(); t(h, '오늘 ' + hm(mins), label(8), GOLD)
+    w.addSpacer(fam === 'small' ? 8 : 10)
+    const btn = (parent, s, url, wd, hgt, color, size = 12) => { const b = parent.addStack(); b.size = new Size(wd, hgt); b.cornerRadius = 10; b.backgroundColor = RULE; b.centerAlignContent(); b.url = url; if (color) { const d = b.addStack(); d.size = new Size(6, 6); d.cornerRadius = 3; d.backgroundColor = new Color(color); b.addSpacer(5) } t(b, s, tw(size), INK).minimumScaleFactor = 0.6; return b }
+    const running = (parent) => { const k = parent.addStack(); k.centerAlignContent(); k.url = link('study.timer'); t(k, '● ' + TM.name + ' ', tw(12), GOLD); if (TM.paused) t(k, hm(TM.pm), tw(12), INK); else timerDate(k, 12); k.addSpacer(); t(k, TM.paused ? '일시정지' : '공부 중', label(8), SOFT) }
+    if (fam === 'small') {
+      w.url = TM ? link('study.timer') : startUrl(s0)
+      if (TM) { t(w, TM.name, tw(12), GOLD); w.addSpacer(2); const r = w.addStack(); if (TM.paused) t(r, hm(TM.pm), thin(30), INK); else timerDate(r, 30, true); r.addSpacer() }
+      else { const r = w.addStack(); r.centerAlignContent(); if (s0 && s0.color) { const d = r.addStack(); d.size = new Size(7, 7); d.cornerRadius = 3.5; d.backgroundColor = new Color(s0.color); r.addSpacer(6) } t(r, s0 ? s0.name : '공부', thin(26), INK).minimumScaleFactor = 0.5; r.addSpacer(); w.addSpacer(2); t(w, '눌러서 시작', tw(10), SOFT) }
+      w.addSpacer(); pbar(w, mins / goal, inner)
+    } else {
+      const per = 4, gap = 8, bw = Math.floor((inner - gap * (per - 1)) / per)
+      if (TM) { running(w); w.addSpacer(10) }
+      const subs = QS.slice(0, TM ? (fam === 'medium' ? 0 : 4) : fam === 'medium' ? 4 : 8)
+      for (let i = 0; i < subs.length; i += per) { const r = w.addStack(); r.spacing = gap; for (const s of subs.slice(i, i + per)) btn(r, s.name, startUrl(s), bw, 34, s.color); w.addSpacer(gap) }
+      if (!subjects.length && !TM) { t(w, '앱 › 설정에서 과목을 추가해 보세요', tw(12), SOFT); w.addSpacer(gap) }
+      const aw = Math.floor((inner - gap * 2) / 3), r2 = w.addStack(); r2.spacing = gap
+      btn(r2, '+ 할 일', newUrl('task'), aw, 30, null, 11); btn(r2, '+ 일정', newUrl('event'), aw, 30, null, 11); btn(r2, '+ 기록', newUrl('record'), aw, 30, null, 11)
+      if (fam === 'large' || fam === 'extraLarge') { w.addSpacer(14); rule(w, inner); w.addSpacer(10); todoList(w, 4, 5) }
     }
   } else if (KIND === 'quote') {
     // ── 다짐 ──
