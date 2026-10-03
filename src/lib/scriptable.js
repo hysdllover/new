@@ -64,10 +64,11 @@ const GOLD = dyn('#b39d74', '#c9b489')
 let RULE = dyn('#e2ded6', '#2c2b29')
 
 // 폰트 — 한글·영문·숫자 한 서체로 통일. 기본 애플 산돌고딕 얇게, 앱 설정에서 설치한 폰트(PostScript 이름) 지정 가능
-let CUSTOM = '', SCALE = 1, WSHIFT = 0
+let CUSTOM = '', SCALE = 1, WSHIFT = 0, CLEAR = false
 // 앱 설정의 위젯 글자 크기(SCALE)·굵기(WSHIFT: -1 얇게 · 0 기본 · 1 보통 · 2 진하게)
 const WTS = ['UltraLight', 'Thin', 'Light', 'Regular', 'Medium', 'SemiBold', 'Bold']
-const F = (s, wt = 'Light') => new Font(CUSTOM || 'AppleSDGothicNeo-' + WTS[Math.max(0, Math.min(6, WTS.indexOf(wt) + WSHIFT))], Math.round(s * SCALE * 2) / 2)
+// CLEAR(투명·클리어 위젯): 아주 작은 글자는 9pt 이상으로, 전체 6% 크게
+const F = (s, wt = 'Light') => new Font(CUSTOM || 'AppleSDGothicNeo-' + WTS[Math.max(0, Math.min(6, WTS.indexOf(wt) + WSHIFT))], Math.round((CLEAR ? Math.max(s, 9) * 1.06 : s) * SCALE * 2) / 2)
 const tw = (s) => F(s, 'Light')
 const thin = (s) => F(s, 'Thin')
 const label = (s) => F(s, 'Regular')
@@ -148,7 +149,13 @@ function line(ratio, w, fg, bg) {
 }
 function rule(parent, w) { const s = parent.addStack(); s.size = new Size(w, 0.6); s.backgroundColor = RULE }
 function vrule(parent, h) { const s = parent.addStack(); s.size = new Size(0.6, h); s.backgroundColor = RULE }
-function t(parent, s, font, color, lines = 1) { const x = parent.addText(String(s)); x.font = font; if (color) x.textColor = color; x.lineLimit = lines; return x }
+function t(parent, s, font, color, lines = 1) {
+  const x = parent.addText(String(s)); x.font = font; if (color) x.textColor = color; x.lineLimit = lines
+  // 투명 위젯: 배경 무늬 위에서도 글자가 떠 보이게 은은한 그림자
+  if (CLEAR) { x.shadowColor = new Color(inkDark ? '#ffffff' : '#000000', 0.45); x.shadowRadius = 2; x.shadowOffset = new Point(0, 0.5) }
+  return x
+}
+let inkDark = false
 function cap(parent, s) { return t(parent, s.split('').join(' '), label(8), SOFT) }
 
 const data = await load()
@@ -208,6 +215,14 @@ if (!data) {
   CUSTOM = (st.widgetFont || '').trim()
   SCALE = Math.max(0.8, Math.min(1.3, +st.widgetScale || 1)); if (lock) SCALE = Math.min(1.25, SCALE * 1.18) // 잠금 화면은 꽉 차게 (기본 1.18배)
   WSHIFT = +st.widgetWeight || 0
+  CLEAR = st.widgetClear !== false && !lock // 기본 켬
+  if (CLEAR) {
+    // 투명·클리어 위젯: 한 단계 굵게, 흐린 글자도 또렷하게, 선도 진하게
+    WSHIFT = Math.max(WSHIFT, 0) + 1
+    inkDark = inkMode === 'dark'
+    SOFT = inkMode === 'light' ? new Color('#ffffff', 0.9) : inkMode === 'dark' ? new Color('#1d1c1a', 0.85) : dyn('#2b2a28', '#ece8e1', 0.85)
+    RULE = inkMode === 'light' ? new Color('#ffffff', 0.5) : inkMode === 'dark' ? new Color('#1d1c1a', 0.35) : dyn('#2b2a28', '#ece8e1', 0.35)
+  }
   MH = innerH - Math.round(11 * SCALE) - 10
   const goal = st.goalDaily || 240
   const subjects = alive(data.study.subjects)
