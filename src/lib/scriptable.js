@@ -407,7 +407,7 @@ if (!data) {
       if (c) { row(c.period + '교시', label(8)); row(c.title, tw(13)); row(clCur ? '~' + clk(c.end) : clk(c.start), label(8)) }
       else row(CL.length ? '끝' : '—', tw(14))
     } else {
-      const r = w.addStack(); r.centerAlignContent(); t(r, clCur ? '지금 ' + clCur.period + '교시' : clNext ? '다음 ' + clNext.period + '교시' : '시간표', label(8)); r.addSpacer(); if (c) t(r, clk(c.start) + '–' + clk(c.end), label(8))
+      const r = w.addStack(); r.size = new Size(LK.rw, 0); r.centerAlignContent(); t(r, clCur ? '지금 ' + clCur.period + '교시' : clNext ? '다음 ' + clNext.period + '교시' : '시간표', label(8)); r.addSpacer(); if (c) t(r, clk(c.start) + '–' + clk(c.end), label(8))
       w.addSpacer(1)
       t(w, c ? c.title : CL.length ? '오늘 수업 끝' : '오늘 수업 없음', thin(22)).minimumScaleFactor = 0.6
       w.addSpacer(1)
@@ -426,7 +426,7 @@ if (!data) {
       const a = z.addStack(); a.addSpacer(); t(a, ddN(dd) === 0 ? 'D-DAY' : ddN(dd), thin(ddN(dd) === 0 ? 14 : 24)).minimumScaleFactor = 0.5; a.addSpacer()
       const b = z.addStack(); b.addSpacer(); t(b, dd.title, label(8)).minimumScaleFactor = 0.6; b.addSpacer()
     } else {
-      const r = w.addStack(); r.bottomAlignContent()
+      const r = w.addStack(); r.size = new Size(LK.rw, 0); r.bottomAlignContent()
       t(r, ddTxt, thin(26)).minimumScaleFactor = 0.6; r.addSpacer()
       w.addSpacer(2)
       const r2 = w.addStack(); t(r2, dd.title, tw(12)); r2.addSpacer(6); t(r2, dd.date.slice(5).replace('-', '.'), tw(10)); r2.addSpacer()
@@ -443,7 +443,7 @@ if (!data) {
       const b = z.addStack(); b.addSpacer(); if (TM.paused) t(b, hm(TM.pm), tw(13)); else timerDate(b, 12); b.addSpacer()
       const c = z.addStack(); c.addSpacer(); t(c, TM.paused ? '일시정지' : TM.mode === 'countdown' ? '남음' : '공부 중', label(7)); c.addSpacer()
     } else {
-      const r = w.addStack(); r.centerAlignContent(); t(r, '● ' + TM.name, tw(11)); r.addSpacer(); t(r, TM.paused ? '일시정지' : TM.mode === 'countdown' ? '타이머' : '공부 중', label(8))
+      const r = w.addStack(); r.size = new Size(LK.rw, 0); r.centerAlignContent(); t(r, '● ' + TM.name, tw(11)); r.addSpacer(); t(r, TM.paused ? '일시정지' : TM.mode === 'countdown' ? '타이머' : '공부 중', label(8))
       w.addSpacer(1)
       const r2 = w.addStack(); if (TM.paused) t(r2, hm(TM.pm), thin(26)); else timerDate(r2, 26, true); r2.addSpacer()
       w.addSpacer(1)
@@ -458,7 +458,7 @@ if (!data) {
       for (const [s, f] of rows) { const a = z.addStack(); a.addSpacer(); const x = t(a, s, f); x.minimumScaleFactor = 0.5; a.addSpacer() }
       if (ratio != null) cline(z, ratio)
     }
-    const rRow = (l, r, lf = tw(11), rf = label(8)) => { const a = w.addStack(); a.centerAlignContent(); t(a, l, lf).minimumScaleFactor = 0.7; a.addSpacer(); if (r) { a.addSpacer(4); t(a, r, rf) } return a } // 오른쪽 값은 오른쪽 끝에
+    const rRow = (l, r, lf = tw(11), rf = label(8)) => { const a = w.addStack(); a.size = new Size(LK.rw, 0); a.centerAlignContent(); t(a, l, lf).minimumScaleFactor = 0.7; a.addSpacer(); if (r) { a.addSpacer(4); t(a, r, rf) } return a } // 오른쪽 값은 오른쪽 끝에
     const dayMins = {}
     for (const x of allSess) dayMins[x.date] = (dayMins[x.date] || 0) + (x.dur || 0)
     const ymdOff = (k) => { const d = new Date(d0); d.setDate(d.getDate() - k); return ymd(d) }
@@ -469,7 +469,7 @@ if (!data) {
       if (inl) inline('공부 ' + hm(mins) + ' / ' + hm(goal) + ' · ' + pct + '%')
       else if (circ) cRows([[hm(mins), tw(14)], [pct + '%', label(8)]], mins / goal)
       else {
-        const r = w.addStack(); r.bottomAlignContent(); t(r, hm(mins), thin(22)); r.addSpacer(4); t(r, '/ ' + hm(goal), tw(10)); r.addSpacer(); t(r, pct + '%', tw(11))
+        const r = w.addStack(); r.size = new Size(LK.rw, 0); r.bottomAlignContent(); t(r, hm(mins), thin(22)); r.addSpacer(4); t(r, '/ ' + hm(goal), tw(10)); r.addSpacer(); t(r, pct + '%', tw(11))
         w.addSpacer(3); lbar(w, mins / goal, LK.rw); w.addSpacer(4)
         rRow('이번 주 ' + hm(week), '어제 ' + hm(yday), tw(10), tw(10))
       }
@@ -590,11 +590,11 @@ if (!data) {
       else if (circ) cRows([[hm(mins), tw(14)], [pct + '%', label(7)]], mins / goal)
       else {
         // 크게 두 개(D-day · 공부 시간) + 아래 한 줄(일정 · %) — 잠금 화면에서 잘 보이게 굵고 넉넉하게
-        const r1 = w.addStack(); r1.bottomAlignContent()
+        const r1 = w.addStack(); r1.size = new Size(LK.rw, 0); r1.bottomAlignContent()
         t(r1, dd ? ddTxt : '—', F(20, 'Regular')).minimumScaleFactor = 0.6; r1.addSpacer()
         if (TM && !TM.paused) { const d = r1.addDate(new Date(TM.mode === 'countdown' ? TM.end : TM.start)); d.applyTimerStyle(); d.font = F(20, 'Regular'); d.lineLimit = 1; d.minimumScaleFactor = 0.6; d.rightAlignText() } else t(r1, hm(TM ? TM.pm : mins), F(20, 'Regular')).minimumScaleFactor = 0.6
         w.addSpacer(3)
-        const r2 = w.addStack(); r2.centerAlignContent()
+        const r2 = w.addStack(); r2.size = new Size(LK.rw, 0); r2.centerAlignContent()
         t(r2, c ? clk(c.s) + ' ' + c.t : dd ? dd.title : '남은 일정 없음', F(12, 'Regular')).minimumScaleFactor = 0.7; r2.addSpacer(6); t(r2, pct + '%', F(12, 'Regular'))
         w.addSpacer(4)
         lbar(w, mins / goal, LK.rw, 3)
@@ -656,7 +656,7 @@ if (!data) {
       if (KIND === 'dday' && dd) { row(ddN(dd) === 0 ? 'D' : String(ddN(dd)), thin(20)); row('D-DAY', label(7)) }
       else { row(hm(mins), tw(14)); row(pct + '%', label(8)); cline(z, mins / goal) }
     } else {
-      const r = w.addStack(); r.bottomAlignContent()
+      const r = w.addStack(); r.size = new Size(LK.rw, 0); r.bottomAlignContent()
       t(r, hm(mins), thin(22)); r.addSpacer(4); t(r, '/ ' + hm(goal), tw(10)); r.addSpacer(); if (dd) t(r, ddTxt, tw(12))
       w.addSpacer(4)
       lbar(w, mins / goal, LK.rw)
