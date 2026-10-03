@@ -58,6 +58,17 @@ Promise.all([loadState(), initFonts(), restoreSync()]).then(async () => {
     const [{ default: DoneConfirm }, { openSheet }] = await Promise.all([import('./components/DoneConfirm.jsx'), import('./components/ui.jsx')])
     setTimeout(() => openSheet((c) => <DoneConfirm id={doneIn} close={c} />, { title: '할 일' }), 300)
   }
+  // 위젯 '바로 시작': ?timer=과목id → 스톱워치 시작 (이미 도는 중이면 그대로) · ?new=task|event|record|memo → 빠른 추가
+  const timerIn = q.get('timer'), newIn = q.get('new')
+  if (timerIn != null) {
+    const tm = await import('./lib/timer.js')
+    if (!tm.getTimer()) { const { list } = await import('./store/store.js'); const sid = list('subjects').some((s) => s.id === timerIn) ? timerIn : list('subjects')[0]?.id; tm.startStopwatch(sid); setTimeout(() => toast('타이머를 시작했어요'), 600) }
+    go('study', 'timer')
+  }
+  if (newIn && ['task', 'event', 'record', 'memo'].includes(newIn)) {
+    const [{ default: QuickAdd }, { openSheet }] = await Promise.all([import('./components/QuickAdd.jsx'), import('./components/ui.jsx')])
+    setTimeout(() => openSheet((c) => <QuickAdd close={c} initial={newIn} />, { title: '빠른 추가' }), 300)
+  }
   // 단축어(애플 인텔리전스)가 돌려준 답: ?ai=답
   const aiIn = q.get('ai')
   if (aiIn != null) {
@@ -73,7 +84,7 @@ Promise.all([loadState(), initFonts(), restoreSync()]).then(async () => {
     const r = importHealth(q)
     if (r) { go('health'); setTimeout(() => toast(`건강 기록 · ${[r.sleep != null && `수면 ${r.sleep}시간`, r.steps != null && `걸음 ${r.steps.toLocaleString()}`].filter(Boolean).join(' · ')}`), 600) }
   }
-  if (target || added || link || noteIn != null || healthIn || aiIn != null || doneIn) history.replaceState(null, '', location.pathname + location.hash)
+  if (target || added || link || noteIn != null || healthIn || aiIn != null || doneIn || timerIn != null || newIn) history.replaceState(null, '', location.pathname + location.hash)
   createRoot(document.getElementById('root')).render(<StrictMode><Root /></StrictMode>)
   startServices()
   import('./lib/resume.js').then((m) => m.startResume())

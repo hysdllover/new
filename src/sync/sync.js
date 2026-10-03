@@ -212,7 +212,7 @@ function widgetPayload() {
     settings: { settings: { main: { goalDaily: main.goalDaily, weekStart: main.weekStart, widgetFont: main.widgetFont, widgetScale: main.widgetScale, widgetWeight: main.widgetWeight } }, quotes: keep('quotes') },
   })
 }
-const WIDGET_GAP = 30000 // 위젯 gist 쓰기 최소 간격 30초 (앱을 나갈 때·타이머는 바로)
+const WIDGET_GAP = 10000 // 위젯 gist 쓰기 최소 간격 10초 (앱을 나갈 때·타이머는 바로)
 let widgetDirty = false, widgetTimer = null
 // 아이폰 캘린더 구독용 .ics (일정·할 일·D-day)
 function calendarIcs() {
