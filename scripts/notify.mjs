@@ -48,23 +48,34 @@ const tz = push.tz || 'Asia/Seoul'
 const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date()).map((p) => [p.type, p.value]))
 const date = `${parts.year}-${parts.month}-${parts.day}`
 const now = +parts.hour * 60 + +parts.minute
-const due = (at) => at != null && at <= now && at > now - WINDOW
+// GitHub 예약 실행은 몇 시간씩 늦어질 수 있음 → 지난 실행 이후 놓친 시간까지 (최대 6시간) 한 번에 확인
+const meta = sentFile._meta || {}
+const since = meta.lastRun ? Math.ceil((Date.now() - meta.lastRun) / 60000) + 1 : WINDOW
+const win = Math.min(360, Math.max(WINDOW, since))
+const due = (at) => at != null && at <= now && at > now - win
 
 const out = []
-const add = (key, at, title, body, url = './') => { if (due(at) && !sentFile[key]) out.push({ key, title, body, url }) }
+const add = (key, at, title, body, url = './') => { if (due(at) && !sentFile[key]) out.push({ key, title, body, url, late: now - at }) }
+// 실행 기록 저장 (알림이 없어도) — 앱 설정에서 ‘마지막 확인’ 으로 보임
+async function finish(files = {}) {
+  sentFile._meta = { ...meta, lastRun: Date.now(), lastWin: win }
+  const cutoff = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10)
+  for (const [k, d] of Object.entries(sentFile)) if (!k.startsWith('_') && d < cutoff) delete sentFile[k]
+  await gh(`/gists/${id}`, { method: 'PATCH', body: JSON.stringify({ files: { 'push-sent.json': { content: JSON.stringify(sentFile) }, ...files } }) })
+}
 
 // 할 일 알림: 정시·N분 전·하루 전·당일 아침 (날짜를 넘는 알림도 계산)
 const nowAbs = absMinutes(date, now)
 const digest = settings.digest?.on
 if (digest) {
   // 알림 요약: 요약 시각에만, 다음 요약 전까지의 할 일 알림을 한 번에
-  const dg = digestDue(alive(T?.tasks), date, now, settings.digest.times, WINDOW)
+  const dg = digestDue(alive(T?.tasks), date, now, settings.digest.times, win)
   if (dg?.items.length && !sentFile[dg.key]) { const x = digestText(dg.items); out.push({ key: dg.key, title: x.title, body: x.body, url: './' }) }
 }
 for (const t of digest ? [] : alive(T?.tasks)) {
   for (const r of reminderTimes(t)) {
     const key = `t:${t.id}:${t.due}:${r.off}`
-    if (r.at <= nowAbs && r.at > nowAbs - WINDOW && !sentFile[key]) out.push({ key, title: t.title, body: reminderBody(t, r.off), url: './' })
+    if (r.at <= nowAbs && r.at > nowAbs - win && !sentFile[key]) out.push({ key, title: t.title, body: reminderBody(t, r.off), url: './', late: nowAbs - r.at })
   }
 }
 for (const e of alive(E?.events)) {
@@ -99,13 +110,19 @@ if (evening != null && studied < goal) add(`pm:${date}`, evening, '오늘 공부
 // 자는 시간(취침~기상)엔 보내지 않음 · 기상 때 밤사이 할 일 알림을 한 번에
 const wake = settings.dayStart ?? 7 * 60, sleep = settings.dayEnd ?? 1440
 if (settings.quietNight !== false) {
-  if (isQuiet(now, wake, sleep)) { console.log(`${date} ${hm(now)} 자는 시간 · 보류`); process.exit(0) }
-  if (now >= wake && now < wake + WINDOW && !sentFile[`night:${date}`]) {
+  if (isQuiet(now, wake, sleep)) { console.log(`${date} ${hm(now)} 자는 시간 · 보류`); for (const n of out) sentFile[n.key] = date; await finish(); process.exit(0) }
+  if (now >= wake && now < wake + win && !sentFile[`night:${date}`]) {
     const miss = nightMissed(alive(T?.tasks), date, wake, sleep)
     if (miss.length) { const x = digestText(miss); out.push({ key: `night:${date}`, title: '자는 동안 · ' + x.title, body: x.body, url: './' }) }
   }
 }
-if (!out.length) { console.log(`${date} ${hm(now)} 보낼 알림 없음`); process.exit(0) }
+if (!out.length) { console.log(`${date} ${hm(now)} 보낼 알림 없음 (확인 범위 ${win}분)`); await finish(); process.exit(0) }
+// 30분 넘게 늦은 알림은 하나로 묶어서 (한꺼번에 여러 개 울리지 않게)
+const lateOnes = out.filter((n) => (n.late || 0) > 30)
+if (lateOnes.length > 1) {
+  for (const n of lateOnes) { sentFile[n.key] = date; out.splice(out.indexOf(n), 1) }
+  out.push({ key: `miss:${date}:${now}`, title: `늦게 확인된 알림 ${lateOnes.length}개`, body: lateOnes.slice(0, 5).map((n) => `· ${n.title}${n.body ? ' — ' + n.body : ''}`).join('\n') + (lateOnes.length > 5 ? `\n외 ${lateOnes.length - 5}개` : ''), url: './' })
+}
 
 webpush.setVapidDetails('mailto:study-dashboard@users.noreply.github.com', push.vapid.publicKey, push.vapid.privateKey)
 const dead = new Set()
@@ -117,9 +134,4 @@ for (const n of out) {
   sentFile[n.key] = date
   console.log('sent', n.key, n.title)
 }
-// 3일 지난 발송 기록 정리
-const cutoff = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10)
-for (const [k, d] of Object.entries(sentFile)) if (d < cutoff) delete sentFile[k]
-const files = { 'push-sent.json': { content: JSON.stringify(sentFile) } }
-if (dead.size) files['push.json'] = { content: JSON.stringify({ ...push, subs: push.subs.filter((s) => !dead.has(s.endpoint)) }, null, 1) }
-await gh(`/gists/${id}`, { method: 'PATCH', body: JSON.stringify({ files }) })
+await finish(dead.size ? { 'push.json': { content: JSON.stringify({ ...push, subs: push.subs.filter((s) => !dead.has(s.endpoint)) }, null, 1) } } : {})

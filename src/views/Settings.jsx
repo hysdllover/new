@@ -4,7 +4,7 @@ import { PRESETS, FONTS } from '../theme/theme.js'
 import { PALETTE, SOFT_PALETTE } from '../store/schema.js'
 import { Card, Seg, Toggle, Field, Icon, toast, confirmSheet, openSheet } from '../components/ui.jsx'
 import { ColorPick, TimeInput, SubjectSelect } from '../components/common.jsx'
-import { useSyncStatus, connect, disconnect, syncNow, gistInfo, tokenExpiry, listBackups, backupNow, restoreBackup, calendarUrl } from '../sync/sync.js'
+import { useSyncStatus, connect, disconnect, syncNow, gistInfo, tokenExpiry, listBackups, backupNow, restoreBackup, calendarUrl, readGistFile } from '../sync/sync.js'
 import { enablePush, disablePush, pushState, testLocal, isStandalone, pushSupported } from '../lib/push.js'
 import { buildScript, WIDGET_KINDS } from '../lib/scriptable.js'
 import { TAB_OPTIONS, DEFAULT_TABBAR, tabOpt } from '../nav.js'
@@ -366,6 +366,10 @@ function PushCard() {
   const [busy, setBusy] = useState(false)
   useEffect(() => { pushState().then(setOn) }, [])
   const connected = sync.state !== 'off'
+  // 알림 서버(GitHub Actions)가 마지막으로 확인한 시각
+  const [last, setLast] = useState(undefined)
+  useEffect(() => { if (connected) readGistFile('push-sent.json').then((x) => setLast(x?._meta?.lastRun || null)).catch(() => setLast(null)) }, [connected])
+  const ago = last ? Math.round((Date.now() - last) / 60000) : null
   const t2m = (v) => v == null ? null : +v.split(':')[0] * 60 + +v.split(':')[1]
   const m2t = (m) => m == null ? null : fmtTime(m)
   return (
@@ -381,6 +385,12 @@ function PushCard() {
             : <button className="btn" disabled={busy} onClick={async () => { setBusy(true); try { await disablePush(); setOn(false); toast('알림 해제') } catch (e) { toast(e.message) } setBusy(false) }}>이 기기 알림 끄기</button>}
           {on && <button className="btn" onClick={() => testLocal()}>테스트</button>}
         </div>
+        {connected && last !== undefined && (
+          <div className="small" style={{ color: ago == null || ago > 30 ? 'var(--danger)' : 'var(--muted)' }}>
+            알림 서버 마지막 확인: {ago == null ? '아직 없음' : ago < 1 ? '방금' : ago < 60 ? `${ago}분 전` : `${Math.floor(ago / 60)}시간 ${ago % 60}분 전`}
+            {(ago == null || ago > 30) && ' · GitHub 예약 실행이 늦어지고 있어요. 아래 ‘정확한 시간에 받기’를 설정하세요.'}
+          </div>
+        )}
         <div className="row">
           <Field label="아침 요약"><TimeInput value={t2m(st.notifyMorning ?? '07:30')} onChange={(v) => setSettings({ notifyMorning: m2t(v) })} defaultValue={450} /></Field>
           <Field label="저녁 목표 알림"><TimeInput value={t2m(st.notifyEvening ?? '21:00')} onChange={(v) => setSettings({ notifyEvening: m2t(v) })} defaultValue={1260} /></Field>
@@ -400,6 +410,24 @@ function PushCard() {
             </div>
           </div>
         )}
+        <details className="more">
+          <summary>정확한 시간에 받기 (5분마다 깨우기 · 권장)</summary>
+          <div className="small" style={{ marginTop: 6, lineHeight: 1.75 }}>
+            GitHub 의 예약 실행은 무료라서 몇 시간씩 밀리기도 해요. 무료 서비스 <b>cron-job.org</b> 가 5분마다 알림 확인을 실행하게 하면 제시간에 와요.<br />
+            1. github.com › Settings › Developer settings › <b>Fine-grained tokens</b> › 새 토큰: 저장소 <b>hysdllover/new</b> 만 · 권한 <b>Actions: Read and write</b><br />
+            2. cron-job.org 가입 › <b>CREATE CRONJOB</b> · URL 은 아래 주소 · 실행 간격 <b>5분</b><br />
+            3. <b>ADVANCED</b> › 요청 방식 <b>POST</b> · 헤더 <code>Authorization</code> = <code>Bearer 토큰</code>, <code>Accept</code> = <code>application/vnd.github+json</code> · 본문 <code>{'{"ref":"main"}'}</code><br />
+            4. 저장 후 몇 분 뒤 위 ‘마지막 확인’ 이 몇 분 전으로 바뀌면 완료
+          </div>
+          {[['주소', 'https://api.github.com/repos/hysdllover/new/actions/workflows/notify.yml/dispatches'], ['본문', '{"ref":"main"}']].map(([k, v]) => (
+            <div key={k} className="row" style={{ marginTop: 6 }}>
+              <span className="tiny muted nowrap" style={{ width: 28 }}>{k}</span>
+              <input className="input grow" readOnly value={v} onFocus={(e) => e.target.select()} />
+              <button className="btn" onClick={async () => { try { await navigator.clipboard.writeText(v); toast('복사했어요') } catch { toast('길게 눌러 복사해 주세요') } }}>복사</button>
+            </div>
+          ))}
+          <div className="tiny muted" style={{ marginTop: 6 }}>토큰은 이 저장소의 Actions 실행 권한만 있어 안전해요. 앱이 열려 있을 때는 앱이 직접 알림을 띄워요.</div>
+        </details>
         <details className="more">
           <summary>처음 한 번만: GitHub 설정</summary>
           <div className="small" style={{ marginTop: 6, lineHeight: 1.7 }}>
