@@ -286,7 +286,7 @@ if (!data) {
     if (!subMins.length) t(parent, 'No study yet.', tw(11), SOFT)
   }
   // 월별 공부 달력 (칸 진하기 = 목표 대비)
-  const monthGrid = (parent, cell, gap, showNum) => {
+  const monthGrid = (parent, cell, gap, showNum, cellH) => {
     const byDay = {}
     for (const s of allSess) byDay[s.date] = (byDay[s.date] || 0) + (s.dur || 0)
     const y = d0.getFullYear(), m = d0.getMonth()
@@ -300,7 +300,7 @@ if (!data) {
     while (day <= n) {
       const row = parent.addStack(); row.spacing = gap
       for (let i = 0; i < 7; i++, day++) {
-        const c = row.addStack(); c.size = new Size(cell, showNum ? cell * 0.8 : cell * 0.72); c.cornerRadius = Math.min(5, cell / 5)
+        const c = row.addStack(); c.size = new Size(cell, cellH || (showNum ? cell * 0.8 : cell * 0.72)); c.cornerRadius = Math.min(5, cell / 5)
         if (day < 1 || day > n) continue
         const key = y + '-' + pad(m + 1) + '-' + pad(day)
         const v = byDay[key] || 0, r = Math.min(1, v / goal)
@@ -353,6 +353,7 @@ if (!data) {
     return row
   }
   const wdRow = (parent, wd, size = 7) => { const gap = 4, bw = Math.floor((wd - gap * 6) / 7); const r = parent.addStack(); r.spacing = gap; week7.forEach((x, i) => { const c = r.addStack(); c.size = new Size(bw, 10); c.centerAlignContent(); t(c, ['S', 'M', 'T', 'W', 'T', 'F', 'S'][x.wd], label(size), i === 6 ? GOLD : SOFT) }) }
+  let FILL = false // true: 내용이 위젯 높이를 스스로 채움 (끝의 빈칸 밀기 안 함)
   const pbar = (parent, r, wd, c) => { const img = parent.addImage(line(r, wd, c ? c : null)); img.imageSize = new Size(wd, 3) }
   // ── 내일 · 마감 · 7일 일정 · 바로 시작 공용 ──
   const dOff = (k) => { const x = new Date(d0); x.setDate(x.getDate() + k); return ymd(x) }
@@ -741,7 +742,9 @@ if (!data) {
     } else if (fam === 'small') {
       monthGrid(w, 16, 3, false)
     } else {
-      const sum = monthGrid(w, (inner - 6 * 5) / 7, 5, true)
+      const mRows = Math.ceil((((new Date(d0.getFullYear(), d0.getMonth(), 1).getDay() - (st.weekStart ?? 1) + 7) % 7) + new Date(d0.getFullYear(), d0.getMonth() + 1, 0).getDate()) / 7)
+      const cw = (inner - 6 * 5) / 7
+      const sum = monthGrid(w, cw, 5, true, Math.max(cw * 0.8, Math.floor((innerH - Math.round(52 * SCALE)) / mRows) - 5))
       w.addSpacer(4)
       const r = w.addStack(); r.centerAlignContent()
       t(r, 'TOTAL ' + hm(sum.total), label(8), INK); r.addSpacer(); t(r, sum.days + ' DAYS', label(8), SOFT); r.addSpacer(); t(r, sum.hit + ' GOAL', label(8), GOLD)
@@ -781,12 +784,14 @@ if (!data) {
       const evs = (cal[k] || []).slice().sort((a, b) => (a.s ?? -1) - (b.s ?? -1))
       for (const e of evs) { if (i === 0 && e.s != null && e.s + 60 <= nowM) continue; agenda.push({ k, dt, time: e.s == null ? '종일' : pad(Math.floor(e.s / 60) % 24) + ':' + pad(e.s % 60), title: e.t, c: e.c }) }
     }
-    const agendaList = (parent, count) => {
-      let last = ''
+    const agendaList = (parent, count, budget) => {
+      let last = '', used = 0
       // 다음 일정(오늘 아직 안 지난 첫 일정) 강조
       const nowHM = pad(new Date().getHours()) + ':' + pad(new Date().getMinutes())
       const nextA = agenda.find((a) => a.k > today || (a.k === today && (a.time === '종일' || a.time >= nowHM)))
       for (const a of agenda.slice(0, count)) {
+        // 높이 한도: 날짜 머리줄 ≈13 · 일정 줄 ≈22 (글자 크기 비례)
+        if (budget) { const need = ((a.k !== last ? 13 : 0) + 22) * SCALE; if (used + need > budget) break; used += need }
         if (a.k !== last) { last = a.k; const h = parent.addStack(); t(h, a.k === today ? 'TODAY' : DAY[a.dt.getDay()] + ' ' + (a.dt.getMonth() + 1) + '/' + a.dt.getDate(), label(8), a.k === today ? GOLD : SOFT); h.addSpacer(); parent.addSpacer(3) }
         const r = parent.addStack(); r.centerAlignContent(); r.spacing = 8
         const hot = a === nextA
@@ -808,9 +813,11 @@ if (!data) {
       const R = row.addStack(); R.layoutVertically(); R.size = new Size(inner - 7 * 17 - 12 - 28.6, 0); agendaList(R, 4); R.addSpacer()
       row.addSpacer()
     } else {
-      grid(w, (inner - 6 * 4) / 7, rows > 5 ? 21 : 24, 3, 10)
+      const cw = (inner - 6 * 4) / 7, hd = Math.round(31 * SCALE)
+      const ch = Math.min(cw, Math.max(rows > 5 ? 21 : 24, Math.floor((innerH * 0.55 - hd) / rows) - 3))
+      grid(w, cw, ch, 3, 10)
       w.addSpacer(4); rule(w, inner); w.addSpacer(8)
-      agendaList(w, fam === 'extraLarge' ? 8 : rows > 5 ? 4 : 5)
+      agendaList(w, 12, innerH - hd - rows * (ch + 3) - 13)
     }
   } else if (KIND === 'week') {
     // ── 주간 공부 ──
@@ -927,9 +934,9 @@ if (!data) {
         t(b, x[2], tw(10), x[5]).minimumScaleFactor = 0.7
         if (x[3] != null) { b.addSpacer(4); pbar(b, x[3], wd) }
       }
-      if (i + cols < 4) w.addSpacer(fam === 'small' ? 10 : 14)
+      if (i + cols < 4) { if (fam === 'small') { w.addSpacer(); FILL = true } else w.addSpacer(14) }
     }
-    if (fam === 'large' || fam === 'extraLarge') { w.addSpacer(14); rule(w, inner); w.addSpacer(10); todoList(w, 5, 5) }
+    if (fam === 'large' || fam === 'extraLarge') { w.addSpacer(14); rule(w, inner); w.addSpacer(10); todoList(w, Math.max(3, Math.floor((innerH - 20 - 2 * Math.round(70 * SCALE) - 14 - 34) / Math.round(22 * SCALE))), 5) }
   } else if (KIND === 'tmrw') {
     // ── 내일 준비: 수업 · 일정 · 할 일 ──
     const td = new Date(d0.getTime() + 86400000)
@@ -1105,7 +1112,7 @@ if (!data) {
     T.addSpacer(9)
     todoList(T, 6)
   }
-  if (!lock) w.addSpacer()
+  if (!lock && !FILL) w.addSpacer()
 } catch (e) {
   // 그리다 실패해도 빈칸 대신 원인을 보여 줌
   w = new ListWidget()
