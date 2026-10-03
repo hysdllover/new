@@ -939,7 +939,30 @@ if (!data) {
         : ['STUDY', hm(mins), pct + '%', mins / goal, 'study.records', GOLD],
     ]
     const cols = fam === 'medium' ? 4 : 2, gap = 12, wd = Math.floor((inner - gap * (cols - 1)) / cols), big = fam === 'small' ? 19 : fam === 'medium' ? 22 : 36
-    if (fam !== 'small') { const h = w.addStack(); h.centerAlignContent(); cap(h, 'TODAY'); h.addSpacer(); t(h, dateStr, label(LG ? 9 : 8), SOFT); if (fam === 'medium') w.addSpacer(); else w.addSpacer(12) }
+    if (fam === 'medium') {
+      // 중형: 왼쪽 D-day · 일정 · 공부(타이머) 세로로, 오른쪽 할 일 목록
+      const lw = Math.round(inner * 0.45), rw = inner - lw - 24.6
+      const row = w.addStack()
+      const L = row.addStack(); L.layoutVertically(); L.size = new Size(lw, innerH)
+      const d1 = L.addStack(); d1.bottomAlignContent(); d1.url = link('study.progress'); t(d1, dd ? ddTxt : '—', thin(26), INK).minimumScaleFactor = 0.6; d1.addSpacer(6); t(d1, dd ? dd.title : 'No D-day', tw(11), GOLD).minimumScaleFactor = 0.7; d1.addSpacer()
+      L.addSpacer()
+      const e1 = L.addStack(); e1.centerAlignContent(); e1.url = link('planner.today'); t(e1, c ? (nCur ? '지금 ' : '') + clk(c.s) : '—', tw(11), GOLD); e1.addSpacer(6); t(e1, c ? c.t : '남은 일정 없음', tw(12), c ? INK : SOFT).minimumScaleFactor = 0.75; e1.addSpacer()
+      L.addSpacer()
+      const s1 = L.addStack(); s1.bottomAlignContent(); s1.url = link(TM ? 'study.timer' : 'study.records')
+      if (TM) { t(s1, '● ' + TM.name + ' ', tw(10), GOLD); if (TM.paused) t(s1, hm(TM.pm), thin(20), INK); else { const d = timerDate(s1, 20, true); d.textColor = INK } }
+      else { t(s1, hm(mins), thin(22), INK).minimumScaleFactor = 0.6; s1.addSpacer(5); t(s1, 'of ' + hm(goal), tw(9), SOFT) }
+      s1.addSpacer(); t(s1, pct + '%', tw(10), GOLD)
+      L.addSpacer(5); pbar(L, mins / goal, lw)
+      row.addSpacer(12); vrule(row, innerH); row.addSpacer(12)
+      const R = row.addStack(); R.layoutVertically(); R.size = new Size(rw, innerH); R.url = link('tasks')
+      const rh = R.addStack(); cap(rh, 'TO DO'); rh.addSpacer(); t(rh, dateStr, label(8), SOFT); R.addSpacer(7)
+      const fs = 13, rowH = (fs * 1.3 + 4) * SCALE
+      const L2 = items.filter((x) => !x.done), n = Math.max(2, Math.floor((innerH - 18 * SCALE) / rowH))
+      for (const x of L2.slice(0, n)) { const r = R.addStack(); r.centerAlignContent(); r.spacing = 6; if (x.id) r.url = APP + '?done=' + encodeURIComponent(x.id); const imp = x.priority >= 3; t(r, imp ? '•' : '–', tw(fs - 1), imp ? GOLD : SOFT); t(r, x.title, imp ? F(fs, 'Medium') : tw(fs), INK).minimumScaleFactor = 0.8; r.addSpacer(); R.addSpacer(4) }
+      if (!L2.length) t(R, 'All clear.', tw(fs), SOFT)
+      R.addSpacer()
+    } else {
+    if (fam !== 'small') { const h = w.addStack(); h.centerAlignContent(); cap(h, 'TODAY'); h.addSpacer(); t(h, dateStr, label(LG ? 9 : 8), SOFT); w.addSpacer(12) }
     if (fam === 'small') w.addSpacer() // 소형: 두 줄을 알맞은 간격으로 묶어 세로 가운데
     for (let i = 0; i < 4; i += cols) {
       const r = w.addStack(); r.spacing = gap
@@ -951,6 +974,7 @@ if (!data) {
         if (x[3] != null) { b.addSpacer(4); pbar(b, x[3], wd) }
       }
       if (i + cols < 4) w.addSpacer(fam === 'small' ? Math.round(16 * SCALE) : 14)
+    }
     }
     // 대형: 아래에 이번 주 공부 (할 일은 위 칸에 있으니 겹치지 않게)
     if (fam === 'large' || fam === 'extraLarge') { w.addSpacer(); rule(w, inner); w.addSpacer(10); const s2 = w.addStack(); s2.centerAlignContent(); cap(s2, 'THIS WEEK'); s2.addSpacer(); t(s2, hm(weekTot) + ' · 하루 ' + hm(weekAvg), label(10), SOFT); w.addSpacer(8); bars7(w, inner, Math.round(innerH * 0.16), GOLD, RULE); w.addSpacer(3); wdRow(w, inner, 9); FILL = true }
