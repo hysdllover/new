@@ -5,6 +5,7 @@ import { COLLECTIONS, GIST_FILES } from '../store/schema.js'
 import { mergeColl, stableFile } from './merge.js'
 import { blobToDataUrl, setRemoteRaw, MAX_FILE } from '../lib/files.js'
 import { eventsOn, classesOn } from '../engine/scheduler.js'
+import { weekGoals, goalProgress } from '../store/actions.js'
 import { today, addDays } from '../engine/date.js'
 import { buildIcs } from '../lib/ics.js'
 import { listFonts, getFontBlob, importFont, removeFont, markSynced, pendingDeletes, clearDeletes, SYNC_FONT_MAX } from '../lib/fonts.js'
@@ -157,7 +158,7 @@ function calPayload() {
   const out = {}
   for (let i = 0; i < 90; i++, d.setDate(d.getDate() + 1)) {
     const evs = eventsOn(ymd(d))
-    if (evs.length) out[ymd(d)] = evs.map((e) => ({ t: e.title || '', s: e.start ?? null, c: e.color || null }))
+    if (evs.length) out[ymd(d)] = evs.map((e) => ({ t: e.title || '', s: e.start ?? null, e: e.end ?? null, c: e.color || null, l: e.location || null }))
   }
   return out
 }
@@ -180,6 +181,19 @@ function classesPayload() {
   return out
 }
 
+// 위젯 '진도': 교재·인강 진행 (짧게)
+function progPayload() {
+  const sub = (id) => list('subjects').find((s) => s.id === id)
+  const tb = list('textbooks').map((x) => ({ t: x.title, n: x.current || 0, of: x.total || 0, u: x.unit || 'p', c: sub(x.subjectId)?.color || null }))
+  const lec = list('lectures').map((x) => { const n = Object.keys(x.done || {}).filter((k) => +k <= x.total).length; return { t: x.title, n, of: x.total || 0, u: '강', c: sub(x.subjectId)?.color || null } })
+  return [...lec, ...tb].filter((x) => x.of && x.n < x.of).slice(0, 8)
+}
+// 위젯 '목표': 이번 주 목표 3개와 진행률
+function goalsPayload() {
+  const tasks = list('tasks')
+  return weekGoals().map((g) => { const p = goalProgress(g, tasks); return { t: g.title, done: !!g.done || (p.linked > 0 && p.ratio >= 1), r: p.ratio, n: p.done, of: p.linked } })
+}
+
 function widgetPayload() {
   const st = getState()
   const keep = (c, fn = () => true) => Object.fromEntries(Object.values(st[c] || {}).filter((r) => !r.deleted && fn(r)).map((r) => [r.id, r]))
@@ -193,6 +207,8 @@ function widgetPayload() {
     cal: calPayload(),
     timer: timerPayload(),
     classes: classesPayload(),
+    prog: progPayload(),
+    goals: goalsPayload(),
     settings: { settings: { main: { goalDaily: main.goalDaily, weekStart: main.weekStart, widgetFont: main.widgetFont, widgetScale: main.widgetScale, widgetWeight: main.widgetWeight } }, quotes: keep('quotes') },
   })
 }
