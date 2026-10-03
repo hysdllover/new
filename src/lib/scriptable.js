@@ -574,10 +574,15 @@ if (!data) {
       if (inl) inline((dd ? ddTxt + ' · ' : '') + (c ? clk(c.s) + ' · ' : '') + '공부 ' + hm(mins))
       else if (circ) cRows([[hm(mins), tw(14)], [pct + '%', label(7)]], mins / goal)
       else {
-        rRow(dd ? dd.title : 'No D-day', dd ? ddTxt : '', tw(11), label(8))
-        rRow(c ? clk(c.s) + ' ' + c.t : '남은 일정 없음', '', tw(11), label(8))
-        rRow((TM ? '● ' + TM.name + ' ' : '공부 ') + hm(mins), pct + '%', tw(11), label(8))
-        lbar(w, mins / goal, LK.rw)
+        // 크게 두 개(D-day · 공부 시간) + 아래 한 줄(일정 · %) — 잠금 화면에서 잘 보이게 굵고 넉넉하게
+        const r1 = w.addStack(); r1.bottomAlignContent()
+        t(r1, dd ? ddTxt : '—', F(20, 'Regular')).minimumScaleFactor = 0.6; r1.addSpacer()
+        if (TM && !TM.paused) { const d = r1.addDate(new Date(TM.mode === 'countdown' ? TM.end : TM.start)); d.applyTimerStyle(); d.font = F(20, 'Regular'); d.lineLimit = 1; d.minimumScaleFactor = 0.6; d.rightAlignText() } else t(r1, hm(TM ? TM.pm : mins), F(20, 'Regular')).minimumScaleFactor = 0.6
+        w.addSpacer(3)
+        const r2 = w.addStack(); r2.centerAlignContent()
+        t(r2, c ? clk(c.s) + ' ' + c.t : dd ? dd.title : '남은 일정 없음', F(12, 'Regular')).minimumScaleFactor = 0.7; r2.addSpacer(6); t(r2, pct + '%', F(12, 'Regular'))
+        w.addSpacer(4)
+        lbar(w, mins / goal, LK.rw, 3)
       }
     } else if (KIND === 'tmrw') {
       const f = TMR.ev[0], c1 = TMR.cl[0]
