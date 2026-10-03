@@ -151,8 +151,6 @@ function rule(parent, w) { const s = parent.addStack(); s.size = new Size(w, 0.6
 function vrule(parent, h) { const s = parent.addStack(); s.size = new Size(0.6, h); s.backgroundColor = RULE }
 function t(parent, s, font, color, lines = 1) {
   const x = parent.addText(String(s)); x.font = font; if (color) x.textColor = color; x.lineLimit = lines
-  // 투명 위젯: 배경 무늬 위에서도 글자가 떠 보이게 은은한 그림자
-  if (CLEAR) { x.shadowColor = new Color(inkDark ? '#ffffff' : '#000000', 0.45); x.shadowRadius = 2; x.shadowOffset = new Point(0, 0.5) }
   return x
 }
 let inkDark = false
