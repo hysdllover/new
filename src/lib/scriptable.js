@@ -3,12 +3,16 @@ import { pickQuote } from './quote.js'
 // 유형: 위젯 편집 › Parameter 에 공부 · 할일 · 디데이 · 달력 · 다짐 (비우면 기본)
 export const WIDGET_KINDS = [['', '기본'], ['공부', '공부'], ['할일', '할 일'], ['디데이', 'D-day'], ['달력', '공부 달력'], ['캘린더', '캘린더'], ['다짐', '다짐'], ['시간표', '시간표'], ['주간', '주간 공부'], ['과목', '과목별'], ['지금', '지금·다음'], ['진도', '진도'], ['목표', '이번 주 목표'], ['오늘', '오늘 한눈에'], ['대시보드', '대시보드'], ['내일', '내일 준비'], ['마감', '마감 임박'], ['일주일', '7일 일정'], ['디데이목록', 'D-day 목록'], ['바로가기', '바로 시작']]
 
+// 스크립트 버전 — 위젯 모양이 바뀔 때 올림. 앱이 위젯 데이터에 같이 올려서, 예전 스크립트면 위젯에 '스크립트 업데이트' 표시
+export const SCRIPT_VER = 54
+
 export function buildScript({ widgetRaw, appUrl }) {
   return `// Study — 홈 화면·잠금 화면 위젯 (Scriptable)
 // 위젯 길게 누르기 › 위젯 편집 › Script: 이 스크립트 · Parameter: 공부 / 할일 / 디데이 / 달력 / 다짐 (비우면 기본)
 // 토큰 없음: 비공개 위젯 gist 의 주소로만 읽어요 (이 스크립트가 어디 노출돼도 GitHub 계정은 안전)
 const SRC = ${JSON.stringify(widgetRaw || '')}
 const APP = ${JSON.stringify(appUrl)}
+const VER = ${SCRIPT_VER}
 
 const dyn = (l, d, a = 1) => Color.dynamic(new Color(l, a), new Color(d, a))
 const BG = dyn('#f5f3ef', '#161616')
@@ -186,7 +190,7 @@ if (!data) {
   const ddTxt = dd ? ddT(dd) : null
   const quotes = Object.keys(data.settings.quotes || {}).sort().map((k) => data.settings.quotes[k]).filter((q) => !q.deleted)
   const quote = pickQuote(quotes)?.text ?? null // 3시간마다 무작위 (앱과 같은 문구)
-  const dateStr = DAY[d0.getDay()] + ' · ' + d0.getDate() + ' ' + MON[d0.getMonth()] + (STALE ? ' · ' + pad(STALE.getHours()) + ':' + pad(STALE.getMinutes()) : '')
+  const dateStr = DAY[d0.getDay()] + ' · ' + d0.getDate() + ' ' + MON[d0.getMonth()] + (STALE ? ' · ' + pad(STALE.getHours()) + ':' + pad(STALE.getMinutes()) : '') + (data.sv && data.sv > VER ? ' · 스크립트 업데이트' : '')
   const pct = Math.round(Math.min(1, mins / goal) * 100)
   // 진행 중 타이머 (앱에서 시작·정지할 때 올라옴) — 끝났거나 오래된 건 무시
   const TM = (() => {
@@ -845,17 +849,16 @@ if (!data) {
     // ── 오늘 한눈에: 다음 일정 · 공부 · 할 일 ──
     const c = nCur || nNext
     const evLine = (parent, size) => { const r = parent.addStack(); r.centerAlignContent(); t(r, c ? (nCur ? '지금 ' : '') + clk(c.s) : '—', tw(size - 3), GOLD); r.addSpacer(6); t(r, c ? c.t : '남은 일정 없음', tw(size), c ? INK : SOFT).minimumScaleFactor = 0.8; r.addSpacer() }
-    const h = w.addStack(); h.centerAlignContent(); cap(h, 'TODAY'); h.addSpacer(); t(h, dateStr, label(8), SOFT)
-    w.addSpacer(8)
+    if (fam !== 'medium') { const h = w.addStack(); h.centerAlignContent(); cap(h, 'TODAY'); h.addSpacer(); t(h, dateStr, label(8), SOFT); w.addSpacer(8) }
     if (fam === 'small') {
       evLine(w, 12); w.addSpacer(); studyBig(w, 26, inner); w.addSpacer(6)
       t(w, '할 일 ' + items.filter((x) => !x.done).length + '개 남음', tw(11), SOFT)
     } else if (fam === 'medium') {
       const row = w.addStack()
       const lw = Math.round(inner * 0.42)
-      const L = row.addStack(); L.layoutVertically(); L.size = new Size(lw, MH); evLine(L, 12); L.addSpacer(); studyBig(L, 26, lw)
-      row.addSpacer(12); vrule(row, MH); row.addSpacer(12)
-      const R = row.addStack(); R.layoutVertically(); R.size = new Size(inner - lw - 24.6, MH); todoList(R, 4, 4); R.addSpacer()
+      const L = row.addStack(); L.layoutVertically(); L.size = new Size(lw, innerH); cap(L, 'TODAY'); L.addSpacer(8); evLine(L, 12); L.addSpacer(); studyBig(L, 26, lw)
+      row.addSpacer(12); vrule(row, innerH); row.addSpacer(12)
+      const R = row.addStack(); R.layoutVertically(); R.size = new Size(inner - lw - 24.6, innerH); todoList(R, 4, 4); R.addSpacer(); if (data.sv && data.sv > VER) t(R, '스크립트 업데이트 · 앱에서 다시 복사', label(8), GOLD)
     } else {
       evLine(w, 14); w.addSpacer(10); studyBig(w, 36, inner)
       w.addSpacer(12); rule(w, inner); w.addSpacer(10)
@@ -872,7 +875,7 @@ if (!data) {
       ['D-DAY', dd ? ddTxt : '—', dd ? dd.title : '없음', null, 'study.progress', GOLD],
     ]
     const cols = fam === 'medium' ? 4 : 2, gap = 12, wd = Math.floor((inner - gap * (cols - 1)) / cols), big = fam === 'small' ? 19 : fam === 'medium' ? 22 : 30
-    if (fam !== 'small') { const h = w.addStack(); h.centerAlignContent(); cap(h, 'TODAY'); h.addSpacer(); t(h, dateStr, label(8), SOFT); w.addSpacer(fam === 'medium' ? 14 : 12) }
+    if (fam !== 'small') { const h = w.addStack(); h.centerAlignContent(); cap(h, 'TODAY'); h.addSpacer(); t(h, dateStr, label(8), SOFT); if (fam === 'medium') w.addSpacer(); else w.addSpacer(12) }
     for (let i = 0; i < 4; i += cols) {
       const r = w.addStack(); r.spacing = gap
       for (const x of tiles.slice(i, i + cols)) {
