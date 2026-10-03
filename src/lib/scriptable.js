@@ -571,12 +571,12 @@ if (!data) {
       }
     } else if (KIND === 'dash') {
       const left = items.filter((x) => !x.done).length, c = nCur || nNext
-      if (inl) inline(hm(mins) + ' · 할 일 ' + left + (dd ? ' · ' + ddTxt : ''))
+      if (inl) inline((dd ? ddTxt + ' · ' : '') + (c ? clk(c.s) + ' · ' : '') + hm(mins) + ' · 할 일 ' + left)
       else if (circ) cRows([[hm(mins), tw(14)], ['할 일 ' + left, label(7)]], mins / goal)
       else {
-        rRow('공부 ' + hm(mins), '할 일 ' + left, tw(11), label(8))
-        rRow(c ? clk(c.s) + ' ' + c.t : '남은 일정 없음', '', tw(11), label(8))
         rRow(dd ? dd.title : 'No D-day', dd ? ddTxt : '', tw(11), label(8))
+        rRow(c ? clk(c.s) + ' ' + c.t : '남은 일정 없음', '', tw(11), label(8))
+        rRow((TM ? '● ' + TM.name + ' ' : '공부 ') + hm(mins), '할 일 ' + left, tw(11), label(8))
         lbar(w, mins / goal, LK.rw)
       }
     } else if (KIND === 'tmrw') {
@@ -920,13 +920,14 @@ if (!data) {
       w.addSpacer(); if (dd) ddRow(w, 12)
     }
   } else if (KIND === 'dash') {
-    // ── 대시보드: 공부 · 할 일 · 다음 일정 · D-day 칸 (중·대는 칸마다 누르면 해당 화면) ──
+    // ── 대시보드: D-day · 일정 · 공부 시간(타이머 중이면 흐르는 시간) · 할 일 (중·대는 칸마다 누르면 해당 화면) ──
     const left = items.filter((x) => !x.done).length, c = nCur || nNext
     const tiles = [
-      ['STUDY', hm(mins), pct + '%', mins / goal, 'study.records', GOLD],
-      ['TO DO', String(left), done + ' done', items.length ? done / items.length : 0, 'tasks', SOFT],
-      ['NEXT', c ? clk(c.s) : '—', c ? c.t : '남은 일정 없음', null, 'planner.today', SOFT],
       ['D-DAY', dd ? ddTxt : '—', dd ? dd.title : '없음', null, 'study.progress', GOLD],
+      [nCur ? 'NOW' : 'NEXT', c ? clk(c.s) : '—', c ? c.t : '남은 일정 없음', null, 'planner.today', SOFT],
+      TM ? ['● ' + TM.name, (b, f) => { if (TM.paused) t(b, hm(TM.pm), f, INK); else { const d = timerDate(b, 10); d.font = f; d.textColor = INK } }, (TM.paused ? '일시정지 · ' : '오늘 ') + hm(mins), mins / goal, 'study.timer', GOLD]
+        : ['STUDY', hm(mins), pct + '%', mins / goal, 'study.records', GOLD],
+      ['TO DO', String(left), done + ' done', items.length ? done / items.length : 0, 'tasks', SOFT],
     ]
     const cols = fam === 'medium' ? 4 : 2, gap = 12, wd = Math.floor((inner - gap * (cols - 1)) / cols), big = fam === 'small' ? 19 : fam === 'medium' ? 22 : 30
     if (fam !== 'small') { const h = w.addStack(); h.centerAlignContent(); cap(h, 'TODAY'); h.addSpacer(); t(h, dateStr, label(8), SOFT); if (fam === 'medium') w.addSpacer(); else w.addSpacer(12) }
@@ -935,8 +936,8 @@ if (!data) {
       const r = w.addStack(); r.spacing = gap
       for (const x of tiles.slice(i, i + cols)) {
         const b = r.addStack(); b.layoutVertically(); b.size = new Size(wd, 0); if (fam !== 'small') b.url = link(x[4])
-        t(b, x[0], label(7), SOFT); b.addSpacer(2)
-        t(b, x[1], thin(big), INK).minimumScaleFactor = 0.5
+        t(b, x[0], label(7), x[0][0] === '●' ? GOLD : SOFT).minimumScaleFactor = 0.7; b.addSpacer(2)
+        if (typeof x[1] === 'function') x[1](b, thin(big)); else t(b, x[1], thin(big), INK).minimumScaleFactor = 0.5
         t(b, x[2], tw(10), x[5]).minimumScaleFactor = 0.7
         if (x[3] != null) { b.addSpacer(4); pbar(b, x[3], wd) }
       }
