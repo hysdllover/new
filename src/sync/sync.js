@@ -211,7 +211,7 @@ function widgetPayload() {
     prog: progPayload(),
     goals: goalsPayload(),
     sv: SCRIPT_VER,
-    settings: { settings: { main: { goalDaily: main.goalDaily, weekStart: main.weekStart, widgetFont: main.widgetFont, widgetScale: main.widgetScale, widgetWeight: main.widgetWeight } }, quotes: keep('quotes') },
+    settings: { settings: { main: { goalDaily: main.goalDaily, weekStart: main.weekStart, widgetFont: main.widgetFont, widgetScale: main.widgetScale, widgetWeight: main.widgetWeight, widgetClear: main.widgetClear } }, quotes: keep('quotes') },
   })
 }
 const WIDGET_GAP = 10000 // 위젯 gist 쓰기 최소 간격 10초 (앱을 나갈 때·타이머는 바로)
