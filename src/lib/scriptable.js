@@ -925,8 +925,6 @@ if (!data) {
     const tiles = [
       ['D-DAY', dd ? ddTxt : '—', dd ? dd.title : '없음', null, 'study.progress', GOLD],
       [nCur ? 'NOW' : 'NEXT', c ? clk(c.s) : '—', c ? c.t : '남은 일정 없음', null, 'planner.today', SOFT],
-      TM ? ['● ' + TM.name, (b, f) => { if (TM.paused) t(b, hm(TM.pm), f, INK); else { const d = timerDate(b, 10); d.font = f; d.textColor = INK } }, (TM.paused ? '일시정지 · ' : '오늘 ') + hm(mins), mins / goal, 'study.timer', GOLD]
-        : ['STUDY', hm(mins), pct + '%', mins / goal, 'study.records', GOLD],
       // 할 일: 개수 대신 남은 할 일 제목 (위에서 두 개)
       ['TO DO', (b) => {
         // 칸 높이에 들어가는 만큼 (소 3 · 중 5 · 대 5 안팎, 글자 크기에 맞춰 계산)
@@ -936,6 +934,8 @@ if (!data) {
         if (!L.length) t(b, 'All clear.', tw(fs + 1), SOFT)
         L.forEach((x, k) => { if (k) b.addSpacer(2); const imp = x.priority >= 3; t(b, (imp ? '• ' : '– ') + x.title, imp ? F(fs, 'Medium') : tw(fs), INK).minimumScaleFactor = 0.8 })
       }, '', null, 'tasks', SOFT],
+      TM ? ['● ' + TM.name, (b, f) => { if (TM.paused) t(b, hm(TM.pm), f, INK); else { const d = timerDate(b, 10); d.font = f; d.textColor = INK } }, (TM.paused ? '일시정지 · ' : '오늘 ') + hm(mins), mins / goal, 'study.timer', GOLD]
+        : ['STUDY', hm(mins), pct + '%', mins / goal, 'study.records', GOLD],
     ]
     const cols = fam === 'medium' ? 4 : 2, gap = 12, wd = Math.floor((inner - gap * (cols - 1)) / cols), big = fam === 'small' ? 19 : fam === 'medium' ? 22 : 30
     if (fam !== 'small') { const h = w.addStack(); h.centerAlignContent(); cap(h, 'TODAY'); h.addSpacer(); t(h, dateStr, label(8), SOFT); if (fam === 'medium') w.addSpacer(); else w.addSpacer(12) }
