@@ -593,7 +593,7 @@ if (!data) {
         if (TM && !TM.paused) { const d = r1.addDate(new Date(TM.mode === 'countdown' ? TM.end : TM.start)); d.applyTimerStyle(); d.font = F(20, 'Regular'); d.lineLimit = 1; d.minimumScaleFactor = 0.6; d.rightAlignText() } else t(r1, hm(TM ? TM.pm : mins), F(20, 'Regular')).minimumScaleFactor = 0.6
         w.addSpacer(3)
         const r2 = w.addStack(); r2.size = new Size(LK.rw, 0); r2.centerAlignContent()
-        t(r2, c ? clk(c.s) + ' ' + c.t : dd ? dd.title : '남은 일정 없음', F(12, 'Regular')).minimumScaleFactor = 0.7; r2.addSpacer(6); t(r2, pct + '%', F(12, 'Regular'))
+        t(r2, c ? clk(c.s) + ' ' + c.t : dd ? dd.title : '남은 일정 없음', F(12, 'Regular')).minimumScaleFactor = 0.7; r2.addSpacer(); t(r2, pct + '%', F(12, 'Regular')) // 왼쪽 글자는 왼쪽 끝, % 만 오른쪽 끝
         w.addSpacer(4)
         lbar(w, mins / goal, LK.rw, 3)
       }
