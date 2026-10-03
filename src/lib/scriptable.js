@@ -112,7 +112,13 @@ function lbar(parent, ratio, wd, h = 2) {
   o.addSpacer()
   return o
 }
-const cline = (z, ratio, wd = 34) => { z.addSpacer(4); const a = z.addStack(); a.addSpacer(); lbar(a, ratio, wd); a.addSpacer() }
+// 잠금 화면 위젯 실제 크기(pt) — 화면 폭별 (원형 c · 직사각형 rw×rh)
+const LK = (() => {
+  if (Device.isPad()) return { c: 72, rw: 160, rh: 72 }
+  const sc = Device.screenSize(), sw = Math.min(sc.width, sc.height)
+  return sw >= 428 ? { c: 76, rw: 172, rh: 76 } : sw >= 390 ? { c: 72, rw: 160, rh: 72 } : { c: 68, rw: 157, rh: 67 }
+})()
+const cline = (z, ratio, wd = Math.round(LK.c * 0.5)) => { z.addSpacer(4); const a = z.addStack(); a.addSpacer(); lbar(a, ratio, wd); a.addSpacer() }
 
 function build(fam) {
 const lock = fam.startsWith('accessory')
@@ -146,7 +152,7 @@ if (!data) {
 } else try {
   const st = data.settings.settings?.main || {}
   CUSTOM = (st.widgetFont || '').trim()
-  SCALE = Math.max(0.8, Math.min(1.3, +st.widgetScale || 1)); if (lock) SCALE = Math.min(SCALE, 1.1)
+  SCALE = Math.max(0.8, Math.min(1.3, +st.widgetScale || 1)); if (lock) SCALE = Math.min(1.25, SCALE * 1.18) // 잠금 화면은 꽉 차게 (기본 1.18배)
   WSHIFT = +st.widgetWeight || 0
   const goal = st.goalDaily || 240
   const subjects = alive(data.study.subjects)
@@ -325,7 +331,7 @@ if (!data) {
       inline(c ? (clCur ? c.period + '교시 ' + c.title + ' ~' + clk(c.end) : '다음 ' + c.period + '교시 ' + c.title + ' ' + clk(c.start)) : CL.length ? '오늘 수업 끝' : '오늘 수업 없음')
     } else if (fam === 'accessoryCircular') {
       w.addAccessoryWidgetBackground = true
-      const z = w.addStack(); z.size = new Size(60, 60); z.layoutVertically(); z.centerAlignContent()
+      const z = w.addStack(); z.size = new Size(LK.c, LK.c); z.layoutVertically(); z.centerAlignContent()
       const row = (s, f) => { const a = z.addStack(); a.addSpacer(); t(a, s, f).minimumScaleFactor = 0.6; a.addSpacer() }
       if (c) { row(c.period + '교시', label(8)); row(c.title, tw(13)); row(clCur ? '~' + clk(c.end) : clk(c.start), label(8)) }
       else row(CL.length ? '끝' : '—', tw(14))
@@ -345,7 +351,7 @@ if (!data) {
       inline(ddTxt + ' ' + dd.title)
     } else if (fam === 'accessoryCircular') {
       w.addAccessoryWidgetBackground = true
-      const z = w.addStack(); z.size = new Size(60, 60); z.layoutVertically(); z.centerAlignContent()
+      const z = w.addStack(); z.size = new Size(LK.c, LK.c); z.layoutVertically(); z.centerAlignContent()
       const a = z.addStack(); a.addSpacer(); t(a, ddN(dd) === 0 ? 'D-DAY' : ddN(dd), thin(ddN(dd) === 0 ? 14 : 24)).minimumScaleFactor = 0.5; a.addSpacer()
       const b = z.addStack(); b.addSpacer(); t(b, dd.title, label(8)).minimumScaleFactor = 0.6; b.addSpacer()
     } else {
@@ -361,7 +367,7 @@ if (!data) {
       if (TM.paused) inline('일시정지 ' + TM.name + ' ' + hm(TM.pm)); else { const d = w.addDate(new Date(TM.mode === 'countdown' ? TM.end : TM.start)); d.applyTimerStyle(); d.lineLimit = 1 }
     } else if (fam === 'accessoryCircular') {
       w.addAccessoryWidgetBackground = true
-      const z = w.addStack(); z.size = new Size(60, 60); z.layoutVertically(); z.centerAlignContent()
+      const z = w.addStack(); z.size = new Size(LK.c, LK.c); z.layoutVertically(); z.centerAlignContent()
       const a = z.addStack(); a.addSpacer(); t(a, TM.name, label(8)).minimumScaleFactor = 0.6; a.addSpacer()
       const b = z.addStack(); b.addSpacer(); if (TM.paused) t(b, hm(TM.pm), tw(13)); else timerDate(b, 12); b.addSpacer()
       const c = z.addStack(); c.addSpacer(); t(c, TM.paused ? '일시정지' : TM.mode === 'countdown' ? '남음' : '공부 중', label(7)); c.addSpacer()
@@ -377,11 +383,11 @@ if (!data) {
     const inl = fam === 'accessoryInline', circ = fam === 'accessoryCircular'
     const cRows = (rows, ratio) => { // 원형: 가운데 정렬 줄들 (+ 진행선)
       w.addAccessoryWidgetBackground = true
-      const z = w.addStack(); z.size = new Size(60, 60); z.layoutVertically(); z.centerAlignContent()
+      const z = w.addStack(); z.size = new Size(LK.c, LK.c); z.layoutVertically(); z.centerAlignContent()
       for (const [s, f] of rows) { const a = z.addStack(); a.addSpacer(); const x = t(a, s, f); x.minimumScaleFactor = 0.5; a.addSpacer() }
       if (ratio != null) cline(z, ratio)
     }
-    const rRow = (l, r, lf = tw(11), rf = label(8)) => { const a = w.addStack(); a.centerAlignContent(); t(a, l, lf).minimumScaleFactor = 0.7; a.addSpacer(4); if (r) t(a, r, rf); else a.addSpacer(); return a }
+    const rRow = (l, r, lf = tw(11), rf = label(8)) => { const a = w.addStack(); a.centerAlignContent(); t(a, l, lf).minimumScaleFactor = 0.7; a.addSpacer(); if (r) { a.addSpacer(4); t(a, r, rf) } return a } // 오른쪽 값은 오른쪽 끝에
     const dayMins = {}
     for (const x of allSess) dayMins[x.date] = (dayMins[x.date] || 0) + (x.dur || 0)
     const ymdOff = (k) => { const d = new Date(d0); d.setDate(d.getDate() - k); return ymd(d) }
@@ -393,7 +399,7 @@ if (!data) {
       else if (circ) cRows([[hm(mins), tw(14)], [pct + '%', label(8)]], mins / goal)
       else {
         const r = w.addStack(); r.bottomAlignContent(); t(r, hm(mins), thin(22)); r.addSpacer(4); t(r, '/ ' + hm(goal), tw(10)); r.addSpacer(); t(r, pct + '%', tw(11))
-        w.addSpacer(3); lbar(w, mins / goal, 150); w.addSpacer(4)
+        w.addSpacer(3); lbar(w, mins / goal, LK.rw); w.addSpacer(4)
         rRow('이번 주 ' + hm(week), '어제 ' + hm(yday), tw(10), tw(10))
       }
     } else if (KIND === 'todo') {
@@ -418,8 +424,8 @@ if (!data) {
         rRow(MON[d0.getMonth()] + ' · ' + hm(total), days + '일 · 달성 ' + hit, tw(12), label(8))
         w.addSpacer(2)
         // 최근 7일 막대 (오늘은 진하게)
-        const sp = w.addStack(); sp.size = new Size(150, 18); sp.bottomAlignContent(); sp.spacing = 5
-        L7.forEach((v, k) => { const b = sp.addStack(); b.size = new Size(17, Math.max(2, Math.round((v / mx) * 18))); b.cornerRadius = 1; b.backgroundColor = new Color('#ffffff', !v ? 0.25 : k === 6 ? 1 : 0.6) })
+        const sp = w.addStack(); sp.size = new Size(LK.rw, 20); sp.bottomAlignContent(); sp.spacing = 5
+        L7.forEach((v, k) => { const b = sp.addStack(); b.size = new Size(Math.floor((LK.rw - 30) / 7), Math.max(2, Math.round((v / mx) * 20))); b.cornerRadius = 1; b.backgroundColor = new Color('#ffffff', !v ? 0.25 : k === 6 ? 1 : 0.6) })
         w.addSpacer(2)
         rRow('최근 7일', '평균 ' + hm(Math.round(L7.reduce((a, v) => a + v, 0) / 7)), label(7), label(7))
       }
@@ -443,7 +449,7 @@ if (!data) {
     } else if (KIND === 'quote') {
       const q = quote || '앱에서 다짐을 적어 보세요'
       if (inl) inline(q)
-      else if (circ) { w.addAccessoryWidgetBackground = true; const z = w.addStack(); z.size = new Size(60, 60); z.setPadding(4, 4, 4, 4); z.centerAlignContent(); const x = t(z, q, tw(9), null, 4); x.centerAlignText(); x.minimumScaleFactor = 0.5 }
+      else if (circ) { w.addAccessoryWidgetBackground = true; const z = w.addStack(); z.size = new Size(LK.c, LK.c); z.setPadding(4, 4, 4, 4); z.centerAlignContent(); const x = t(z, q, tw(9), null, 4); x.centerAlignText(); x.minimumScaleFactor = 0.5 }
       else t(w, q, tw(12), null, 3).minimumScaleFactor = 0.7
     } else if (KIND === 'week') {
       if (inl) inline('이번 주 ' + hm(weekTot) + ' · 하루 ' + hm(weekAvg))
@@ -451,8 +457,8 @@ if (!data) {
       else {
         rRow('이번 주 ' + hm(weekTot), '하루 ' + hm(weekAvg), tw(12), label(8))
         w.addSpacer(3)
-        const mx = Math.max(goal, ...week7.map((x) => x.m)), row = w.addStack(); row.size = new Size(150, 20); row.bottomAlignContent(); row.spacing = 5
-        week7.forEach((x, i) => { const b = row.addStack(); b.size = new Size(17, Math.max(2, Math.round((x.m / mx) * 20))); b.cornerRadius = 1; b.backgroundColor = new Color('#ffffff', !x.m ? 0.25 : i === 6 ? 1 : 0.6) })
+        const mx = Math.max(goal, ...week7.map((x) => x.m)), row = w.addStack(); row.size = new Size(LK.rw, 22); row.bottomAlignContent(); row.spacing = 5
+        week7.forEach((x, i) => { const b = row.addStack(); b.size = new Size(Math.floor((LK.rw - 30) / 7), Math.max(2, Math.round((x.m / mx) * 22))); b.cornerRadius = 1; b.backgroundColor = new Color('#ffffff', !x.m ? 0.25 : i === 6 ? 1 : 0.6) })
         w.addSpacer(2)
         rRow(lastWeek ? '지난주 같은 때 ' + hm(lastWeek) : '최근 7일', '', label(7), label(7))
       }
@@ -461,7 +467,7 @@ if (!data) {
       if (inl) inline(top.length ? top.slice(0, 2).map((x) => x.s.name + ' ' + hm(x.m)).join(' · ') : '이번 주 공부 기록 없음')
       else if (circ) cRows(top[0] ? [[top[0].s.name, label(8)], [hm(top[0].m), tw(14)], ['WEEK', label(6)]] : [['—', tw(14)]], top[0] ? top[0].m / Math.max(1, weekTot) : null)
       else {
-        for (const x of top) { rRow(x.s.name, hm(x.m), tw(11), label(8)); lbar(w, x.m / (top[0].m || 1), 150) ; w.addSpacer(2) }
+        for (const x of top) { rRow(x.s.name, hm(x.m), tw(11), label(8)); lbar(w, x.m / (top[0].m || 1), LK.rw) ; w.addSpacer(2) }
         if (!top.length) t(w, '이번 주 공부 기록 없음', tw(11))
       }
     } else if (KIND === 'now') {
@@ -469,7 +475,7 @@ if (!data) {
       if (inl) inline(nCur ? nCur.t + ' ~' + clk(nCur.e) : c ? (nTmr ? '내일 ' : '다음 ') + clk(c.s) + ' ' + c.t : '남은 일정 없음')
       else if (circ) {
         w.addAccessoryWidgetBackground = true
-        const z = w.addStack(); z.size = new Size(60, 60); z.layoutVertically(); z.centerAlignContent()
+        const z = w.addStack(); z.size = new Size(LK.c, LK.c); z.layoutVertically(); z.centerAlignContent()
         const rowC = (fn) => { const a = z.addStack(); a.addSpacer(); fn(a); a.addSpacer() }
         if (c) { rowC((a) => t(a, nCur ? '남음' : nTmr ? '내일' : '다음', label(7))); rowC((a) => { if (nTmr) t(a, clk(c.s), tw(13)); else timerTo(a, nCur ? c.e : c.s, tw(12)) }); rowC((a) => t(a, c.t, label(7)).minimumScaleFactor = 0.5) }
         else rowC((a) => t(a, '—', tw(14)))
@@ -485,7 +491,7 @@ if (!data) {
       if (inl) inline(p0 ? p0.t + ' ' + Math.round((p0.n / p0.of) * 100) + '%' : '진행 중인 교재·인강 없음')
       else if (circ) cRows(p0 ? [[Math.round((p0.n / p0.of) * 100) + '%', tw(14)], [p0.t, label(7)]] : [['—', tw(14)]], p0 ? p0.n / p0.of : null)
       else {
-        for (const x of PROG.slice(0, 3)) { rRow(x.t, x.n + '/' + x.of + x.u, tw(11), label(8)); lbar(w, x.n / x.of, 150); w.addSpacer(2) }
+        for (const x of PROG.slice(0, 3)) { rRow(x.t, x.n + '/' + x.of + x.u, tw(11), label(8)); lbar(w, x.n / x.of, LK.rw); w.addSpacer(2) }
         if (!PROG.length) t(w, '진행 중인 교재·인강 없음', tw(11))
       }
     } else if (KIND === 'goals') {
@@ -505,7 +511,7 @@ if (!data) {
         rRow(DAY[d0.getDay()] + ' ' + d0.getDate(), '할 일 ' + left, label(8), label(8))
         rRow(c ? clk(c.s) + ' ' + c.t : '남은 일정 없음', '', tw(11), label(8))
         rRow('공부 ' + hm(mins) + ' / ' + hm(goal), pct + '%', tw(11), label(8))
-        lbar(w, mins / goal, 150)
+        lbar(w, mins / goal, LK.rw)
       }
     } else if (KIND === 'dash') {
       const left = items.filter((x) => !x.done).length, c = nCur || nNext
@@ -515,7 +521,7 @@ if (!data) {
         rRow('공부 ' + hm(mins), '할 일 ' + left, tw(11), label(8))
         rRow(c ? clk(c.s) + ' ' + c.t : '남은 일정 없음', '', tw(11), label(8))
         rRow(dd ? dd.title : 'No D-day', dd ? ddTxt : '', tw(11), label(8))
-        lbar(w, mins / goal, 150)
+        lbar(w, mins / goal, LK.rw)
       }
     } else if (KIND === 'tmrw') {
       const f = TMR.ev[0], c1 = TMR.cl[0]
@@ -560,7 +566,7 @@ if (!data) {
       else {
         rRow('공부 시작', '오늘 ' + hm(mins), label(8), label(8))
         t(w, s0 ? s0.name : '공부', thin(22)).minimumScaleFactor = 0.6
-        lbar(w, mins / goal, 150)
+        lbar(w, mins / goal, LK.rw)
       }
     }
   } else if (lock) {
@@ -569,7 +575,7 @@ if (!data) {
       inline(hm(mins) + (dd ? ' · ' + ddTxt + ' ' + dd.title : ''))
     } else if (fam === 'accessoryCircular') {
       w.addAccessoryWidgetBackground = true
-      const z = w.addStack(); z.size = new Size(60, 60); z.layoutVertically(); z.centerAlignContent()
+      const z = w.addStack(); z.size = new Size(LK.c, LK.c); z.layoutVertically(); z.centerAlignContent()
       const row = (s, f) => { const a = z.addStack(); a.addSpacer(); t(a, s, f).minimumScaleFactor = 0.6; a.addSpacer() }
       if (KIND === 'dday' && dd) { row(ddN(dd) === 0 ? 'D' : String(ddN(dd)), thin(20)); row('D-DAY', label(7)) }
       else { row(hm(mins), tw(14)); row(pct + '%', label(8)); cline(z, mins / goal) }
@@ -577,7 +583,7 @@ if (!data) {
       const r = w.addStack(); r.bottomAlignContent()
       t(r, hm(mins), thin(22)); r.addSpacer(4); t(r, '/ ' + hm(goal), tw(10)); r.addSpacer(); if (dd) t(r, ddTxt, tw(12))
       w.addSpacer(4)
-      lbar(w, mins / goal, 150)
+      lbar(w, mins / goal, LK.rw)
       w.addSpacer(5)
       t(w, KIND === 'dday' && dd ? dd.title : todo[0] ? '– ' + todo[0].title : (dd ? dd.title : 'All clear.'), tw(11))
     }

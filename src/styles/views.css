@@ -353,12 +353,12 @@ button.greet { display: block; width: 100%; text-align: left; }
 .dw-day { border-radius: 4px; font-size: 8px; padding: 2px 3px; line-height: 1; }
 .dw-day.on { outline: 1px solid var(--ink); }
 .dw-lock { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 4px 0 6px; padding: 14px; border-radius: 18px; background: linear-gradient(135deg, #3d4659, #6b6377); color: #fff; font-family: "Apple SD Gothic Neo", -apple-system, sans-serif; font-weight: 300; }
-.dw-lc { width: 60px; height: 60px; border-radius: 50%; background: rgba(255, 255, 255, .12); position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; line-height: 1.1; }
+.dw-lc { zoom: 1.18; width: 61px; height: 61px; border-radius: 50%; background: rgba(255, 255, 255, .12); position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; line-height: 1.1; }
 .dw-lc span { font-size: 8px; }
 .dw-lc svg { position: absolute; inset: 0; transform: rotate(-90deg); }
 .dw-lc circle { fill: none; stroke: rgba(255, 255, 255, .25); stroke-width: 3; }
 .dw-lc circle.on { stroke: #fff; stroke-linecap: round; }
-.dw-lr { width: 160px; font-size: 11px; display: flex; flex-direction: column; gap: 3px; }
+.dw-lr { zoom: 1.18; width: 136px; font-size: 11px; display: flex; flex-direction: column; gap: 3px; }
 .dw-lr > div:first-child { display: flex; align-items: baseline; gap: 4px; }
 .dw-lr b { font-size: 20px; font-weight: 100; }
 .dw-lr .dw-line::before { background: rgba(255, 255, 255, .35); }
@@ -443,14 +443,14 @@ button.greet { display: block; width: 100%; text-align: left; }
 .dw-lock { flex-direction: column; align-items: flex-start; gap: 6px; }
 .dw-clock { font-size: 56px; font-weight: 200; line-height: 1; margin: 0 0 6px; letter-spacing: -1px; }
 .dw-lc { overflow: hidden; text-align: center; }
-.dw-lc span { display: block; max-width: 54px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dw-lc span { display: block; max-width: 56px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dw-lr > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dw-li { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dw-lbar { display: block; height: 2px; border-radius: 1px; background: rgba(255, 255, 255, .3); margin: 3px auto 2px; overflow: hidden; }
 .dw-lr .dw-lbar { margin: 3px 0 4px; }
 .dw-lbar b { display: block; height: 100%; background: #fff; border-radius: 1px; }
-.dw-lspark { display: flex; align-items: flex-end; gap: 5px; height: 18px; width: 150px; margin: 2px 0; }
-.dw-lspark i { width: 17px; background: #fff; border-radius: 1px; }
+.dw-lspark { display: flex; align-items: flex-end; gap: 4px; height: 18px; width: 136px; margin: 2px 0; }
+.dw-lspark i { width: 16px; background: #fff; border-radius: 1px; }
 /* 위젯 글자 크기 미리보기: 내용만 확대·축소 (위젯 칸 크기는 그대로) */
 .dw-in { zoom: var(--dw-scale, 1); width: calc(100% / var(--dw-scale, 1)); height: calc(100% / var(--dw-scale, 1)); display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .dw-m .dw-in { flex-direction: row; gap: 16px; }
