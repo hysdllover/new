@@ -662,7 +662,7 @@ function WidgetPreview() {
   const quickBody = (n, lg) => <>{hdr('START', '오늘 ' + hm(mins))}{[0, 4].filter((i) => i < Math.min(n, qsub.length)).map((i) => <div key={i} className="row" style={{ gap: 8, marginBottom: 8, flexWrap: 'nowrap' }}>{qsub.slice(i, i + 4).map((s) => btn(s.name, s.id, s.color))}{Array.from({ length: 4 - qsub.slice(i, i + 4).length }, (_, k) => <span key={'p' + k} style={{ flex: 1 }} />)}</div>)}<div className="row" style={{ gap: 8, flexWrap: 'nowrap' }}>{btn('+ 할 일', 'a')}{btn('+ 일정', 'b')}{btn('+ 기록', 'c')}</div>{lg && <><div className="dw-hr" />{list(4)}</>}</>
   const V = {
     대시보드: [
-      tileGrid(2, 19, true),
+      M(<><div className="grow" />{tileGrid(2, 19)}<div className="grow" /></>),
       M(<>{hdr('TODAY', dateStr)}<div className="grow" />{tileGrid(4, 22)}<div className="grow" /></>),
       M(<>{hdr('TODAY', dateStr)}{tileGrid(2, 30)}<div className="dw-hr" />{list(5)}</>),
     ],
