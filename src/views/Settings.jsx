@@ -15,7 +15,8 @@ import { sortTasks } from './tasks/filter.js'
 import { download } from '../lib/files.js'
 import { useMyFonts, addFont, removeFont, fontFamily, loadAllFonts, SYNC_FONT_MAX } from '../lib/fonts.js'
 import { requestPermission } from '../lib/notify.js'
-import { fmtTime, today, WD } from '../engine/date.js'
+import { fmtTime, today, WD, weekStart } from '../engine/date.js'
+import { weekGoals, goalProgress } from '../store/actions.js'
 import { DIGEST_TIMES } from '../engine/reminders.js'
 
 export default function Settings() {
@@ -462,7 +463,7 @@ function HomeWidgetCard() {
         2. 아래 <b>스크립트 복사</b> → Scriptable › ＋ › 붙여넣기 → 이름 ‘스터디’<br />
         3. 홈 화면 길게 누르기 › ＋ › Scriptable 위젯(소·중·대) 추가 → 위젯 편집 › Script: ‘스터디’ · Parameter: 위 형태 단어<br />
         4. 투명 배경(아이폰): Scriptable 에서 ‘스터디’ 스크립트를 눌러 실행 › 투명 배경 설정 › 빈 홈 화면 스크린샷·위젯 크기·위치 선택. 같은 크기 위젯이 여러 개면 Parameter 에 @번호를 붙여 구분 (예: 공부@2). 글자색도 같은 메뉴에서 바꿔요.<br />
-        5. 잠금 화면: 잠금 화면 길게 누르기 › 사용자화 › 잠금 화면 › 위젯 추가 › Scriptable → <b>추가한 위젯을 한 번 더 눌러 Script: ‘스터디’ 선택</b> (안 고르면 빈칸) · 잠금 화면도 Parameter 로 공부 · 할일 · 달력 · 캘린더 · 다짐 · 디데이(다음 D-day 는 디데이2) · 시간표 지정 (비우면 기본, 아이폰·아이패드 같음)<br />
+        5. 잠금 화면: 잠금 화면 길게 누르기 › 사용자화 › 잠금 화면 › 위젯 추가 › Scriptable → <b>추가한 위젯을 한 번 더 눌러 Script: ‘스터디’ 선택</b> (안 고르면 빈칸) · 잠금 화면도 Parameter 로 공부 · 할일 · 달력 · 캘린더 · 다짐 · 디데이(다음 D-day 는 디데이2) · 시간표 · 주간 · 과목 · 지금 · 진도 · 목표 · 오늘 지정 (비우면 기본, 아이폰·아이패드 같음)<br />
         6. 아이패드 잠금 화면은 iPadOS 17 이상. 빈칸·오류가 보이면 Scriptable 에서 스크립트를 실행 › ‘잠금 화면 미리보기’로 오류 문구를 확인하세요.
       </div>
       <div className="tiny muted" style={{ marginTop: 4 }}>위젯을 누르면 해당 화면(할 일·공부 기록)이 열려요. iOS 제한으로 사파리에서 열리니, 사파리에서도 한 번 동기화를 연결해 두세요.</div>
@@ -598,6 +599,21 @@ function WidgetPreview() {
     return <div><div className="dw-bars" style={{ height: h }}>{sw.last7.map((x, i) => <i key={i} style={{ height: Math.max(2, x.m / max * h), opacity: i === 6 ? 1 : .35 + .4 * Math.min(1, x.m / goal) }} />)}<b style={{ bottom: goal / max * h }} /></div>
       <div className="dw-bars-l">{sw.last7.map((x, i) => <span key={i} className={i === 6 ? 'dw-gold' : ''}>{'SMTWTFS'[x.wd]}</span>)}</div></div>
   }
+  // 새 유형 미리보기 데이터 (위젯 스크립트와 같은 계산)
+  const lecturesP = useColl('lectures'), textbooksP = useColl('textbooks'); useColl('days')
+  const wsP = weekStart(d, st.weekStart ?? 1)
+  const weekSub = subjects.map((s) => ({ s, m: sessions.filter((x) => x.subjectId === s.id && x.date >= wsP && x.date <= d).reduce((a, x) => a + x.dur, 0) })).filter((x) => x.m).sort((a, b) => b.m - a.m)
+  const progP = [...lecturesP.map((x) => ({ t: x.title, n: Object.keys(x.done || {}).filter((k) => +k <= x.total).length, of: x.total || 0, u: '강' })), ...textbooksP.map((x) => ({ t: x.title, n: x.current || 0, of: x.total || 0, u: x.unit || 'p' }))].filter((x) => x.of && x.n < x.of)
+  const goalsP = weekGoals().map((g) => { const p = goalProgress(g, tasks); return { t: g.title, done: !!g.done || (p.linked > 0 && p.ratio >= 1), r: p.ratio, n: p.done, of: p.linked } })
+  const gDone = goalsP.filter((g) => g.done).length
+  const nmP = now.getHours() * 60 + now.getMinutes()
+  const nowL = [...eventsOn(d).filter((e) => e.start != null).map((e) => ({ t: e.title, s: e.start, e: e.end ?? e.start + 60, c: e.color, l: e.location })), ...classesOn(d).map((c) => ({ t: c.period + '교시 ' + c.title, s: c.start, e: c.end, l: c.room }))].sort((a, b) => a.s - b.s)
+  const nCur = nowL.find((x) => x.s <= nmP && x.e > nmP), nNext = nowL.find((x) => x.s > nmP), nC = nCur || nNext
+  const leftN = items.filter((t) => !t.done).length
+  const pRow = (k, v, r, c) => <div key={k} style={{ marginBottom: 7 }}><div className="row between" style={{ fontSize: 13 }}><span className="ellipsis">{k}</span><span className="dw-soft">{v}</span></div><div className="dw-line" style={{ marginTop: 3 }}><i style={{ width: Math.min(100, r * 100) + '%', background: c || null }} /></div></div>
+  const hdr = (k, right) => <div className="row between" style={{ marginBottom: 8, flexWrap: 'nowrap', gap: 6 }}><span className="dw-cap sp nowrap">{k}</span><span className="dw-cap nowrap">{right}</span></div>
+  const M = (x) => <div className="col" style={{ gap: 0, flex: 1, minWidth: 0, height: '100%' }}>{x}</div>
+  const nowBody = (big) => nC ? <>{hdr(nCur ? 'NOW' : 'NEXT', big ? dateStr : '')}<div style={{ fontSize: big ? 24 : 20, fontWeight: 100, lineHeight: 1.2 }}>{nC.t}</div><div className="dw-soft" style={{ marginTop: 4 }}>{fmtTime(nC.s)}–{fmtTime(nC.e)}{nC.l ? ' · ' + nC.l : ''}</div><div className="dw-gold" style={{ marginTop: 6, fontSize: 11 }}>{nCur ? '끝까지 ' : '시작까지 '}{Math.max(0, (nCur ? nC.e : nC.s) - nmP)}분</div></> : <>{hdr('NEXT', '')}<div className="dw-soft">오늘 남은 일정이 없어요</div></>
   // 캘린더 유형: 이번 달 + 다가오는 일정
   const MONS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
   const ymdOf = (x) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`
@@ -626,6 +642,16 @@ function WidgetPreview() {
       {!out.length && <div className="dw-soft">다가오는 일정 없음</div>}</>
   }
   const V = {
+    주간: [30, 26, 90].map((h, i) => M(<>{hdr('THIS WEEK', i ? dateStr : '')}<div className="dw-big"><span style={{ fontSize: i === 2 ? 38 : 30 }}>{hm(sw.week)}</span></div><div className="dw-soft">하루 평균 {hm(sw.avg)}</div><div className="grow" />{bars7(h)}{i === 2 && <><div className="dw-hr" />{weekSub.slice(0, 5).map((x) => pRow(x.s.name, hm(x.m), x.m / (weekSub[0].m || 1), x.s.color))}</>}</>)),
+    과목: [3, 3, 8].map((n) => M(<>{hdr('SUBJECTS', '이번 주 ' + hm(sw.week))}{weekSub.slice(0, n).map((x) => pRow(x.s.name, hm(x.m), x.m / (weekSub[0].m || 1), x.s.color))}{!weekSub.length && <div className="dw-soft">이번 주 공부 기록이 없어요</div>}</>)),
+    지금: [0, 1, 2].map((i) => M(<>{nowBody(i > 0)}{i > 0 && nowL.filter((x) => x.e > nmP && x !== nC).slice(0, i === 2 ? 8 : 1).map((x, k) => <div key={k} className="dw-todo" style={{ marginTop: k ? 0 : 10 }}><span className="dw-soft" style={{ width: 38 }}>{fmtTime(x.s)}</span><span className="ellipsis">{x.t}</span></div>)}</>)),
+    진도: [3, 3, 8].map((n, i) => M(<>{hdr('PROGRESS', i ? dateStr : '')}{progP.slice(0, n).map((x) => pRow(x.t, i ? `${x.n}/${x.of}${x.u}` : Math.round((x.n / x.of) * 100) + '%', x.n / x.of))}{!progP.length && <div className="dw-soft">진행 중인 교재·인강이 없어요</div>}</>)),
+    목표: [0, 1, 2].map((i) => M(<>{hdr('THIS WEEK', `${gDone}/${goalsP.length}`)}{goalsP.map((g) => pRow((g.done ? '✓ ' : '– ') + g.t, i && g.of ? `${g.n}/${g.of}` : '', g.r))}{!goalsP.length && <div className="dw-soft">할 일 › 이번 주 목표에서 정해 보세요</div>}{i === 2 && <><div className="dw-hr" /><div className="row between"><span>이번 주 공부 {hm(sw.week)}</span><span className="dw-soft">하루 {hm(sw.avg)}</span></div></>}</>)),
+    오늘: [
+      <>{hdr('TODAY', dateStr)}<div className="dw-todo"><span className="dw-gold">{nC ? fmtTime(nC.s) : '—'}</span><span className="ellipsis">{nC ? nC.t : '남은 일정 없음'}</span></div><div className="grow" />{big(24)}<div className="dw-soft" style={{ marginTop: 6 }}>할 일 {leftN}개 남음</div></>,
+      <><div className="col" style={{ gap: 0, width: 128, flexShrink: 0 }}>{hdr('TODAY', '')}<div className="dw-todo"><span className="dw-gold">{nC ? fmtTime(nC.s) : '—'}</span><span className="ellipsis">{nC ? nC.t : '없음'}</span></div><div className="grow" />{big(24)}</div><div className="dw-vr" /><div className="col" style={{ gap: 0, flex: 1, minWidth: 0 }}>{list(4)}</div></>,
+      <>{hdr('TODAY', dateStr)}<div className="dw-todo"><span className="dw-gold">{nC ? fmtTime(nC.s) : '—'}</span><span className="ellipsis">{nC ? nC.t : '남은 일정 없음'}</span></div><div style={{ height: 8 }} />{big(34)}<div className="dw-hr" />{list(6)}<div className="grow" />{ddRow}</>,
+    ],
     '': [
       <><div className="dw-cap">{dateStr}</div><div className="grow" />{big(26)}<div className="grow" />{ddRow}</>,
       <><div className="col" style={{ gap: 0, width: 128, flexShrink: 0 }}><div className="dw-cap">{dateStr}</div><div className="grow" />{big(28)}<div className="grow" />{ddRow}</div>
@@ -698,6 +724,12 @@ function WidgetPreview() {
       return { c: nx ? [[nx.s == null ? '종일' : fmtTime(nx.s), { fontSize: 13 }], [nx.title, S], [nx.i ? (nx.i === 1 ? '내일' : wd(nx.i)) : 'TODAY', { fontSize: 6 }]] : [['—', B]], r: ag.length ? ag.slice(0, 3).map((a) => [<span style={ROW}><span className="ellipsis">{a.title}</span><span style={{ fontSize: 8, flexShrink: 0 }}>{when(a)}</span></span>]) : [['다가오는 일정 없음']], i: nx ? (nx.i === 0 && nx.s == null ? '' : '다음 ') + when(nx) + ' ' + nx.title : '다가오는 일정 없음' }
     }
     if (kind === '다짐') { const q = quote || '앱에서 다짐을 적어 보세요'; return { c: [[q, { fontSize: 9, textAlign: 'center', padding: '0 6px', lineHeight: 1.2 }]], r: [[q, { fontSize: 12, whiteSpace: 'normal' }]], i: q } }
+    if (kind === '주간') return { c: [[hm(sw.week), { fontSize: 13 }], ['WEEK', S], [bar(sw.week / (goal * 7), 34)]], r: [[<span style={ROW}><span>이번 주 {hm(sw.week)}</span><span style={{ fontSize: 9 }}>하루 {hm(sw.avg)}</span></span>], [<span className="dw-lspark">{sw.last7.map((x, k) => <i key={k} style={{ height: Math.max(2, Math.round((x.m / Math.max(goal, ...sw.last7.map((y) => y.m))) * 18)), opacity: !x.m ? .25 : k === 6 ? 1 : .6 }} />)}</span>]], i: `이번 주 ${hm(sw.week)} · 하루 ${hm(sw.avg)}` }
+    if (kind === '과목') return { c: weekSub[0] ? [[weekSub[0].s.name, S], [hm(weekSub[0].m), { fontSize: 14 }], [bar(weekSub[0].m / Math.max(1, sw.week), 34)]] : [['—', B]], r: weekSub.length ? weekSub.slice(0, 3).map((x) => [<span style={ROW}><span>{x.s.name}</span><span style={{ fontSize: 9 }}>{hm(x.m)}</span></span>]) : [['이번 주 공부 기록 없음']], i: weekSub.length ? weekSub.slice(0, 2).map((x) => x.s.name + ' ' + hm(x.m)).join(' · ') : '이번 주 공부 기록 없음' }
+    if (kind === '지금') return { c: nC ? [[nCur ? '남음' : '다음', S], [`${Math.max(0, (nCur ? nC.e : nC.s) - nmP)}분`, { fontSize: 13 }], [nC.t, S]] : [['—', B]], r: nC ? [[<span style={{ ...ROW, fontSize: 8 }}><span>{nCur ? '지금' : '다음'}</span><span>{fmtTime(nC.s)}–{fmtTime(nC.e)}</span></span>], [nC.t, { fontSize: 20, fontWeight: 100 }], [`${nCur ? '끝까지' : '시작까지'} ${Math.max(0, (nCur ? nC.e : nC.s) - nmP)}분`, { fontSize: 9 }]] : [['오늘 남은 일정 없음']], i: nCur ? `${nC.t} ~${fmtTime(nC.e)}` : nC ? `다음 ${fmtTime(nC.s)} ${nC.t}` : '남은 일정 없음' }
+    if (kind === '진도') return { c: progP[0] ? [[Math.round((progP[0].n / progP[0].of) * 100) + '%', { fontSize: 14 }], [progP[0].t, S], [bar(progP[0].n / progP[0].of, 34)]] : [['—', B]], r: progP.length ? progP.slice(0, 3).flatMap((x) => [[<span style={ROW}><span className="ellipsis">{x.t}</span><span style={{ fontSize: 9 }}>{x.n}/{x.of}{x.u}</span></span>], [bar(x.n / x.of, 150)]]) : [['진행 중인 교재·인강 없음']], i: progP[0] ? `${progP[0].t} ${Math.round((progP[0].n / progP[0].of) * 100)}%` : '진행 중인 교재·인강 없음' }
+    if (kind === '목표') return { c: goalsP.length ? [[`${gDone}/${goalsP.length}`, B], ['GOALS', S], [bar(gDone / goalsP.length, 34)]] : [['—', B]], r: goalsP.length ? [[<span style={{ ...ROW, fontSize: 8, letterSpacing: 2 }}><span>THIS WEEK</span><span>{gDone}/{goalsP.length}</span></span>], ...goalsP.slice(0, 3).map((g) => [(g.done ? '✓ ' : '– ') + g.t, g.done ? DIM : null])] : [['이번 주 목표 없음']], i: goalsP.length ? `목표 ${gDone}/${goalsP.length}` + (goalsP.find((g) => !g.done) ? ' · ' + goalsP.find((g) => !g.done).t : ' 완료') : '이번 주 목표 없음' }
+    if (kind === '오늘') return { c: [[leftN, B], ['할 일', S], [bar(mins / goal, 34)]], r: [[<span style={{ ...ROW, fontSize: 8 }}><span>{['일', '월', '화', '수', '목', '금', '토'][now.getDay()]} {now.getDate()}</span><span>할 일 {leftN}</span></span>], [nC ? `${fmtTime(nC.s)} ${nC.t}` : '남은 일정 없음'], [<span style={ROW}><span>공부 {hm(mins)} / {hm(goal)}</span><span style={{ fontSize: 9 }}>{pct}%</span></span>], [bar(mins / goal, 150)]], i: `할 일 ${leftN} · 공부 ${hm(mins)}` + (nC ? ` · ${fmtTime(nC.s)} ${nC.t}` : '') }
     if (kind === '시간표') {
       const cls = classesOn(d), cur = cls.find((c) => c.start <= nm && c.end > nm), next = cls.find((c) => c.start > nm), c = cur || next
       const after = c ? cls.filter((x) => x.start > c.start).slice(0, 3).map((x) => x.title).join(' · ') : ''
