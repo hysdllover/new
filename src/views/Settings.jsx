@@ -5,7 +5,7 @@ import { PRESETS, FONTS, effTheme, setDeviceTheme } from '../theme/theme.js'
 import { PALETTE, SOFT_PALETTE } from '../store/schema.js'
 import { Card, Seg, Toggle, Field, Icon, toast, confirmSheet, openSheet } from '../components/ui.jsx'
 import { ColorPick, TimeInput, SubjectSelect } from '../components/common.jsx'
-import { useSyncStatus, connect, disconnect, syncNow, gistInfo, tokenExpiry, listBackups, backupNow, restoreBackup, calendarUrl, readGistFile, syncLog } from '../sync/sync.js'
+import { useSyncStatus, connect, disconnect, syncNow, gistInfo, tokenExpiry, listBackups, backupNow, restoreBackup, calendarUrl, readGistFile, syncLog, connectLink } from '../sync/sync.js'
 import { enablePush, disablePush, pushState, testLocal, isStandalone, pushSupported } from '../lib/push.js'
 import { buildLoader, WIDGET_KINDS } from '../lib/scriptable.js'
 import { TAB_OPTIONS, DEFAULT_TABBAR, tabOpt } from '../nav.js'
@@ -295,6 +295,10 @@ function SyncCard() {
             <button className="btn" onClick={() => syncNow()}><Icon name="sync" size={16} />지금 동기화</button>
             {gistId && <a className="btn" href={`https://gist.github.com/${gistId}`} target="_blank" rel="noreferrer">Gist 보기</a>}
             <button className="btn danger" onClick={() => confirmSheet('연결 해제', '이 기기의 토큰을 지웁니다. 데이터는 그대로 남아요.', disconnect, '해제')}>연결 해제</button>
+          </div>
+          <div className="col" style={{ gap: 4 }}>
+            <button className="btn" onClick={async () => { try { await navigator.clipboard.writeText(connectLink()); toast('복사했어요 · Safari 주소창에 붙여 넣으세요') } catch { toast('복사하지 못했어요') } }}>Safari 연결 링크 복사</button>
+            <div className="tiny muted">위젯을 누르면 iOS 가 홈 화면 앱 대신 Safari 로 열어요(iOS 제한 · 웹 앱을 직접 여는 방법이 없어요). Safari 는 저장소가 따로라, 이 링크를 Safari 주소창에 한 번 붙여 넣으면 Safari 도 같은 데이터로 동기화돼요. 링크에 토큰이 들어 있으니 메모·채팅에 붙이지 말고 바로 Safari 에만 쓰세요.</div>
           </div>
           <SyncLog />
           <Field label="자동 동기화 간격 (열려 있을 때)"><Seg value={st.syncEvery || 'normal'} onChange={(v) => setSettings({ syncEvery: v })} options={[['normal', '3분'], ['eco', '10분 · 절약'], ['off', '끄기']]} /></Field>
@@ -613,6 +617,7 @@ function CustomWidgetsField() {
         <div className="row wrap" style={{ gap: 6 }}>
           {DASH_KEYS.map(([k, l]) => <button key={k} className={'chip' + (blocks.includes(k) ? ' on' : '')} onClick={() => tog(k)}>{blocks.includes(k) && <span className="tiny">{blocks.indexOf(k) + 1}</span>}{l}</button>)}
         </div>
+        {blocks.length > 0 && cw.layout !== 'rows' && <div className="row wrap" style={{ gap: 6 }}><span className="tiny muted">넓게 (한 줄 전체)</span>{blocks.map((k) => <button key={k} className={'chip' + ((cw.wide || []).includes(k) ? ' on' : '')} onClick={() => save({ wide: (cw.wide || []).includes(k) ? cw.wide.filter((x) => x !== k) : [...(cw.wide || []), k] })}>{DASH_KEYS.find(([x]) => x === k)?.[1]}</button>)}</div>}
         <div className="tiny muted">누른 순서대로 놓여요 (최대 6 · 소형 4 · 중형 4). 칸: 2열 격자 · 줄: 위에서 아래로(중형은 두 단). 위 미리보기에서 ‘내 위젯 {i + 1}’을 눌러 확인하세요.</div>
       </div>
     </Field>
@@ -787,7 +792,7 @@ function WidgetPreview() {
   const dGraph = (k) => !!TLp[k][1]?.node
   const dCol = (ks) => ks.map((k, i) => <Fragment key={k}>{i > 0 && <div className="grow" />}{dLine(k)}</Fragment>)
   const dOthers = dKeys.filter((k) => k !== 'todo'), dHasTodo = dKeys.includes('todo')
-  const tileGrid = (cols, size, fill, tiles = dKeys.map((k) => TLp[k])) => <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: '12px 12px', ...(fill ? { height: '100%', alignContent: 'space-between' } : null) }}>{tiles.map((x) => <div key={x[0]} className="col" style={{ gap: 1, minWidth: 0 }}><span className="dw-cap">{x[0]}</span>{x[1]?.node ? <div style={size < 25 ? { zoom: 0.72 } : null}>{x[1].node}</div> : Array.isArray(x[1]) ? <div className="col" style={{ gap: 2, marginTop: 3, minWidth: 0 }}>{x[1].slice(0, cols === 4 ? 6 : size >= 30 ? 4 : 3).map((t) => <span key={t.id} className="ellipsis" style={{ fontSize: size >= 30 ? 15 : 11, fontWeight: t.priority >= 3 ? 500 : null }}>{t.priority >= 3 ? '• ' : '– '}{t.title}</span>)}{!x[1].length && <span className="dw-soft">All clear.</span>}</div> : <span className="ellipsis" style={{ fontSize: size, fontWeight: 100, lineHeight: 1.1 }}>{x[1]}</span>}{x[2] && <span className={'ellipsis ' + (x[4] ? 'dw-gold' : 'dw-soft')} style={{ fontSize: 10 }}>{x[2]}</span>}{x[3] != null && <div className="dw-line" style={{ marginTop: 3 }}><i style={{ width: Math.min(100, x[3] * 100) + '%' }} /></div>}</div>)}</div>
+  const tileGrid = (cols, size, fill, tiles = dKeys.map((k) => TLp[k])) => <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: '12px 12px', ...(fill ? { height: '100%', alignContent: 'space-between' } : null) }}>{tiles.map((x) => <div key={x[0]} className="col" style={{ gap: 1, minWidth: 0, ...(x.wide ? { gridColumn: '1 / -1' } : null) }}><span className="dw-cap">{x[0]}</span>{x[1]?.node ? <div style={size < 25 ? { zoom: 0.72 } : null}>{x[1].node}</div> : Array.isArray(x[1]) ? <div className="col" style={{ gap: 2, marginTop: 3, minWidth: 0 }}>{x[1].slice(0, cols === 4 ? 6 : size >= 30 ? 4 : 3).map((t) => <span key={t.id} className="ellipsis" style={{ fontSize: size >= 30 ? 15 : 11, fontWeight: t.priority >= 3 ? 500 : null }}>{t.priority >= 3 ? '• ' : '– '}{t.title}</span>)}{!x[1].length && <span className="dw-soft">All clear.</span>}</div> : <span className="ellipsis" style={{ fontSize: size, fontWeight: 100, lineHeight: 1.1 }}>{x[1]}</span>}{x[2] && <span className={'ellipsis ' + (x[4] ? 'dw-gold' : 'dw-soft')} style={{ fontSize: 10 }}>{x[2]}</span>}{x[3] != null && <div className="dw-line" style={{ marginTop: 3 }}><i style={{ width: Math.min(100, x[3] * 100) + '%' }} /></div>}</div>)}</div>
   const btn = (s, key, color) => <span key={key} className="row" style={{ flex: 1, minWidth: 0, height: 32, borderRadius: 10, background: 'var(--rule)', justifyContent: 'center', gap: 5, fontSize: 12 }}>{color && <i style={{ width: 6, height: 6, borderRadius: 3, background: color, flexShrink: 0 }} />}<span className="ellipsis">{s}</span></span>
   const quickBody = (n, lg) => <>{hdr('START', '오늘 ' + hm(mins))}{[0, 4].filter((i) => i < Math.min(n, qsub.length)).map((i) => <div key={i} className="row" style={{ gap: 8, marginBottom: 8, flexWrap: 'nowrap' }}>{qsub.slice(i, i + 4).map((s) => btn(s.name, s.id, s.color))}{Array.from({ length: 4 - qsub.slice(i, i + 4).length }, (_, k) => <span key={'p' + k} style={{ flex: 1 }} />)}</div>)}<div className="row" style={{ gap: 8, flexWrap: 'nowrap' }}>{btn('+ 할 일', 'a')}{btn('+ 일정', 'b')}{btn('+ 기록', 'c')}</div>{lg && <><div className="dw-hr" />{list(4)}</>}</>
   const V = {
@@ -929,7 +934,7 @@ function WidgetPreview() {
   for (let i = 0; i < 3; i++) {
     const cw = (st.customWidgets || [])[i] || {}, rows = cw.layout === 'rows', ttl = cw.name || '내 위젯 ' + (i + 1)
     const ks = (cw.blocks || []).filter((k, j, a) => TLp[k] && a.indexOf(k) === j); if (!ks.length) ks.push('date', 'study', 'next', 'todo')
-    const T = (n) => ks.slice(0, n).map((k) => TLp[k])
+    const wideK = new Set(cw.wide || []), T = (n) => ks.slice(0, n).map((k) => { const x = [...TLp[k]]; x.wide = wideK.has(k); return x })
     const half = Math.ceil(Math.min(4, ks.length) / 2), ks4 = ks.slice(0, 4), oth = ks4.filter((k) => k !== 'todo')
     V['구성' + (i + 1)] = rows ? [
       M(dCol(ks.slice(0, 3))),

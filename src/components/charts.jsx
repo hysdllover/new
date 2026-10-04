@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { shareBlob } from '../lib/shareCard.js'
+import { settings } from '../store/store.js'
 import { addDays, addMonths, diffDays, today, weekStart, fmtShort, parseYmd, monthStart, daysInMonth, fmtDur, WD } from '../engine/date.js'
 
 // 선 그래프: series = [{ points: [[x,y]], color, dash }], x 는 0..1 로 정규화된 값
@@ -73,9 +75,15 @@ export function Heatmap({ values, weeks = 15, max, color = 'var(--c2)', onPick }
 }
 
 // 월별 공부 달력: 칸 진하기 = 목표 대비 공부량
-export function MonthHeat({ values, goal = 240, weekStartDow = 1, color = 'var(--c2)', onPick, compact }) {
+export function MonthHeat({ values, goal = 240, weekStartDow = 1, color = 'var(--c2)', onPick, compact, fixed }) {
   const t = today()
-  const [month, setMonth] = useState(monthStart(t))
+  const [m0, setMonth] = useState(monthStart(t)), month = fixed || m0
+  // 이미지로 저장 (리포트 이미지 색 설정을 따름)
+  const saveImg = async () => {
+    const { drawMonthCal } = await import('../lib/reportImage.js')
+    const blob = await drawMonthCal({ month, values, goal, weekStartDow, theme: settings().reportTheme || 'app' })
+    await shareBlob(blob, `공부달력-${month.slice(0, 7)}.png`)
+  }
   const y = +month.slice(0, 4), mo = +month.slice(5, 7) - 1
   const n = daysInMonth(y, mo)
   const lead = (parseYmd(month).getDay() - weekStartDow + 7) % 7
@@ -86,11 +94,14 @@ export function MonthHeat({ values, goal = 240, weekStartDow = 1, color = 'var(-
   const wd = Array.from({ length: 7 }, (_, i) => WD[(i + weekStartDow) % 7])
   return (
     <div className={'mheat' + (compact ? ' compact' : '')}>
-      <div className="row between mheat-top">
+      {!fixed && <div className="row between mheat-top">
         <button className="icon-btn no-print" onClick={() => setMonth(addMonths(month, -1))} aria-label="이전 달">‹</button>
         <b>{y}. {mo + 1}</b>
-        <button className="icon-btn no-print" onClick={() => setMonth(addMonths(month, 1))} aria-label="다음 달">›</button>
-      </div>
+        <span className="row" style={{ gap: 2 }}>
+          {!compact && <button className="chip no-print" onClick={saveImg}>이미지</button>}
+          <button className="icon-btn no-print" onClick={() => setMonth(addMonths(month, 1))} aria-label="다음 달">›</button>
+        </span>
+      </div>}
       <div className="mheat-grid">
         {wd.map((w) => <span key={w} className="mheat-wd">{w}</span>)}
         {Array.from({ length: lead }, (_, i) => <span key={'e' + i} />)}

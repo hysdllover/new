@@ -5,12 +5,19 @@ import { longPress } from '../lib/drag.js'
 import { openTaskMenu } from './TaskQuickMenu.jsx'
 import { openNote } from '../nav.js'
 
-export default function TaskItem({ t, subjects, projects, drag, compact, extra }) {
+export default function TaskItem({ t, subjects, projects, drag, compact, extra, sel }) {
   const subs = t.subtasks || []
   const sdone = subs.filter((s) => s.done).length
   const proj = projects?.find((p) => p.id === t.projectId)
   // 길게 눌러 떼면 빠른 메뉴, 누른 채 움직이면 (있으면) 드래그
   const hold = longPress(() => ({ ...(drag?.getOpts?.() || null), onHold: () => openTaskMenu(t) }))
+  // 선택 모드: 누르면 선택만
+  if (sel) return (
+    <div className={'item task-item sel-item' + (t.done ? ' done' : '') + (sel.on ? ' on' : '')} onClick={sel.toggle} data-id={t.id} role="checkbox" aria-checked={sel.on}>
+      <span className="sel-box" />
+      <div className="t"><div className="title"><span className="ttl">{t.title || '제목 없음'}</span></div>{!compact && <div className="meta"><DueBadge task={t} /><SubjectTag id={t.subjectId} subjects={subjects} /></div>}</div>
+    </div>
+  )
   return (
     <div className={'item task-item draggable' + (t.done ? ' done' : '')} {...hold} onClick={(e) => { if (Date.now() - (e.currentTarget.__held || 0) < 700) return; openDetail('task', t.id) }} data-id={t.id}>
       <Check on={t.done} onClick={() => toggleTask(t.id)} color={subjects?.find((s) => s.id === t.subjectId)?.color} />

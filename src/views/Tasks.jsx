@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { useColl, patch, put, remove } from '../store/store.js'
+import { useMemo, useState } from 'react'
+import { useColl, patch, put, remove, batch } from '../store/store.js'
 import { addTask, toggleTask, moveTasks, QUICK_DATES } from '../store/actions.js'
 import TaskQuickInput from '../components/TaskQuickInput.jsx'
 import { AddInput, Empty, Icon, openSheet, openMenu, toast, openDetail } from '../components/ui.jsx'
@@ -38,6 +38,7 @@ function TaskList({ params }) {
   const set = (p) => setParams('tasks', { ...p, viewId: null })
   const items = useMemo(() => applyFilter(tasks, { smart: 'all', sort: 'manual', ...f }), [tasks, f])
   const manual = (f.sort || 'manual') === 'manual'
+  const sel = useSel()
   const nFilter = [f.subjectId, f.projectId, f.sort && f.sort !== 'manual'].filter(Boolean).length
 
   const dragFor = (t) => longPress(() => ({
@@ -87,6 +88,7 @@ function TaskList({ params }) {
       <div className="row" style={{ gap: 6 }}>
         <input className="input grow" placeholder="검색" value={f.q || ''} onChange={(e) => setParams('tasks', { q: e.target.value })} />
         <button className={'btn' + (nFilter ? ' on-acc' : '')} onClick={() => setParams('tasks', { showFilter: !params.showFilter })}>필터{nFilter ? ' ' + nFilter : ''}</button>
+        {f.smart !== 'done' && <button className={'btn' + (sel.mode ? ' on-acc' : '')} onClick={sel.toggleMode}>선택</button>}
       </div>
       {params.showFilter && (
         <div className="row wrap" style={{ gap: 6 }}>
@@ -107,13 +109,14 @@ function TaskList({ params }) {
       <div className="card" style={{ padding: '2px 12px' }}>
         <div className="list">
           {items.map((t) => (
-            <div key={t.id} data-drop={'task:' + t.id}><TaskItem t={t} subjects={subjects} projects={projects} drag={dragFor(t)}
+            <div key={t.id} data-drop={'task:' + t.id}><TaskItem t={t} subjects={subjects} projects={projects} drag={dragFor(t)} sel={sel.of(t)}
               extra={f.smart === 'inbox' && <span className="inbox-acts" data-nodrag onClick={(e) => e.stopPropagation()}>{[['today', '오늘'], ['tomorrow', '내일'], ['weekend', '주말']].map(([k, l]) => <button key={k} className="chip sm" onClick={() => moveTasks([t.id], k)}>{l}</button>)}<button className="chip sm" onClick={() => patch('tasks', t.id, { inbox: false })}>정리됨</button></span>} /></div>
           ))}
           {!items.length && <Empty>{f.smart === 'inbox' ? '받은 편지함이 비었어요' : '할 일이 없어요'}</Empty>}
         </div>
       </div>)}
-      {manual && items.length > 1 && <div className="tiny muted center">길게 눌러 순서를 바꿀 수 있어요</div>}
+      {manual && items.length > 1 && !sel.mode && <div className="tiny muted center">길게 눌러 순서를 바꿀 수 있어요</div>}
+      {sel.mode && <SelBar sel={sel} all={items} />}
     </div>
   )
 }
@@ -128,7 +131,7 @@ function DayView({ params }) {
   const live = tasks.filter((t) => !t.archived)
   const ofDay = (d) => live.filter((t) => t.due === d) // 완료한 것도 줄 그은 채 제자리
   const order = (a, b) => (a.dueTime == null) - (b.dueTime == null) || (a.dueTime ?? 0) - (b.dueTime ?? 0) || (a.order ?? 0) - (b.order ?? 0)
-  const tidy = useTidy()
+  const tidy = useTidy(), sel = useSel()
   const all = ofDay(date).sort(order)
   const items = tidy ? all.filter((t) => !t.done) : all
   const spans = live.filter((t) => !t.done && spanOn(t, date))
@@ -165,7 +168,7 @@ function DayView({ params }) {
   }
   const rel = (d) => { const n = Math.round((parseYmd(d) - parseYmd(t0)) / 86400000); return n === 0 ? '오늘' : n === 1 ? '내일' : n === -1 ? '어제' : n === 2 ? '모레' : null }
   const left = items.filter((t) => !t.done).length
-  const row = (t) => <div key={t.id} data-drop={'task:' + t.id}><TaskItem t={t} subjects={subjects} projects={projects} drag={dragFor(t)} /></div>
+  const row = (t) => <div key={t.id} data-drop={'task:' + t.id}><TaskItem t={t} subjects={subjects} projects={projects} drag={dragFor(t)} sel={sel.of(t)} /></div>
   return (
     <div className="col" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <div className="row between">
@@ -178,6 +181,7 @@ function DayView({ params }) {
           <button className="icon-btn" onClick={() => go(addDays(date, 1))} aria-label="다음날"><Icon name="next" /></button>
         </div>
         <div className="row" style={{ gap: 6 }}>
+          <button className={'btn sm' + (sel.mode ? ' on-acc' : '')} onClick={sel.toggleMode}>선택</button>
           <button className={'btn sm' + (tidy ? ' on-acc' : '')} onClick={() => setTidy(!tidy)}>{tidy ? '모두 보기' : '끝난 것 접기'}</button>
           {!isToday && <button className="btn sm" onClick={() => go(t0)}>오늘</button>}
         </div>
@@ -201,7 +205,7 @@ function DayView({ params }) {
           <div className="row between" style={{ padding: '4px 0' }}><span className="small muted">지난 할 일 <span className="cnt">{overdue.filter((t) => !t.done).length}</span></span>
             {overdue.some((t) => !t.done) && <button className="chip sm" onClick={() => { const ids = overdue.filter((t) => !t.done).map((t) => t.id); moveTasks(ids, 'today'); toast(`${ids.length}개를 오늘로 옮겼어요`) }}>모두 오늘로</button>}
           </div>
-          <div className="list">{overdue.map((t) => <div key={t.id}><TaskItem t={t} subjects={subjects} projects={projects} /></div>)}</div>
+          <div className="list">{overdue.map((t) => <div key={t.id}><TaskItem t={t} subjects={subjects} projects={projects} sel={sel.of(t)} /></div>)}</div>
         </div>
       )}
       {spans.length > 0 && (
@@ -221,8 +225,39 @@ function DayView({ params }) {
           {!items.length && <Empty>{all.length ? '모두 끝냈어요' : isToday ? '오늘 할 일이 없어요' : '이날 할 일이 없어요'}</Empty>}
         </div>
       </div>
-      {left > 0 && <BulkMove ids={items.filter((t) => !t.done).map((t) => t.id)} />}
-      <div className="tiny muted center">좌우로 밀어 날짜 이동 · 길게 눌러 순서 변경 (시간 있는 할 일은 시간순)</div>
+      {left > 0 && !sel.mode && <BulkMove ids={items.filter((t) => !t.done).map((t) => t.id)} />}
+      {sel.mode ? <SelBar sel={sel} all={[...overdue, ...items]} /> : <div className="tiny muted center">좌우로 밀어 날짜 이동 · 길게 눌러 순서 변경 (시간 있는 할 일은 시간순)</div>}
+    </div>
+  )
+}
+
+// 여러 개 골라 한 번에: 완료 · 날짜 옮기기 · 삭제
+function useSel() {
+  const [mode, setMode] = useState(false), [ids, setIds] = useState(() => new Set())
+  const toggle = (id) => setIds((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
+  return {
+    mode, ids, setIds,
+    toggleMode: () => { setMode(!mode); setIds(new Set()) },
+    off: () => { setMode(false); setIds(new Set()) },
+    of: (t) => (mode ? { on: ids.has(t.id), toggle: () => toggle(t.id) } : undefined),
+  }
+}
+function SelBar({ sel, all }) {
+  const ids = [...sel.ids].filter((id) => all.some((t) => t.id === id)), n = ids.length
+  const allOn = n > 0 && n === all.length
+  const done = () => { const open = ids.filter((id) => !all.find((t) => t.id === id)?.done); batch(() => open.forEach((id) => toggleTask(id))); toast(`${open.length}개 완료`); sel.off() }
+  const move = (k, l) => { moveTasks(ids, k); toast(`${n}개를 ${l}(으)로 옮겼어요`); sel.off() }
+  const del = () => { if (!confirm(`${n}개를 삭제할까요?`)) return; batch(() => ids.forEach((id) => remove('tasks', id))); toast(`${n}개 삭제`); sel.off() }
+  return (
+    <div className="sel-bar">
+      <div className="row between"><span className="small">{n}개 선택</span>
+        <span className="row" style={{ gap: 6 }}><button className="chip" onClick={() => sel.setIds(new Set(allOn ? [] : all.map((t) => t.id)))}>{allOn ? '선택 해제' : '전체'}</button><button className="chip" onClick={sel.off}>닫기</button></span></div>
+      <div className="row wrap" style={{ gap: 6, opacity: n ? 1 : .45, pointerEvents: n ? 'auto' : 'none' }}>
+        <button className="chip on" onClick={done}>완료</button>
+        {QUICK_DATES.map(([k, l]) => <button key={k} className="chip" onClick={() => move(k, l)}>{l}</button>)}
+        <label className="chip date-chip">날짜…<input type="date" onChange={(e) => e.target.value && move(e.target.value, fmtDate(e.target.value))} /></label>
+        <button className="chip" style={{ color: 'var(--danger, #b0605f)' }} onClick={del}>삭제</button>
+      </div>
     </div>
   )
 }
