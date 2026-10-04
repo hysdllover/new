@@ -18,6 +18,8 @@ export const SECTIONS = [
 const DEFAULT = ['study', 'subjects', 'done', 'events']
 const secsOf = (st) => (st.reportSections?.length ? st.reportSections : DEFAULT).filter((k) => SECTIONS.some(([x]) => x === k))
 
+const hmS = (m) => `${Math.floor((m || 0) / 60)}:${String((m || 0) % 60).padStart(2, '0')}`
+
 export function daySummary(date, { tasks, sessions, subjects, goal, ...opts }) {
   const sub = (id) => subjects.find((s) => s.id === id)
   const ss = sessions.filter((s) => s.date === date)
@@ -99,11 +101,15 @@ export default function DaySummary({ initial = today() }) {
   const share = async () => { const text = asText(d, secs); try { if (navigator.share) await navigator.share({ text }); else { await navigator.clipboard.writeText(text); toast('복사했어요') } } catch {} }
   const mx = Math.max(60, ...d.hours)
   const body = (k) => {
-    if (k === 'study') return <div className="row" style={{ alignItems: 'baseline', gap: 8 }}><span style={{ fontSize: 28, fontWeight: 200 }}>{fmtDur(d.mins)}</span><span className="small muted">/ {fmtDur(d.goal)}</span></div>
-    if (k === 'subjects') return d.subs.length ? d.subs.map((x, i) => <div key={i} className="small"><span className="dot" style={{ background: x.sub?.color || 'var(--muted)', marginRight: 6 }} />{x.sub?.name || '과목 없음'} <span className="muted">{fmtDur(x.m)}</span>{x.notes.length > 0 && <div className="tiny muted" style={{ marginLeft: 14 }}>{x.notes.join(' / ')}</div>}</div>) : null
+    if (k === 'study') { const p = Math.round(Math.min(1, d.mins / (d.goal || 1)) * 100); return <div className="col" style={{ gap: 6 }}>
+      <div className="row" style={{ alignItems: 'baseline', gap: 8 }}><span style={{ fontSize: 30, fontWeight: 200, letterSpacing: '-.01em' }}>{hmS(d.mins)}</span><span className="tiny muted">/ {hmS(d.goal)}</span><span className="grow" /><span className="tiny" style={{ color: 'var(--accent)' }}>{p}%</span></div>
+      <div style={{ height: 2, background: 'var(--line)', borderRadius: 1 }}><i style={{ display: 'block', height: 2, width: p + '%', background: 'var(--accent)', borderRadius: 1 }} /></div>
+      <div className="row" style={{ gap: 0, marginTop: 4 }}>{[['이번 주', hmS(d.wk)], ['공부 기록', d.sess.length], ['끝낸 일', d.done.length]].map(([l, v]) => <div key={l} className="col grow" style={{ gap: 0 }}><span className="rp-cap">{l}</span><span style={{ fontSize: 17, fontWeight: 200 }}>{v}</span></div>)}</div>
+    </div> }
+    if (k === 'subjects') return d.subs.length ? d.subs.map((x, i) => <div key={i} style={{ marginBottom: 4 }}><div className="row between small" style={{ fontWeight: 300 }}><span>{x.sub?.name || '과목 없음'}</span><span className="muted">{hmS(x.m)}</span></div><div style={{ height: 1.5, background: 'var(--line)', marginTop: 3 }}><i style={{ display: 'block', height: 1.5, width: (x.m / (d.subs[0].m || 1)) * 100 + '%', background: x.sub?.color || 'var(--accent)' }} /></div>{x.notes.length > 0 && <div className="tiny muted" style={{ marginTop: 2 }}>{x.notes.join(' / ')}</div>}</div>) : null
     if (k === 'hours') return d.hours.some(Boolean) ? <div><div className="row" style={{ gap: 2, alignItems: 'flex-end', height: 40 }}>{d.hours.map((m, i) => <i key={i} title={`${i + 6}시 ${m}분`} style={{ flex: 1, height: Math.max(2, Math.round((m / mx) * 40)), borderRadius: 2, background: m ? 'var(--accent)' : 'var(--line)', opacity: m ? 0.4 + 0.6 * (m / mx) : 1 }} />)}</div><div className="row between tiny muted"><span>6</span><span>12</span><span>18</span><span>24</span></div></div> : null
     const l = lines(k, d)
-    return l.length ? l.map((x, i) => <div key={i} className="small">{x}</div>) : null
+    return l.length ? <div className={l.length >= 6 ? 'rp-two' : 'col'} style={{ gap: 2 }}>{l.map((x, i) => { const m = /^(✓|–|↺) /.exec(x); return <div key={i} className="small ellipsis" style={{ fontWeight: 300 }}>{m && <span style={{ color: m[1] === '✓' ? 'var(--accent)' : 'var(--muted)', marginRight: 6 }}>{m[1]}</span>}{m ? x.slice(2) : x}</div> })}</div> : null
   }
   return (
     <div className="col">
@@ -119,7 +125,7 @@ export default function DaySummary({ initial = today() }) {
           <div className="row wrap" style={{ gap: 6 }}>{SECTIONS.filter(([k]) => !secs.includes(k)).map(([k, l]) => <button key={k} className="chip" onClick={() => setSecs([...secs, k])}>+ {l}</button>)}</div>
         </div>
       )}
-      {secs.map((k) => { const b = body(k); return b && <div key={k} className="col" style={{ gap: 2 }}>{k !== 'study' && <div className="small muted" style={{ marginTop: 4 }}>{title(k, d)}</div>}{b}</div> })}
+      {secs.map((k) => { const b = body(k); return b && <div key={k} className="col" style={{ gap: 4 }}>{k !== 'study' && <div className="rp-cap rp-h">{title(k, d)}</div>}{b}</div> })}
       {secs.every((k) => !body(k)) && <div className="small muted">기록이 없어요.</div>}
       <div className="row" style={{ gap: 6, marginTop: 8 }}>
         <button className="btn" onClick={() => setEdit(!edit)}>{edit ? '구성 닫기' : '구성'}</button>
