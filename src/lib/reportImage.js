@@ -7,7 +7,7 @@ export const REPORT_THEMES = [['app', '앱 색'], ['light', '밝게'], ['dark', 
 const PAL = {
   light: { bg: '#fbfaf7', ink: '#2c2f36', soft: '#9a968e', acc: '#55658a', rule: '#e6e2da' },
   dark: { bg: '#23272f', ink: '#e7e5e0', soft: '#8c919c', acc: '#b3a6cf', rule: '#383d48' },
-  paper: { bg: '#f3eee3', ink: '#3b372f', soft: '#9c927f', acc: '#6e7a52', rule: '#ddd4c2' },
+  paper: { bg: '#f4f4f1', ink: '#33353a', soft: '#94958f', acc: '#6e7a52', rule: '#dedfd9', grain: true },
 }
 function palette(theme) {
   if (PAL[theme]) return PAL[theme]
@@ -20,9 +20,21 @@ function setup(theme) {
   const spaced = (s, size, x, y, color, right) => { g.font = f(size, 400); g.fillStyle = color; const sp = size * 0.18; let w = 0; for (const ch of s) w += g.measureText(ch).width + sp; let cx = right ? x - w + sp : x; for (const ch of s) { g.fillText(ch, cx, y); cx += g.measureText(ch).width + sp } }
   return { T, c, g, f, spaced }
 }
+// 종이 결: 고운 입자 + 가로 섬유결 (회색만, 누런 기 없음)
+function paperGrain(g, W, H) {
+  const N = 256, t = document.createElement('canvas'); t.width = t.height = N
+  const x = t.getContext('2d'), im = x.createImageData(N, N)
+  for (let i = 0; i < im.data.length; i += 4) { const v = Math.random() < 0.5 ? 0 : 255; im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = Math.random() * 22 }
+  x.putImageData(im, 0, 0)
+  g.fillStyle = g.createPattern(t, 'repeat'); g.fillRect(0, 0, W, H)
+  g.save(); g.globalAlpha = 0.035; g.strokeStyle = '#555'; g.lineWidth = 1
+  for (let i = 0; i < H / 3; i++) { const y = Math.random() * H, x0 = Math.random() * W, len = 20 + Math.random() * 90; g.beginPath(); g.moveTo(x0, y); g.lineTo(x0 + len, y + (Math.random() - 0.5) * 3); g.stroke() }
+  g.restore()
+}
 const finish = async (c, g, T, ops, W, y) => {
   c.width = W; c.height = Math.max(Math.round(W * 0.8), y)
   g.fillStyle = T.bg; g.fillRect(0, 0, W, c.height); g.textBaseline = 'top'
+  if (T.grain) paperGrain(g, W, c.height)
   for (const op of ops) op()
   return await new Promise((res) => c.toBlob(res, 'image/png'))
 }
