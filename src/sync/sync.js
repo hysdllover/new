@@ -99,8 +99,8 @@ async function ensureGist() {
 }
 
 // 연결: 토큰이 틀린 경우(401)에만 지우고, 요청 제한·네트워크 오류는 토큰을 남긴 채 자동 재시도
-export async function connect(tok) {
-  ls.set('gist_token', tok.trim()); ls.set('gist_id', null); backup()
+export async function connect(tok, gid = null) {
+  ls.set('gist_token', tok.trim()); ls.set('gist_id', gid); backup()
   setStatus({ state: 'syncing', error: null, auth: false })
   try {
     await ensureGist()
@@ -116,6 +116,16 @@ export async function connect(tok) {
   }
   await syncNow()
   return gistId()
+}
+
+// Safari 연결 링크: 위젯을 누르면 iOS 가 Safari 로 열어서(홈 화면 앱과 저장소가 따로) — Safari 에도 같은 토큰을 한 번 넣는 링크
+// 토큰은 # 뒤에만 있어 서버로 가지 않고, 열자마자 주소에서 지움
+export const connectLink = () => { const t = token(); if (!t) return null; const b = btoa(JSON.stringify({ t, g: gistId() })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); return location.origin + location.pathname + '#link=' + b }
+export function readConnectLink() {
+  const m = /^#link=([\w-]+)/.exec(location.hash)
+  if (!m) return null
+  history.replaceState(null, '', location.pathname + location.search)
+  try { const o = JSON.parse(atob(m[1].replace(/-/g, '+').replace(/_/g, '/'))); return o.t ? o : null } catch { return null }
 }
 
 export function disconnect() {

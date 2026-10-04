@@ -3,6 +3,7 @@ import { Icon, UiLayer, useUi, closeDetail, openSheet, openMenu, useMedia } from
 import { TABS, EXTRA, SEGMENTS, useNav, go, segOf, tabOpt, DEFAULT_TABBAR } from './nav.js'
 import { useColl, useSettings, setSettings } from './store/store.js'
 import { useSyncStatus, syncNow } from './sync/sync.js'
+import { isStandalone } from './lib/push.js'
 import { fmtDate, today } from './engine/date.js'
 import QuickAdd from './components/QuickAdd.jsx'
 import { useResume } from './lib/resume.js'
@@ -22,6 +23,18 @@ const VIEWS = { home: Home, planner: Planner, tasks: Tasks, study: Study, notes:
 // 아이패드 가로 2단: 오른쪽에 함께 띄울 화면 (설정 › 디자인)
 export const SPLIT = { planner: ['planner', 'today', '오늘 일정'], timer: ['study', 'timer', '타이머'], tasks: ['tasks', 'day', '오늘 할 일'], notes: ['notes', 'daily', '데일리 노트'] }
 const TITLES = { home: null, planner: '캘린더', tasks: '할 일', study: '공부 기록', notes: '노트', health: '건강', settings: '설정' }
+
+// 위젯을 누르면 Safari 로 열림(iOS 제한) → 연결 안 된 Safari 에서만 안내
+function SafariNote() {
+  const [x, setX] = useState(() => { try { return sessionStorage.getItem('safari_note') } catch { return null } })
+  if (x) return null
+  return (
+    <div className="safari-note small">
+      <span className="grow">Safari 에서 열렸어요. 홈 화면 앱과 데이터가 따로라 동기화가 안 돼요. 홈 화면 앱 › 설정 › 동기화 › <b>Safari 연결 링크</b>를 복사해 이 주소창에 한 번 붙여 넣으면 같이 써요.</span>
+      <button className="icon-btn" aria-label="닫기" onClick={() => { try { sessionStorage.setItem('safari_note', '1') } catch {} setX('1') }}>×</button>
+    </div>
+  )
+}
 
 export default function App() {
   const nav = useNav()
@@ -62,7 +75,7 @@ export default function App() {
     ...extra.filter((x) => !bar.some((b) => b.tab === x.id)).map((x) => ({ label: x.label, icon: x.icon, onClick: () => go(x.id) })),
     { label: '기록에 물어보기', icon: 'search', onClick: () => import('./components/AskSheet.jsx').then((m) => openSheet(() => <m.default />, { title: '내 기록에 물어보기' })) },
     { label: '사진 넣기', icon: 'upload', onClick: () => import('./components/PhotoPaste.jsx').then((m) => openSheet((c) => <m.default close={c} />, { title: '사진 넣기' })) },
-    { label: '하루 리포트', icon: 'check', onClick: () => import('./components/DaySummary.jsx').then((m) => openSheet(() => <m.default />, { title: '하루 리포트' })) },
+    { label: '리포트', icon: 'check', onClick: () => import('./components/DaySummary.jsx').then((m) => openSheet(() => <m.default />, { title: '리포트' })) },
     { label: '보관함·휴지통', icon: 'archive', onClick: () => go('tasks', 'archive') },
     { label: '인쇄 (A4)', icon: 'print', onClick: () => window.print() },
   ])
@@ -116,7 +129,7 @@ export default function App() {
         )}
         <ResumeBanner />
         <main className="content" id="content">
-          <div className="content-inner"><View seg={seg} params={nav.params[tab] || {}} /></div>
+          <div className="content-inner">{sync.state === 'off' && !isStandalone() && /iP(hone|ad)|Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 0 && <SafariNote />}<View seg={seg} params={nav.params[tab] || {}} /></div>
         </main>
       </div>
 

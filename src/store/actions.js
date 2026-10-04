@@ -43,6 +43,7 @@ export function goalProgress(g, tasks) {
 // 빠른 날짜 목표: 오늘·내일·이번 주말(토)·다음 주 월요일
 export function quickDate(kind) {
   const d = today(), dow = new Date().getDay()
+  if (/^\d{4}-\d\d-\d\d$/.test(kind || '')) return kind // 날짜 직접
   if (kind === 'today') return d
   if (kind === 'tomorrow') return addDays(d, 1)
   if (kind === 'weekend') return addDays(d, dow === 6 ? 1 : dow === 0 ? 6 : 6 - dow) // 토요일(토요일이면 일요일)

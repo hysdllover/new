@@ -12,7 +12,7 @@ import { TABS, EXTRA, go } from './nav.js'
 import { addTask } from './store/actions.js'
 import { toast } from './components/ui.jsx'
 import { startServices } from './lib/notify.js'
-import { startSync, restoreSync } from './sync/sync.js'
+import { startSync, restoreSync, readConnectLink, connect } from './sync/sync.js'
 
 function Root() {
   const st = useSettings()
@@ -22,7 +22,9 @@ function Root() {
   return <App />
 }
 
+const linkIn = readConnectLink() // 렌더 전에 주소에서 토큰 지움
 Promise.all([loadState(), initFonts(), restoreSync()]).then(async () => {
+  if (linkIn) connect(linkIn.t, linkIn.g).then((id) => toast(id ? '이 브라우저도 동기화 연결됨' : '토큰 저장됨 · 연결은 자동으로 다시 시도해요')).catch((e) => toast(e.message))
   if (location.search.includes('demo')) (await import('./dev/seed.js')).seed()
   // 홈 화면 위젯에서 연 링크: ?go=탭.세그먼트
   const target = new URLSearchParams(location.search).get('go')

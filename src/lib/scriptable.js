@@ -1118,17 +1118,23 @@ if (!data) {
     } else {
     if (fam !== 'small') { const h = w.addStack(); h.centerAlignContent(); (CW ? t(h, titleTxt, label(10), SOFT) : cap(h, titleTxt)); h.addSpacer(); t(h, dateStr, label(LG ? 9 : 8), SOFT); w.addSpacer(12) }
     if (fam === 'small') w.addSpacer() // 소형: 두 줄을 알맞은 간격으로 묶어 세로 가운데
-    for (let i = 0; i < tiles.length; i += cols) {
+    // 줄 나누기: 내 위젯에서 '넓게'로 고른 블록은 한 줄 전체
+    const wideSet = new Set(CW && Array.isArray(CW.wide) ? CW.wide : []), rowsG = []
+    { let cur = []; keys.forEach((k, j) => { if (wideSet.has(k)) { if (cur.length) rowsG.push(cur); cur = []; rowsG.push([j]) } else { cur.push(j); if (cur.length === cols) { rowsG.push(cur); cur = [] } } }); if (cur.length) rowsG.push(cur) }
+    rowsG.splice(fam === 'small' ? 2 : 4) // 높이 한도: 소형 두 줄 · 대형 네 줄
+    rowsG.forEach((ids, ri) => {
       const r = w.addStack(); r.spacing = gap
-      for (const x of tiles.slice(i, i + cols)) {
+      const wdx = ids.length === 1 && wideSet.has(keys[ids[0]]) ? inner : wd
+      for (const x of ids.map((j) => tiles[j])) {
+        const wd = wdx
         const b = r.addStack(); b.layoutVertically(); b.size = new Size(wd, 0); if (fam !== 'small') b.url = link(x[4])
         t(b, x[0], label(LG ? 9 : 7), x[0][0] === '●' ? GOLD : SOFT).minimumScaleFactor = 0.7; b.addSpacer(2)
         if (typeof x[1] === 'function') { if (x[0] === 'TO DO') b.addSpacer(3); x[1](b, thin(big), wd) } else t(b, x[1], thin(big), INK).minimumScaleFactor = 0.5
         if (x[2]) t(b, x[2], tw(LG ? 12 : 10), x[5]).minimumScaleFactor = 0.7
         if (x[3] != null) { b.addSpacer(4); pbar(b, x[3], wd) }
       }
-      if (i + cols < tiles.length) w.addSpacer(fam === 'small' ? Math.round(16 * SCALE) : 14)
-    }
+      if (ri < rowsG.length - 1) w.addSpacer(fam === 'small' ? Math.round(16 * SCALE) : 14)
+    })
     }
     // 대형: 아래에 이번 주 공부 (할 일은 위 칸에 있으니 겹치지 않게)
     if ((fam === 'large' || fam === 'extraLarge') && !CW && !keys.includes('bars')) { w.addSpacer(); rule(w, inner); w.addSpacer(10); const s2 = w.addStack(); s2.centerAlignContent(); cap(s2, 'THIS WEEK'); s2.addSpacer(); t(s2, hm(weekTot) + ' · 하루 ' + hm(weekAvg), label(10), SOFT); w.addSpacer(8); bars7(w, inner, Math.round(innerH * 0.16), GOLD, RULE); w.addSpacer(3); wdRow(w, inner, 9); FILL = true }
