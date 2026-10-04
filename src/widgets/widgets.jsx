@@ -1,3 +1,4 @@
+import { Roll } from '../components/Roll.jsx'
 import { useColl, useSettings, put, patch, remove } from '../store/store.js'
 import { dayRec, setDay, toggleTask, completeReview } from '../store/actions.js'
 import { eventsOn, classesOn } from '../engine/scheduler.js'
@@ -96,8 +97,8 @@ function Goal() {
   return (
     <Card className="center" onClick={goto('study', 'records')} style={{ cursor: 'pointer' }}>
       <div className="col" style={{ alignItems: 'center', gap: 4 }}>
-        <Ring value={m / st.goalDaily} size={78}><b className="small">{Math.round((m / st.goalDaily) * 100)}%</b></Ring>
-        <span className="small">{fmtDur(m)}</span><span className="tiny muted">목표 {fmtDur(st.goalDaily)}</span>
+        <Ring value={m / st.goalDaily} size={78}><b className="small"><Roll value={Math.round((m / st.goalDaily) * 100) + '%'} /></b></Ring>
+        <span className="small"><Roll value={fmtDur(m)} /></span><span className="tiny muted">목표 {fmtDur(st.goalDaily)}</span>
       </div>
     </Card>
   )
@@ -436,7 +437,7 @@ function BigDday() {
   const dd = useColl('ddays').filter((d) => d.date >= today()).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || a.date.localeCompare(b.date))[0]
   return (
     <Card className="center" onClick={goto('study', 'records')} style={{ cursor: 'pointer' }}>
-      {dd ? <><div className="small muted ellipsis">{dd.title}</div><div className="big-num" style={{ color: dd.color || 'var(--accent)' }}>{dday(dd.date)}</div><div className="tiny muted">{fmtShort(dd.date)}</div></> : <div className="small muted">통계에서 D-day 추가</div>}
+      {dd ? <><div className="small muted ellipsis">{dd.title}</div><div className="big-num" style={{ color: dd.color || 'var(--accent)' }}><Roll value={dday(dd.date)} /></div><div className="tiny muted">{fmtShort(dd.date)}</div></> : <div className="small muted">통계에서 D-day 추가</div>}
     </Card>
   )
 }
@@ -480,7 +481,7 @@ function WeekGoal() {
   return (
     <Card className="center" onClick={goto('study', 'records')} style={{ cursor: 'pointer' }}>
       <div className="col" style={{ alignItems: 'center', gap: 4 }}>
-        <Ring value={m / (st.goalWeekly || 1)} size={78} color="var(--c2)"><b className="small">{Math.round((m / (st.goalWeekly || 1)) * 100)}%</b></Ring>
+        <Ring value={m / (st.goalWeekly || 1)} size={78} color="var(--c2)"><b className="small"><Roll value={Math.round((m / (st.goalWeekly || 1)) * 100) + '%'} /></b></Ring>
         <span className="small">이번 주 {fmtDur(m)}</span><span className="tiny muted">목표 {fmtDur(st.goalWeekly)}</span>
       </div>
     </Card>

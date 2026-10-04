@@ -4,7 +4,7 @@ import { pickQuote } from './quote.js'
 export const WIDGET_KINDS = [['', '기본'], ['공부', '공부'], ['할일', '할 일'], ['디데이', 'D-day'], ['달력', '공부 달력'], ['캘린더', '캘린더'], ['다짐', '다짐'], ['시간표', '시간표'], ['주간', '주간 공부'], ['과목', '과목별'], ['지금', '지금·다음'], ['진도', '진도'], ['목표', '이번 주 목표'], ['오늘', '오늘 한눈에'], ['대시보드', '대시보드'], ['내일', '내일 준비'], ['마감', '마감 임박'], ['일주일', '7일 일정'], ['디데이목록', 'D-day 목록'], ['바로가기', '바로 시작'], ['진행', '공부 진행'], ['남은분', '남은 시간'], ['타이머', '타이머·공부 시간'], ['구성1', '내 위젯 1'], ['구성2', '내 위젯 2'], ['구성3', '내 위젯 3']]
 
 // 스크립트 버전 — 위젯 모양이 바뀔 때 올림. 앱이 위젯 데이터에 같이 올려서, 예전 스크립트면 위젯에 '스크립트 업데이트' 표시
-export const SCRIPT_VER = 56
+export const SCRIPT_VER = 57
 
 // 전체 스크립트 (예전 방식 · 테스트용): 머리 + 본체
 export function buildScript({ widgetRaw, appUrl }) {
@@ -53,14 +53,24 @@ if (!fm.fileExists(path)) {
 `
 }
 
-function coreBody() {
+// 단색 테마(색조 홈 화면용): 본체의 모든 색을 nC() 로 — 단색일 때 흰색 한 가지(밝기만 다르게)로 바꿈
+function coreBody() { return coreRaw().replace(/new Color\(/g, 'nC(') }
+function coreRaw() {
   return `const VER = ${SCRIPT_VER}
+let MONO = false
+const nC = (h, a = 1) => {
+  if (!MONO) return new  Color(h, a)
+  const x = String(h).replace('#', ''), f = x.length === 3 ? x.split('').map((c) => c + c).join('') : x.slice(0, 6)
+  if (/^f{6}$/i.test(f)) return new  Color('#ffffff', a)
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(f.slice(i, i + 2), 16) / 255), L = 0.2126 * r + 0.7152 * g + 0.0722 * b
+  return new  Color('#ffffff', (L > 0.78 || L < 0.22 ? 0.25 : 0.9) * a) // 아주 밝거나 어두운 색(선·바탕) → 옅게, 나머지(포인트) → 진하게
+}
 
 const dyn = (l, d, a = 1) => Color.dynamic(new Color(l, a), new Color(d, a))
 const BG = dyn('#f5f3ef', '#161616')
 let INK = dyn('#2b2a28', '#ece8e1')
 let SOFT = dyn('#a19c93', '#7d786f')
-const GOLD = dyn('#b39d74', '#c9b489')
+let GOLD = dyn('#b39d74', '#c9b489')
 let RULE = dyn('#e2ded6', '#2c2b29')
 
 // 폰트 — 한글·영문·숫자 한 서체로 통일. 기본 애플 산돌고딕 얇게, 앱 설정에서 설치한 폰트(PostScript 이름) 지정 가능
@@ -216,13 +226,16 @@ let MH = innerH - 21 // 중형: 머리줄(제목 + 간격) 아래 남는 높이 
 // 투명 배경(배경화면 잘라 붙이기) · 글자색
 // 앱 설정의 위젯 테마가 있으면 우선: 흰 글씨 · 검은 글씨 · 종이 · 다크 (자동이면 Scriptable 메뉴의 글자색)
 const WT = (data && data.settings && data.settings.settings && data.settings.settings.main && data.settings.settings.main.widgetTheme) || 'auto'
-const inkMode = WT === 'white' || WT === 'night' ? 'light' : WT === 'black' || WT === 'paper' ? 'dark' : Keychain.contains('study-ink') ? Keychain.get('study-ink') : 'auto'
+MONO = WT === 'mono'
+if (MONO) GOLD = new Color('#ffffff', 0.9)
+const inkMode = WT === 'white' || WT === 'night' || WT === 'mono' ? 'light' : WT === 'black' || WT === 'paper' ? 'dark' : Keychain.contains('study-ink') ? Keychain.get('study-ink') : 'auto'
 if (inkMode === 'light') { INK = new Color('#ffffff'); SOFT = new Color('#ffffff', 0.72); RULE = new Color('#ffffff', 0.3) }
 if (inkMode === 'dark') { INK = new Color('#1d1c1a'); SOFT = new Color('#1d1c1a', 0.6); RULE = new Color('#1d1c1a', 0.2) }
 if (!lock) {
   w.setPadding(P, P, P, P)
   if (WT === 'paper') { if (PAPER) w.backgroundImage = paperBg(SZ[fam] || SZ.large, SZ.h[fam] || SZ.h.large); else w.backgroundColor = new Color('#f2f2f1') }
   else if (WT === 'night') w.backgroundColor = new Color('#1b1d22')
+  else if (WT === 'mono') w.backgroundColor = new  Color('#1c1d21')
   else if (FM.fileExists(bgPath(fam, RAWP))) w.backgroundImage = FM.readImage(bgPath(fam, RAWP))
   else w.backgroundColor = BG
 }
