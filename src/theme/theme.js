@@ -25,6 +25,8 @@ export const FONTS = {
   pretendard: { name: 'Pretendard', family: '"Pretendard", -apple-system, sans-serif', href: 'https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/pretendard.min.css' },
   notosans: { name: 'Noto Sans KR', family: '"Noto Sans KR", -apple-system, sans-serif', href: 'https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600&display=swap' },
   notoserif: { name: 'Noto Serif KR', family: '"Noto Serif KR", serif', href: 'https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;600&display=swap' },
+  gaegu: { name: '개구 (손글씨)', family: '"Gaegu", -apple-system, sans-serif', href: 'https://fonts.googleapis.com/css2?family=Gaegu:wght@300;400;700&display=swap' },
+  nanumpen: { name: '나눔손글씨 펜', family: '"Nanum Pen Script", -apple-system, sans-serif', href: 'https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap' },
   gowun: { name: 'Gowun Dodum', family: '"Gowun Dodum", -apple-system, sans-serif', href: 'https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap' },
 }
 
@@ -65,7 +67,9 @@ export function applyTheme(t0) {
     '--font-head': (t.headFont && familyOf(t.headFont)) || font.family,
   }
   for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v)
-  root.dataset.card = t.card
+  // 노트: 종이 질감 + 노트 요소(모눈 · 머리줄 · 손글씨 제목)
+  root.dataset.card = t.card === 'note' ? 'paper' : t.card
+  root.toggleAttribute('data-note', t.card === 'note')
   if (t.mode === 'system') delete root.dataset.theme
   else root.dataset.theme = t.mode
 }

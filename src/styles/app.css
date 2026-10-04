@@ -128,6 +128,15 @@ svg { display: block; }
 [data-card="paper"] .card { border-radius: 3px; }
 [data-card="paper"] .card > .card-h { padding-bottom: 6px; border-bottom: 1px solid var(--line); }
 @media print { [data-card="paper"] body, [data-card="paper"] .card { background-image: none; box-shadow: none; } }
+/* 노트: 종이 위 노트 한 장 — 옅은 모눈 · 머리줄 · 손글씨 제목 · 왼쪽 여백선 */
+[data-note] { --grid: color-mix(in srgb, var(--accent) 5.5%, transparent); }
+[data-note] .card { background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px), var(--page); background-size: 18px 18px, 18px 18px, auto; background-position: -1px -1px; }
+[data-note] .card > .card-h { border-bottom-color: color-mix(in srgb, var(--accent) 22%, transparent); }
+[data-note] .card-h h3, [data-note] .topbar .title, [data-note] h1, [data-note] h2 { font-family: var(--font-head, inherit); font-weight: 400; letter-spacing: .01em; }
+[data-note] .card-h h3 { font-size: 1.15em; }
+[data-note] .topbar .title, [data-note] h1 { font-size: 1.55em; }
+[data-note] .sheet { background-image: linear-gradient(90deg, transparent 22px, color-mix(in srgb, var(--c4) 35%, transparent) 22px, color-mix(in srgb, var(--c4) 35%, transparent) 23px, transparent 23px), var(--page); }
+@media print { [data-note] .card, [data-note] .sheet { background-image: none; } }
 .card-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
 .card-h h3 { font-size: .95em; font-family: var(--font-head, inherit); }
 .grid { display: grid; gap: var(--gap); }
