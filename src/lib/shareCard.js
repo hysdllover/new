@@ -62,7 +62,7 @@ export async function shareBlob(blob, name) {
   if (navigator.canShare?.({ files: [file] })) {
     try { await navigator.share({ files: [file] }); return 'shared' } catch (e) { if (e.name === 'AbortError') return 'cancel' }
   }
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click()
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove()
   setTimeout(() => URL.revokeObjectURL(a.href), 5000)
   return 'saved'
 }
