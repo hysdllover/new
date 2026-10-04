@@ -1,3 +1,4 @@
+import { scheduleTask } from '../../store/actions.js'
 import { createElement as h } from 'react'
 import { patch, batch } from '../../store/store.js'
 import { cascade } from '../../engine/scheduler.js'
@@ -25,4 +26,15 @@ export function applyCascadeChange(moved) {
       h('button', { className: 'btn primary', onClick: () => { close(); commit() } }, '함께 밀기'),
     ),
   ), { title: '연쇄 재조정 미리보기' })
+}
+
+// 할 일을 타임라인(data-drop="timeline:날짜")에 놓으면 그 시각에 배정 — 할 일 화면·아이패드 2단에서 공용
+export function dropTaskOnTimeline(t, zone, pt) {
+  const d = zone?.dataset?.drop
+  if (!d?.startsWith('timeline:')) return false
+  const date = d.slice(9), r = zone.getBoundingClientRect()
+  const m = Math.max(0, Math.round((+zone.dataset.start + (pt.y - r.top) - 15) / 10) * 10)
+  const b = scheduleTask(t.id, date, m, t.estimate || 30)
+  if (b) applyCascadeChange(b)
+  return true
 }

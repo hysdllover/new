@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Icon, UiLayer, useUi, closeDetail, openSheet, openMenu, useMedia } from './components/ui.jsx'
 import { TABS, EXTRA, SEGMENTS, useNav, go, segOf, tabOpt, DEFAULT_TABBAR } from './nav.js'
 import { useColl, useSettings, setSettings } from './store/store.js'
@@ -36,6 +36,9 @@ export default function App() {
   const segs = (SEGMENTS[tab] || []).filter((s) => !s[2] || st.modules[s[2]] !== false)
   const seg0 = segOf(tab)
   const seg = segs.length && !segs.some((x) => x[0] === seg0) ? segs[0][0] : seg0
+  const pins = (st.sidebarPins || []).map(tabOpt).filter(Boolean)
+  const [sbOpen, setSbOpen] = useState(() => { try { return JSON.parse(localStorage.getItem('sb_open') || '{}') } catch { return {} } })
+  const toggleSb = (k) => { const v = { ...sbOpen, [k]: !(k === 'all' ? sbOpen.all : sbOpen[k] !== false) }; setSbOpen(v); try { localStorage.setItem('sb_open', JSON.stringify(v)) } catch {} }
   const sp = SPLIT[st.splitPane], pane = sp && !(sp[0] === tab && sp[1] === seg) ? { V: VIEWS[sp[0]], seg: sp[1] } : null
 
   useEffect(() => {
@@ -59,7 +62,7 @@ export default function App() {
     ...extra.filter((x) => !bar.some((b) => b.tab === x.id)).map((x) => ({ label: x.label, icon: x.icon, onClick: () => go(x.id) })),
     { label: '기록에 물어보기', icon: 'search', onClick: () => import('./components/AskSheet.jsx').then((m) => openSheet(() => <m.default />, { title: '내 기록에 물어보기' })) },
     { label: '사진 넣기', icon: 'upload', onClick: () => import('./components/PhotoPaste.jsx').then((m) => openSheet((c) => <m.default close={c} />, { title: '사진 넣기' })) },
-    { label: '하루 요약', icon: 'check', onClick: () => import('./components/DaySummary.jsx').then((m) => openSheet(() => <m.default />, { title: '하루 요약' })) },
+    { label: '하루 리포트', icon: 'check', onClick: () => import('./components/DaySummary.jsx').then((m) => openSheet(() => <m.default />, { title: '하루 리포트' })) },
     { label: '보관함·휴지통', icon: 'archive', onClick: () => go('tasks', 'archive') },
     { label: '인쇄 (A4)', icon: 'print', onClick: () => window.print() },
   ])
@@ -73,17 +76,24 @@ export default function App() {
   return (
     <div className="app">
       <nav className="sidebar no-print">
-        {[...TABS, ...extra].map((t) => (
-          <button key={t.id} className={'nav' + (tab === t.id ? ' on' : '')} onClick={() => go(t.id)} title={t.label}>
+        {/* 아이패드 사이드바: 고정한 화면을 위에, 나머지는 접기 (설정 › 아이패드 사이드바) */}
+        {pins.map((o) => (
+          <button key={o.key} className={'nav' + (tab === o.tab && (!o.seg || seg === o.seg) && !(o.seg == null && pins.some((p) => p.tab === o.tab && p.seg === seg)) ? ' on' : '')} onClick={() => go(o.tab, o.seg)} title={o.label}>
+            <Icon name={o.icon} /><span>{o.label}</span>
+          </button>
+        ))}
+        {pins.length > 0 && <button className="sec sec-btn" onClick={() => toggleSb('all')}>{sbOpen.all ? '▾' : '▸'} 전체</button>}
+        {(!pins.length || sbOpen.all) && [...TABS, ...extra].filter((t) => !pins.some((p) => p.tab === t.id && !p.seg)).map((t) => (
+          <button key={t.id} className={'nav' + (tab === t.id && !pins.some((p) => p.tab === t.id) ? ' on' : '')} onClick={() => go(t.id)} title={t.label}>
             <Icon name={t.icon} /><span>{t.label}</span>
           </button>
         ))}
-        {views.length > 0 && <div className="sec">저장된 뷰</div>}
-        {views.map((v) => (
+        {views.length > 0 && <button className="sec sec-btn" onClick={() => toggleSb('views')}>{sbOpen.views !== false ? '▾' : '▸'} 저장된 뷰</button>}
+        {sbOpen.views !== false && views.map((v) => (
           <button key={v.id} className="sub" onClick={() => go('tasks', 'list', { viewId: v.id })}><Icon name="flag" size={14} />{v.name}</button>
         ))}
-        {projects.length > 0 && <div className="sec">프로젝트</div>}
-        {projects.map((p) => (
+        {projects.length > 0 && <button className="sec sec-btn" onClick={() => toggleSb('proj')}>{sbOpen.proj !== false ? '▾' : '▸'} 프로젝트</button>}
+        {sbOpen.proj !== false && projects.map((p) => (
           <button key={p.id} className="sub" onClick={() => go('notes', 'hub', { hubId: 'p:' + p.id })}><span className="dot" style={{ background: p.color }} />{p.name}</button>
         ))}
       </nav>
