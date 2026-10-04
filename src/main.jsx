@@ -55,8 +55,17 @@ Promise.all([loadState(), initFonts(), restoreSync()]).then(async () => {
   // 위젯에서 누른 할 일: ?done=할일id → 완료 확인
   const doneIn = q.get('done')
   if (doneIn) {
-    const [{ default: DoneConfirm }, { openSheet }] = await Promise.all([import('./components/DoneConfirm.jsx'), import('./components/ui.jsx')])
-    setTimeout(() => openSheet((c) => <DoneConfirm id={doneIn} close={c} />, { title: '할 일' }), 300)
+    const { find } = await import('./store/store.js')
+    const tk = find('tasks', doneIn)
+    if (q.get('quick') && tk && !tk.deleted) {
+      // 위젯에서 바로 완료 (확인 창 없이) — 잘못 눌렀으면 되돌리기
+      const { toggleTask } = await import('./store/actions.js')
+      if (!tk.done) toggleTask(doneIn)
+      setTimeout(() => toast(`완료 · ${tk.title}`, { label: '되돌리기', fn: () => toggleTask(doneIn) }), 500)
+    } else {
+      const [{ default: DoneConfirm }, { openSheet }] = await Promise.all([import('./components/DoneConfirm.jsx'), import('./components/ui.jsx')])
+      setTimeout(() => openSheet((c) => <DoneConfirm id={doneIn} close={c} />, { title: '할 일' }), 300)
+    }
   }
   // 위젯 '바로 시작': ?timer=과목id → 스톱워치 시작 (이미 도는 중이면 그대로) · ?new=task|event|record|memo → 빠른 추가
   const timerIn = q.get('timer'), newIn = q.get('new')
