@@ -217,7 +217,7 @@ function widgetPayload() {
     settings: { settings: { main: { goalDaily: main.goalDaily, weekStart: main.weekStart, widgetFont: main.widgetFont, widgetScale: main.widgetScale, widgetWeight: main.widgetWeight, widgetClear: main.widgetClear, widgetTheme: main.widgetTheme, dashTiles: main.dashTiles, customWidgets: main.customWidgets } }, quotes: keep('quotes') },
   })
 }
-const WIDGET_GAP = 10000 // 위젯 gist 쓰기 최소 간격 10초 (앱을 나갈 때·타이머는 바로)
+const WIDGET_GAP = 60000, WIDGET_FORCE_GAP = 15000 // 위젯 gist 쓰기 최소 간격 1분 (앱을 나갈 때·타이머는 15초) — GitHub 쓰기 제한 대비
 let widgetDirty = false, widgetTimer = null
 // 아이폰 캘린더 구독용 .ics (일정·할 일·D-day)
 function calendarIcs() {
@@ -248,9 +248,10 @@ async function syncWidget(remoteId, patchFiles, force) {
     id = res.id
     ls.set('widget_last', content); ls.set('ics_last', ics)
   } else if (ls.get('widget_last') !== content || ls.get('ics_last') !== ics || ls.get('widget_gist') !== id) {
-    if (!force && ls.get('widget_gist') === id && Date.now() - (+ls.get('widget_at') || 0) < WIDGET_GAP) {
+    const gap = force ? WIDGET_FORCE_GAP : WIDGET_GAP
+    if (ls.get('widget_gist') === id && Date.now() - (+ls.get('widget_at') || 0) < gap) {
       widgetDirty = true
-      clearTimeout(widgetTimer); widgetTimer = setTimeout(() => syncNow({ flush: true }), WIDGET_GAP - (Date.now() - (+ls.get('widget_at') || 0)) + 500)
+      clearTimeout(widgetTimer); widgetTimer = setTimeout(() => syncNow({ flush: true }), gap - (Date.now() - (+ls.get('widget_at') || 0)) + 500)
       return
     }
     try {
@@ -308,7 +309,7 @@ export async function restoreBackup(b) {
 }
 
 let againFlush = false
-let running = null, again = false, pausedUntil = 0, resumeTimer = null, lastPush = 0
+let running = null, again = false, pausedUntil = 0, resumeTimer = null, lastPush = 0, lastRun = 0
 const pauseMsg = () => `요청이 많아 잠시 쉬는 중 · ${Math.max(1, Math.ceil((pausedUntil - Date.now()) / 60000))}분 뒤 자동 재시도`
 function pause(until) {
   pausedUntil = until
@@ -320,6 +321,9 @@ export async function syncNow({ flush = false } = {}) {
   if (!navigator.onLine) { setStatus({ state: 'pending' }); return }
   if (Date.now() < pausedUntil) { setStatus({ state: 'error', error: pauseMsg() }); return }
   if (running) { again = true; againFlush = againFlush || flush; return running }
+  // 받기만 하는 동기화는 20초 안에 다시 하지 않음 (요청 수 절약)
+  if (!flush && status.state !== 'pending' && !widgetDirty && Date.now() - lastRun < 20000) return
+  lastRun = Date.now()
   running = (async () => {
     setStatus({ state: 'syncing', error: null, auth: false })
     try {
@@ -396,8 +400,8 @@ export function startSync() {
     if (!token()) return
     if (status.state !== 'syncing') setStatus({ state: 'pending' })
     clearTimeout(timer)
-    // 입력이 멈추고 2초 뒤, 연속 업로드는 최소 8초 간격 (GitHub 쓰기 제한 대비)
-    timer = setTimeout(() => syncNow(), Math.max(2000, lastPush + 8000 - Date.now()))
+    // 입력이 멈추고 4초 뒤, 연속 업로드는 최소 30초 간격 (GitHub 쓰기 제한 대비)
+    timer = setTimeout(() => syncNow(), Math.max(4000, lastPush + 30000 - Date.now()))
   })
   // 앱을 나갈 때 대기 중인 변경을 바로 올림 (iOS 는 백그라운드에서 곧 멈춤)
   const flush = () => { if (status.state === 'pending' || widgetDirty) { clearTimeout(timer); syncNow({ flush: true }) } }
@@ -406,10 +410,13 @@ export function startSync() {
   // 타이머 시작·정지는 잠금 화면 위젯에 바로 반영
   window.addEventListener('timer-change', () => { if (token()) syncNow({ flush: true }) })
   window.addEventListener('online', () => syncNow())
-  // 열려 있는 동안 다른 기기 변경을 30초마다 받기
-  setInterval(() => { if (document.visibilityState === 'visible') syncNow() }, 30000)
-  // 타이머가 도는 동안엔 다른 기기의 정지·기록을 빨리 받도록 20초마다
-  setInterval(() => { if (document.visibilityState === 'visible' && localStorage.getItem('timer')) syncNow() }, 20000)
+  // 열려 있는 동안 다른 기기 변경 받기: 설정의 자동 동기화 간격(기본 3분 · 절약 10분 · 끄기) — 타이머 중엔 1분
+  setInterval(() => {
+    if (document.visibilityState !== 'visible') return
+    const every = { normal: 180000, eco: 600000, off: 0 }[settings().syncEvery || 'normal']
+    const need = localStorage.getItem('timer') ? Math.min(every || 60000, 60000) : every
+    if (need && Date.now() - lastRun >= need - 1000) syncNow()
+  }, 30000)
   syncNow()
 }
 

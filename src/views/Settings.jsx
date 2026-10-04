@@ -297,7 +297,9 @@ function SyncCard() {
             <button className="btn danger" onClick={() => confirmSheet('연결 해제', '이 기기의 토큰을 지웁니다. 데이터는 그대로 남아요.', disconnect, '해제')}>연결 해제</button>
           </div>
           <SyncLog />
-          <div className="tiny muted">앱을 열 때·돌아올 때·편집 후·1분마다 자동 동기화. 같은 항목은 최신 수정이 우선합니다. 홈 화면 앱과 사파리는 저장 공간이 따로라, 위젯을 눌러 사파리로 열었다면 사파리에서도 한 번 연결해 주세요.</div>
+          <Field label="자동 동기화 간격 (열려 있을 때)"><Seg value={st.syncEvery || 'normal'} onChange={(v) => setSettings({ syncEvery: v })} options={[['normal', '3분'], ['eco', '10분 · 절약'], ['off', '끄기']]} /></Field>
+          <div className="tiny muted" style={{ marginTop: -4 }}>편집한 내용은 4초 뒤(연속이면 30초 간격) 올리고, 앱을 열거나 나갈 때도 동기화해요. 타이머 중에는 1분마다 받아요. ‘끄기’는 앱을 열고 닫을 때·편집할 때만 동기화해요.</div>
+          <div className="tiny muted">앱을 열 때·돌아올 때·편집 후·정한 간격마다 자동 동기화. 같은 항목은 최신 수정이 우선합니다. 홈 화면 앱과 사파리는 저장 공간이 따로라, 위젯을 눌러 사파리로 열었다면 사파리에서도 한 번 연결해 주세요.</div>
         </div>
       )}
       <div className="divider" />
