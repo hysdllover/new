@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { weekGoals } from '../store/actions.js'
 import { REMINDER_OPTS, taskReminders } from '../engine/reminders.js'
-import { useRec, useColl, useSettings, patch, uid, list } from '../store/store.js'
+import { useRec, useColl, useSettings, patch, uid, list, find } from '../store/store.js'
 import { updateTask, toggleTask, deleteTask, scheduleTask, splitTask, addReview, taskSpent, dayRec, setDay } from '../store/actions.js'
 import { Icon, Check, Field, AutoText, closeDetail, openSheet, toast, Prog } from './ui.jsx'
 import { PRI, SubjectSelect, ProjectSelect, RepeatEditor, TimeInput } from './common.jsx'
 import { LinksEditor, FilesEditor } from './Attach.jsx'
 import { fmtDur, today, fmtShort, addDays } from '../engine/date.js'
 import RecordEditor from './RecordEditor.jsx'
+import { openNote } from '../nav.js'
 import { startStopwatch } from '../lib/timer.js'
 import { go } from '../nav.js'
 
@@ -113,6 +114,7 @@ export default function TaskEditor({ id }) {
             {REMINDER_OPTS.map(([v, l]) => { const cur = taskReminders(t), on = cur.includes(v); return <button key={v} className={'chip' + (on ? ' on' : '')} onClick={() => up({ reminders: on ? cur.filter((x) => x !== v) : [...cur, v], remind: null })}>{l}</button> })}
           </div>
         </Field>
+        {t.noteId && find('notes', t.noteId) && <div className="row small" style={{ gap: 6 }}><span className="muted">노트에서 만든 할 일 · 체크하면 노트에도 반영</span><button className="chip" onClick={() => { closeDetail(); openNote(t.noteId) }}>{find('notes', t.noteId).title || '노트'} 열기</button></div>}
         <Field label="링크"><LinksEditor links={t.links} onChange={(v) => up({ links: v })} /></Field>
         <Field label="첨부 (사진·PDF·HTML)"><FilesEditor ids={t.files} onChange={(v) => up({ files: v })} meta={{ subjectId: t.subjectId, taskId: id }} /></Field>
         <Field label="반복"><RepeatEditor rule={t.repeat} start={t.due} onChange={(r) => up({ repeat: r })} /></Field>

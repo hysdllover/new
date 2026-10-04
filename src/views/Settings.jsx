@@ -34,6 +34,7 @@ export default function Settings() {
       <ShareCaptureCard />
       <CalendarSubCard />
       <TabBarCard />
+      <SidebarCard />
       <Card title="디자인">
         <div className="form">
           <Field label="색상 프리셋">
@@ -610,6 +611,8 @@ function WidgetPreview() {
   const items = sortTasks(tasks.filter((t) => !t.archived && t.due && t.due <= d && (!t.done || t.due === d || doneT.includes(t))), 'due')
   const ddSorted = ddays.filter((x) => x.date >= d).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || a.date.localeCompare(b.date))
   const dd = ddSorted[0], ddNext = ddSorted[1]
+  // 시험까지 남은 주말 (위젯 스크립트와 같은 계산)
+  const wkP = (x) => { let n = 0; const a = new Date(today() + 'T00:00'), end = new Date(x.date + 'T00:00'); if (a.getDay() === 0) a.setDate(a.getDate() - 1); for (; a < end; a.setDate(a.getDate() + 1)) if (a.getDay() === 6) n++; return n }
   const ddN = dd ? Math.round((new Date(dd.date) - new Date(d)) / 86400000) : null
   const ddTxt = dd ? (ddN === 0 ? 'D-DAY' : 'D-' + ddN) : null
   const qs = [...quotes].sort((a, b) => a.id.localeCompare(b.id))
@@ -643,7 +646,7 @@ function WidgetPreview() {
       <div className="dw-cal" style={{ gridTemplateColumns: `repeat(7, ${cell}px)` }}>
         {Array.from({ length: 7 }, (_, i) => <span key={'w' + i} className="dw-cap" style={{ textAlign: 'center' }}>{'SMTWTFS'[(i + ws) % 7]}</span>)}
         {Array.from({ length: lead }, (_, i) => <span key={'e' + i} />)}
-        {Array.from({ length: n }, (_, i) => { const v = byDay[key(i + 1)] || 0, r = Math.min(1, v / goal); return <span key={i} className={'dw-day' + (key(i + 1) === d ? ' on' : '')} style={{ height: nums ? cell * 0.8 : cell * 0.72, background: v ? `color-mix(in srgb, var(--gold) ${Math.round(18 + 72 * r)}%, transparent)` : 'var(--rule)', color: r >= .6 ? 'var(--bg)' : 'var(--soft)' }}>{nums ? i + 1 : ''}</span> })}
+        {Array.from({ length: n }, (_, i) => { const v = byDay[key(i + 1)] || 0, r = Math.min(1, v / goal); return <span key={i} className={'dw-day' + (key(i + 1) === d ? ' on' : '')} style={{ height: nums ? cell * 0.8 : cell * 0.72, background: v ? `color-mix(in srgb, var(--gold) ${Math.round(18 + 72 * r)}%, transparent)` : 'var(--rule)', color: r >= .6 ? 'var(--bg)' : v ? 'var(--ink)' : 'var(--soft)', ...(nums ? { display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'flex-start', padding: '3px 4px 2px' } : null) }}>{nums ? <><span>{i + 1}</span>{v > 0 && <span style={{ fontSize: 8, fontWeight: 500 }}>{hm(v)}</span>}</> : ''}</span> })}
       </div>
     )
   }
@@ -799,7 +802,7 @@ function WidgetPreview() {
     ],
     할일: [4, 5, 11].map((n) => <><div className="row between"><span className="dw-cap sp">TODAY</span><span className="dw-cap dw-gold">{done} DONE</span></div><div style={{ height: 10 }} />{list(n)}</>),
     디데이: [40, 52, 52].map((sz, i) => <><div className="dw-cap">{dateStr}</div><div className="grow" />
-      {dd ? <><div style={{ fontSize: sz, fontWeight: 100, lineHeight: 1 }}>{ddTxt}</div><div className="row" style={{ gap: 8, marginTop: 4 }}><span className="dw-gold">{dd.title}</span><span className="dw-soft">{dd.date.slice(5).replace('-', '.')}</span></div></> : <div className="dw-soft">No D-day.</div>}
+      {dd ? <><div style={{ fontSize: sz, fontWeight: 100, lineHeight: 1 }}>{ddTxt}</div><div className="row" style={{ gap: 8, marginTop: 4 }}><span className="dw-gold">{dd.title}</span><span className="dw-soft">{dd.date.slice(5).replace('-', '.')}</span></div><div className="dw-soft" style={{ fontSize: 10, marginTop: 2 }}>남은 주말 {wkP(dd)}번</div></> : <div className="dw-soft">No D-day.</div>}
       {i > 0 && quote && <div className="dw-soft" style={{ marginTop: 10, fontSize: 12 }}>— {quote}</div>}
       {i === 2 && ddList.length > 1 && <><div className="dw-hr" />{ddList.slice(1, 6).map((x) => <div key={x.id} className="row between" style={{ marginBottom: 8 }}><span>{x.title}</span><span className="dw-gold">D-{Math.round((new Date(x.date) - new Date(d)) / 86400000)}</span></div>)}</>}
       {i < 2 && <div className="grow" />}</>),
@@ -823,7 +826,7 @@ function WidgetPreview() {
   const B = { fontSize: 22, fontWeight: 100 }, S = { fontSize: 8 }, DIM = { opacity: .55 }, ROW = { display: 'flex', justifyContent: 'space-between', gap: 6, width: '100%', minWidth: 0 }
   const Lfor = (kind) => {
     const left = items.filter((t) => !t.done)
-    if (kind === '디데이') return { c: [[dd ? (ddN === 0 ? 'D' : ddN) : '–', B], ['D-DAY', S]], r: [[ddTxt || 'No D-day', { fontSize: 24, fontWeight: 100 }], [dd ? `${dd.title}  ${dd.date.slice(5).replace('-', '.')}` : ''], [ddNext ? `${ddNext.title} D-${Math.round((new Date(ddNext.date) - new Date(d)) / 86400000)}` : '', { ...DIM, fontSize: 10 }]], i: dd ? `${ddTxt} ${dd.title}` : 'No D-day' }
+    if (kind === '디데이') return { c: [[dd ? (ddN === 0 ? 'D' : ddN) : '–', B], ['D-DAY', S]], r: [[ddTxt || 'No D-day', { fontSize: 24, fontWeight: 100 }], [dd ? <span style={ROW}><span>{dd.title}  {dd.date.slice(5).replace('-', '.')}</span><span style={{ fontSize: 10 }}>주말 {wkP(dd)}번</span></span> : ''], [ddNext ? `${ddNext.title} D-${Math.round((new Date(ddNext.date) - new Date(d)) / 86400000)}` : '', { ...DIM, fontSize: 10 }]], i: dd ? `${ddTxt} ${dd.title} · 주말 ${wkP(dd)}번` : 'No D-day' }
     if (kind === '공부') return { c: [[hm(mins), { fontSize: 14 }], [pct + '%', S], [bar(mins / goal, 34)]], r: [[<><b>{hm(mins)}</b> / {hm(goal)}<span className="grow" />{pct}%</>], [bar(mins / goal, 136)], [<span style={ROW}><span>이번 주 {hm(sw.week)}</span><span>어제 {hm(sw.yday)}</span></span>]], i: `공부 ${hm(mins)} / ${hm(goal)} · ${pct}%` }
     if (kind === '할일') return { c: [[left.length, { fontSize: 24, fontWeight: 100 }], ['할 일', S], [`${done}/${done + left.length}`, S]], r: [[<span style={{ ...ROW, fontSize: 8, letterSpacing: 2 }}><span>TODAY</span><span>{done}/{items.length}</span></span>], ...items.slice(0, 3).map((t) => [(t.done ? '✓ ' : '– ') + t.title, t.done ? DIM : null]), ...(items.length ? [] : [['All clear.']])], i: left.length ? `할 일 ${left.length}개 · ${left[0].title}` : '오늘 할 일 끝' }
     if (kind === '달력') {
@@ -904,6 +907,20 @@ function WidgetPreview() {
         </div>
       </div>
     </>
+  )
+}
+
+// 아이패드 사이드바: 자주 쓰는 화면 고정 (누른 순서대로), 나머지는 '전체'로 접힘
+function SidebarCard() {
+  const st = useSettings(), pins = st.sidebarPins || []
+  const tog = (k) => setSettings({ sidebarPins: pins.includes(k) ? pins.filter((x) => x !== k) : [...pins, k] })
+  return (
+    <Card title="아이패드 사이드바" action={pins.length > 0 && <button className="tiny muted" onClick={() => setSettings({ sidebarPins: [] })}>모두 해제</button>}>
+      <div className="tiny muted" style={{ marginBottom: 6 }}>고정한 화면이 맨 위에 누른 순서대로 놓이고, 나머지는 ‘전체’ 아래로 접혀요. 저장된 뷰·프로젝트도 접을 수 있어요.</div>
+      <div className="row wrap" style={{ gap: 6 }}>
+        {TAB_OPTIONS.map((o) => <button key={o.key} className={'chip' + (pins.includes(o.key) ? ' on' : '')} onClick={() => tog(o.key)}>{pins.includes(o.key) && <span className="tiny">{pins.indexOf(o.key) + 1}</span>}<Icon name={o.icon} size={13} />{o.label}</button>)}
+      </div>
+    </Card>
   )
 }
 

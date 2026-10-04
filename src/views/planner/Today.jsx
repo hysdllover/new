@@ -6,6 +6,7 @@ import { fmtTime, today, nowMin, fmtDur } from '../../engine/date.js'
 import { Card, Check, Empty, Icon, openDetail, toast, useNow } from '../../components/ui.jsx'
 import TaskItem from '../../components/TaskItem.jsx'
 import Timeline from './Timeline.jsx'
+import { dropTaskOnTimeline } from './timeline.js'
 import { applyCascadeChange } from './timeline.js'
 import { longPress } from '../../lib/drag.js'
 import { find } from '../../store/store.js'
@@ -28,13 +29,7 @@ export default function Today({ date }) {
 
   const dragTask = (t) => longPress(() => ({
     label: t.title,
-    onDrop: (zone, pt) => {
-      if (!zone.dataset.drop.startsWith('timeline:')) return
-      const r = zone.getBoundingClientRect()
-      const m = Math.max(0, Math.round((+zone.dataset.start + (pt.y - r.top) - 15) / 10) * 10)
-      const b = scheduleTask(t.id, date, m, t.estimate || 30)
-      if (b) applyCascadeChange(b)
-    },
+    onDrop: (zone, pt) => { dropTaskOnTimeline(t, zone, pt) },
   }))
 
   return (

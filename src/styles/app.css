@@ -251,3 +251,5 @@ input[type="color"] { width: 36px; height: 30px; border: 1px solid var(--line); 
 /* 2단 오른쪽은 좁으니 한 줄로 */
 .split-pane .grid.two, .split-pane .grid.three, .split-pane .today-grid, .split-pane .today-w, .split-pane .matrix { grid-template-columns: 1fr !important; }
 .split-pane .week { grid-template-columns: 1fr !important; }
+
+.sidebar .sec-btn { background: none; border: 0; text-align: left; padding: 0; cursor: pointer; font-family: inherit; }

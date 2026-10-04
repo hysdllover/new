@@ -3,6 +3,7 @@ import { DueBadge, SubjectTag, PRI_COLOR } from './common.jsx'
 import { toggleTask } from '../store/actions.js'
 import { longPress } from '../lib/drag.js'
 import { openTaskMenu } from './TaskQuickMenu.jsx'
+import { openNote } from '../nav.js'
 
 export default function TaskItem({ t, subjects, projects, drag, compact, extra }) {
   const subs = t.subtasks || []
@@ -25,6 +26,7 @@ export default function TaskItem({ t, subjects, projects, drag, compact, extra }
             {t.estimate && <span>{t.estimate}분</span>}
             {(t.files?.length > 0 || t.links?.length > 0) && <Icon name="link" size={12} />}
             {t.dependsOn?.length > 0 && <span>⛓</span>}
+            {t.noteId && <button className="badge" data-nodrag onClick={(e) => { e.stopPropagation(); openNote(t.noteId) }} title="이 할 일이 있는 노트">노트</button>}
             {extra}
           </div>
         )}

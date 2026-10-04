@@ -255,6 +255,8 @@ if (!data) {
   const ddAll = alive(data.study.ddays).filter((d) => d.date >= today).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || a.date.localeCompare(b.date))
   const ddN = (d) => Math.round((new Date(d.date) - new Date(today)) / 86400000)
   const ddT = (d) => (ddN(d) === 0 ? 'D-DAY' : 'D-' + ddN(d))
+  // 시험까지 남은 주말 (오늘이 주말이면 이번 주말 포함, D-day 당일 주말은 빼고)
+  const weekends = (d) => { let n = 0; const x = new Date(today + 'T00:00'), end = new Date(d.date + 'T00:00'); if (x.getDay() === 0) x.setDate(x.getDate() - 1); for (; x < end; x.setDate(x.getDate() + 1)) if (x.getDay() === 6) n++; return n }
   const dd = ddAll[KIND === 'dday' ? DDI : 0]
   const ddTxt = dd ? ddT(dd) : null
   const quotes = Object.keys(data.settings.quotes || {}).sort().map((k) => data.settings.quotes[k]).filter((q) => !q.deleted)
@@ -333,7 +335,8 @@ if (!data) {
         const v = byDay[key] || 0, r = Math.min(1, v / goal)
         c.backgroundColor = v ? dyn('#b39d74', '#c9b489', 0.18 + 0.72 * r) : RULE
         if (key === today) { c.borderWidth = 1; c.borderColor = INK }
-        if (showNum) { c.setPadding(3, 4, 0, 0); c.topAlignContent(); t(c, day, label(8), r >= 0.6 ? dyn('#ffffff', '#161616') : SOFT) }
+        // 대형: 날짜 + 그날 공부 시간 (칸 진하기 = 목표 대비)
+        if (showNum) { const fg = r >= 0.6 ? dyn('#ffffff', '#161616') : v ? INK : SOFT; c.layoutVertically(); c.setPadding(3, 4, 2, 2); t(c, day, label(8), fg); c.addSpacer(); if (v) t(c, hm(v), F(8, 'Medium'), fg).minimumScaleFactor = 0.6 }
       }
       parent.addSpacer(gap)
     }
@@ -427,17 +430,18 @@ if (!data) {
     const next = ddAll[DDI + 1]
     if (!dd) inline('No D-day')
     else if (fam === 'accessoryInline') {
-      inline(ddTxt + ' ' + dd.title)
+      inline(ddTxt + ' ' + dd.title + ' · 주말 ' + weekends(dd) + '번')
     } else if (fam === 'accessoryCircular') {
       w.addAccessoryWidgetBackground = true
       const z = w.addStack(); z.size = new Size(LK.c, LK.c); z.layoutVertically(); z.centerAlignContent()
       const a = z.addStack(); a.addSpacer(); t(a, ddN(dd) === 0 ? 'D-DAY' : ddN(dd), thin(ddN(dd) === 0 ? 14 : 24)).minimumScaleFactor = 0.5; a.addSpacer()
       const b = z.addStack(); b.addSpacer(); t(b, dd.title, label(8)).minimumScaleFactor = 0.6; b.addSpacer()
+      const c2 = z.addStack(); c2.addSpacer(); t(c2, '주말 ' + weekends(dd), label(6)); c2.addSpacer()
     } else {
       const r = w.addStack(); r.size = new Size(LK.rw, 0); r.bottomAlignContent()
       t(r, ddTxt, thin(26)).minimumScaleFactor = 0.6; r.addSpacer()
       w.addSpacer(2)
-      const r2 = w.addStack(); t(r2, dd.title, tw(12)); r2.addSpacer(6); t(r2, dd.date.slice(5).replace('-', '.'), tw(10)); r2.addSpacer()
+      const r2 = w.addStack(); r2.size = new Size(LK.rw, 0); t(r2, dd.title, tw(12)).minimumScaleFactor = 0.7; r2.addSpacer(6); t(r2, dd.date.slice(5).replace('-', '.'), tw(10)); r2.addSpacer(); t(r2, '주말 ' + weekends(dd) + '번', tw(10))
       if (next) { w.addSpacer(2); const r3 = w.addStack(); t(r3, next.title + ' ' + ddT(next), tw(10)).textOpacity = 0.7; r3.addSpacer() }
     }
   } else if (lock && TM && (KIND === 'default' || KIND === 'study' || KIND === 'quick' || KIND === 'timer')) {
@@ -772,6 +776,7 @@ if (!data) {
       t(w, ddTxt, thin(fam === 'small' ? 40 : 52), INK)
       w.addSpacer(2)
       const r = w.addStack(); r.centerAlignContent(); t(r, dd.title, tw(fam === 'small' ? 12 : 14), GOLD); r.addSpacer(8); t(r, dd.date.slice(5).replace('-', '.'), tw(10), SOFT); r.addSpacer()
+      w.addSpacer(2); t(w, '남은 주말 ' + weekends(dd) + '번', tw(10), SOFT)
     } else t(w, 'No D-day.', tw(14), SOFT)
     if (fam !== 'small' && quote) { w.addSpacer(10); t(w, '— ' + quote, tw(12), SOFT, 2) }
     if (fam === 'large' && ddAll.length > 1) {

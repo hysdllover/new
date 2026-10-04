@@ -8,6 +8,7 @@ import { WeekGoalsCard } from '../components/WeekGoals.jsx'
 import { SMART, applyFilter, quadrant, openCount } from './tasks/filter.js'
 import { setParams } from '../nav.js'
 import { longPress } from '../lib/drag.js'
+import { dropTaskOnTimeline } from './planner/timeline.js'
 import { useRef } from 'react'
 import { today, tsToYmd, tsToMin, weekStart, fmtDate, fmtTime, fmtDur, addDays, parseYmd, WD } from '../engine/date.js'
 import { useSettings } from '../store/store.js'
@@ -39,9 +40,11 @@ function TaskList({ params }) {
   const manual = (f.sort || 'manual') === 'manual'
   const nFilter = [f.subjectId, f.projectId, f.sort && f.sort !== 'manual'].filter(Boolean).length
 
-  const dragFor = (t) => manual ? longPress(() => ({
+  const dragFor = (t) => longPress(() => ({
     label: t.title,
     onDrop: (zone, pt) => {
+      if (dropTaskOnTimeline(t, zone, pt)) return
+      if (!manual) return
       const target = zone.dataset.drop
       if (!target.startsWith('task:')) return
       const tid = target.slice(5)
@@ -54,7 +57,7 @@ function TaskList({ params }) {
       const other = nb && nb.id !== t.id ? (nb.order ?? 0) : o + (before ? -1000 : 1000)
       patch('tasks', t.id, { order: (o + other) / 2 })
     },
-  })) : {}
+  }))
 
   const saveView = () => {
     const name = prompt('저장할 뷰 이름', '')
@@ -133,9 +136,11 @@ function DayView({ params }) {
   const overdue = isToday ? live.filter((t) => t.due && t.due < t0 && (!t.done || (!tidy && doneToday(t)))).sort((a, b) => a.due.localeCompare(b.due) || order(a, b)) : []
   const ws = weekStart(date, st.weekStart ?? 1)
   const strip = Array.from({ length: 7 }, (_, i) => addDays(ws, i))
-  const dragFor = (t) => t.dueTime != null ? {} : longPress(() => ({
+  const dragFor = (t) => longPress(() => ({
     label: t.title,
     onDrop: (zone, pt) => {
+      if (dropTaskOnTimeline(t, zone, pt)) return // 아이패드 2단 · 오늘 일정 타임라인으로
+      if (t.dueTime != null) return
       const target = zone.dataset.drop
       if (!target?.startsWith('task:')) return
       const tid = target.slice(5)
