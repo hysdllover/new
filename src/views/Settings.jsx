@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { useSettings, setSettings, useColl, put, remove, patch, exportJSON, importJSON, uid } from '../store/store.js'
 import { PRESETS, FONTS } from '../theme/theme.js'
 import { PALETTE, SOFT_PALETTE } from '../store/schema.js'
@@ -463,7 +463,8 @@ function HomeWidgetCard() {
         2. 아래 <b>스크립트 복사</b> → Scriptable › ＋ › 붙여넣기 → 이름 ‘스터디’<br />
         3. 홈 화면 길게 누르기 › ＋ › Scriptable 위젯(소·중·대) 추가 → 위젯 편집 › Script: ‘스터디’ · Parameter: 위 형태 단어<br />
         4. 투명 배경(아이폰): Scriptable 에서 ‘스터디’ 스크립트를 눌러 실행 › 투명 배경 설정 › 빈 홈 화면 스크린샷·위젯 크기·위치 선택. 같은 크기 위젯이 여러 개면 Parameter 에 @번호를 붙여 구분 (예: 공부@2). 글자색도 같은 메뉴에서 바꿔요.<br />
-        5. 잠금 화면: 잠금 화면 길게 누르기 › 사용자화 › 잠금 화면 › 위젯 추가 › Scriptable → <b>추가한 위젯을 한 번 더 눌러 Script: ‘스터디’ 선택</b> (안 고르면 빈칸) · 잠금 화면도 Parameter 로 공부 · 할일 · 달력 · 캘린더 · 다짐 · 디데이(다음 D-day 는 디데이2) · 시간표 · 주간 · 과목 · 지금 · 진도 · 목표 · 오늘 지정 (비우면 기본, 아이폰·아이패드 같음)<br />
+        5. 잠금 화면: 잠금 화면 길게 누르기 › 사용자화 › 잠금 화면 › 위젯 추가 › Scriptable → <b>추가한 위젯을 한 번 더 눌러 Script: ‘스터디’ 선택</b> (안 고르면 빈칸) · 잠금 화면도 Parameter 로 공부 · 할일 · 달력 · 캘린더 · 다짐 · 디데이(다음 D-day 는 디데이2) · 시간표 · 주간 · 과목 · 지금 · 진도 · 목표 · 오늘 · 대시보드 지정 (비우면 기본, 아이폰·아이패드 같음). 원형 전용: <b>진행</b>(공부 %) · <b>남은분</b>(다음 일정까지)<br />
+        · 과목 고정 시작 버튼: Parameter 에 <b>시작:수학</b> (누르면 그 과목 타이머 시작) · 할 일을 누르면 확인 없이 바로 완료돼요(되돌리기 가능)<br />
         6. 아이패드 잠금 화면은 iPadOS 17 이상. 빈칸·오류가 보이면 Scriptable 에서 스크립트를 실행 › ‘잠금 화면 미리보기’로 오류 문구를 확인하세요.
       </div>
       <div className="tiny muted" style={{ marginTop: 4 }}>위젯을 누르면 해당 화면(할 일·공부 기록)이 열려요. iOS 제한으로 사파리에서 열리니, 사파리에서도 한 번 동기화를 연결해 두세요.</div>
@@ -524,9 +525,27 @@ function WidgetFontField() {
       </>}
       <Field label="위젯 글자 크기"><Seg value={String(st.widgetScale || 1)} onChange={(v) => setSettings({ widgetScale: +v })} options={[['0.9', '작게'], ['1', '기본'], ['1.1', '크게'], ['1.2', '더 크게']]} /></Field>
       <Field label="위젯 글자 굵기"><Seg value={String(st.widgetWeight || 0)} onChange={(v) => setSettings({ widgetWeight: +v })} options={[['-1', '더 얇게'], ['0', '기본'], ['1', '보통'], ['2', '진하게']]} /></Field>
+      <Field label="위젯 테마"><Seg value={st.widgetTheme || 'auto'} onChange={(v) => setSettings({ widgetTheme: v })} options={[['auto', '자동'], ['white', '흰 글씨'], ['black', '검은 글씨'], ['paper', '종이'], ['night', '다크']]} /></Field>
+      <div className="tiny muted" style={{ marginTop: -4 }}>흰·검은 글씨는 투명 배경(Scriptable 메뉴)과 함께, 종이·다크는 배경색까지 바꿔요. 자동은 Scriptable 메뉴의 글자색을 따라요.</div>
+      <DashTilesField />
       <Toggle checked={st.widgetClear !== false} onChange={(v) => setSettings({ widgetClear: v })} label="투명·클리어 위젯용 (글씨 또렷하게: 한 단계 굵게·조금 크게)" />
       <div className="tiny muted">미리보기에 바로 보여요. 위젯에는 다음 동기화 뒤 반영돼요 (설치한 폰트는 굵기 대신 그 폰트 그대로). 잠금 화면은 ‘크게’까지만 커져요.</div>
     </div>
+  )
+}
+
+// 대시보드 위젯 칸 4개 고르기
+const DASH_KEYS = [['dday', 'D-day'], ['next', '일정'], ['todo', '할 일'], ['study', '공부 시간'], ['prog', '진도'], ['goals', '이번 주 목표'], ['week', '이번 주 공부']]
+export const dashKeys = (st) => { const k = (st.dashTiles || []).filter((x, i, a) => DASH_KEYS.some(([y]) => y === x) && a.indexOf(x) === i).slice(0, 4); for (const [x] of DASH_KEYS) if (k.length < 4 && !k.includes(x)) k.push(x); return k }
+function DashTilesField() {
+  const st = useSettings(), keys = dashKeys(st)
+  const set = (i, v) => { const k = [...keys]; const j = k.indexOf(v); if (j >= 0) k[j] = k[i]; k[i] = v; setSettings({ dashTiles: k }) }
+  return (
+    <Field label="대시보드 칸 (순서대로 · 중형은 할 일이 오른쪽 목록)">
+      <div className="row wrap" style={{ gap: 6 }}>
+        {keys.map((k, i) => <select key={i} className="input" style={{ width: 'auto', flex: '1 1 30%' }} value={k} onChange={(e) => set(i, e.target.value)}>{DASH_KEYS.map(([v, l]) => <option key={v} value={v}>{i + 1}. {l}</option>)}</select>)}
+      </div>
+    </Field>
   )
 }
 
@@ -534,6 +553,7 @@ function WidgetFontField() {
 function WidgetPreview() {
   const st = useSettings()
   useEffect(() => { loadAllFonts() }, [])
+  const WTH = { white: { background: 'linear-gradient(135deg, #5b6170, #8b8f86)', color: '#fff' }, black: { background: 'linear-gradient(135deg, #ece9e2, #cfd3cc)', color: '#1d1c1a' }, paper: { background: '#f5f3ef', color: '#2b2a28' }, night: { background: '#1b1d22', color: '#f1efe9' } }[st.widgetTheme] || null
   const ff = { ...(st.widgetFont ? { fontFamily: `"${st.widgetFont}", "Apple SD Gothic Neo", sans-serif` } : null), '--dw-scale': st.widgetScale || 1, fontWeight: [200, 300, 400, 500, 600][(+st.widgetWeight || 0) + 1 + (st.widgetClear !== false ? 1 : 0)] }
   const tasks = useColl('tasks'), sessions = useColl('sessions'), ddays = useColl('ddays'), quotes = useColl('quotes'), subjects = useColl('subjects')
   const d = today()
@@ -657,17 +677,25 @@ function WidgetPreview() {
   const qsub = (() => { const out = []; for (const x of [...sessions].sort((a, b) => String(b.date).localeCompare(String(a.date)))) { const s = subjects.find((y) => y.id === x.subjectId); if (s && !out.includes(s)) out.push(s) } for (const s of subjects) if (!out.includes(s)) out.push(s); return out.slice(0, 8) })()
   const evRow = (e, k) => <div key={k} className="dw-todo"><span className="dw-soft" style={{ width: 30, flexShrink: 0 }}>{e.start == null ? '종일' : fmtTime(e.start)}</span><i style={{ width: 2, height: 12, borderRadius: 1, flexShrink: 0, background: e.color || 'var(--rule)' }} /><span className="ellipsis">{e.title}</span></div>
   const tkRow = (t) => <div key={t.id} className="dw-todo"><span className={t.priority >= 3 ? 'dw-gold' : 'dw-soft'}>{t.priority >= 3 ? '•' : '–'}</span><span className="ellipsis grow" style={t.priority >= 3 ? { fontWeight: 500 } : null}>{t.title}</span>{t.dueTime != null && <span className="dw-soft">{fmtTime(t.dueTime)}</span>}</div>
-  const tiles = [['D-DAY', dd ? ddTxt : '—', dd ? dd.title : '없음', null, 1], [nCur ? 'NOW' : 'NEXT', nC ? fmtTime(nC.s) : '—', nC ? nC.t : '남은 일정 없음'], ['TO DO', items.filter((t) => !t.done), ''], ['STUDY', hm(mins), pct + '%', mins / goal, 1]]
+  const g0P = goalsP.find((g) => !g.done), pP = progP[0]
+  const TLp = { dday: ['D-DAY', dd ? ddTxt : '—', dd ? dd.title : '없음', null, 1], next: [nCur ? 'NOW' : 'NEXT', nC ? fmtTime(nC.s) : '—', nC ? nC.t : '남은 일정 없음'], todo: ['TO DO', items.filter((t) => !t.done), ''], study: ['STUDY', hm(mins), pct + '%', mins / goal, 1],
+    prog: ['PROGRESS', pP ? Math.round((pP.n / pP.of) * 100) + '%' : '—', pP ? pP.t : '진행 중인 교재 없음', pP ? pP.n / pP.of : null], goals: ['GOALS', goalsP.length ? `${gDone}/${goalsP.length}` : '—', g0P ? g0P.t : goalsP.length ? '모두 완료' : '목표 없음', goalsP.length ? gDone / goalsP.length : null], week: ['THIS WEEK', hm(sw.week), '하루 ' + hm(sw.avg), sw.week / Math.max(1, goal * 7), 1] }
+  const dKeys = dashKeys(st), tiles = dKeys.map((k) => TLp[k])
+  const dLine = (k) => k === 'dday' ? <div key={k} className="row" style={{ gap: 6, alignItems: 'baseline', flexWrap: 'nowrap' }}><span style={{ fontSize: 26, fontWeight: 100, lineHeight: 1 }}>{dd ? ddTxt : '—'}</span><span className="dw-gold ellipsis" style={{ fontSize: 11 }}>{dd ? dd.title : 'No D-day'}</span></div>
+    : k === 'next' ? <div key={k} className="dw-todo"><span className="dw-gold" style={{ fontSize: 11 }}>{nC ? (nCur ? '지금 ' : '') + fmtTime(nC.s) : '—'}</span><span className="ellipsis">{nC ? nC.t : '남은 일정 없음'}</span></div>
+    : k === 'study' ? <div key={k}>{big(22)}</div>
+    : k === 'week' ? <div key={k} className="row" style={{ gap: 6, alignItems: 'baseline', flexWrap: 'nowrap' }}><span style={{ fontSize: 22, fontWeight: 100 }}>{hm(sw.week)}</span><span className="dw-soft" style={{ fontSize: 10 }}>이번 주</span><span className="grow" /><span className="dw-gold" style={{ fontSize: 10 }}>하루 {hm(sw.avg)}</span></div>
+    : <div key={k}><div className="row" style={{ flexWrap: 'nowrap', gap: 6 }}><span className="ellipsis grow">{TLp[k][2]}</span><span className="dw-gold" style={{ fontSize: 11 }}>{TLp[k][1]}</span></div>{TLp[k][3] != null && <div className="dw-line" style={{ marginTop: 4 }}><i style={{ width: Math.min(100, TLp[k][3] * 100) + '%' }} /></div>}</div>
+  const dCol = (ks) => ks.map((k, i) => <Fragment key={k}>{i > 0 && <div className="grow" />}{dLine(k)}</Fragment>)
+  const dOthers = dKeys.filter((k) => k !== 'todo'), dHasTodo = dKeys.includes('todo')
   const tileGrid = (cols, size, fill) => <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: '12px 12px', ...(fill ? { height: '100%', alignContent: 'space-between' } : null) }}>{tiles.map((x) => <div key={x[0]} className="col" style={{ gap: 1, minWidth: 0 }}><span className="dw-cap">{x[0]}</span>{Array.isArray(x[1]) ? <div className="col" style={{ gap: 2, marginTop: 3, minWidth: 0 }}>{x[1].slice(0, cols === 4 ? 6 : size >= 30 ? 4 : 3).map((t) => <span key={t.id} className="ellipsis" style={{ fontSize: size >= 30 ? 15 : 11, fontWeight: t.priority >= 3 ? 500 : null }}>{t.priority >= 3 ? '• ' : '– '}{t.title}</span>)}{!x[1].length && <span className="dw-soft">All clear.</span>}</div> : <span className="ellipsis" style={{ fontSize: size, fontWeight: 100, lineHeight: 1.1 }}>{x[1]}</span>}{x[2] && <span className={'ellipsis ' + (x[4] ? 'dw-gold' : 'dw-soft')} style={{ fontSize: 10 }}>{x[2]}</span>}{x[3] != null && <div className="dw-line" style={{ marginTop: 3 }}><i style={{ width: Math.min(100, x[3] * 100) + '%' }} /></div>}</div>)}</div>
   const btn = (s, key, color) => <span key={key} className="row" style={{ flex: 1, minWidth: 0, height: 32, borderRadius: 10, background: 'var(--rule)', justifyContent: 'center', gap: 5, fontSize: 12 }}>{color && <i style={{ width: 6, height: 6, borderRadius: 3, background: color, flexShrink: 0 }} />}<span className="ellipsis">{s}</span></span>
   const quickBody = (n, lg) => <>{hdr('START', '오늘 ' + hm(mins))}{[0, 4].filter((i) => i < Math.min(n, qsub.length)).map((i) => <div key={i} className="row" style={{ gap: 8, marginBottom: 8, flexWrap: 'nowrap' }}>{qsub.slice(i, i + 4).map((s) => btn(s.name, s.id, s.color))}{Array.from({ length: 4 - qsub.slice(i, i + 4).length }, (_, k) => <span key={'p' + k} style={{ flex: 1 }} />)}</div>)}<div className="row" style={{ gap: 8, flexWrap: 'nowrap' }}>{btn('+ 할 일', 'a')}{btn('+ 일정', 'b')}{btn('+ 기록', 'c')}</div>{lg && <><div className="dw-hr" />{list(4)}</>}</>
   const V = {
     대시보드: [
       M(<><div className="grow" />{tileGrid(2, 19)}<div className="grow" /></>),
-      <><div className="col" style={{ gap: 0, width: '45%', flexShrink: 0, minWidth: 0 }}>
-        <div className="row" style={{ gap: 6, alignItems: 'baseline', flexWrap: 'nowrap' }}><span style={{ fontSize: 26, fontWeight: 100, lineHeight: 1 }}>{dd ? ddTxt : '—'}</span><span className="dw-gold ellipsis" style={{ fontSize: 11 }}>{dd ? dd.title : 'No D-day'}</span></div>
-        <div className="grow" /><div className="dw-todo"><span className="dw-gold" style={{ fontSize: 11 }}>{nC ? (nCur ? '지금 ' : '') + fmtTime(nC.s) : '—'}</span><span className="ellipsis">{nC ? nC.t : '남은 일정 없음'}</span></div><div className="grow" />{big(22)}</div>
-        <div className="dw-vr" /><div className="col" style={{ gap: 0, flex: 1, minWidth: 0 }}>{hdr('TO DO', dateStr)}{items.filter((t) => !t.done).slice(0, 5).map((t) => <div key={t.id} className="dw-todo"><span className={t.priority >= 3 ? 'dw-gold' : 'dw-soft'}>{t.priority >= 3 ? '•' : '–'}</span><span className="ellipsis" style={t.priority >= 3 ? { fontWeight: 500 } : null}>{t.title}</span></div>)}{!leftN && <div className="dw-soft">All clear.</div>}</div></>,
+      <><div className="col" style={{ gap: 0, width: '45%', flexShrink: 0, minWidth: 0 }}>{dCol(dHasTodo ? dOthers.slice(0, 3) : dOthers.slice(0, 2))}</div>
+        <div className="dw-vr" /><div className="col" style={{ gap: 0, flex: 1, minWidth: 0 }}>{dHasTodo ? <>{hdr('TO DO', dateStr)}{items.filter((t) => !t.done).slice(0, 5).map((t) => <div key={t.id} className="dw-todo"><span className={t.priority >= 3 ? 'dw-gold' : 'dw-soft'}>{t.priority >= 3 ? '•' : '–'}</span><span className="ellipsis" style={t.priority >= 3 ? { fontWeight: 500 } : null}>{t.title}</span></div>)}{!leftN && <div className="dw-soft">All clear.</div>}</> : dCol(dOthers.slice(2, 4))}</div></>,
       M(<>{hdr('TODAY', dateStr)}{tileGrid(2, 36)}<div className="grow" /><div className="dw-hr" />{hdr('THIS WEEK', `${hm(sw.week)} · 하루 ${hm(sw.avg)}`)}{bars7(60)}</>),
     ],
     내일: [0, 1, 2].map((i) => { const none = !tmrEv.length && !tmrTk.length && !tmrCl.length
@@ -749,7 +777,7 @@ function WidgetPreview() {
   // 잠금 화면 미리보기 — 위젯 스크립트(scriptable.js)의 잠금 화면 분기와 같은 내용
   const bar = (r, wd) => <i className="dw-lbar" style={{ width: wd }}><b style={{ width: Math.max(0, Math.min(1, r)) * 100 + '%' }} /></i>
   const B = { fontSize: 22, fontWeight: 100 }, S = { fontSize: 8 }, DIM = { opacity: .55 }, ROW = { display: 'flex', justifyContent: 'space-between', gap: 6, width: '100%', minWidth: 0 }
-  const L = (() => {
+  const Lfor = (kind) => {
     const left = items.filter((t) => !t.done)
     if (kind === '디데이') return { c: [[dd ? (ddN === 0 ? 'D' : ddN) : '–', B], ['D-DAY', S]], r: [[ddTxt || 'No D-day', { fontSize: 24, fontWeight: 100 }], [dd ? `${dd.title}  ${dd.date.slice(5).replace('-', '.')}` : ''], [ddNext ? `${ddNext.title} D-${Math.round((new Date(ddNext.date) - new Date(d)) / 86400000)}` : '', { ...DIM, fontSize: 10 }]], i: dd ? `${ddTxt} ${dd.title}` : 'No D-day' }
     if (kind === '공부') return { c: [[hm(mins), { fontSize: 14 }], [pct + '%', S], [bar(mins / goal, 34)]], r: [[<><b>{hm(mins)}</b> / {hm(goal)}<span className="grow" />{pct}%</>], [bar(mins / goal, 136)], [<span style={ROW}><span>이번 주 {hm(sw.week)}</span><span>어제 {hm(sw.yday)}</span></span>]], i: `공부 ${hm(mins)} / ${hm(goal)} · ${pct}%` }
@@ -796,7 +824,11 @@ function WidgetPreview() {
       return { c: c ? [[c.period + '교시', S], [c.title, { fontSize: 13 }], [cur ? '~' + fmtTime(c.end) : fmtTime(c.start), S]] : [[cls.length ? '끝' : '—', B]], r: [[<span style={{ ...ROW, fontSize: 8 }}><span>{cur ? `지금 ${cur.period}교시` : next ? `다음 ${next.period}교시` : '시간표'}</span><span>{c ? `${fmtTime(c.start)}–${fmtTime(c.end)}` : ''}</span></span>], [c ? c.title : cls.length ? '오늘 수업 끝' : '오늘 수업 없음', { fontSize: 20, fontWeight: 100 }], [c?.room ? c.room + (after ? ' · ' + after : '') : after, { fontSize: 10 }]], i: c ? (cur ? `${c.period}교시 ${c.title} ~${fmtTime(c.end)}` : `다음 ${c.period}교시 ${c.title} ${fmtTime(c.start)}`) : cls.length ? '오늘 수업 끝' : '오늘 수업 없음' }
     }
     return { c: [[hm(mins), { fontSize: 14 }], [pct + '%', S], [bar(mins / goal, 34)]], r: [[<><b>{hm(mins)}</b> / {hm(goal)}<span className="grow" />{ddTxt}</>], [bar(mins / goal, 136)], [todo[0] ? '– ' + todo[0].title : dd?.title || 'All clear.']], i: hm(mins) + (dd ? ` · ${ddTxt} ${dd.title}` : '') }
-  })()
+  }
+  V['진행'] = V['공부']; V['남은분'] = V['지금']
+  const L = kind === '진행' ? { ...Lfor('공부'), c: [[pct + '%', B], [`공부 ${hm(mins)}`, S], [bar(mins / goal, 34)]] }
+    : kind === '남은분' ? { ...Lfor('지금'), c: nC ? [[nCur ? '끝까지' : '시작까지', S], [`${Math.max(0, (nCur ? nC.e : nC.s) - nmP)}분`, { fontSize: 15 }], [nC.t, S]] : [['—', B]] }
+    : Lfor(kind)
   const [vs, vm, vl] = V[kind]
   return (
     <>
@@ -805,9 +837,9 @@ function WidgetPreview() {
       </div></div>
       <div className="tiny muted">{kind ? <>위젯 편집 › Parameter 에 <b>{kind}</b> 입력</> : '위젯 편집 › Parameter 를 비워 두면 기본 형태'}</div>
       <div className="dw-row">
-        <div className="dw dw-s" style={ff}><div className="dw-in">{vs}</div></div>
-        <div className="dw dw-m" style={ff}><div className="dw-in">{vm}</div></div>
-        <div className="dw dw-l" style={ff}><div className="dw-in">{vl}</div></div>
+        <div className="dw dw-s" style={{ ...ff, ...WTH }}><div className="dw-in">{vs}</div></div>
+        <div className="dw dw-m" style={{ ...ff, ...WTH }}><div className="dw-in">{vm}</div></div>
+        <div className="dw dw-l" style={{ ...ff, ...WTH }}><div className="dw-in">{vl}</div></div>
       </div>
       <div className="tiny muted" style={{ marginTop: 8 }}>잠금 화면 · 원형 · 직사각형 · 한 줄 (Parameter 같음, 아이폰·아이패드 공통)</div>
       <div className="dw-lock" style={ff}>
