@@ -1,6 +1,6 @@
-import { useEffect, useState, useSyncExternalStore } from 'react'
+import { createElement, useEffect, useState, useSyncExternalStore } from 'react'
 import { addSession, markLecture } from '../store/actions.js'
-import { settings, put, find, subscribe, deviceId } from '../store/store.js'
+import { settings, put, find, subscribe, deviceId, list } from '../store/store.js'
 import { toast } from '../components/ui.jsx'
 import { keepAwake } from './notify.js'
 
@@ -56,13 +56,13 @@ function flush(x) {
 
 export function startStopwatch(subjectId, taskId, lectureId) {
   if (t) stop()
-  set({ mode: 'stopwatch', subjectId, taskId, ...(lectureId ? { lectureId } : {}), segStart: Date.now(), acc: 0 })
+  set({ mode: 'stopwatch', subjectId, taskId, ...(lectureId ? { lectureId } : {}), segStart: Date.now(), runStart: Date.now(), acc: 0 })
   if (settings().wakeLock !== false) keepAwake(true)
 }
 // 타이머: 정한 시간이 지나면 자동으로 멈추고 기록
 export function startCountdown(subjectId, minutes, taskId) {
   if (t) stop()
-  set({ mode: 'countdown', subjectId, taskId, segStart: Date.now(), acc: 0, target: minutes * 60000 })
+  set({ mode: 'countdown', subjectId, taskId, segStart: Date.now(), runStart: Date.now(), acc: 0, target: minutes * 60000 })
   if (settings().wakeLock !== false) keepAwake(true)
 }
 export function pause() {
@@ -83,7 +83,7 @@ export function stop() {
   const lec = was.lectureId
   // 인강 듣기로 시작했으면 바로 다음 강 완료 표시
   if (lec) toast(total >= 1 ? `${total}분 기록했어요` : '인강 듣기를 마쳤어요', { label: '＋1강', fn: () => { const n = markLecture(lec); if (n) toast(`${n}강 완료`) } })
-  else if (total >= 1) toast(`${total}분 기록했어요`, last ? { label: '수정', fn: () => import('../views/study/Log.jsx').then((m) => m.openRecord(last)) } : undefined)
+  else if (total >= 1) askWrap(was, total, last)
 }
 export const setTimerTask = (taskId, subjectId) => t && set({ ...t, taskId, subjectId: subjectId ?? t.subjectId })
 
@@ -94,8 +94,20 @@ function countdownTick() {
   // 끝난 시각 기준으로 정확히 기록
   const end = t.segStart + (t.target - (t.acc || 0))
   addSession({ id: 'tm-' + t.segStart, subjectId: t.subjectId, taskId: t.taskId, lectureId: t.lectureId, start: t.segStart, end, kind: 'countdown' })
+  const was = t
   set(null); keepAwake(false)
   notify('타이머 끝', `${min}분 공부를 기록했어요`)
+  if (document.visibilityState === 'visible') askWrap(was, min, null)
+}
+
+// 끝낸 뒤 한 줄 메모·집중도 묻기 (이번 타이머로 생긴 구간 모두)
+function askWrap(was, total, last) {
+  const from = was.runStart || was.segStart
+  const ids = list('sessions').filter((s) => s.id?.startsWith('tm-') && s.start >= from && s.subjectId === was.subjectId).map((s) => s.id)
+  if (last && !ids.includes(last.id)) ids.push(last.id)
+  if (!ids.length) return
+  Promise.all([import('../components/StudyWrap.jsx'), import('../components/ui.jsx')]).then(([{ default: StudyWrap }, { openSheet }]) =>
+    openSheet((close) => createElement(StudyWrap, { ids, min: total, close }), { title: '공부 기록' }))
 }
 
 function notify(title, body) {

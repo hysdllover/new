@@ -1,3 +1,4 @@
+import { focusLabel } from '../../components/StudyWrap.jsx'
 import { useColl, useSettings } from '../../store/store.js'
 import { Card, Icon, Empty, Ring, openSheet } from '../../components/ui.jsx'
 import RecordEditor from '../../components/RecordEditor.jsx'
@@ -55,7 +56,7 @@ export default function Log({ params = {} }) {
                     <div className="meta">
                       {r.start != null ? <span>{fmtTime(tsToMin(r.start))}–{fmtTime(tsToMin(r.start) + r.dur)}</span> : <span>시각 없음</span>}
                       <span className="badge">{r.kind === 'manual' ? '직접 입력' : r.kind === 'stopwatch' ? '스톱워치' : '타이머'}</span>
-                      {r.focus > 0 && <span>{'★'.repeat(r.focus)}</span>}
+                      {r.focus > 0 && <span>집중 {focusLabel(r.focus)}</span>}
                     </div>
                     {r.note && <div className="small" style={{ marginTop: 3, whiteSpace: 'pre-wrap' }}>{r.note}</div>}
                     {pics.length > 0 && <div className="row wrap" style={{ gap: 4, marginTop: 6 }} onClick={(e) => e.stopPropagation()}>{pics.map((f) => <FileThumb key={f.id} file={f} size={48} />)}</div>}

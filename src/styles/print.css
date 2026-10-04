@@ -11,3 +11,9 @@
   .print-only { display: block !important; }
 }
 .print-only { display: none; }
+/* 하루 요약 등 따로 찍기 */
+#print-area { display: none; }
+@media print {
+  body.print-area #root { display: none !important; }
+  body.print-area #print-area { display: block !important; font-size: 11pt; line-height: 1.6; }
+}
