@@ -977,16 +977,71 @@ if (!data) {
     const left = items.filter((x) => !x.done).length, c = nCur || nNext
     const LG = fam === 'large' || fam === 'extraLarge' // 대형은 글자 크게
     // 칸 고르기 (앱 설정 › 위젯 › 대시보드 칸): dday · next · todo · study · prog · goals · week 중 4개
-    const DK = ['dday', 'next', 'todo', 'study', 'prog', 'goals', 'week']
+    const DK = ['dday', 'next', 'todo', 'study', 'prog', 'goals', 'week', 'bars', 'subjbar', 'ring', 'heat', 'hours', 'compare']
     const keys = (Array.isArray(st.dashTiles) ? st.dashTiles : []).filter((k, i, a) => DK.includes(k) && a.indexOf(k) === i).slice(0, 4)
     for (const k of DK) if (keys.length < 4 && !keys.includes(k)) keys.push(k)
     const p0 = PROG[0], g0 = GOALS.find((g) => !g.done)
+    const LGd = fam === 'large' || fam === 'extraLarge', gH = fam === 'small' ? 24 : fam === 'medium' ? 26 : 40 // 그래프 높이
+    const mPre = d0.getFullYear() + '-' + pad(d0.getMonth() + 1), monthTot = Object.entries(DM).filter(([k2]) => k2.startsWith(mPre)).reduce((a2, [, v]) => a2 + v, 0)
+    const ringImg = (r, size, lw) => {
+      const c = new DrawContext(); c.size = new Size(size, size); c.opaque = false; c.respectScreenScale = true
+      const light = inkMode === 'light', fg = new Color(light ? '#ffffff' : dark() ? '#c9b489' : '#b39d74'), bg = new Color(light ? '#ffffff' : dark() ? '#2c2b29' : '#e2ded6', light ? 0.3 : 1)
+      const cx = size / 2, rad = size / 2 - lw
+      const arc = (to, col) => { const p = new Path(), n = Math.max(2, Math.round(72 * to)), pts = []; for (let i = 0; i <= n; i++) { const a2 = -Math.PI / 2 + 2 * Math.PI * to * (i / n); pts.push(new Point(cx + rad * Math.cos(a2), cx + rad * Math.sin(a2))) } p.addLines(pts); c.addPath(p); c.setStrokeColor(col); c.setLineWidth(lw); c.strokePath() }
+      arc(1, bg); if (r > 0) arc(Math.min(1, r), fg)
+      return c.getImage()
+    }
     const TL = {
       dday: ['D-DAY', dd ? ddTxt : '—', dd ? dd.title : '없음', null, 'study.progress', GOLD],
       next: [nCur ? 'NOW' : 'NEXT', c ? clk(c.s) : '—', c ? c.t : '남은 일정 없음', null, 'planner.today', SOFT],
       prog: ['PROGRESS', p0 ? Math.round((p0.n / p0.of) * 100) + '%' : '—', p0 ? p0.t : '진행 중인 교재 없음', p0 ? p0.n / p0.of : null, 'study.progress', SOFT],
       goals: ['GOALS', GOALS.length ? goalsDone + '/' + GOALS.length : '—', g0 ? g0.t : GOALS.length ? '모두 완료' : '목표 없음', GOALS.length ? goalsDone / GOALS.length : null, 'tasks', SOFT],
       week: ['THIS WEEK', hm(weekTot), '하루 ' + hm(weekAvg), weekTot / Math.max(1, goal * 7), 'study.records', GOLD],
+      // ── 그래프 칸 (값 자리에 그리는 함수: (칸, 큰 글꼴, 폭)) ──
+      // 이번 주 7일 막대 + 요일
+      bars: ['THIS WEEK ' + hm(weekTot), (b, f, wd) => { b.addSpacer(4); bars7(b, wd, gH, GOLD, RULE); b.addSpacer(2); wdRow(b, wd, LGd ? 8 : 7) }, '', null, 'study.records', SOFT],
+      // 이번 주 과목 비율: 가로 누적 막대 + 상위 과목
+      subjbar: ['SUBJECTS', (b, f, wd) => {
+        b.addSpacer(6)
+        const tot = weekSub.reduce((a2, x) => a2 + x.m, 0), bar = b.addStack(); bar.size = new Size(wd, LGd ? 10 : 7); bar.cornerRadius = LGd ? 5 : 3.5
+        if (!tot) bar.backgroundColor = RULE
+        else weekSub.forEach((x, i) => { const sg = bar.addStack(); sg.size = new Size(Math.max(2, Math.round((wd * x.m) / tot) - (i < weekSub.length - 1 ? 1 : 0)), LGd ? 10 : 7); sg.backgroundColor = x.s.color ? new Color(x.s.color) : GOLD; if (i < weekSub.length - 1) bar.addSpacer(1) })
+        b.addSpacer(5)
+        for (const x of weekSub.slice(0, LGd ? 3 : 2)) { const r = b.addStack(); r.centerAlignContent(); const d = r.addStack(); d.size = new Size(5, 5); d.cornerRadius = 2.5; d.backgroundColor = x.s.color ? new Color(x.s.color) : GOLD; r.addSpacer(4); t(r, x.s.name, tw(LGd ? 11 : 9), INK).minimumScaleFactor = 0.7; r.addSpacer(); t(r, Math.round((x.m / tot) * 100) + '%', tw(LGd ? 11 : 9), SOFT) }
+        if (!tot) t(b, '이번 주 기록 없음', tw(9), SOFT)
+      }, '', null, 'study.records', SOFT],
+      // 오늘 목표 링 + 시간·%
+      ring: ['GOAL', (b, f, wd) => {
+        b.addSpacer(4); const r = b.addStack(); r.centerAlignContent(); const sz = gH + 14
+        const img = r.addImage(ringImg(mins / goal, sz, LGd ? 5 : 4)); img.imageSize = new Size(sz, sz); r.addSpacer(8)
+        const cc = r.addStack(); cc.layoutVertically(); t(cc, hm(mins), thin(LGd ? 26 : 18), INK).minimumScaleFactor = 0.6; t(cc, pct + '% · ' + hm(goal), tw(LGd ? 11 : 9), GOLD).minimumScaleFactor = 0.7; r.addSpacer()
+      }, '', null, 'study.records', SOFT],
+      // 이번 달 공부 히트맵 (칸 진하기 = 목표 대비)
+      heat: [MON[d0.getMonth()] + ' ' + hm(monthTot), (b, f, wd) => {
+        b.addSpacer(4)
+        const y = d0.getFullYear(), m = d0.getMonth(), n = new Date(y, m + 1, 0).getDate(), ws = st.weekStart ?? 1, lead = (new Date(y, m, 1).getDay() - ws + 7) % 7
+        const rows = Math.ceil((lead + n) / 7), g = 2, cw = Math.floor((wd - g * 6) / 7), ch = Math.max(4, Math.min(cw, Math.floor((gH + 10 - g * (rows - 1)) / rows)))
+        let day = 1 - lead
+        for (let ri = 0; ri < rows; ri++) {
+          const row = b.addStack(); row.spacing = g
+          for (let i = 0; i < 7; i++, day++) { const c = row.addStack(); c.size = new Size(cw, ch); c.cornerRadius = Math.min(2, ch / 3); if (day < 1 || day > n) continue; const k2 = y + '-' + pad(m + 1) + '-' + pad(day), v = DM[k2] || 0; c.backgroundColor = v ? dyn('#b39d74', '#c9b489', 0.2 + 0.75 * Math.min(1, v / goal)) : RULE; if (k2 === today) { c.borderWidth = 1; c.borderColor = INK } }
+          if (ri < rows - 1) b.addSpacer(g)
+        }
+      }, '', null, 'study.records', SOFT],
+      // 오늘 시간대 (6~24시)
+      hours: ['HOURS', (b, f, wd) => {
+        b.addSpacer(4)
+        const hs = Array(18).fill(0)
+        for (const x of sessions) if (x.start != null) { const st0 = new Date(x.start), a2 = st0.getHours() * 60 + st0.getMinutes(), e2 = a2 + (x.dur || 0); for (let h = 6; h < 24; h++) hs[h - 6] += Math.max(0, Math.min(e2, (h + 1) * 60) - Math.max(a2, h * 60)) }
+        const mx = Math.max(30, ...hs), g = 1, bw = Math.max(2, Math.floor((wd - g * 17) / 18)), row = b.addStack(); row.size = new Size(wd, gH); row.bottomAlignContent(); row.spacing = g
+        hs.forEach((v) => { const c = row.addStack(); c.size = new Size(bw, Math.max(1.5, Math.round((v / mx) * gH))); c.cornerRadius = 1; c.backgroundColor = v ? GOLD : RULE })
+        b.addSpacer(2); const lb = b.addStack(); lb.size = new Size(wd, 0); t(lb, '6', label(6), SOFT); lb.addSpacer(); t(lb, '12', label(6), SOFT); lb.addSpacer(); t(lb, '18', label(6), SOFT); lb.addSpacer(); t(lb, '24', label(6), SOFT)
+      }, '', null, 'study.records', SOFT],
+      // 지난주 같은 때와 비교 (두 줄 막대)
+      compare: ['VS LAST WEEK', (b, f, wd) => {
+        b.addSpacer(4); const mx = Math.max(1, weekTot, lastWeek)
+        for (const [l, v, c] of [['이번 주', weekTot, GOLD], ['지난주', lastWeek, SOFT]]) { const r = b.addStack(); r.centerAlignContent(); t(r, l, tw(LGd ? 11 : 9), INK); r.addSpacer(); t(r, hm(v), tw(LGd ? 11 : 9), c); b.addSpacer(2); const bb = b.addStack(); bb.size = new Size(wd, 3); bb.cornerRadius = 1.5; bb.backgroundColor = RULE; const fi = bb.addStack(); fi.size = new Size(Math.max(2, Math.round((wd * v) / mx)), 3); fi.cornerRadius = 1.5; fi.backgroundColor = c; bb.addSpacer(); b.addSpacer(LGd ? 6 : 4) }
+      }, (weekTot >= lastWeek ? '+' : '−') + hm(Math.abs(weekTot - lastWeek)), null, 'study.records', GOLD],
     }
     const tilesA = [
       // 할 일: 개수 대신 남은 할 일 제목 (위에서 두 개)
@@ -1017,13 +1072,16 @@ if (!data) {
           else { t(a, hm(mins), thin(22), INK).minimumScaleFactor = 0.6; a.addSpacer(5); t(a, 'of ' + hm(goal), tw(9), SOFT) }
           a.addSpacer(); t(a, pct + '%', tw(10), GOLD); P2.addSpacer(5); pbar(P2, mins / goal, wd)
         } else if (k === 'week') { a.bottomAlignContent(); t(a, hm(weekTot), thin(22), INK).minimumScaleFactor = 0.6; a.addSpacer(6); t(a, '이번 주', tw(10), SOFT); a.addSpacer(); t(a, '하루 ' + hm(weekAvg), tw(10), GOLD) }
+        else if (typeof TL[k][1] === 'function') { const x = TL[k]; a.centerAlignContent(); t(a, x[0], label(8), SOFT); a.addSpacer(); if (x[2]) t(a, x[2], tw(10), x[5]); x[1](P2, thin(20), wd) }
         else { const x = TL[k]; a.centerAlignContent(); t(a, x[2], tw(12), INK).minimumScaleFactor = 0.75; a.addSpacer(6); t(a, x[1], tw(11), GOLD); if (x[3] != null) { P2.addSpacer(4); pbar(P2, x[3], wd) } }
       }
       const others = keys.filter((k) => k !== 'todo'), hasTodo = keys.includes('todo')
       const col = (P2, ks, wd) => ks.forEach((k, i) => { if (i) P2.addSpacer(); line(P2, k, wd) })
       const row = w.addStack()
       const L = row.addStack(); L.layoutVertically(); L.size = new Size(lw, innerH)
-      col(L, hasTodo ? others.slice(0, 3) : others.slice(0, 2), lw)
+      // 그래프 칸이 끼면 높이가 모자라 왼쪽은 두 칸까지
+      const isG = (k) => ['bars', 'subjbar', 'ring', 'heat', 'hours', 'compare'].includes(k)
+      col(L, hasTodo ? others.slice(0, others.slice(0, 3).some(isG) ? 2 : 3) : others.slice(0, 2), lw)
       row.addSpacer(12); vrule(row, innerH); row.addSpacer(12)
       const R = row.addStack(); R.layoutVertically(); R.size = new Size(rw, innerH)
       if (hasTodo) {
@@ -1043,7 +1101,7 @@ if (!data) {
       for (const x of tiles.slice(i, i + cols)) {
         const b = r.addStack(); b.layoutVertically(); b.size = new Size(wd, 0); if (fam !== 'small') b.url = link(x[4])
         t(b, x[0], label(LG ? 9 : 7), x[0][0] === '●' ? GOLD : SOFT).minimumScaleFactor = 0.7; b.addSpacer(2)
-        if (typeof x[1] === 'function') { if (x[0] === 'TO DO') b.addSpacer(3); x[1](b, thin(big)) } else t(b, x[1], thin(big), INK).minimumScaleFactor = 0.5
+        if (typeof x[1] === 'function') { if (x[0] === 'TO DO') b.addSpacer(3); x[1](b, thin(big), wd) } else t(b, x[1], thin(big), INK).minimumScaleFactor = 0.5
         if (x[2]) t(b, x[2], tw(LG ? 12 : 10), x[5]).minimumScaleFactor = 0.7
         if (x[3] != null) { b.addSpacer(4); pbar(b, x[3], wd) }
       }
@@ -1051,7 +1109,7 @@ if (!data) {
     }
     }
     // 대형: 아래에 이번 주 공부 (할 일은 위 칸에 있으니 겹치지 않게)
-    if (fam === 'large' || fam === 'extraLarge') { w.addSpacer(); rule(w, inner); w.addSpacer(10); const s2 = w.addStack(); s2.centerAlignContent(); cap(s2, 'THIS WEEK'); s2.addSpacer(); t(s2, hm(weekTot) + ' · 하루 ' + hm(weekAvg), label(10), SOFT); w.addSpacer(8); bars7(w, inner, Math.round(innerH * 0.16), GOLD, RULE); w.addSpacer(3); wdRow(w, inner, 9); FILL = true }
+    if ((fam === 'large' || fam === 'extraLarge') && !keys.includes('bars')) { w.addSpacer(); rule(w, inner); w.addSpacer(10); const s2 = w.addStack(); s2.centerAlignContent(); cap(s2, 'THIS WEEK'); s2.addSpacer(); t(s2, hm(weekTot) + ' · 하루 ' + hm(weekAvg), label(10), SOFT); w.addSpacer(8); bars7(w, inner, Math.round(innerH * 0.16), GOLD, RULE); w.addSpacer(3); wdRow(w, inner, 9); FILL = true }
   } else if (KIND === 'tmrw') {
     // ── 내일 준비: 수업 · 일정 · 할 일 ──
     const td = new Date(d0.getTime() + 86400000)
