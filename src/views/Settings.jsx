@@ -84,7 +84,7 @@ export default function Settings() {
           <Field label={`모서리 둥글기 ${th.radius}px`}><input type="range" min="0" max="20" value={th.radius} onChange={(e) => setTheme({ radius: +e.target.value })} /></Field>
           <Field label="간격 · 이 기기만 (아이패드 기본 여유)"><Seg value={eff.density} onChange={(v) => { setDeviceTheme({ density: v }, th); bump() }} options={[['compact', '촘촘'], ['normal', '보통'], ['relaxed', '여유']]} /></Field>
           <Field label="아이패드 가로 2단 (오른쪽에 함께 보기)"><Seg value={st.splitPane || ''} onChange={(v) => setSettings({ splitPane: v || null })} options={[['', '끔'], ['planner', '오늘 일정'], ['timer', '타이머'], ['tasks', '오늘 할 일'], ['notes', '데일리']]} /></Field>
-          <Field label="카드 스타일"><Seg value={th.card} onChange={(v) => setTheme({ card: v })} options={[['line', '선'], ['shadow', '그림자'], ['flat', '평면'], ['glass', '유리']]} /></Field>
+          <Field label="카드 스타일"><Seg value={th.card} onChange={(v) => setTheme({ card: v })} options={[['line', '선'], ['shadow', '그림자'], ['flat', '평면'], ['glass', '유리'], ['paper', '종이']]} /></Field>
         </div>
       </Card>
 
