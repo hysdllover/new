@@ -261,7 +261,7 @@ function DoneTimeline({ items, subjects }) {
           </div>
         )
       })}
-      {!groups.length && <Empty>완료한 할 일이 여기 날짜별로 쌓여요</Empty>}
+      {!groups.length && <Empty>완료한 할 일이 없어요</Empty>}
     </div>
   )
 }

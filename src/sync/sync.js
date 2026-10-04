@@ -22,6 +22,9 @@ const ls = {
 let status = { state: ls.get('gist_token') ? 'idle' : 'off', last: +ls.get('gist_last') || null, error: null }
 const L = new Set()
 const setStatus = (p) => { status = { ...status, ...p }; L.forEach((l) => l()) }
+// 동기화 기록 (이 기기 · 최근 20개): 받은 항목 · 보낸 파일 · 겹침 · 오류
+export const syncLog = () => { try { return JSON.parse(localStorage.getItem('sync_log') || '[]') } catch { return [] } }
+function addLog(x) { try { localStorage.setItem('sync_log', JSON.stringify([x, ...syncLog()].slice(0, 20))) } catch {} }
 export const useSyncStatus = () => useSyncExternalStore((f) => { L.add(f); return () => L.delete(f) }, () => status)
 
 const token = () => ls.get('gist_token')
@@ -330,14 +333,16 @@ export async function syncNow({ flush = false } = {}) {
         remoteText[name] = f.truncated ? await (await fetch(f.raw_url)).text() : f.content
       }
       // 1) 원격 → 로컬 병합
-      const ex = excluded()
+      const ex = excluded(), since = +ls.get('gist_last') || 0
+      let got = 0, clash = 0
       for (const f of GIST_FILES) {
         let data = {}
         try { data = JSON.parse(remoteText[f + '.json'] || '{}') } catch {}
         for (const [c, recs] of Object.entries(data)) {
           if (!(c in COLLECTIONS) || ex.has(c)) continue
-          const { merged, localChanged } = mergeColl(getState()[c], recs)
+          const { merged, localChanged, received, conflicts } = mergeColl(getState()[c], recs, since)
           if (localChanged) replaceColl(c, merged)
+          got += received; clash += conflicts
         }
       }
       // 2) 로컬 → 원격: 바뀐 파일만
@@ -367,12 +372,15 @@ export async function syncNow({ flush = false } = {}) {
       await clearDeletes()
       const now = Date.now()
       ls.set('gist_last', String(now))
+      const sent = Object.keys(patchFiles).filter((k) => k.endsWith('.json') && !k.startsWith('backup-')).length
+      if (got || sent || clash) addLog({ at: now, got, sent, clash })
       setStatus({ state: 'ok', last: now })
     } catch (e) {
       if (e.until) pause(e.until)
       else {
         if (/Gist 를 찾을 수 없/.test(e.message)) ls.set('gist_id', null) // 지워진 gist → 다음에 다시 찾거나 만듦
         setStatus({ state: 'error', error: e.message, auth: !!e.auth })
+        addLog({ at: Date.now(), err: String(e.message || e).slice(0, 80) })
       }
     }
   })()

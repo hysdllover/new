@@ -52,7 +52,7 @@ export default function Library() {
           )
         })}
       </div>
-      {!list.length && <Empty>사진·PDF·HTML 자료를 올려 과목과 단원으로 정리하세요</Empty>}
+      {!list.length && <Empty>자료가 없어요</Empty>}
     </div>
   )
 }

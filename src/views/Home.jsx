@@ -39,6 +39,7 @@ const savePages = (pages) => setSettings({ widgetPages: pages })
 
 export default function Home() {
   const pages = usePages()
+  const hide = useSettings().homeHide || {}
   const [editing, setEditing] = useState(false)
   const [cur, setCur] = useState(() => { try { return +localStorage.getItem('homePage') || 0 } catch { return 0 } })
   const scroller = useRef(null)
@@ -70,9 +71,12 @@ export default function Home() {
 
   return (
     <div className="col">
-      <Greeting />
-      <PlanBanner />
-      <TodayOne />
+      {!hide.greet && <Greeting />}
+      {!hide.plan && <PlanBanner />}
+      {!hide.one && <TodayOne />}
+      {editing && <div className="row wrap no-print" style={{ gap: 6 }}><span className="tiny muted">위쪽 카드</span>
+        {[['greet', '인사·날짜'], ['plan', '계획 안내'], ['one', '오늘 하나']].map(([k, l]) => <button key={k} className={'chip' + (!hide[k] ? ' on' : '')} onClick={() => setSettings({ homeHide: { ...hide, [k]: !hide[k] } })}>{l}</button>)}
+        <span className="tiny muted">· 위젯은 길게 끌거나 ‹ › 로 순서 바꾸기</span></div>}
       <div className="row no-print" style={{ gap: 6 }}>
         <div className="scroll-x grow"><div className="row" style={{ gap: 6 }}>
           {pages.map((p, i) => <button key={p.id} className={'chip' + (i === idx ? ' on' : '')} onClick={() => goPage(i)}>{p.name}</button>)}
@@ -99,7 +103,11 @@ export default function Home() {
                     data-drop={editing ? 'w:' + w.id : undefined}
                     onClick={editing ? () => widgetSettings(pi, w) : undefined}
                     {...(editing ? longPress(() => ({ label: WIDGETS[w.type].label, onDrop: (z) => move(w.id, z.dataset.drop.slice(2)) }), 250) : {})}>
-                    {editing && <div className="w-badge">{wCols(w)}/4{wRows(w) > 1 ? ` · ${wRows(w)}배` : ''} · 탭해서 설정</div>}
+                    {editing && <div className="w-badge row" style={{ gap: 4 }}>
+                      <button className="icon-btn" aria-label="앞으로" onClick={(e) => { e.stopPropagation(); const a = [...p.widgets], i = a.indexOf(w); if (i > 0) { [a[i - 1], a[i]] = [a[i], a[i - 1]]; setW(pi, a) } }}>‹</button>
+                      <span>{wCols(w)}/4{wRows(w) > 1 ? ` · ${wRows(w)}배` : ''} · 탭해서 설정</span>
+                      <button className="icon-btn" aria-label="뒤로" onClick={(e) => { e.stopPropagation(); const a = [...p.widgets], i = a.indexOf(w); if (i < a.length - 1) { [a[i + 1], a[i]] = [a[i], a[i + 1]]; setW(pi, a) } }}>›</button>
+                    </div>}
                     <div className="wf-body" style={editing ? { pointerEvents: 'none' } : null}>
                       <W w={w} update={(patchW) => setW(pi, p.widgets.map((x) => (x.id === w.id ? { ...x, ...patchW } : x)))} />
                     </div>

@@ -80,7 +80,7 @@ function Meds() {
             <span className="small muted">{t === '--' ? '시간 없음' : t}</span>
           </div>
         ))}
-        {!slots.length && <Empty>복용할 약을 추가하면 시간에 맞춰 알려줘요</Empty>}
+        {!slots.length && <Empty>약이 없어요</Empty>}
       </div>
       <div className="divider" />
       <div className="list">

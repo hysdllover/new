@@ -34,7 +34,7 @@ export default function Review() {
               <button className="btn sm primary" onClick={() => completeReview(r.id, true)}>기억남</button>
             </div>
           ))}
-          {!due.length && <Empty>오늘 복습할 항목이 없어요</Empty>}
+          {!due.length && <Empty>오늘 복습이 없어요</Empty>}
         </div>
         <div style={{ marginTop: 10 }}><AddInput placeholder="오늘 배운 것 복습 등록" onAdd={(title) => addReview({ title })} /></div>
       </Card>
@@ -47,7 +47,7 @@ export default function Review() {
               <button className="icon-btn" onClick={() => remove('reviews', r.id)} aria-label="삭제"><Icon name="close" size={14} /></button>
             </div>
           ))}
-          {!upcoming.length && <Empty>노트·할 일에서 ‘복습 등록’을 누르면 망각곡선 간격으로 다시 알려줘요</Empty>}
+          {!upcoming.length && <Empty>예정된 복습이 없어요</Empty>}
         </div>
         {done.length > 0 && <div className="small muted" style={{ marginTop: 8 }}>완전히 익힌 항목 {done.length}개</div>}
       </Card>

@@ -64,7 +64,7 @@ export default function Log({ params = {} }) {
                 </button>
               )
             })}
-            {!list.length && <Empty>이 날의 기록이 없어요</Empty>}
+            {!list.length && <Empty>기록이 없어요</Empty>}
           </div>
         </Card>
       </div>

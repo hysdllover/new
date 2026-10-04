@@ -137,7 +137,7 @@ function Habits() {
             </div>
           )
         })}
-        {!habits.length && <Empty>매일 반복할 습관을 추가하세요</Empty>}
+        {!habits.length && <Empty>습관이 없어요</Empty>}
         <AddInput placeholder="습관 추가 (예: 아침 영단어)" onAdd={(title) => put('habits', { title, color: PALETTE[habits.length % PALETTE.length], days: {} })} />
       </div>
     </Card>
@@ -174,7 +174,7 @@ function Grades() {
             ))}
           </div>
         </>
-      ) : <Empty>시험 점수를 기록하면 추이와 목표를 보여줘요</Empty>}
+      ) : <Empty>성적 기록이 없어요</Empty>}
     </Card>
   )
 }

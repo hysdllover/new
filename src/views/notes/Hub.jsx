@@ -30,7 +30,7 @@ export default function Hub({ hubId }) {
               </button>
             )
           })}
-          {!projects.length && <Empty>설정에서 프로젝트를 추가하세요</Empty>}
+          {!projects.length && <Empty>프로젝트가 없어요</Empty>}
         </div>
         <h4>과목</h4>
         <div className="note-grid">
@@ -58,7 +58,7 @@ function HubPage({ hubId }) {
   const tasks = useColl('tasks'), events = useColl('events'), notes = useColl('notes'), files = useColl('files')
   const sessions = useColl('sessions'), textbooks = useColl('textbooks'), lectures = useColl('lectures'), reviews = useColl('reviews'), ddays = useColl('ddays')
   const rec = isP ? projects.find((p) => p.id === id) : subjects.find((s) => s.id === id)
-  if (!rec) return <Empty>삭제된 허브입니다</Empty>
+  if (!rec) return <Empty>삭제된 허브예요</Empty>
   const key = isP ? 'projectId' : 'subjectId'
   const ts = tasks.filter((t) => t[key] === id && !t.archived)
   const open = ts.filter((t) => !t.done).sort((a, b) => (a.due || '9').localeCompare(b.due || '9'))

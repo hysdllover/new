@@ -78,6 +78,12 @@ Promise.all([loadState(), initFonts(), restoreSync()]).then(async () => {
     const [{ default: QuickAdd }, { openSheet }] = await Promise.all([import('./components/QuickAdd.jsx'), import('./components/ui.jsx')])
     setTimeout(() => openSheet((c) => <QuickAdd close={c} initial={newIn} />, { title: '빠른 추가' }), 300)
   }
+  // 공유 시트 사진: ?photo=1 → 붙여넣기 시트 (단축어가 사진을 클립보드에 복사해 둠)
+  const photoIn = q.get('photo') != null
+  if (photoIn) {
+    const [{ default: PhotoPaste }, { openSheet }] = await Promise.all([import('./components/PhotoPaste.jsx'), import('./components/ui.jsx')])
+    setTimeout(() => openSheet((c) => <PhotoPaste close={c} />, { title: '사진 넣기' }), 300)
+  }
   // 단축어(애플 인텔리전스)가 돌려준 답: ?ai=답
   const aiIn = q.get('ai')
   if (aiIn != null) {
@@ -93,7 +99,7 @@ Promise.all([loadState(), initFonts(), restoreSync()]).then(async () => {
     const r = importHealth(q)
     if (r) { go('health'); setTimeout(() => toast(`건강 기록 · ${[r.sleep != null && `수면 ${r.sleep}시간`, r.steps != null && `걸음 ${r.steps.toLocaleString()}`].filter(Boolean).join(' · ')}`), 600) }
   }
-  if (target || added || link || noteIn != null || healthIn || aiIn != null || doneIn || timerIn != null || newIn) history.replaceState(null, '', location.pathname + location.hash)
+  if (target || added || link || noteIn != null || healthIn || aiIn != null || doneIn || timerIn != null || newIn || photoIn) history.replaceState(null, '', location.pathname + location.hash)
   createRoot(document.getElementById('root')).render(<StrictMode><Root /></StrictMode>)
   startServices()
   import('./lib/resume.js').then((m) => m.startResume())
