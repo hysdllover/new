@@ -1,3 +1,4 @@
+import { useTimerState, useTick, elapsed, remaining } from '../lib/timer.js'
 import { Fragment, useEffect, useState } from 'react'
 import { useSettings, setSettings, useColl, put, remove, patch, exportJSON, importJSON, uid } from '../store/store.js'
 import { PRESETS, FONTS, effTheme, setDeviceTheme } from '../theme/theme.js'
@@ -15,7 +16,7 @@ import { sortTasks } from './tasks/filter.js'
 import { download } from '../lib/files.js'
 import { useMyFonts, addFont, removeFont, fontFamily, loadAllFonts, SYNC_FONT_MAX } from '../lib/fonts.js'
 import { requestPermission } from '../lib/notify.js'
-import { fmtTime, today, WD, weekStart } from '../engine/date.js'
+import { fmtTime, fmtClock, today, WD, weekStart } from '../engine/date.js'
 import { weekGoals, goalProgress } from '../store/actions.js'
 import { DIGEST_TIMES } from '../engine/reminders.js'
 
@@ -719,13 +720,14 @@ function WidgetPreview() {
   const qsub = (() => { const out = []; for (const x of [...sessions].sort((a, b) => String(b.date).localeCompare(String(a.date)))) { const s = subjects.find((y) => y.id === x.subjectId); if (s && !out.includes(s)) out.push(s) } for (const s of subjects) if (!out.includes(s)) out.push(s); return out.slice(0, 8) })()
   const evRow = (e, k) => <div key={k} className="dw-todo"><span className="dw-soft" style={{ width: 30, flexShrink: 0 }}>{e.start == null ? '종일' : fmtTime(e.start)}</span><i style={{ width: 2, height: 12, borderRadius: 1, flexShrink: 0, background: e.color || 'var(--rule)' }} /><span className="ellipsis">{e.title}</span></div>
   const tkRow = (t) => <div key={t.id} className="dw-todo"><span className={t.priority >= 3 ? 'dw-gold' : 'dw-soft'}>{t.priority >= 3 ? '•' : '–'}</span><span className="ellipsis grow" style={t.priority >= 3 ? { fontWeight: 500 } : null}>{t.title}</span>{t.dueTime != null && <span className="dw-soft">{fmtTime(t.dueTime)}</span>}</div>
+  const tmP = useTimerState(); useTick(!!tmP && !tmP.paused) // 타이머가 돌면 공부 칸에 타이머
   const g0P = goalsP.find((g) => !g.done), pP = progP[0]
-  const TLp = { dday: ['D-DAY', dd ? ddTxt : '—', dd ? dd.title : '없음', null, 1], next: [nCur ? 'NOW' : 'NEXT', nC ? fmtTime(nC.s) : '—', nC ? nC.t : '남은 일정 없음'], todo: ['TO DO', items.filter((t) => !t.done), ''], study: ['STUDY', hm(mins), pct + '%', mins / goal, 1],
+  const TLp = { dday: ['D-DAY', dd ? ddTxt : '—', dd ? dd.title : '없음', null, 1], next: [nCur ? 'NOW' : 'NEXT', nC ? fmtTime(nC.s) : '—', nC ? nC.t : '남은 일정 없음'], todo: ['TO DO', items.filter((t) => !t.done), ''], study: tmP ? ['● ' + (subjects.find((x) => x.id === tmP.subjectId)?.name || '공부'), fmtClock((tmP.mode === 'countdown' ? remaining(tmP) : elapsed(tmP)) / 1000), (tmP.paused ? '일시정지 · ' : '오늘 ') + hm(mins), mins / goal, 1] : ['STUDY', hm(mins), pct + '%', mins / goal, 1],
     prog: ['PROGRESS', pP ? Math.round((pP.n / pP.of) * 100) + '%' : '—', pP ? pP.t : '진행 중인 교재 없음', pP ? pP.n / pP.of : null], goals: ['GOALS', goalsP.length ? `${gDone}/${goalsP.length}` : '—', g0P ? g0P.t : goalsP.length ? '모두 완료' : '목표 없음', goalsP.length ? gDone / goalsP.length : null], week: ['THIS WEEK', hm(sw.week), '하루 ' + hm(sw.avg), sw.week / Math.max(1, goal * 7), 1] }
   const dKeys = dashKeys(st), tiles = dKeys.map((k) => TLp[k])
   const dLine = (k) => k === 'dday' ? <div key={k} className="row" style={{ gap: 6, alignItems: 'baseline', flexWrap: 'nowrap' }}><span style={{ fontSize: 26, fontWeight: 100, lineHeight: 1 }}>{dd ? ddTxt : '—'}</span><span className="dw-gold ellipsis" style={{ fontSize: 11 }}>{dd ? dd.title : 'No D-day'}</span></div>
     : k === 'next' ? <div key={k} className="dw-todo"><span className="dw-gold" style={{ fontSize: 11 }}>{nC ? (nCur ? '지금 ' : '') + fmtTime(nC.s) : '—'}</span><span className="ellipsis">{nC ? nC.t : '남은 일정 없음'}</span></div>
-    : k === 'study' ? <div key={k}>{big(22)}</div>
+    : k === 'study' ? (tmP ? <div key={k}><div className="row" style={{ gap: 6, alignItems: 'baseline', flexWrap: 'nowrap' }}><span className="dw-gold" style={{ fontSize: 10 }}>● {TLp.study[0].slice(2)}</span><span style={{ fontSize: 20, fontWeight: 100 }}>{TLp.study[1]}</span><span className="grow" /><span className="dw-gold" style={{ fontSize: 10 }}>{pct}%</span></div><div className="dw-line"><i style={{ width: pct + '%' }} /></div></div> : <div key={k}>{big(22)}</div>)
     : k === 'week' ? <div key={k} className="row" style={{ gap: 6, alignItems: 'baseline', flexWrap: 'nowrap' }}><span style={{ fontSize: 22, fontWeight: 100 }}>{hm(sw.week)}</span><span className="dw-soft" style={{ fontSize: 10 }}>이번 주</span><span className="grow" /><span className="dw-gold" style={{ fontSize: 10 }}>하루 {hm(sw.avg)}</span></div>
     : <div key={k}><div className="row" style={{ flexWrap: 'nowrap', gap: 6 }}><span className="ellipsis grow">{TLp[k][2]}</span><span className="dw-gold" style={{ fontSize: 11 }}>{TLp[k][1]}</span></div>{TLp[k][3] != null && <div className="dw-line" style={{ marginTop: 4 }}><i style={{ width: Math.min(100, TLp[k][3] * 100) + '%' }} /></div>}</div>
   const dCol = (ks) => ks.map((k, i) => <Fragment key={k}>{i > 0 && <div className="grow" />}{dLine(k)}</Fragment>)
