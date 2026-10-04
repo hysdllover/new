@@ -4,7 +4,7 @@ import { pickQuote } from './quote.js'
 export const WIDGET_KINDS = [['', '기본'], ['공부', '공부'], ['할일', '할 일'], ['디데이', 'D-day'], ['달력', '공부 달력'], ['캘린더', '캘린더'], ['다짐', '다짐'], ['시간표', '시간표'], ['주간', '주간 공부'], ['과목', '과목별'], ['지금', '지금·다음'], ['진도', '진도'], ['목표', '이번 주 목표'], ['오늘', '오늘 한눈에'], ['대시보드', '대시보드'], ['내일', '내일 준비'], ['마감', '마감 임박'], ['일주일', '7일 일정'], ['디데이목록', 'D-day 목록'], ['바로가기', '바로 시작'], ['진행', '공부 진행'], ['남은분', '남은 시간'], ['타이머', '타이머·공부 시간'], ['구성1', '내 위젯 1'], ['구성2', '내 위젯 2'], ['구성3', '내 위젯 3']]
 
 // 스크립트 버전 — 위젯 모양이 바뀔 때 올림. 앱이 위젯 데이터에 같이 올려서, 예전 스크립트면 위젯에 '스크립트 업데이트' 표시
-export const SCRIPT_VER = 57
+export const SCRIPT_VER = 58
 
 // 전체 스크립트 (예전 방식 · 테스트용): 머리 + 본체
 export function buildScript({ widgetRaw, appUrl }) {
@@ -67,11 +67,11 @@ const nC = (h, a = 1) => {
 }
 
 const dyn = (l, d, a = 1) => Color.dynamic(new Color(l, a), new Color(d, a))
-const BG = dyn('#f5f3ef', '#161616')
-let INK = dyn('#2b2a28', '#ece8e1')
-let SOFT = dyn('#a19c93', '#7d786f')
-let GOLD = dyn('#b39d74', '#c9b489')
-let RULE = dyn('#e2ded6', '#2c2b29')
+const BG = dyn('#f2f4f6', '#15181d')
+let INK = dyn('#2a2f38', '#e6e9ee')
+let SOFT = dyn('#8c94a1', '#78808d')
+let GOLD = dyn('#66778f', '#9fadc4')
+let RULE = dyn('#dce1e7', '#2a2f37')
 
 // 폰트 — 한글·영문·숫자 한 서체로 통일. 기본 애플 산돌고딕 얇게, 앱 설정에서 설치한 폰트(PostScript 이름) 지정 가능
 let CUSTOM = '', SCALE = 1, WSHIFT = 0, CLEAR = false
@@ -156,8 +156,8 @@ const dark = () => Device.isUsingDarkAppearance()
 // 가는 진행선
 function line(ratio, w, fg, bg) {
   const c = new DrawContext(); c.size = new Size(w, 3); c.opaque = false; c.respectScreenScale = true
-  c.setFillColor(new Color(bg || (dark() ? '#2c2b29' : '#e2ded6'))); c.fillRect(new Rect(0, 1, w, 1))
-  c.setFillColor(new Color(fg || (dark() ? '#c9b489' : '#b39d74'))); c.fillRect(new Rect(0, 0.5, Math.max(2, w * Math.min(1, ratio)), 2))
+  c.setFillColor(new Color(bg || (dark() ? '#2a2f37' : '#dce1e7'))); c.fillRect(new Rect(0, 1, w, 1))
+  c.setFillColor(new Color(fg || (dark() ? '#9fadc4' : '#66778f'))); c.fillRect(new Rect(0, 0.5, Math.max(2, w * Math.min(1, ratio)), 2))
   return c.getImage()
 }
 function rule(parent, w) { const s = parent.addStack(); s.size = new Size(w, 0.6); s.backgroundColor = RULE }
@@ -230,7 +230,7 @@ MONO = WT === 'mono'
 if (MONO) GOLD = new Color('#ffffff', 0.9)
 const inkMode = WT === 'white' || WT === 'night' || WT === 'mono' ? 'light' : WT === 'black' || WT === 'paper' ? 'dark' : Keychain.contains('study-ink') ? Keychain.get('study-ink') : 'auto'
 if (inkMode === 'light') { INK = new Color('#ffffff'); SOFT = new Color('#ffffff', 0.72); RULE = new Color('#ffffff', 0.3) }
-if (inkMode === 'dark') { INK = new Color('#1d1c1a'); SOFT = new Color('#1d1c1a', 0.6); RULE = new Color('#1d1c1a', 0.2) }
+if (inkMode === 'dark') { INK = new Color('#1e232b'); SOFT = new Color('#1e232b', 0.6); RULE = new Color('#1e232b', 0.2) }
 if (!lock) {
   w.setPadding(P, P, P, P)
   if (WT === 'paper') { if (PAPER) w.backgroundImage = paperBg(SZ[fam] || SZ.large, SZ.h[fam] || SZ.h.large); else w.backgroundColor = new Color('#f2f2f1') }
@@ -253,8 +253,8 @@ if (!data) {
     // 투명·클리어 위젯: 한 단계 굵게, 흐린 글자도 또렷하게, 선도 진하게
     WSHIFT = Math.max(WSHIFT, 0) + 1
     inkDark = inkMode === 'dark'
-    SOFT = inkMode === 'light' ? new Color('#ffffff', 0.9) : inkMode === 'dark' ? new Color('#1d1c1a', 0.85) : dyn('#2b2a28', '#ece8e1', 0.85)
-    RULE = inkMode === 'light' ? new Color('#ffffff', 0.5) : inkMode === 'dark' ? new Color('#1d1c1a', 0.35) : dyn('#2b2a28', '#ece8e1', 0.35)
+    SOFT = inkMode === 'light' ? new Color('#ffffff', 0.9) : inkMode === 'dark' ? new Color('#1e232b', 0.85) : dyn('#2a2f38', '#e6e9ee', 0.85)
+    RULE = inkMode === 'light' ? new Color('#ffffff', 0.5) : inkMode === 'dark' ? new Color('#1e232b', 0.35) : dyn('#2a2f38', '#e6e9ee', 0.35)
   }
   MH = innerH - Math.round(11 * SCALE) - 10
   const goal = st.goalDaily || 240
@@ -274,7 +274,7 @@ if (!data) {
   let strikeImg = null // 필요할 때만 그림 (잠금 화면에선 안 그림)
   const strikeImage = () => strikeImg || (strikeImg = (() => {
     const c = new DrawContext(); c.size = new Size(240, 24); c.opaque = false; c.respectScreenScale = true
-    c.setFillColor(new Color(dark() ? '#7d786f' : '#a19c93')); c.fillRect(new Rect(0, 11.6, 240, 1.2))
+    c.setFillColor(new Color(dark() ? '#78808d' : '#8c94a1')); c.fillRect(new Rect(0, 11.6, 240, 1.2))
     return c.getImage()
   })())
   const strike = (parent, s, font) => { const k = parent.addStack(); k.backgroundImage = strikeImage(); t(k, s, font, SOFT).minimumScaleFactor = 0.85; return k }
@@ -359,10 +359,10 @@ if (!data) {
         if (day < 1 || day > n) continue
         const key = y + '-' + pad(m + 1) + '-' + pad(day)
         const v = byDay[key] || 0, r = Math.min(1, v / goal)
-        c.backgroundColor = v ? dyn('#b39d74', '#c9b489', 0.18 + 0.72 * r) : RULE
+        c.backgroundColor = v ? dyn('#66778f', '#9fadc4', 0.18 + 0.72 * r) : RULE
         if (key === today) { c.borderWidth = 1; c.borderColor = INK }
         // 대형: 날짜 + 그날 공부 시간 (칸 진하기 = 목표 대비)
-        if (showNum) { const fg = r >= 0.6 ? dyn('#ffffff', '#161616') : v ? INK : SOFT; c.layoutVertically(); c.setPadding(3, 4, 2, 2); t(c, day, label(8), fg); c.addSpacer(); if (v) t(c, hm(v), F(8, 'Medium'), fg).minimumScaleFactor = 0.6 }
+        if (showNum) { const fg = r >= 0.6 ? dyn('#ffffff', '#15181d') : v ? INK : SOFT; c.layoutVertically(); c.setPadding(3, 4, 2, 2); t(c, day, label(8), fg); c.addSpacer(); if (v) t(c, hm(v), F(8, 'Medium'), fg).minimumScaleFactor = 0.6 }
       }
       parent.addSpacer(gap)
     }
@@ -405,7 +405,7 @@ if (!data) {
   const bars7 = (parent, wd, h, fg, bg) => {
     const mx = Math.max(goal, ...week7.map((x) => x.m)), gap = 4, bw = Math.floor((wd - gap * 6) / 7)
     const row = parent.addStack(); row.size = new Size(wd, h); row.bottomAlignContent(); row.spacing = gap
-    week7.forEach((x, i) => { const b = row.addStack(); b.size = new Size(bw, Math.max(2, Math.round((x.m / mx) * h))); b.cornerRadius = Math.min(3, bw / 3); b.backgroundColor = x.m ? (i === 6 ? fg : dyn('#b39d74', '#c9b489', 0.5)) : bg })
+    week7.forEach((x, i) => { const b = row.addStack(); b.size = new Size(bw, Math.max(2, Math.round((x.m / mx) * h))); b.cornerRadius = Math.min(3, bw / 3); b.backgroundColor = x.m ? (i === 6 ? fg : dyn('#66778f', '#9fadc4', 0.5)) : bg })
     return row
   }
   const wdRow = (parent, wd, size = 7) => { const gap = 4, bw = Math.floor((wd - gap * 6) / 7); const r = parent.addStack(); r.spacing = gap; week7.forEach((x, i) => { const c = r.addStack(); c.size = new Size(bw, Math.max(10, size + 4)); c.centerAlignContent(); t(c, ['S', 'M', 'T', 'W', 'T', 'F', 'S'][x.wd], label(size), i === 6 ? GOLD : SOFT) }) }
@@ -736,10 +736,10 @@ if (!data) {
       const c = new DrawContext(); c.size = new Size(width, height); c.opaque = false; c.respectScreenScale = true
       const max = Math.max(goal, ...last7.map((x) => x.m)), bw = (width - 6 * 6) / 7
       const gy = height - (goal / max) * height
-      c.setFillColor(new Color(dark() ? '#3a3935' : '#d9d4ca')); for (let x = 0; x < width; x += 4) c.fillRect(new Rect(x, gy, 2, 0.6))
+      c.setFillColor(new Color(dark() ? '#353b45' : '#d3d9e0')); for (let x = 0; x < width; x += 4) c.fillRect(new Rect(x, gy, 2, 0.6))
       last7.forEach((x, i) => {
         const h = Math.max(1.5, (x.m / max) * height)
-        c.setFillColor(new Color(dark() ? '#c9b489' : '#b39d74', i === 6 ? 1 : 0.35 + 0.4 * Math.min(1, x.m / goal)))
+        c.setFillColor(new Color(dark() ? '#9fadc4' : '#66778f', i === 6 ? 1 : 0.35 + 0.4 * Math.min(1, x.m / goal)))
         const p = new Path(); p.addRoundedRect(new Rect(i * (bw + 6), height - h, bw, h), 2, 2); c.addPath(p); c.fillPath()
       })
       const img = parent.addImage(c.getImage()); img.imageSize = new Size(width, height)
@@ -1015,7 +1015,7 @@ if (!data) {
     const mPre = d0.getFullYear() + '-' + pad(d0.getMonth() + 1), monthTot = Object.entries(DM).filter(([k2]) => k2.startsWith(mPre)).reduce((a2, [, v]) => a2 + v, 0)
     const ringImg = (r, size, lw) => {
       const c = new DrawContext(); c.size = new Size(size, size); c.opaque = false; c.respectScreenScale = true
-      const light = inkMode === 'light', fg = new Color(light ? '#ffffff' : dark() ? '#c9b489' : '#b39d74'), bg = new Color(light ? '#ffffff' : dark() ? '#2c2b29' : '#e2ded6', light ? 0.3 : 1)
+      const light = inkMode === 'light', fg = new Color(light ? '#ffffff' : dark() ? '#9fadc4' : '#66778f'), bg = new Color(light ? '#ffffff' : dark() ? '#2a2f37' : '#dce1e7', light ? 0.3 : 1)
       const cx = size / 2, rad = size / 2 - lw
       const arc = (to, col) => { const p = new Path(), n = Math.max(2, Math.round(72 * to)), pts = []; for (let i = 0; i <= n; i++) { const a2 = -Math.PI / 2 + 2 * Math.PI * to * (i / n); pts.push(new Point(cx + rad * Math.cos(a2), cx + rad * Math.sin(a2))) } p.addLines(pts); c.addPath(p); c.setStrokeColor(col); c.setLineWidth(lw); c.strokePath() }
       arc(1, bg); if (r > 0) arc(Math.min(1, r), fg)
@@ -1060,7 +1060,7 @@ if (!data) {
         let day = 1 - lead
         for (let ri = 0; ri < rows; ri++) {
           const row = b.addStack(); row.spacing = g
-          for (let i = 0; i < 7; i++, day++) { const c = row.addStack(); c.size = new Size(cw, ch); c.cornerRadius = Math.min(2, ch / 3); if (day < 1 || day > n) continue; const k2 = y + '-' + pad(m + 1) + '-' + pad(day), v = DM[k2] || 0; c.backgroundColor = v ? dyn('#b39d74', '#c9b489', 0.2 + 0.75 * Math.min(1, v / goal)) : RULE; if (k2 === today) { c.borderWidth = 1; c.borderColor = INK } }
+          for (let i = 0; i < 7; i++, day++) { const c = row.addStack(); c.size = new Size(cw, ch); c.cornerRadius = Math.min(2, ch / 3); if (day < 1 || day > n) continue; const k2 = y + '-' + pad(m + 1) + '-' + pad(day), v = DM[k2] || 0; c.backgroundColor = v ? dyn('#66778f', '#9fadc4', 0.2 + 0.75 * Math.min(1, v / goal)) : RULE; if (k2 === today) { c.borderWidth = 1; c.borderColor = INK } }
           if (ri < rows - 1) b.addSpacer(g)
         }
       }, '', null, 'study.records', SOFT],

@@ -313,11 +313,11 @@ button.greet { display: block; width: 100%; text-align: left; }
 /* ── 홈 화면 위젯 미리보기 (얇은 단일 서체 · 모노톤) ── */
 .dw-row { display: flex; align-items: flex-start; gap: 12px; overflow-x: auto; padding: 4px 2px 10px; scrollbar-width: none; }
 .dw-row::-webkit-scrollbar { display: none; }
-.dw { --bg: #f5f3ef; --ink: #2b2a28; --soft: #a19c93; --gold: #b39d74; --rule: #e2ded6;
+.dw { --bg: #f2f4f6; --ink: #2a2f38; --soft: #8c94a1; --gold: #66778f; --rule: #dce1e7;
   flex-shrink: 0; border-radius: 22px; padding: 18px; display: flex; flex-direction: column; background: var(--bg); color: var(--ink);
   font-family: "Apple SD Gothic Neo", -apple-system, "Noto Sans KR", sans-serif; font-weight: 300; font-size: 12px; box-shadow: 0 1px 2px rgba(0, 0, 0, .06), 0 8px 24px rgba(0, 0, 0, .06); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .dw { --bg: #161616; --ink: #ece8e1; --soft: #7d786f; --gold: #c9b489; --rule: #2c2b29; } }
-:root[data-theme="dark"] .dw { --bg: #161616; --ink: #ece8e1; --soft: #7d786f; --gold: #c9b489; --rule: #2c2b29; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .dw { --bg: #15181d; --ink: #e6e9ee; --soft: #78808d; --gold: #9fadc4; --rule: #2a2f37; } }
+:root[data-theme="dark"] .dw { --bg: #15181d; --ink: #e6e9ee; --soft: #78808d; --gold: #9fadc4; --rule: #2a2f37; }
 .dw-s { width: 158px; height: 158px; padding: 16px; }
 .dw-m { width: 338px; height: 158px; flex-direction: row; gap: 16px; }
 .dw-l { width: 338px; height: 354px; }
