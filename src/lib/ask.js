@@ -39,7 +39,7 @@ export function answer(q, { tasks, sessions, subjects, ddays, today: t, weekStar
     const list = live.filter((x) => !x.done && ((x.carry || 0) > 0 || (x.due && x.due < t)) && (!sub || x.subjectId === sub.id))
       .sort((a, b) => (b.carry || 0) - (a.carry || 0) || (a.due || '').localeCompare(b.due || ''))
     if (!list.length) return { text: '밀린 할 일이 없어요' }
-    return { text: `밀리거나 미룬 할 일 ${list.length}개`, lines: list.slice(0, 8).map((x) => `${x.title}${x.carry ? ` · ${x.carry}번 미룸` : ''}${x.due ? ` · ${x.due.slice(5).replace('-', '/')}` : ''}`) }
+    return { text: `밀리거나 미룬 할 일 ${list.length}개`, lines: list.slice(0, 8).map((x) => `${x.title}${x.due ? ` · ${x.due.slice(5).replace('-', '/')}` : ''}`) }
   }
   // 완료한 할 일
   if (/완료|끝낸|끝냈|해낸|한\s*일/.test(q)) {
@@ -81,7 +81,7 @@ export function contextFor({ tasks, sessions, subjects, ddays, today: t }) {
   const study = Object.entries(by).sort().map(([k, v]) => `${k} ${v}분`).join('; ')
   const live = tasks.filter((x) => !x.archived)
   const open = live.filter((x) => !x.done).sort((a, b) => (a.due || '9').localeCompare(b.due || '9')).slice(0, 40)
-    .map((x) => `${x.title}(${name(x.subjectId)}${x.due ? ', 마감 ' + x.due : ''}${x.carry ? ', ' + x.carry + '번 미룸' : ''}${x.estimate ? ', 예상 ' + x.estimate + '분' : ''})`).join('; ')
+    .map((x) => `${x.title}(${name(x.subjectId)}${x.due ? ', 마감 ' + x.due : ''}${x.estimate ? ', 예상 ' + x.estimate + '분' : ''})`).join('; ')
   const done = live.filter((x) => x.done && x.doneAt && tsToYmd(x.doneAt) >= addDays(t, -13)).slice(0, 30).map((x) => `${tsToYmd(x.doneAt)} ${x.title}`).join('; ')
   const dd = ddays.filter((d) => d.date >= t).map((d) => `${d.title} ${d.date}`).join('; ')
   return `오늘: ${t}\n최근 30일 공부(날짜 과목 분): ${study || '없음'}\n남은 할 일: ${open || '없음'}\n최근 2주 완료: ${done || '없음'}\nD-day: ${dd || '없음'}`

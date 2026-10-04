@@ -23,7 +23,6 @@ export default function TaskItem({ t, subjects, projects, drag, compact, extra }
             {subs.length > 0 && <span>☑ {sdone}/{subs.length}</span>}
             {t.repeat && <span>↻</span>}
             {t.estimate && <span>{t.estimate}분</span>}
-            {t.carry > 0 && <span className="carry" title="이월 횟수">↪{t.carry}</span>}
             {(t.files?.length > 0 || t.links?.length > 0) && <Icon name="link" size={12} />}
             {t.dependsOn?.length > 0 && <span>⛓</span>}
             {extra}

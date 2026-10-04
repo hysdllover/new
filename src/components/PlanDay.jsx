@@ -24,7 +24,7 @@ function PlanDay({ close }) {
   const finish = () => { setDay(d, { planned: true }); toast('오늘 계획 완료 · 좋은 하루 보내세요'); close() }
   const Row = ({ t, children }) => (
     <div className="item" style={{ alignItems: 'center', gap: 8 }}>
-      <span className="grow ellipsis small">{t.title}{t.due && t.due < d && <span className="tiny muted"> · {fmtShort(t.due)}{t.carry ? <span className="carry"> · ↪{t.carry}</span> : ''}</span>}</span>
+      <span className="grow ellipsis small">{t.title}{t.due && t.due < d && <span className="tiny muted"> · {fmtShort(t.due)}</span>}</span>
       <div className="row" style={{ gap: 4, flexShrink: 0 }}>{children}</div>
     </div>
   )

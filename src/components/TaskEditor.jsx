@@ -133,7 +133,7 @@ export default function TaskEditor({ id }) {
           </div>
         </details>
 
-        <div className="small muted">공부 시간 {fmtDur(spent)}{t.carry ? ` · 이월 ${t.carry}회` : ''}</div>
+        <div className="small muted">공부 시간 {fmtDur(spent)}</div>
         <button className="btn ghost sm" onClick={() => setShowLog(!showLog)}>활동 로그 {myLogs.length}개 {showLog ? '▲' : '▼'}</button>
         {showLog && (
           <div className="list small">
