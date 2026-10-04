@@ -16,6 +16,8 @@ const ROWS = [[1, '기본'], [2, '2배'], [3, '3배']]
 const STYLES = [['card', '카드'], ['tint', '색채움'], ['plain', '미니멀'], ['bold', '진하게'], ['glass', '유리'], ['outline', '테두리'], ['gradient', '그라데이션']]
 export const wCols = (w) => w.cols || { s: 2, m: 4, l: 4, t: 2 }[w.size || 's'] || 2
 export const wRows = (w) => w.rows || (w.size === 't' ? 2 : 1)
+// 벤토: 작은 위젯이 이어지면 [큰 칸(반 폭·2배 높이), 작은 칸, 작은 칸] 묶음으로 · 넓은 위젯은 한 줄
+const bento = (ws) => { let run = 0; return ws.map((w) => { const z = WIDGETS[w.type]?.size || 's'; if (z === 'm' || z === 'l') { run = 0; return { ...w, cols: 4, rows: 1, size: 'l' } } const big = run % 3 === 0; run++; const [cols, rows] = big ? [2, 2] : [2, 1]; return { ...w, cols, rows, size: sizeOf(cols, rows) } }) }
 const sizeOf = (cols, rows) => (rows >= 2 && cols <= 2 ? 't' : cols >= 4 ? 'l' : cols === 3 ? 'm' : 's')
 
 export const DEFAULT_PAGES = [
@@ -91,6 +93,7 @@ export default function Home() {
               <div className="row" style={{ gap: 6, marginBottom: 8 }}>
                 <input className="input" value={p.name} onChange={(e) => setPage(pi, (x) => ({ ...x, name: e.target.value }))} style={{ maxWidth: 200 }} />
                 <button className="btn sm" onClick={() => addWidget(pi)}><Icon name="plus" size={14} />위젯</button>
+                <button className="btn sm" onClick={() => confirmSheet('벤토 배치', '이 페이지 위젯 크기를 벤토 격자로 맞춰요 (작은 위젯은 큰 칸 하나 + 작은 칸 둘씩 묶고, 넓은 위젯은 한 줄). 순서는 그대로예요.', () => setW(pi, bento(p.widgets)), '맞추기')}>벤토 배치</button>
                 {pages.length > 1 && <button className="btn sm danger" onClick={() => confirmSheet('페이지 삭제', `'${p.name}' 페이지를 삭제할까요?`, () => { savePages(pages.filter((_, i) => i !== pi)); setCur(0) }, '삭제')}>페이지 삭제</button>}
               </div>
             )}
@@ -99,7 +102,7 @@ export default function Home() {
                 const W = WIDGETS[w.type].C
                 const move = (id, toId) => { const a = [...p.widgets]; const i = a.findIndex((x) => x.id === id), j = a.findIndex((x) => x.id === toId); if (i < 0 || j < 0 || i === j) return; const [m] = a.splice(i, 1); a.splice(j, 0, m); setW(pi, a) }
                 return (
-                  <div key={w.id} className={`w-${w.size || 's'} wf wf-${w.style || 'card'}` + (editing ? ' w-edit draggable' : '')} style={{ gridColumn: `span ${wCols(w)}`, minHeight: wRows(w) > 1 ? wRows(w) * 120 + (wRows(w) - 1) * 12 : null, ...(w.color ? { '--wc': w.color } : null) }}
+                  <div key={w.id} className={`w-${w.size || 's'} wf wf-${w.style || 'card'}` + (editing ? ' w-edit draggable' : '')} style={{ gridColumn: `span ${wCols(w)}`, gridRow: wRows(w) > 1 ? `span ${wRows(w)}` : null, minHeight: wRows(w) > 1 ? wRows(w) * 120 + (wRows(w) - 1) * 12 : null, ...(w.color ? { '--wc': w.color } : null) }}
                     data-drop={editing ? 'w:' + w.id : undefined}
                     onClick={editing ? () => widgetSettings(pi, w) : undefined}
                     {...(editing ? longPress(() => ({ label: WIDGETS[w.type].label, onDrop: (z) => move(w.id, z.dataset.drop.slice(2)) }), 250) : {})}>

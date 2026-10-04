@@ -31,6 +31,7 @@ export const TAB_OPTIONS = [
   { key: 'study.progress', label: '진도', icon: 'book' },
   { key: 'planner', label: '캘린더', icon: 'planner' },
   { key: 'planner.days3', label: '3일', icon: 'calendar' },
+  { key: 'planner.page', label: '오늘 페이지', icon: 'file' },
   { key: 'planner.timetable', label: '시간표', icon: 'calendar' },
   { key: 'notes', label: '노트', icon: 'notes' },
   { key: 'notes.daily', label: '데일리', icon: 'file' },
@@ -41,9 +42,9 @@ export const DEFAULT_TABBAR = ['home', 'tasks', 'study', 'planner', 'notes']
 export const tabOpt = (key) => { const o = TAB_OPTIONS.find((x) => x.key === key); if (!o) return null; const [tab, seg] = key.split('.'); return { ...o, tab, seg } }
 
 export const SEGMENTS = {
-  planner: [['today', '오늘'], ['days3', '3일'], ['week', '주'], ['month', '월'], ['timetable', '시간표'], ['circle', '원형', 'planning'], ['grid', '10분', 'planning']],
+  planner: [['today', '오늘'], ['page', '오늘 페이지'], ['days3', '3일'], ['week', '주'], ['month', '월'], ['timetable', '시간표'], ['circle', '원형', 'planning'], ['grid', '10분', 'planning']],
   tasks: [['day', '일별'], ['list', '리스트'], ['matrix', '매트릭스', 'matrix'], ['kanban', '칸반', 'kanban'], ['gantt', '간트', 'gantt'], ['table', '표', 'db'], ['archive', '보관함']],
-  study: [['log', '기록 입력'], ['timer', '타이머'], ['records', '통계'], ['review', '복습'], ['progress', '진도'], ['plan', '계획', 'planning']],
+  study: [['log', '기록 입력'], ['timer', '타이머'], ['records', '통계'], ['subjects', '과목'], ['review', '복습'], ['progress', '진도'], ['plan', '계획', 'planning']],
   notes: [['daily', '데일리'], ['pages', '페이지'], ['hub', '허브'], ['graph', '그래프', 'graph'], ['library', '자료']],
 }
 

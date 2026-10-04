@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { useColl, useSettings, put } from '../../store/store.js'
+import { useColl, useSettings, put, find } from '../../store/store.js'
+import { Sticker, TAPES } from '../../components/Stickers.jsx'
 import { eventsOn } from '../../engine/scheduler.js'
 import { monthStart, weekStart, addDays, addMonths, parseYmd, WD, today, fmtDate, fmtTime, fmtDur } from '../../engine/date.js'
 import { holiday } from '../../engine/holidays.js'
@@ -15,6 +16,7 @@ export default function Month({ date, setDate }) {
   const [layers, setLayers] = useState(loadLayers)
   const toggle = (k) => { const n = { ...layers, [k]: !layers[k] }; setLayers(n); try { localStorage.setItem('layers', JSON.stringify(n)) } catch {} }
   const events = useColl('events'), tasks = useColl('tasks'), sessions = useColl('sessions'), habits = useColl('habits')
+  useColl('days')
   const meds = useColl('meds'), medLogs = useColl('medLogs'), subjects = useColl('subjects')
   const ms = monthStart(date)
   const start = weekStart(ms, st.weekStart)
@@ -64,6 +66,7 @@ export default function Month({ date, setDate }) {
                 <div className="mnum"><span className={wd === 0 || hol ? 'sun' : wd === 6 ? 'sat' : ''}>{parseYmd(d).getDate()}</span>
                 </div>
                 {hol && <div className="mhol ellipsis">{hol}</div>}
+                {(() => { const k = (find('days', d)?.deco || []).find((x) => !TAPES[x.k]); return k ? <span className="mcell-stk"><Sticker k={k.k} color={k.c} size={16} /></span> : null })()}
                 <div className="mitems">
                   {evs.slice(0, 3).map((e) => <div key={e.id} className="mev ellipsis" style={{ '--c': e.color || 'var(--accent)' }}>{e.title}</div>)}
                   {evs.length > 3 && <div className="tiny muted">+{evs.length - 3}</div>}
