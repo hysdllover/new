@@ -55,6 +55,7 @@ export default function App() {
     ...hiddenTabs.map((x) => ({ label: x.label, icon: x.icon, onClick: () => go(x.id) })),
     ...extra.filter((x) => !bar.some((b) => b.tab === x.id)).map((x) => ({ label: x.label, icon: x.icon, onClick: () => go(x.id) })),
     { label: '기록에 물어보기', icon: 'search', onClick: () => import('./components/AskSheet.jsx').then((m) => openSheet(() => <m.default />, { title: '내 기록에 물어보기' })) },
+    { label: '하루 요약', icon: 'check', onClick: () => import('./components/DaySummary.jsx').then((m) => openSheet(() => <m.default />, { title: '하루 요약' })) },
     { label: '보관함·휴지통', icon: 'archive', onClick: () => go('tasks', 'archive') },
     { label: '인쇄 (A4)', icon: 'print', onClick: () => window.print() },
   ])

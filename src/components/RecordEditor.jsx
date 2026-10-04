@@ -1,3 +1,4 @@
+import { FOCUS, focusLabel } from './StudyWrap.jsx'
 import { useState } from 'react'
 import { useColl, remove, restore } from '../store/store.js'
 import { saveRecord } from '../store/actions.js'
@@ -58,10 +59,10 @@ export default function RecordEditor({ rec, date, subjectId, onDone, compact }) 
 
       {!compact || more ? (
         <>
-          <Field label="공부 내용"><AutoText className="input" value={f.note} onChange={(v) => set({ note: v })} placeholder="예: 수학의 바이블 3단원, 오답 10문제" style={{ minHeight: 56 }} /></Field>
+          <Field label="공부 내용"><AutoText className="input" value={f.note} onChange={(v) => set({ note: v })} placeholder="예: 수학의 바이블 3단원" style={{ minHeight: 56 }} /></Field>
           <Field label="집중도">
-            <div className="row" style={{ gap: 2 }}>
-              {[1, 2, 3, 4, 5].map((n) => <button key={n} type="button" className="star" onClick={() => set({ focus: f.focus === n ? 0 : n })} aria-label={`집중도 ${n}`}>{n <= f.focus ? '★' : '☆'}</button>)}
+            <div className="row" style={{ gap: 6 }}>
+              {FOCUS.map(([v, l]) => <button key={v} type="button" className={'chip' + (focusLabel(f.focus) === l ? ' on' : '')} onClick={() => set({ focus: focusLabel(f.focus) === l ? 0 : v })}>{l}</button>)}
             </div>
           </Field>
           <Field label="연결할 할 일">
