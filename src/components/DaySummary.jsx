@@ -1,20 +1,24 @@
 // 하루 리포트: 구성(켜기·순서)을 직접 정함 — 공유(텍스트)·A4 인쇄도 같은 구성
 import { useState } from 'react'
-import { useColl, useSettings, setSettings, find } from '../store/store.js'
+import { useColl, useSettings, setSettings, find, list } from '../store/store.js'
+import { pickQuote } from '../lib/quote.js'
+import { drawReport } from '../lib/reportImage.js'
+import { shareBlob } from '../lib/shareCard.js'
 import { eventsOn } from '../engine/scheduler.js'
-import { today, addDays, fmtDate, fmtDur, fmtTime, tsToMin } from '../engine/date.js'
+import { today, addDays, fmtDate, fmtDur, fmtTime, tsToMin, weekStart, diffDays } from '../engine/date.js'
 import { dayRec } from '../store/actions.js'
 import { toast } from './ui.jsx'
 import { focusLabel } from './StudyWrap.jsx'
 
 export const SECTIONS = [
-  ['study', '공부 시간'], ['subjects', '과목별·메모'], ['hours', '시간대'], ['done', '끝낸 일'], ['left', '남은 할 일'],
-  ['events', '일정'], ['tomorrow', '내일'], ['condition', '컨디션'], ['comment', '한 줄 코멘트'],
+  ['study', '공부 시간'], ['subjects', '과목별·메모'], ['sessions', '공부 기록'], ['hours', '시간대'], ['focus', '집중'], ['week', '이번 주'],
+  ['top3', '핵심 3가지'], ['done', '끝낸 일'], ['left', '남은 할 일'], ['events', '일정'], ['tomorrow', '내일'],
+  ['habits', '습관'], ['reviews', '복습'], ['progress', '진도'], ['dday', 'D-day'], ['condition', '컨디션'], ['quote', '다짐'], ['comment', '한 줄 코멘트'],
 ]
 const DEFAULT = ['study', 'subjects', 'done', 'events']
 const secsOf = (st) => (st.reportSections?.length ? st.reportSections : DEFAULT).filter((k) => SECTIONS.some(([x]) => x === k))
 
-export function daySummary(date, { tasks, sessions, subjects, goal }) {
+export function daySummary(date, { tasks, sessions, subjects, goal, ...opts }) {
   const sub = (id) => subjects.find((s) => s.id === id)
   const ss = sessions.filter((s) => s.date === date)
   const mins = ss.reduce((a, s) => a + (s.dur || 0), 0)
@@ -28,8 +32,18 @@ export function daySummary(date, { tasks, sessions, subjects, goal }) {
   const done = live.filter((t) => t.done && sameDay(t.doneAt))
   const left = live.filter((t) => !t.done && t.due && t.due <= date)
   const tmr = addDays(date, 1)
-  const cond = find('conditions', date), comment = dayRec(date).comment || ''
-  return { date, mins, goal, subs: Object.values(bySub).sort((a, b) => b.m - a.m), hours, done, left, evs: eventsOn(date), tmr: { tasks: live.filter((t) => !t.done && t.due === tmr), evs: eventsOn(tmr) }, cond, comment }
+  const cond = find('conditions', date), rec = dayRec(date), comment = rec.comment || ''
+  // 공부 기록 목록 · 집중 · 이번 주
+  const sess = ss.slice().sort((a, b) => (a.start || 0) - (b.start || 0)).map((s) => ({ t: s.start != null ? fmtTime(tsToMin(s.start)) : '', sub: sub(s.subjectId)?.name || '공부', dur: s.dur || 0, note: s.note || '', focus: s.focus ? focusLabel(s.focus) : '' }))
+  const fc = { 상: 0, 중: 0, 하: 0 }; for (const s of ss) if (s.focus) fc[focusLabel(s.focus)]++
+  const ws = weekStart(date, opts.weekStart ?? 1), wk = sessions.filter((s) => s.date >= ws && s.date <= date).reduce((a, s) => a + (s.dur || 0), 0), wdays = diffDays(date, ws) + 1
+  const top3 = (rec.top3 || []).map((id) => tasks.find((t) => t.id === id)).filter(Boolean)
+  const habits = list('habits').map((h) => ({ title: h.title, on: !!h.days?.[date] }))
+  const revs = list('reviews').flatMap((r) => (r.history || []).filter((x) => x.date === date).map((x) => ({ title: r.title, ok: x.ok })))
+  const prog = [...list('lectures').map((x) => ({ t: x.title, n: Object.values(x.done || {}).filter((v) => v === date).length, all: Object.keys(x.done || {}).length, of: x.total, u: '강' })), ...list('textbooks').map((x) => ({ t: x.title, n: 0, all: x.current || 0, of: x.total, u: x.unit || 'p' }))].filter((x) => x.of)
+  const ddays = list('ddays').filter((x) => x.date >= date).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 2).map((x) => ({ t: x.title, n: diffDays(x.date, date) }))
+  const quote = pickQuote(list('quotes').sort((a, b) => a.id.localeCompare(b.id)))?.text || ''
+  return { date, mins, goal, subs: Object.values(bySub).sort((a, b) => b.m - a.m), hours, done, left, evs: eventsOn(date), tmr: { tasks: live.filter((t) => !t.done && t.due === tmr), evs: eventsOn(tmr) }, cond, comment, sess, fc, wk, wavg: Math.round(wk / wdays), top3, habits, revs, prog, ddays, quote }
 }
 
 const condTxt = (c) => c ? [c.sleep != null && `수면 ${c.sleep}시간`, c.steps != null && `걸음 ${Number(c.steps).toLocaleString()}`, c.mood != null && `기분 ${c.mood}/5`, c.energy != null && `에너지 ${c.energy}/5`].filter(Boolean).join(' · ') : ''
@@ -44,15 +58,24 @@ function lines(k, d) {
   if (k === 'tomorrow') return [...d.tmr.evs.map((e) => (e.start != null ? fmtTime(e.start) + ' ' : '종일 ') + e.title), ...d.tmr.tasks.map((t) => '– ' + t.title)]
   if (k === 'condition') return condTxt(d.cond) ? [condTxt(d.cond)] : []
   if (k === 'comment') return d.comment ? [d.comment] : []
+  if (k === 'sessions') return d.sess.map((x) => `${x.t ? x.t + ' ' : ''}${x.sub} ${fmtDur(x.dur)}${x.note ? ' — ' + x.note : ''}${x.focus ? ' · 집중 ' + x.focus : ''}`)
+  if (k === 'focus') { const n = d.fc.상 + d.fc.중 + d.fc.하; return n ? [`상 ${d.fc.상} · 중 ${d.fc.중} · 하 ${d.fc.하}`] : [] }
+  if (k === 'week') return [`이번 주 ${fmtDur(d.wk)} · 하루 평균 ${fmtDur(d.wavg)}`]
+  if (k === 'top3') return d.top3.map((t) => (t.done ? '✓ ' : '– ') + t.title)
+  if (k === 'habits') return d.habits.length ? [`${d.habits.filter((h) => h.on).length}/${d.habits.length} · ` + d.habits.map((h) => (h.on ? '✓' : '–') + h.title).join(' ')] : []
+  if (k === 'reviews') return d.revs.map((r) => (r.ok ? '✓ ' : '↺ ') + r.title)
+  if (k === 'progress') return d.prog.slice(0, 5).map((x) => `${x.t} ${x.all}/${x.of}${x.u}${x.n ? ` (오늘 +${x.n}${x.u})` : ''}`)
+  if (k === 'dday') return d.ddays.map((x) => `${x.t} ${x.n === 0 ? 'D-DAY' : 'D-' + x.n}`)
+  if (k === 'quote') return d.quote ? [d.quote] : []
   return []
 }
-const title = (k, d) => ({ done: `끝낸 일 ${d.done.length}`, left: `남은 할 일 ${d.left.length}` })[k] || SECTIONS.find(([x]) => x === k)[1]
+const title = (k, d) => ({ done: `끝낸 일 ${d.done.length}`, left: `남은 할 일 ${d.left.length}`, sessions: `공부 기록 ${d.sess.length}` })[k] || SECTIONS.find(([x]) => x === k)[1]
 
 const asText = (d, secs) => [`${fmtDate(d.date)} 하루 리포트`, ...secs.flatMap((k) => { const l = lines(k, d); return l.length ? ['', `[${title(k, d)}]`, ...l] : [] })].join('\n')
 
 function printA4(d, secs) {
   const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c])
-  const el = document.createElement('div'); el.id = 'print-area'
+  const el = document.createElement('div'); el.id = 'print-area'; el.style.fontFamily = 'var(--font)'
   el.innerHTML = `<h2 style="font-weight:400;margin:0 0 6mm">${esc(fmtDate(d.date))} · 하루 리포트</h2>` + secs.map((k) => {
     const l = lines(k, d)
     if (k === 'hours') { const mx = Math.max(60, ...d.hours); return `<h3 style="font-weight:500;margin:5mm 0 2mm">시간대</h3><div style="display:flex;gap:1.5mm;align-items:flex-end;height:22mm">${d.hours.map((m, i) => `<div style="flex:1;text-align:center;font-size:7pt;color:#888"><div style="background:#8a8f98;height:${Math.round((m / mx) * 18)}mm;margin-bottom:1mm"></div>${i + 6}</div>`).join('')}</div>` }
@@ -69,7 +92,8 @@ export default function DaySummary({ initial = today() }) {
   const tasks = useColl('tasks'), sessions = useColl('sessions'), subjects = useColl('subjects'), st = useSettings()
   useColl('days'); useColl('conditions')
   const secs = secsOf(st)
-  const d = daySummary(date, { tasks, sessions, subjects, goal: st.goalDaily || 240 })
+  useColl('habits'); useColl('reviews'); useColl('lectures'); useColl('textbooks'); useColl('ddays'); useColl('quotes')
+  const d = daySummary(date, { tasks, sessions, subjects, goal: st.goalDaily || 240, weekStart: st.weekStart })
   const setSecs = (v) => setSettings({ reportSections: v })
   const move = (i, dir) => { const a = [...secs], j = i + dir; if (j < 0 || j >= a.length) return; [a[i], a[j]] = [a[j], a[i]]; setSecs(a) }
   const share = async () => { const text = asText(d, secs); try { if (navigator.share) await navigator.share({ text }); else { await navigator.clipboard.writeText(text); toast('복사했어요') } } catch {} }
@@ -99,7 +123,8 @@ export default function DaySummary({ initial = today() }) {
       {secs.every((k) => !body(k)) && <div className="small muted">기록이 없어요.</div>}
       <div className="row" style={{ gap: 6, marginTop: 8 }}>
         <button className="btn" onClick={() => setEdit(!edit)}>{edit ? '구성 닫기' : '구성'}</button>
-        <button className="btn grow" onClick={share}>공유</button>
+        <button className="btn grow" onClick={share}>텍스트</button>
+        <button className="btn grow" onClick={async () => { const blob = await drawReport(d, secs, lines, title); const r = await shareBlob(blob, `리포트-${date}.png`); if (r === 'saved') toast('이미지를 저장했어요') }}>이미지</button>
         <button className="btn grow" onClick={() => printA4(d, secs)}>A4 인쇄</button>
       </div>
     </div>
