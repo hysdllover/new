@@ -628,7 +628,7 @@ function CustomWidgetsField() {
 function WidgetPreview() {
   const st = useSettings()
   useEffect(() => { loadAllFonts() }, [])
-  const WTH = { white: { background: 'linear-gradient(135deg, #5b6170, #8b8f86)', color: '#fff' }, black: { background: 'linear-gradient(135deg, #ece9e2, #cfd3cc)', color: '#1d1c1a' }, paper: { background: '#f5f3ef', color: '#2b2a28' }, night: { background: '#1b1d22', color: '#f1efe9' } }[st.widgetTheme] || null
+  const WTH = { white: { background: 'linear-gradient(135deg, #5b6170, #8b8f86)', color: '#fff' }, black: { background: 'linear-gradient(135deg, #ece9e2, #cfd3cc)', color: '#1d1c1a' }, paper: { background: `#f2f2f1 url(${import.meta.env.BASE_URL}paper.jpg) 0 0 / 320px 320px`, color: '#2b2a28' }, night: { background: '#1b1d22', color: '#f1efe9' } }[st.widgetTheme] || null
   const ff = { ...(st.widgetFont ? { fontFamily: `"${st.widgetFont}", "Apple SD Gothic Neo", sans-serif` } : null), '--dw-scale': st.widgetScale || 1, fontWeight: [200, 300, 400, 500, 600][(+st.widgetWeight || 0) + 1 + (st.widgetClear !== false ? 1 : 0)] }
   const tasks = useColl('tasks'), sessions = useColl('sessions'), ddays = useColl('ddays'), quotes = useColl('quotes'), subjects = useColl('subjects')
   const d = today()
