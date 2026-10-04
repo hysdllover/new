@@ -572,6 +572,7 @@ function WidgetFontField() {
       <Field label="위젯 테마"><Seg value={st.widgetTheme || 'auto'} onChange={(v) => setSettings({ widgetTheme: v })} options={[['auto', '자동'], ['white', '흰 글씨'], ['black', '검은 글씨'], ['paper', '종이'], ['night', '다크']]} /></Field>
       <div className="tiny muted" style={{ marginTop: -4 }}>흰·검은 글씨는 투명 배경(Scriptable 메뉴)과 함께, 종이·다크는 배경색까지 바꿔요. 자동은 Scriptable 메뉴의 글자색을 따라요.</div>
       <DashTilesField />
+      <CustomWidgetsField />
       <Toggle checked={st.widgetClear !== false} onChange={(v) => setSettings({ widgetClear: v })} label="투명·클리어 위젯용 (글씨 또렷하게: 한 단계 굵게·조금 크게)" />
       <div className="tiny muted">미리보기에 바로 보여요. 위젯에는 다음 동기화 뒤 반영돼요 (설치한 폰트는 굵기 대신 그 폰트 그대로). 잠금 화면은 ‘크게’까지만 커져요.</div>
     </div>
@@ -579,7 +580,7 @@ function WidgetFontField() {
 }
 
 // 대시보드 위젯 칸 4개 고르기
-const DASH_KEYS = [['dday', 'D-day'], ['next', '일정'], ['todo', '할 일'], ['study', '공부 시간'], ['prog', '진도'], ['goals', '이번 주 목표'], ['week', '이번 주 공부'], ['bars', '7일 막대'], ['subjbar', '과목 비율'], ['ring', '목표 링'], ['heat', '이번 달 달력'], ['hours', '오늘 시간대'], ['compare', '지난주 비교']]
+const DASH_KEYS = [['dday', 'D-day'], ['next', '일정'], ['todo', '할 일'], ['study', '공부 시간'], ['prog', '진도'], ['goals', '이번 주 목표'], ['week', '이번 주 공부'], ['bars', '7일 막대'], ['subjbar', '과목 비율'], ['ring', '목표 링'], ['heat', '이번 달 달력'], ['hours', '오늘 시간대'], ['compare', '지난주 비교'], ['date', '오늘 날짜'], ['quote', '다짐'], ['class', '지금·다음 교시'], ['agenda', '다가오는 일정'], ['ddl', 'D-day 목록']]
 export const dashKeys = (st) => { const k = (st.dashTiles || []).filter((x, i, a) => DASH_KEYS.some(([y]) => y === x) && a.indexOf(x) === i).slice(0, 4); for (const [x] of DASH_KEYS) if (k.length < 4 && !k.includes(x)) k.push(x); return k }
 function DashTilesField() {
   const st = useSettings(), keys = dashKeys(st)
@@ -588,6 +589,29 @@ function DashTilesField() {
     <Field label="대시보드 칸 (순서대로 · 중형은 할 일이 오른쪽 목록)">
       <div className="row wrap" style={{ gap: 6 }}>
         {keys.map((k, i) => <select key={i} className="input" style={{ width: 'auto', flex: '1 1 30%' }} value={k} onChange={(e) => set(i, e.target.value)}>{DASH_KEYS.map(([v, l]) => <option key={v} value={v}>{i + 1}. {l}</option>)}</select>)}
+      </div>
+    </Field>
+  )
+}
+
+// 내 위젯 1~3: 이름 · 배치(칸/줄) · 블록(누른 순서, 최대 6) — Parameter 구성1 · 구성2 · 구성3
+function CustomWidgetsField() {
+  const st = useSettings(), cws = st.customWidgets || []
+  const [i, setI] = useState(0), cw = cws[i] || {}, blocks = cw.blocks || []
+  const save = (p) => { const a = [0, 1, 2].map((j) => cws[j] || {}); a[i] = { ...a[i], ...p }; setSettings({ customWidgets: a }) }
+  const tog = (k) => save({ blocks: blocks.includes(k) ? blocks.filter((x) => x !== k) : [...blocks, k].slice(0, 6) })
+  return (
+    <Field label="내 위젯 구성 (Parameter: 구성1 · 구성2 · 구성3)">
+      <div className="col" style={{ gap: 6 }}>
+        <Seg value={String(i)} onChange={(v) => setI(+v)} options={[['0', '구성1'], ['1', '구성2'], ['2', '구성3']]} />
+        <div className="row" style={{ gap: 6 }}>
+          <input className="input grow" placeholder={'이름 (예: 시험 준비) · 비우면 내 위젯 ' + (i + 1)} value={cw.name || ''} onChange={(e) => save({ name: e.target.value })} />
+          <Seg value={cw.layout === 'rows' ? 'rows' : 'grid'} onChange={(v) => save({ layout: v })} options={[['grid', '칸'], ['rows', '줄']]} />
+        </div>
+        <div className="row wrap" style={{ gap: 6 }}>
+          {DASH_KEYS.map(([k, l]) => <button key={k} className={'chip' + (blocks.includes(k) ? ' on' : '')} onClick={() => tog(k)}>{blocks.includes(k) && <span className="tiny">{blocks.indexOf(k) + 1}</span>}{l}</button>)}
+        </div>
+        <div className="tiny muted">누른 순서대로 놓여요 (최대 6 · 소형 4 · 중형 4). 칸: 2열 격자 · 줄: 위에서 아래로(중형은 두 단). 위 미리보기에서 ‘내 위젯 {i + 1}’을 눌러 확인하세요.</div>
       </div>
     </Field>
   )
@@ -741,8 +765,18 @@ function WidgetPreview() {
     hours: ['HOURS', G(<div><div className="row" style={{ gap: 1, alignItems: 'flex-end', height: 24 }}>{hrs.map((v, i) => <i key={i} style={{ flex: 1, height: Math.max(1.5, (v / Math.max(30, ...hrs)) * 24), borderRadius: 1, background: v ? 'var(--gold)' : 'var(--rule)' }} />)}</div><div className="row between dw-soft" style={{ fontSize: 6 }}><span>6</span><span>12</span><span>18</span><span>24</span></div></div>), ''],
     compare: ['VS LAST WEEK', G(<div>{[['이번 주', sw.week, 'var(--gold)'], ['지난주', lastW, 'var(--soft)']].map(([l, v, c]) => <div key={l} style={{ marginTop: 3 }}><div className="row between" style={{ fontSize: 9 }}><span>{l}</span><span style={{ color: c }}>{hm(v)}</span></div><div style={{ height: 3, borderRadius: 2, background: 'var(--rule)' }}><i style={{ display: 'block', height: 3, borderRadius: 2, width: (v / Math.max(1, sw.week, lastW)) * 100 + '%', background: c }} /></div></div>)}</div>), (sw.week >= lastW ? '+' : '−') + hm(Math.abs(sw.week - lastW)), null, 1],
   })
+  const clsP = classesOn(d), cCur = clsP.find((c) => c.start <= nmP && c.end > nmP), cNx = cCur || clsP.find((c) => c.start > nmP)
+  const agP = []; for (let i = 0; i < 7 && agP.length < 3; i++) { const x = new Date(); x.setDate(x.getDate() + i); for (const e of eventsOn(ymdOf(x))) if (agP.length < 3 && !(i === 0 && e.start != null && (e.end ?? e.start + 60) <= nmP)) agP.push({ i, x, e }) }
+  Object.assign(TLp, {
+    date: [['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][now.getDay()], G(<div className="row" style={{ gap: 6, alignItems: 'baseline' }}><span style={{ fontSize: 26, fontWeight: 100 }}>{now.getDate()}</span><span className="dw-soft" style={{ fontSize: 10 }}>{MONS[now.getMonth()]}</span></div>), ''],
+    quote: ['다짐', G(<div style={{ fontSize: 11, lineHeight: 1.4 }}>{quote || '앱에서 다짐을 적어 보세요'}</div>), ''],
+    class: [cCur ? 'NOW CLASS' : 'NEXT CLASS', G(<div><div className="ellipsis" style={{ fontSize: 13 }}>{cNx ? `${cNx.period}교시 ${cNx.title}` : clsP.length ? '오늘 수업 끝' : '수업 없음'}</div>{cNx && <div className="dw-soft" style={{ fontSize: 9 }}>{fmtTime(cNx.start)}–{fmtTime(cNx.end)}</div>}</div>), ''],
+    agenda: ['AGENDA', G(<div>{agP.map(({ i, x, e }, k) => <div key={k} className="row" style={{ gap: 5, flexWrap: 'nowrap', fontSize: 10 }}><span className="dw-gold" style={{ whiteSpace: 'nowrap', flexShrink: 0 }}>{i === 0 ? '' : i === 1 ? '내일 ' : ['일', '월', '화', '수', '목', '금', '토'][x.getDay()] + ' '}{e.start == null ? '종일' : fmtTime(e.start)}</span><span className="ellipsis">{e.title}</span></div>)}{!agP.length && <span className="dw-soft">일정 없음</span>}</div>), ''],
+    ddl: ['D-DAYS', G(<div>{ddSorted.slice(0, 3).map((x) => <div key={x.id} className="row between" style={{ fontSize: 10, flexWrap: 'nowrap', gap: 4 }}><span className="ellipsis">{x.title}</span><span className="dw-gold">{ddT(x)}</span></div>)}</div>), ''],
+  })
   const dKeys = dashKeys(st), tiles = dKeys.map((k) => TLp[k])
-  const dLine = (k) => k === 'dday' ? <div key={k} className="row" style={{ gap: 6, alignItems: 'baseline', flexWrap: 'nowrap' }}><span style={{ fontSize: 26, fontWeight: 100, lineHeight: 1 }}>{dd ? ddTxt : '—'}</span><span className="dw-gold ellipsis" style={{ fontSize: 11 }}>{dd ? dd.title : 'No D-day'}</span></div>
+  const dLine = (k) => k === 'todo' ? <div key={k}><div className="dw-cap">TO DO</div>{items.filter((t) => !t.done).slice(0, 3).map((t) => <div key={t.id} className="dw-todo"><span className={t.priority >= 3 ? 'dw-gold' : 'dw-soft'}>{t.priority >= 3 ? '•' : '–'}</span><span className="ellipsis">{t.title}</span></div>)}</div>
+    : k === 'dday' ? <div key={k} className="row" style={{ gap: 6, alignItems: 'baseline', flexWrap: 'nowrap' }}><span style={{ fontSize: 26, fontWeight: 100, lineHeight: 1 }}>{dd ? ddTxt : '—'}</span><span className="dw-gold ellipsis" style={{ fontSize: 11 }}>{dd ? dd.title : 'No D-day'}</span></div>
     : k === 'next' ? <div key={k} className="dw-todo"><span className="dw-gold" style={{ fontSize: 11 }}>{nC ? (nCur ? '지금 ' : '') + fmtTime(nC.s) : '—'}</span><span className="ellipsis">{nC ? nC.t : '남은 일정 없음'}</span></div>
     : k === 'study' ? (tmP ? <div key={k}><div className="row" style={{ gap: 6, alignItems: 'baseline', flexWrap: 'nowrap' }}><span className="dw-gold" style={{ fontSize: 10 }}>● {TLp.study[0].slice(2)}</span><span style={{ fontSize: 20, fontWeight: 100 }}>{TLp.study[1]}</span><span className="grow" /><span className="dw-gold" style={{ fontSize: 10 }}>{pct}%</span></div><div className="dw-line"><i style={{ width: pct + '%' }} /></div></div> : <div key={k}>{big(22)}</div>)
     : k === 'week' ? <div key={k} className="row" style={{ gap: 6, alignItems: 'baseline', flexWrap: 'nowrap' }}><span style={{ fontSize: 22, fontWeight: 100 }}>{hm(sw.week)}</span><span className="dw-soft" style={{ fontSize: 10 }}>이번 주</span><span className="grow" /><span className="dw-gold" style={{ fontSize: 10 }}>하루 {hm(sw.avg)}</span></div>
@@ -751,7 +785,7 @@ function WidgetPreview() {
   const dGraph = (k) => !!TLp[k][1]?.node
   const dCol = (ks) => ks.map((k, i) => <Fragment key={k}>{i > 0 && <div className="grow" />}{dLine(k)}</Fragment>)
   const dOthers = dKeys.filter((k) => k !== 'todo'), dHasTodo = dKeys.includes('todo')
-  const tileGrid = (cols, size, fill) => <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: '12px 12px', ...(fill ? { height: '100%', alignContent: 'space-between' } : null) }}>{tiles.map((x) => <div key={x[0]} className="col" style={{ gap: 1, minWidth: 0 }}><span className="dw-cap">{x[0]}</span>{x[1]?.node ? <div style={size < 25 ? { zoom: 0.72 } : null}>{x[1].node}</div> : Array.isArray(x[1]) ? <div className="col" style={{ gap: 2, marginTop: 3, minWidth: 0 }}>{x[1].slice(0, cols === 4 ? 6 : size >= 30 ? 4 : 3).map((t) => <span key={t.id} className="ellipsis" style={{ fontSize: size >= 30 ? 15 : 11, fontWeight: t.priority >= 3 ? 500 : null }}>{t.priority >= 3 ? '• ' : '– '}{t.title}</span>)}{!x[1].length && <span className="dw-soft">All clear.</span>}</div> : <span className="ellipsis" style={{ fontSize: size, fontWeight: 100, lineHeight: 1.1 }}>{x[1]}</span>}{x[2] && <span className={'ellipsis ' + (x[4] ? 'dw-gold' : 'dw-soft')} style={{ fontSize: 10 }}>{x[2]}</span>}{x[3] != null && <div className="dw-line" style={{ marginTop: 3 }}><i style={{ width: Math.min(100, x[3] * 100) + '%' }} /></div>}</div>)}</div>
+  const tileGrid = (cols, size, fill, tiles = dKeys.map((k) => TLp[k])) => <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: '12px 12px', ...(fill ? { height: '100%', alignContent: 'space-between' } : null) }}>{tiles.map((x) => <div key={x[0]} className="col" style={{ gap: 1, minWidth: 0 }}><span className="dw-cap">{x[0]}</span>{x[1]?.node ? <div style={size < 25 ? { zoom: 0.72 } : null}>{x[1].node}</div> : Array.isArray(x[1]) ? <div className="col" style={{ gap: 2, marginTop: 3, minWidth: 0 }}>{x[1].slice(0, cols === 4 ? 6 : size >= 30 ? 4 : 3).map((t) => <span key={t.id} className="ellipsis" style={{ fontSize: size >= 30 ? 15 : 11, fontWeight: t.priority >= 3 ? 500 : null }}>{t.priority >= 3 ? '• ' : '– '}{t.title}</span>)}{!x[1].length && <span className="dw-soft">All clear.</span>}</div> : <span className="ellipsis" style={{ fontSize: size, fontWeight: 100, lineHeight: 1.1 }}>{x[1]}</span>}{x[2] && <span className={'ellipsis ' + (x[4] ? 'dw-gold' : 'dw-soft')} style={{ fontSize: 10 }}>{x[2]}</span>}{x[3] != null && <div className="dw-line" style={{ marginTop: 3 }}><i style={{ width: Math.min(100, x[3] * 100) + '%' }} /></div>}</div>)}</div>
   const btn = (s, key, color) => <span key={key} className="row" style={{ flex: 1, minWidth: 0, height: 32, borderRadius: 10, background: 'var(--rule)', justifyContent: 'center', gap: 5, fontSize: 12 }}>{color && <i style={{ width: 6, height: 6, borderRadius: 3, background: color, flexShrink: 0 }} />}<span className="ellipsis">{s}</span></span>
   const quickBody = (n, lg) => <>{hdr('START', '오늘 ' + hm(mins))}{[0, 4].filter((i) => i < Math.min(n, qsub.length)).map((i) => <div key={i} className="row" style={{ gap: 8, marginBottom: 8, flexWrap: 'nowrap' }}>{qsub.slice(i, i + 4).map((s) => btn(s.name, s.id, s.color))}{Array.from({ length: 4 - qsub.slice(i, i + 4).length }, (_, k) => <span key={'p' + k} style={{ flex: 1 }} />)}</div>)}<div className="row" style={{ gap: 8, flexWrap: 'nowrap' }}>{btn('+ 할 일', 'a')}{btn('+ 일정', 'b')}{btn('+ 기록', 'c')}</div>{lg && <><div className="dw-hr" />{list(4)}</>}</>
   const V = {
@@ -889,6 +923,24 @@ function WidgetPreview() {
     return { c: [[hm(mins), { fontSize: 14 }], [pct + '%', S], [bar(mins / goal, 34)]], r: [[<><b>{hm(mins)}</b> / {hm(goal)}<span className="grow" />{ddTxt}</>], [bar(mins / goal, 136)], [todo[0] ? '– ' + todo[0].title : dd?.title || 'All clear.']], i: hm(mins) + (dd ? ` · ${ddTxt} ${dd.title}` : '') }
   }
   V['진행'] = V['공부']; V['남은분'] = V['지금']
+  // 내 위젯 1~3 미리보기 (설정 › 내 위젯 구성과 같음)
+  for (let i = 0; i < 3; i++) {
+    const cw = (st.customWidgets || [])[i] || {}, rows = cw.layout === 'rows', ttl = cw.name || '내 위젯 ' + (i + 1)
+    const ks = (cw.blocks || []).filter((k, j, a) => TLp[k] && a.indexOf(k) === j); if (!ks.length) ks.push('date', 'study', 'next', 'todo')
+    const T = (n) => ks.slice(0, n).map((k) => TLp[k])
+    const half = Math.ceil(Math.min(4, ks.length) / 2), ks4 = ks.slice(0, 4), oth = ks4.filter((k) => k !== 'todo')
+    V['구성' + (i + 1)] = rows ? [
+      M(dCol(ks.slice(0, 3))),
+      <><div className="col" style={{ gap: 0, flex: 1, minWidth: 0 }}>{hdr(ttl, '')}{dCol(ks4.slice(0, half))}</div><div className="dw-vr" /><div className="col" style={{ gap: 0, flex: 1, minWidth: 0 }}>{hdr('', dateStr)}{dCol(ks4.slice(half))}</div></>,
+      M(<>{hdr(ttl, dateStr)}{dCol(ks.slice(0, 6))}</>),
+    ] : [
+      M(<><div className="grow" />{tileGrid(2, 19, false, T(4))}<div className="grow" /></>),
+      ks4.includes('todo')
+        ? <><div className="col" style={{ gap: 0, width: '45%', flexShrink: 0, minWidth: 0 }}>{dCol(oth.slice(0, oth.slice(0, 3).some(dGraph) ? 2 : 3))}</div><div className="dw-vr" /><div className="col" style={{ gap: 0, flex: 1, minWidth: 0 }}>{dLine('todo')}</div></>
+        : <><div className="col" style={{ gap: 0, width: '45%', flexShrink: 0, minWidth: 0 }}>{dCol(oth.slice(0, 2))}</div><div className="dw-vr" /><div className="col" style={{ gap: 0, flex: 1, minWidth: 0 }}>{dCol(oth.slice(2, 4))}</div></>,
+      M(<>{hdr(ttl, dateStr)}{tileGrid(2, 36, false, T(6))}</>),
+    ]
+  }
   // 타이머·공부 시간 (미리보기는 타이머가 안 도는 상태 기준)
   const qs0 = qsub[0]
   const tmB = (sz) => <>{hdr('STUDY', pct + '%')}<div className="dw-big"><span style={{ fontSize: sz }}>{hm(mins)}</span><span className="dw-soft">/ {hm(goal)}</span></div><div className="dw-line"><i style={{ width: pct + '%' }} /></div><div className="dw-gold" style={{ marginTop: 5, fontSize: 11 }}>▶ {qs0 ? qs0.name + ' 시작' : '공부 시작'}</div></>
