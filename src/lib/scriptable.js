@@ -607,7 +607,14 @@ if (!data) {
       }
     } else if (KIND === 'dash') {
       const left = items.filter((x) => !x.done).length, c = nCur || nNext
-      if (inl) inline((dd ? ddTxt + ' · ' : '') + (c ? clk(c.s) + ' · ' : '') + '공부 ' + hm(mins))
+      // 타이머가 돌면 공부 시간 자리에 타이머
+      if (inl) { if (TM && !TM.paused) { const d = w.addDate(new Date(TM.mode === 'countdown' ? TM.end : TM.start)); d.applyTimerStyle(); d.lineLimit = 1 } else inline((dd ? ddTxt + ' · ' : '') + (c ? clk(c.s) + ' · ' : '') + (TM ? TM.name + ' 일시정지 ' + hm(TM.pm) : '공부 ' + hm(mins))) }
+      else if (circ && TM) {
+        w.addAccessoryWidgetBackground = true
+        const z = w.addStack(); z.size = new Size(LK.c, LK.c); z.layoutVertically(); z.centerAlignContent()
+        const rowC = (fn) => { const a2 = z.addStack(); a2.addSpacer(); fn(a2); a2.addSpacer() }
+        rowC((a2) => t(a2, TM.name, label(8)).minimumScaleFactor = 0.6); rowC((a2) => { if (TM.paused) t(a2, hm(TM.pm), tw(13)); else timerDate(a2, 12) }); rowC((a2) => t(a2, TM.paused ? '일시정지' : '공부 중', label(7)))
+      }
       else if (circ) cRows([[hm(mins), tw(14)], [pct + '%', label(7)]], mins / goal)
       else {
         // 크게 두 개(D-day · 공부 시간) + 아래 한 줄(일정 · %) — 잠금 화면에서 잘 보이게 굵고 넉넉하게
