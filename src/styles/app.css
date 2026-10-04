@@ -6,7 +6,7 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 b, strong, h1, h2, h3, h4 { font-weight: var(--fw-b); }
-h1 { font-size: 1.5em; margin: 0; letter-spacing: -.01em; }
+h1 { font-size: 1.5em; margin: 0; letter-spacing: -.01em; font-family: var(--font-head, inherit); }
 h2 { font-size: 1.2em; margin: 0; }
 h3 { font-size: 1.05em; margin: 0; }
 h4 { font-size: .92em; margin: 0; color: var(--muted); letter-spacing: .02em; }
@@ -37,7 +37,7 @@ svg { display: block; }
   padding: calc(var(--sat) + 10px) calc(16px + var(--sar)) 6px calc(16px + var(--sal));
   display: flex; align-items: center; gap: 8px; background: var(--bg); position: relative; z-index: 5;
 }
-.topbar .title { font-size: 1.25em; font-weight: var(--fw-b); flex: 1; min-width: 0; }
+.topbar .title { font-size: 1.25em; font-weight: var(--fw-b); flex: 1; min-width: 0; font-family: var(--font-head, inherit); }
 .segbar { padding: 4px calc(16px + var(--sar)) 8px calc(16px + var(--sal)); overflow-x: auto; scrollbar-width: none; }
 .segbar::-webkit-scrollbar { display: none; }
 .content {
@@ -115,7 +115,7 @@ svg { display: block; }
 [data-theme="dark"][data-card="glass"] .tabbar, [data-theme="dark"][data-card="glass"] .sidebar, [data-theme="dark"][data-card="glass"] .chip, [data-theme="dark"][data-card="glass"] .input { background: rgba(40, 40, 46, .4); }
 @media print { [data-card="glass"] body::before { display: none; } [data-card="glass"] .card { backdrop-filter: none; background: #fff; box-shadow: none; } }
 .card-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
-.card-h h3 { font-size: .95em; }
+.card-h h3 { font-size: .95em; font-family: var(--font-head, inherit); }
 .grid { display: grid; gap: var(--gap); }
 .grid.two { grid-template-columns: 1fr; }
 @media (min-width: 768px) { .grid.two { grid-template-columns: 1fr 1fr; } .grid.three { grid-template-columns: repeat(3, 1fr); } }
@@ -242,3 +242,12 @@ input[type="color"] { width: 36px; height: 30px; border: 1px solid var(--line); 
 [data-calm] .badge.warn { background: color-mix(in srgb, var(--muted) 14%, transparent); color: var(--muted); }
 .resume-bar { display: flex; align-items: center; gap: 6px; margin: 0 16px 6px; padding: 7px 10px 7px 14px; border-radius: 12px; font-size: 13px; background: color-mix(in srgb, var(--accent) 9%, var(--surface)); }
 .resume-bar b { font-weight: 500; }
+
+/* 아이패드 가로 2단: 오른쪽 함께 보기 */
+.split-pane { display: none; }
+@media (min-width: 1024px) {
+  .split-pane { display: block; width: 380px; flex-shrink: 0; border-left: 1px solid var(--line); background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; padding: calc(var(--sat) + 14px) calc(14px + var(--sar)) calc(24px + var(--sab)) 14px; }
+}
+/* 2단 오른쪽은 좁으니 한 줄로 */
+.split-pane .grid.two, .split-pane .grid.three, .split-pane .today-grid, .split-pane .today-w, .split-pane .matrix { grid-template-columns: 1fr !important; }
+.split-pane .week { grid-template-columns: 1fr !important; }

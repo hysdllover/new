@@ -1,10 +1,10 @@
 import { Fragment, useEffect, useState } from 'react'
 import { useSettings, setSettings, useColl, put, remove, patch, exportJSON, importJSON, uid } from '../store/store.js'
-import { PRESETS, FONTS } from '../theme/theme.js'
+import { PRESETS, FONTS, effTheme, setDeviceTheme } from '../theme/theme.js'
 import { PALETTE, SOFT_PALETTE } from '../store/schema.js'
 import { Card, Seg, Toggle, Field, Icon, toast, confirmSheet, openSheet } from '../components/ui.jsx'
 import { ColorPick, TimeInput, SubjectSelect } from '../components/common.jsx'
-import { useSyncStatus, connect, disconnect, syncNow, gistInfo, tokenExpiry, listBackups, backupNow, restoreBackup, calendarUrl, readGistFile } from '../sync/sync.js'
+import { useSyncStatus, connect, disconnect, syncNow, gistInfo, tokenExpiry, listBackups, backupNow, restoreBackup, calendarUrl, readGistFile, syncLog } from '../sync/sync.js'
 import { enablePush, disablePush, pushState, testLocal, isStandalone, pushSupported } from '../lib/push.js'
 import { buildLoader, WIDGET_KINDS } from '../lib/scriptable.js'
 import { TAB_OPTIONS, DEFAULT_TABBAR, tabOpt } from '../nav.js'
@@ -22,6 +22,7 @@ import { DIGEST_TIMES } from '../engine/reminders.js'
 export default function Settings() {
   const st = useSettings()
   const th = st.theme
+  const [, setTick] = useState(0), bump = () => setTick((x) => x + 1), eff = effTheme(th)
   const setTheme = (p) => setSettings({ theme: { ...th, ...p } })
   const myFonts = useMyFonts()
   return (
@@ -68,11 +69,19 @@ export default function Settings() {
               {th.font?.startsWith('my:') && !myFonts.some((f) => 'my:' + f.id === th.font) && <option value={th.font}>내 폰트 (이 기기에 없음)</option>}
             </select>
           </Field>
+          <Field label="제목·큰 숫자 폰트">
+            <select className="input" value={th.headFont || ''} onChange={(e) => setTheme({ headFont: e.target.value || null })}>
+              <option value="">본문과 같게</option>
+              {Object.entries(FONTS).map(([k, f]) => <option key={k} value={k}>{f.name}</option>)}
+              {myFonts.map((f) => <option key={f.id} value={'my:' + f.id}>내 폰트 · {f.name}</option>)}
+            </select>
+          </Field>
           <MyFonts th={th} setTheme={setTheme} fonts={myFonts} />
-          <Field label={`글자 크기 ${th.fontSize}px`}><input type="range" min="12" max="16" step="0.5" value={th.fontSize} onChange={(e) => setTheme({ fontSize: +e.target.value })} /></Field>
+          <Field label={`글자 크기 ${eff.fontSize}px · 이 기기만`}><Seg value={String(eff.fontSize)} onChange={(v) => { setDeviceTheme({ fontSize: +v }, th); bump() }} options={[['12', '작게'], ['13', '기본'], ['14.5', '크게'], ['16', '더 크게']]} /></Field>
           <Field label={`글자 굵기 ${th.fontWeight}`}><input type="range" min="300" max="500" step="100" value={th.fontWeight} onChange={(e) => setTheme({ fontWeight: +e.target.value })} /></Field>
           <Field label={`모서리 둥글기 ${th.radius}px`}><input type="range" min="0" max="20" value={th.radius} onChange={(e) => setTheme({ radius: +e.target.value })} /></Field>
-          <Field label="간격"><Seg value={th.density} onChange={(v) => setTheme({ density: v })} options={[['compact', '촘촘'], ['normal', '보통'], ['relaxed', '여유']]} /></Field>
+          <Field label="간격 · 이 기기만 (아이패드 기본 여유)"><Seg value={eff.density} onChange={(v) => { setDeviceTheme({ density: v }, th); bump() }} options={[['compact', '촘촘'], ['normal', '보통'], ['relaxed', '여유']]} /></Field>
+          <Field label="아이패드 가로 2단 (오른쪽에 함께 보기)"><Seg value={st.splitPane || ''} onChange={(v) => setSettings({ splitPane: v || null })} options={[['', '끔'], ['planner', '오늘 일정'], ['timer', '타이머'], ['tasks', '오늘 할 일'], ['notes', '데일리']]} /></Field>
           <Field label="카드 스타일"><Seg value={th.card} onChange={(v) => setTheme({ card: v })} options={[['line', '선'], ['shadow', '그림자'], ['flat', '평면'], ['glass', '유리']]} /></Field>
         </div>
       </Card>
@@ -117,15 +126,20 @@ export default function Settings() {
 
       <Card title="백업 · 복원">
         <div className="row wrap">
-          <button className="btn" onClick={() => download(`study-backup-${today()}.json`, exportJSON(), 'application/json')}><Icon name="download" size={16} />JSON 내보내기</button>
+          <button className="btn" onClick={() => download(`study-backup-${today()}-${new Date().toTimeString().slice(0, 5).replace(':', '')}.json`, exportJSON(), 'application/json')}><Icon name="download" size={16} />JSON 내보내기</button>
           <button className="btn" onClick={() => {
             const i = document.createElement('input'); i.type = 'file'; i.accept = 'application/json,.json'
             i.onchange = async () => { const f = i.files[0]; if (!f) return; const text = await f.text(); confirmSheet('복원', '현재 데이터를 백업 파일로 교체할까요?', () => { try { importJSON(text); toast('복원 완료') } catch (e) { toast(e.message) } }, '복원') }
             i.click()
-          }}><Icon name="upload" size={16} />JSON 가져오기</button>
+          }}><Icon name="upload" size={16} />JSON 가져오기 (교체)</button>
+          <button className="btn" onClick={() => {
+            const i = document.createElement('input'); i.type = 'file'; i.accept = 'application/json,.json'
+            i.onchange = async () => { const f = i.files[0]; if (!f) return; try { const n = importJSON(await f.text(), { merge: true }); toast(`합쳤어요 · ${n}개 항목 반영`) } catch (e) { toast(e.message) } }
+            i.click()
+          }}><Icon name="upload" size={16} />합치기로 가져오기</button>
         </div>
         <AutoBackups />
-        <div className="tiny muted" style={{ marginTop: 8 }}>첨부 파일 원본은 Gist 동기화로 옮겨집니다. JSON 백업에는 목록만 포함돼요.</div>
+        <div className="tiny muted" style={{ marginTop: 8 }}>교체: 지금 데이터를 백업 파일로 바꿔요 · 합치기: 지금 데이터는 두고 항목마다 최신 수정만 반영해요. 첨부 파일 원본은 Gist 동기화로 옮겨지고, JSON 백업에는 목록만 포함돼요.</div>
       </Card>
       <Card title="홈 화면에 설치">
         <div className="small">Safari 에서 공유 버튼 → <b>홈 화면에 추가</b>. 전체 화면·오프라인으로 동작합니다. iPhone 과 iPad 모두 같은 방법으로 설치한 뒤 위 동기화에 같은 토큰을 입력하세요.</div>
@@ -189,7 +203,18 @@ function ShareCaptureCard() {
         <input className="input grow" readOnly value={base + '?note='} onFocus={(e) => e.target.select()} />
         <button className="btn" onClick={async () => { try { await navigator.clipboard.writeText(base + '?note='); toast('주소를 복사했어요') } catch { toast('주소를 길게 눌러 복사해 주세요') } }}>복사</button>
       </div>
-      <div className="tiny muted" style={{ marginTop: 6 }}>PDF·사진 파일은 단축어로 넘길 수 없어요. 노트에서 파일 첨부로 추가해 주세요.</div>
+      <div style={{ borderTop: '1px solid var(--line)', margin: '12px 0' }} />
+      <b className="small">사진으로 (문제집·필기 사진)</b>
+      <div className="small" style={{ lineHeight: 1.7, marginTop: 4 }}>
+        사진 앱·카메라에서 <b>공유 › 사진으로</b> → 앱이 열리면 <b>붙여넣기</b> 한 번 → 할 일 또는 노트에 첨부돼요.<br />
+        1. 새 단축어 ‘사진으로’ (공유 시트에서 보기 · 받는 유형: 이미지)<br />
+        2. 동작 <b>클립보드에 복사</b>(단축어 입력) → <b>URL</b>: 아래 주소 → <b>URL 열기</b>
+      </div>
+      <div className="row" style={{ marginTop: 8 }}>
+        <input className="input grow" readOnly value={base + '?photo=1'} onFocus={(e) => e.target.select()} />
+        <button className="btn" onClick={async () => { try { await navigator.clipboard.writeText(base + '?photo=1'); toast('주소를 복사했어요') } catch { toast('주소를 길게 눌러 복사해 주세요') } }}>복사</button>
+      </div>
+      <div className="tiny muted" style={{ marginTop: 6 }}>⋯ 메뉴 › 사진 넣기 로도 열 수 있어요. PDF 는 노트에서 파일 첨부로 추가해 주세요.</div>
     </Card>
   )
 }
@@ -219,6 +244,22 @@ function AutoBackups() {
   )
 }
 const fmtDateK = (s) => { const [y, m, d] = s.split('-'); return `${y}년 ${+m}월 ${+d}일` }
+
+// 동기화 기록: 언제 · 받음/보냄 · 겹침(양쪽에서 같은 항목 수정 → 최신 수정 우선) · 오류
+function SyncLog() {
+  useSyncStatus()
+  const log = syncLog().slice(0, 6)
+  if (!log.length) return null
+  return (
+    <details className="small">
+      <summary className="muted">동기화 기록</summary>
+      <div className="col" style={{ gap: 2, marginTop: 4 }}>
+        {log.map((x, i) => <div key={i} className="tiny row" style={{ gap: 8 }}><span className="muted" style={{ width: 82, flexShrink: 0 }}>{new Date(x.at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+          {x.err ? <span style={{ color: 'var(--danger)' }}>오류 · {x.err}</span> : <span>받음 {x.got} · 보냄 {x.sent}{x.clash ? <b style={{ fontWeight: 500 }}> · 겹침 {x.clash} (최신 수정 우선)</b> : ''}</span>}</div>)}
+      </div>
+    </details>
+  )
+}
 
 function SyncCard() {
   const s = useSyncStatus()
@@ -253,6 +294,7 @@ function SyncCard() {
             {gistId && <a className="btn" href={`https://gist.github.com/${gistId}`} target="_blank" rel="noreferrer">Gist 보기</a>}
             <button className="btn danger" onClick={() => confirmSheet('연결 해제', '이 기기의 토큰을 지웁니다. 데이터는 그대로 남아요.', disconnect, '해제')}>연결 해제</button>
           </div>
+          <SyncLog />
           <div className="tiny muted">앱을 열 때·돌아올 때·편집 후·1분마다 자동 동기화. 같은 항목은 최신 수정이 우선합니다. 홈 화면 앱과 사파리는 저장 공간이 따로라, 위젯을 눌러 사파리로 열었다면 사파리에서도 한 번 연결해 주세요.</div>
         </div>
       )}

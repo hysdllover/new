@@ -30,7 +30,21 @@ export const FONTS = {
 
 const DENSITY = { compact: 0.75, normal: 1, relaxed: 1.3 }
 
-export function applyTheme(t) {
+// 기기별 글자 크기·간격 (아이폰·아이패드 따로) — 이 기기 localStorage, 없으면 공용 테마 값 (아이패드는 기본 '여유')
+const isPad = () => /iPad/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) || Math.min(screen.width, screen.height) >= 700
+export const deviceTheme = () => { try { return JSON.parse(localStorage.getItem('device_theme') || '{}') } catch { return {} } }
+export function setDeviceTheme(p, t) { try { localStorage.setItem('device_theme', JSON.stringify({ ...deviceTheme(), ...p })) } catch {} applyTheme(t) }
+export const effTheme = (t) => { const d = deviceTheme(); return { ...t, fontSize: d.fontSize ?? t.fontSize, density: d.density ?? (isPad() && t.density === 'normal' ? 'relaxed' : t.density) } }
+const familyOf = (key) => {
+  const mine = key?.startsWith('my:') ? key.slice(3) : null
+  if (mine) { loadFont(mine); return `"${fontFamily(mine)}", ${FONTS.system.family}` }
+  const f = FONTS[key]
+  if (f?.href && !document.querySelector(`link[data-font="${key}"]`)) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = f.href; l.dataset.font = key; document.head.appendChild(l) }
+  return f ? f.family : null
+}
+
+export function applyTheme(t0) {
+  const t = effTheme(t0)
   const root = document.documentElement
   const p = PRESETS[t.preset] || PRESETS.default
   const accent = t.accent || p.accent
@@ -47,6 +61,8 @@ export function applyTheme(t) {
     '--font': font.family, '--fs': t.fontSize + 'px', '--fw': t.fontWeight,
     '--fw-b': Math.min(t.fontWeight + 200, 700),
     '--radius': t.radius + 'px', '--gap': (12 * (DENSITY[t.density] || 1)) + 'px',
+    // 제목·큰 숫자 글꼴 (비우면 본문과 같음)
+    '--font-head': (t.headFont && familyOf(t.headFont)) || font.family,
   }
   for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v)
   root.dataset.card = t.card

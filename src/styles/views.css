@@ -118,7 +118,7 @@
 @media print { .tl-scroll { max-height: none; overflow: visible; } }
 
 /* ── 공부 ── */
-.big-clock { font-size: 2.2em; font-weight: var(--fw); letter-spacing: .02em; font-variant-numeric: tabular-nums; }
+.big-clock { font-family: var(--font-head, inherit); font-size: 2.2em; font-weight: var(--fw); letter-spacing: .02em; font-variant-numeric: tabular-nums; }
 .big-clock.xl { font-size: 3.4em; line-height: 1.2; }
 .play-btn { width: 34px; height: 34px; border-radius: 17px; display: grid; place-items: center; color: var(--c); border: 1.5px solid var(--c); flex-shrink: 0; }
 .play-btn.on { background: var(--c); color: #fff; }
@@ -166,7 +166,7 @@
 .note-page { max-width: 760px; margin: 0 auto; }
 .note-head { display: flex; align-items: flex-start; gap: 8px; margin: 6px 0 8px; }
 .note-icon { font-size: 26px; line-height: 1.2; }
-.note-title { flex: 1; border: 0; background: transparent; font-size: 1.7em; font-weight: var(--fw-b); outline: none; padding: 0; line-height: 1.3; font-family: inherit; color: inherit; }
+.note-title { flex: 1; border: 0; background: transparent; font-size: 1.7em; font-weight: var(--fw-b); outline: none; padding: 0; line-height: 1.3; font-family: var(--font-head, inherit); color: inherit; }
 .note-meta { gap: 6px; margin-bottom: 14px; }
 .blocks { display: flex; flex-direction: column; }
 .blk { display: flex; align-items: flex-start; gap: 4px; position: relative; min-height: 30px; }
@@ -291,7 +291,7 @@ details.more[open] > summary::before { content: '▾ '; }
 .wf-bold .card .muted, .wf-bold .card .tiny, .wf-bold .card h3 { color: rgba(255, 255, 255, .82); }
 .wf-bold .card .chip, .wf-bold .card .input { background: rgba(255, 255, 255, .15); color: #fff; border-color: transparent; }
 .w-badge { position: absolute; top: -8px; left: 8px; z-index: 3; height: auto; white-space: nowrap; max-width: calc(100% - 16px); overflow: hidden; text-overflow: ellipsis; font-size: 10.5px; background: var(--accent); color: #fff; border-radius: 6px; padding: 1px 7px; }
-.big-num { font-size: 2.3em; font-weight: var(--fw-b); line-height: 1.15; font-variant-numeric: tabular-nums; }
+.big-num { font-family: var(--font-head, inherit); font-size: 2.3em; font-weight: var(--fw-b); line-height: 1.15; font-variant-numeric: tabular-nums; }
 .big-num span { font-size: .45em; margin-left: 2px; color: var(--muted); }
 .qr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; }
 .qr-btn { display: flex; align-items: center; gap: 6px; padding: 10px; border-radius: 10px; background: color-mix(in srgb, var(--c) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--c) 25%, transparent); font-size: .92em; min-height: 44px; }

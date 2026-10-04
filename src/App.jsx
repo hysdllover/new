@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { Icon, UiLayer, useUi, closeDetail, openSheet, openMenu, useMedia } from './components/ui.jsx'
 import { TABS, EXTRA, SEGMENTS, useNav, go, segOf, tabOpt, DEFAULT_TABBAR } from './nav.js'
-import { useColl, useSettings } from './store/store.js'
+import { useColl, useSettings, setSettings } from './store/store.js'
 import { useSyncStatus, syncNow } from './sync/sync.js'
 import { fmtDate, today } from './engine/date.js'
 import QuickAdd from './components/QuickAdd.jsx'
@@ -19,6 +19,8 @@ import Health from './views/Health.jsx'
 import Settings from './views/Settings.jsx'
 
 const VIEWS = { home: Home, planner: Planner, tasks: Tasks, study: Study, notes: Notes, health: Health, settings: Settings }
+// 아이패드 가로 2단: 오른쪽에 함께 띄울 화면 (설정 › 디자인)
+export const SPLIT = { planner: ['planner', 'today', '오늘 일정'], timer: ['study', 'timer', '타이머'], tasks: ['tasks', 'day', '오늘 할 일'], notes: ['notes', 'daily', '데일리 노트'] }
 const TITLES = { home: null, planner: '캘린더', tasks: '할 일', study: '공부 기록', notes: '노트', health: '건강', settings: '설정' }
 
 export default function App() {
@@ -34,6 +36,7 @@ export default function App() {
   const segs = (SEGMENTS[tab] || []).filter((s) => !s[2] || st.modules[s[2]] !== false)
   const seg0 = segOf(tab)
   const seg = segs.length && !segs.some((x) => x[0] === seg0) ? segs[0][0] : seg0
+  const sp = SPLIT[st.splitPane], pane = sp && !(sp[0] === tab && sp[1] === seg) ? { V: VIEWS[sp[0]], seg: sp[1] } : null
 
   useEffect(() => {
     const onKey = (e) => {
@@ -55,6 +58,7 @@ export default function App() {
     ...hiddenTabs.map((x) => ({ label: x.label, icon: x.icon, onClick: () => go(x.id) })),
     ...extra.filter((x) => !bar.some((b) => b.tab === x.id)).map((x) => ({ label: x.label, icon: x.icon, onClick: () => go(x.id) })),
     { label: '기록에 물어보기', icon: 'search', onClick: () => import('./components/AskSheet.jsx').then((m) => openSheet(() => <m.default />, { title: '내 기록에 물어보기' })) },
+    { label: '사진 넣기', icon: 'upload', onClick: () => import('./components/PhotoPaste.jsx').then((m) => openSheet((c) => <m.default close={c} />, { title: '사진 넣기' })) },
     { label: '하루 요약', icon: 'check', onClick: () => import('./components/DaySummary.jsx').then((m) => openSheet(() => <m.default />, { title: '하루 요약' })) },
     { label: '보관함·휴지통', icon: 'archive', onClick: () => go('tasks', 'archive') },
     { label: '인쇄 (A4)', icon: 'print', onClick: () => window.print() },
@@ -107,6 +111,10 @@ export default function App() {
       </div>
 
       {detail && wide && <aside className="detail open">{detail}</aside>}
+      {!detail && wide && pane && <aside className="split-pane no-print">
+        <div className="row between" style={{ marginBottom: 8 }}><span className="small muted">{SPLIT[st.splitPane][2]}</span><button className="icon-btn" aria-label="2단 닫기" onClick={() => setSettings({ splitPane: null })}><Icon name="close" size={14} /></button></div>
+        <pane.V seg={pane.seg} params={{}} />
+      </aside>}
       {detail && !wide && (
         <>
           <div className="sheet-bg" onClick={closeDetail} />

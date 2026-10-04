@@ -40,3 +40,12 @@ test('동일하면 변경 없음', () => {
 test('stableFile 은 키 순서와 무관하게 같은 문자열', () => {
   assert.equal(stableFile({ t: { b: 1, a: 2 }, s: {} }), stableFile({ s: {}, t: { a: 2, b: 1 } }))
 })
+
+test('mergeColl counts received and conflicts since last sync', () => {
+  const local = { a: { id: 'a', v: 1, updatedAt: 500, deviceId: 'x' }, b: { id: 'b', v: 1, updatedAt: 100, deviceId: 'x' } }
+  const remote = { a: { id: 'a', v: 2, updatedAt: 600, deviceId: 'y' }, b: { id: 'b', v: 2, updatedAt: 450, deviceId: 'y' }, c: { id: 'c', updatedAt: 450 } }
+  const r = mergeColl(local, remote, 400)
+  assert.equal(r.received, 3)
+  assert.equal(r.conflicts, 1)
+  assert.equal(r.merged.a.v, 2)
+})

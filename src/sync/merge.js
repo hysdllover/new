@@ -6,14 +6,17 @@ export const newer = (a, b) => {
   return ta > tb || (ta === tb && String(a.deviceId || '') > String(b.deviceId || ''))
 }
 
-export function mergeColl(local = {}, remote = {}) {
+// since: 마지막 동기화 시각 — 그 뒤로 양쪽에서 같은 항목을 고쳤으면 겹침(conflicts)으로 셈 (최신 수정이 이김)
+export function mergeColl(local = {}, remote = {}, since = 0) {
   const out = { ...local }
-  let localChanged = false
+  let localChanged = false, received = 0, conflicts = 0
   for (const [id, r] of Object.entries(remote)) {
     const l = local[id]
-    if (!l || (newer(r, l) && (r.updatedAt !== l.updatedAt || r.deviceId !== l.deviceId))) { out[id] = r; localChanged = true }
+    const differs = l && (r.updatedAt !== l.updatedAt || r.deviceId !== l.deviceId)
+    if (differs && since && (l.updatedAt || 0) > since && (r.updatedAt || 0) > since) conflicts++
+    if (!l || (newer(r, l) && differs)) { out[id] = r; localChanged = true; received++ }
   }
-  return { merged: out, localChanged }
+  return { merged: out, localChanged, received, conflicts }
 }
 
 // 정렬된 JSON (비교용으로 항상 같은 문자열을 만든다)

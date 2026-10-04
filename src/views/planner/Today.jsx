@@ -56,7 +56,7 @@ export default function Today({ date }) {
                   <TaskItem key={t.id} t={t} subjects={subjects} projects={projects} drag={dragTask(t)}
                     extra={<button className="chip" onClick={(e) => { e.stopPropagation(); if (scheduleTask(t.id, date)) toast('빈 시간에 배정') }}>배정</button>} />
                 ))}
-                {!unscheduled.length && <Empty>모두 배정했어요 👏</Empty>}
+                {!unscheduled.length && <Empty>모두 배정했어요</Empty>}
               </div>
             </Card>
           </>

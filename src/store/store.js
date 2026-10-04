@@ -1,3 +1,4 @@
+import { mergeColl } from '../sync/merge.js'
 import { useMemo, useSyncExternalStore } from 'react'
 import { get, set } from 'idb-keyval'
 import { COLL_NAMES, DEFAULT_SETTINGS, DEFAULT_SUBJECTS, DEFAULT_QUOTES, emptyState } from './schema.js'
@@ -145,8 +146,16 @@ export async function loadState() {
 }
 
 export function exportJSON() { return JSON.stringify({ app: 'study-dashboard', v: SCHEMA_VERSION, exportedAt: new Date().toISOString(), state }, null, 1) }
-export function importJSON(text) {
+export function importJSON(text, { merge = false } = {}) {
   const data = JSON.parse(text)
   if (!data.state) throw new Error('형식이 올바르지 않습니다')
-  replaceAll(data.state)
+  if (!merge) return replaceAll(data.state)
+  // 합치기: 항목마다 최신 수정이 남음 (지금 데이터는 지우지 않음)
+  let n = 0
+  for (const [c, recs] of Object.entries(data.state)) {
+    if (!(c in state) || c === 'settings' || !recs || typeof recs !== 'object') continue
+    const { merged, localChanged, received } = mergeColl(state[c], recs)
+    if (localChanged) { replaceColl(c, merged); n += received }
+  }
+  return n
 }

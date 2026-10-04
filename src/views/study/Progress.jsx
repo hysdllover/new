@@ -19,7 +19,7 @@ export default function Progress() {
         <h4>교재 진도</h4>
         <button className="btn sm" onClick={() => openSheet((c) => <TbForm close={c} />, { title: '교재 추가' })}><Icon name="plus" size={14} />교재</button>
       </div>
-      {!textbooks.length && <Empty>교재를 추가하고 진도를 기록해 보세요</Empty>}
+      {!textbooks.length && <Empty>교재가 없어요</Empty>}
       <div className="grid two">
         {textbooks.map((tb) => {
           const ratio = (tb.current || 0) / (tb.total || 1)

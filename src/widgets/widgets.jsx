@@ -79,7 +79,7 @@ function Top3() {
             <button className="t title ellipsis" style={{ textAlign: 'left' }} onClick={() => openDetail('task', t.id)}>{t.title}</button>
           </div>
         ))}
-        {!top.length && <Empty>캘린더 › 오늘에서 핵심 3가지를 골라요</Empty>}
+        {!top.length && <Empty>핵심 3가지가 없어요</Empty>}
       </div>
       {day.comment && <div className="small muted" style={{ marginTop: 6 }}>“{day.comment}” {(day.stickers || []).join('')}</div>}
     </Card>
@@ -139,7 +139,7 @@ function TodayList() {
         </div>
         <div className="list">
           {due.slice(0, 10).map((t) => <TaskItem key={t.id} t={t} subjects={subjects} projects={projects} />)}
-          {!openCount(due) && <Empty>오늘 할 일을 모두 끝냈어요 🎉</Empty>}
+          {!openCount(due) && <Empty>모두 끝냈어요</Empty>}
         </div>
       </div>
     </Card>
@@ -158,7 +158,7 @@ function ReviewW() {
             <button className="btn sm primary" onClick={() => completeReview(r.id, true)}>기억남</button>
           </div>
         ))}
-        {!reviews.length && <Empty>오늘 복습 끝!</Empty>}
+        {!reviews.length && <Empty>오늘 복습 끝</Empty>}
       </div>
     </Card>
   )
@@ -523,7 +523,7 @@ function ExamRangeW() {
             </div>
           )
         })}
-        {!dd.length && <Empty>기록 › 진도에서 시험 범위를 추가하세요</Empty>}
+        {!dd.length && <Empty>D-day가 없어요</Empty>}
       </div>
     </Card>
   )
@@ -540,7 +540,7 @@ function Textbooks() {
             <div className="bar-t" style={{ marginTop: 4 }}><i style={{ width: r * 100 + '%' }} /></div>
           </div>
         ) })}
-        {!tbs.length && <Empty>교재를 추가해 보세요</Empty>}
+        {!tbs.length && <Empty>교재가 없어요</Empty>}
       </div>
     </Card>
   )
@@ -564,7 +564,7 @@ function LecturesW() {
             <div className={'tiny' + (s.late ? ' lec-late' : ' muted')} style={{ marginTop: 3 }}>{lectureLine(s)} · 남은 {fmtDur(s.leftMin)}</div>
           </div>
         ))}
-        {!rows.length && <Empty>{lecs.length ? '모든 강좌를 완강했어요' : '공부 › 진도에서 인강을 추가해 보세요'}</Empty>}
+        {!rows.length && <Empty>{lecs.length ? '모든 강좌를 완강했어요' : '인강이 없어요'}</Empty>}
       </div>
     </Card>
   )
@@ -580,7 +580,7 @@ function GradesW() {
           <div key={s.id} className="row small"><span className="dot" style={{ background: s.color }} /><span className="grow">{s.name}</span><b>{last.score}</b><span className="tiny muted">/{last.max || 100}</span>
             {prev && <span className="tiny" style={{ color: diff >= 0 ? 'var(--c2)' : 'var(--c4)', width: 34, textAlign: 'right' }}>{diff >= 0 ? '▲' : '▼'}{Math.abs(diff)}</span>}</div>
         ) })}
-        {!rows.length && <Empty>통계에서 성적을 기록하세요</Empty>}
+        {!rows.length && <Empty>성적 기록이 없어요</Empty>}
       </div>
     </Card>
   )
@@ -627,7 +627,7 @@ function DdayList() {
     <Card title="D-day">
       <div className="col" style={{ gap: 6 }}>
         {dd.slice(0, 5).map((d) => <div key={d.id} className="row small"><span className="grow ellipsis">{d.title}</span><span className="tiny muted">{fmtShort(d.date)}</span><b style={{ color: d.color || 'var(--accent)', width: 52, textAlign: 'right' }}>{dday(d.date)}</b></div>)}
-        {!dd.length && <Empty>통계에서 D-day 추가</Empty>}
+        {!dd.length && <Empty>D-day가 없어요</Empty>}
       </div>
     </Card>
   )
