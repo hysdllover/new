@@ -868,7 +868,16 @@ function WidgetPreview() {
     return { c: [[hm(mins), { fontSize: 14 }], [pct + '%', S], [bar(mins / goal, 34)]], r: [[<><b>{hm(mins)}</b> / {hm(goal)}<span className="grow" />{ddTxt}</>], [bar(mins / goal, 136)], [todo[0] ? '– ' + todo[0].title : dd?.title || 'All clear.']], i: hm(mins) + (dd ? ` · ${ddTxt} ${dd.title}` : '') }
   }
   V['진행'] = V['공부']; V['남은분'] = V['지금']
-  const L = kind === '진행' ? { ...Lfor('공부'), c: [[pct + '%', B], [`공부 ${hm(mins)}`, S], [bar(mins / goal, 34)]] }
+  // 타이머·공부 시간 (미리보기는 타이머가 안 도는 상태 기준)
+  const qs0 = qsub[0]
+  const tmB = (sz) => <>{hdr('STUDY', pct + '%')}<div className="dw-big"><span style={{ fontSize: sz }}>{hm(mins)}</span><span className="dw-soft">/ {hm(goal)}</span></div><div className="dw-line"><i style={{ width: pct + '%' }} /></div><div className="dw-gold" style={{ marginTop: 5, fontSize: 11 }}>▶ {qs0 ? qs0.name + ' 시작' : '공부 시작'}</div></>
+  const subL = (n) => <>{subMins.slice(0, n).map((x) => pRow(x.s.name, hm(x.m), x.m / (subMins[0].m || 1), x.s.color))}{!subMins.length && <div className="dw-soft">오늘 기록이 없어요</div>}</>
+  V['타이머'] = [
+    M(<><div className="dw-cap">{dateStr}</div><div className="grow" />{tmB(30)}</>),
+    <><div className="col" style={{ gap: 0, width: '50%', flexShrink: 0, minWidth: 0 }}><div className="dw-cap">{dateStr}</div><div className="grow" />{tmB(30)}</div><div className="dw-vr" /><div className="col" style={{ gap: 0, flex: 1, minWidth: 0 }}>{hdr('TODAY', '')}{subL(4)}</div></>,
+    M(<>{hdr('TODAY', dateStr)}{tmB(46)}<div className="dw-hr" />{hdr('SUBJECTS', '이번 주 ' + hm(sw.week))}{subL(4)}<div className="grow" /><div className="row" style={{ gap: 8, flexWrap: 'nowrap' }}>{qsub.slice(0, 4).map((x) => btn(x.name, x.id, x.color))}</div></>),
+  ]
+  const L = kind === '타이머' ? Lfor('공부') : kind === '진행' ? { ...Lfor('공부'), c: [[pct + '%', B], [`공부 ${hm(mins)}`, S], [bar(mins / goal, 34)]] }
     : kind === '남은분' ? { ...Lfor('지금'), c: nC ? [[nCur ? '끝까지' : '시작까지', S], [`${Math.max(0, (nCur ? nC.e : nC.s) - nmP)}분`, { fontSize: 15 }], [nC.t, S]] : [['—', B]] }
     : Lfor(kind)
   const [vs, vm, vl] = V[kind]
