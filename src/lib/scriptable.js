@@ -164,7 +164,7 @@ const data = await load()
 const FM = FileManager.local()
 const bgPath = (f, p) => FM.joinPath(FM.documentsDirectory(), 'study-bg-' + f + '-' + (p || 'default') + '.jpg')
 // 종이 테마: 앱과 같은 요철 결 이미지(한 번 받아 두고 씀) → 위젯 크기만큼 타일로 깔기
-const paperPath = FM.joinPath(FM.documentsDirectory(), 'study-paper-1.jpg')
+const paperPath = FM.joinPath(FM.documentsDirectory(), 'study-paper-2.jpg')
 let PAPER = null
 if (((data && data.settings && data.settings.settings && data.settings.settings.main) || {}).widgetTheme === 'paper') {
   try { if (!FM.fileExists(paperPath)) FM.writeImage(paperPath, await new Request(APP + 'paper.jpg').loadImage()); PAPER = FM.readImage(paperPath) } catch (e) {}
@@ -172,7 +172,7 @@ if (((data && data.settings && data.settings.settings && data.settings.settings.
 function paperBg(wd, ht) {
   const c = new DrawContext(); c.size = new Size(wd, ht); c.opaque = true; c.respectScreenScale = true
   c.setFillColor(new Color('#f2f2f1')); c.fillRect(new Rect(0, 0, wd, ht))
-  for (let x = 0; x < wd; x += 320) for (let y = 0; y < ht; y += 320) c.drawImageInRect(PAPER, new Rect(x, y, 320, 320))
+  for (let x = 0; x < wd; x += 360) for (let y = 0; y < ht; y += 360) c.drawImageInRect(PAPER, new Rect(x, y, 360, 360))
   return c.getImage()
 }
 // 잠금 화면 진행선: 이미지 대신 색 채운 스택 두 겹 (가볍고 확실히 그려짐)
