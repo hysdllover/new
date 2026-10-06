@@ -19,6 +19,6 @@ test('시간 없는 할 일은 9시 기준, 완료·보관은 제외', () => {
 
 test('예전 remind 값 인식·문구', () => {
   assert.deepEqual(taskReminders({ remind: 15, dueTime: 600 }), [15])
-  assert.equal(reminderBody({ dueTime: 600 }, 1440), '내일 10:00 마감')
-  assert.equal(reminderBody({ dueTime: 600 }, 30), '30분 뒤 마감')
+  assert.equal(reminderBody({ dueTime: 600 }, 1440), '내일 10:00까지')
+  assert.equal(reminderBody({ dueTime: 600 }, 30), '30분 뒤까지')
 })

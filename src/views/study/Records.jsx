@@ -36,6 +36,7 @@ export default function Records() {
   const doneRate = weekTasks.length ? weekTasks.filter((t) => t.done).length / weekTasks.length : 0
   return (
     <div className="grid two">
+      <WeekSwipe sessions={sessions} subjects={subjects} s={s} st={st} />
       <Card title="목표 달성" action={<button className="btn sm" onClick={() => openSheet(() => <ShareCardSheet />, { title: '공부 인증 카드' })}><Icon name="share" size={14} />인증 카드</button>}>
         <div className="row" style={{ justifyContent: 'space-around' }}>
           <div className="col center" style={{ alignItems: 'center', gap: 4 }}>
@@ -63,6 +64,48 @@ export default function Records() {
       <DdayCard />
       <Habits />
       <Grades />
+    </div>
+  )
+}
+
+// 이번 주 요약: 좌우로 넘기는 한 장 카드들
+const hmS = (m) => `${Math.floor((m || 0) / 60)}:${String((m || 0) % 60).padStart(2, '0')}`
+function WeekSwipe({ sessions, subjects, s, st }) {
+  const [i, setI] = useState(0)
+  const t0 = today(), ws = s.ws, days = Array.from({ length: 7 }, (_, k) => addDays(ws, k)).filter((d) => d <= t0)
+  const lws = addDays(ws, -7), lastSame = Array.from({ length: days.length }, (_, k) => s.byDay[addDays(lws, k)] || 0).reduce((a, v) => a + v, 0)
+  const wk = sessions.filter((x) => x.date >= ws && x.date <= t0)
+  const bySub = {}; for (const x of wk) bySub[x.subjectId || '-'] = (bySub[x.subjectId || '-'] || 0) + (x.dur || 0)
+  const topSub = Object.entries(bySub).sort((a, b) => b[1] - a[1])[0], sub = topSub && subjects.find((x) => x.id === topSub[0])
+  const bestDay = days.reduce((a, d) => ((s.byDay[d] || 0) > (s.byDay[a] || 0) ? d : a), days[0])
+  const hit = days.filter((d) => (s.byDay[d] || 0) >= (st.goalDaily || 240)).length
+  const fc = { 3: 0, 2: 0, 1: 0 }; for (const x of wk) if (x.focus) fc[x.focus >= 4 ? 3 : x.focus >= 3 ? 2 : 1]++
+  const slot = { '오전': 0, '오후': 0, '저녁': 0, '밤': 0 }
+  for (const x of wk) if (x.start != null) { const h = new Date(x.start).getHours(); slot[h < 12 ? '오전' : h < 18 ? '오후' : h < 22 ? '저녁' : '밤'] += x.dur || 0 }
+  const topSlot = Object.entries(slot).sort((a, b) => b[1] - a[1])[0]
+  const diff = s.week - lastSame
+  const cards = [
+    ['이번 주', hmS(s.week), `하루 평균 ${hmS(Math.round(s.week / Math.max(1, days.length)))}`],
+    ['지난주 같은 때와', (diff >= 0 ? '+' : '−') + hmS(Math.abs(diff)), `지난주 ${hmS(lastSame)}`],
+    ['가장 많이 한 과목', topSub ? (sub?.name || '과목 없음') : '—', topSub ? `${hmS(topSub[1])} · ${Math.round((topSub[1] / Math.max(1, s.week)) * 100)}%` : '기록 없음', sub?.color],
+    ['가장 많이 한 날', bestDay && s.byDay[bestDay] ? `${'일월화수목금토'[new Date(bestDay + 'T00:00').getDay()]}요일` : '—', bestDay && s.byDay[bestDay] ? hmS(s.byDay[bestDay]) : '기록 없음'],
+    ['목표를 채운 날', `${hit}일`, `지난 ${days.length}일 중`],
+    ['집중', fc[3] + fc[2] + fc[1] ? `상 ${fc[3]}` : '—', fc[3] + fc[2] + fc[1] ? `중 ${fc[2]} · 하 ${fc[1]}` : '기록을 마칠 때 집중도를 남겨 보세요'],
+    ['잘 되는 시간대', topSlot && topSlot[1] ? topSlot[0] : '—', topSlot && topSlot[1] ? hmS(topSlot[1]) : '기록 없음'],
+  ]
+  const onScroll = (e) => { const el = e.currentTarget; setI(Math.round(el.scrollLeft / Math.max(1, el.firstChild?.offsetWidth || 1))) }
+  return (
+    <div className="wswipe-wrap" style={{ gridColumn: '1 / -1' }}>
+      <div className="wswipe" onScroll={onScroll}>
+        {cards.map(([cap, big, sub2, color], k) => (
+          <div key={k} className="card wswipe-card" style={color ? { '--wc': color } : null}>
+            <span className="tiny muted wsw-cap">{cap}</span>
+            <span className="wsw-big">{color && <i className="wsw-dot" />}{big}</span>
+            <span className="small muted">{sub2}</span>
+          </div>
+        ))}
+      </div>
+      <div className="row center" style={{ gap: 5, marginTop: 6, justifyContent: 'center' }}>{cards.map((_, k) => <i key={k} className={'wsw-pip' + (k === i ? ' on' : '')} />)}</div>
     </div>
   )
 }

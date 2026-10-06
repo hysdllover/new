@@ -639,3 +639,13 @@ button.greet { display: block; width: 100%; text-align: left; }
 .note-grid.ng-one { grid-template-columns: 1fr !important; }
 .note-grid.ng-one .note-prev { -webkit-line-clamp: 2; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
 .note-card.on { border-color: var(--accent) !important; }
+/* 이번 주 요약 카드 (좌우로 넘기기) */
+.wswipe { display: grid; grid-auto-flow: column; grid-auto-columns: min(78%, 260px); gap: var(--gap); overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding: 2px 2px 4px; }
+.wswipe::-webkit-scrollbar { display: none; }
+.wswipe-card { scroll-snap-align: start; display: flex; flex-direction: column; gap: 4px; min-height: 108px; justify-content: space-between; }
+.wsw-cap { letter-spacing: .08em; }
+.wsw-big { font-size: 1.9em; font-weight: 200; font-family: var(--font-head, inherit); line-height: 1.15; display: flex; align-items: center; gap: 8px; }
+.wsw-dot { width: 8px; height: 8px; border-radius: 4px; background: var(--wc); flex-shrink: 0; }
+.wsw-pip { width: 5px; height: 5px; border-radius: 3px; background: var(--line); transition: background .2s, width .2s; }
+.wsw-pip.on { width: 14px; background: var(--accent); }
+.wset { display: flex; gap: 8px; align-items: flex-start; }
