@@ -940,3 +940,18 @@ html[data-bar="thick"] { --bar-w: 14px; --bar-h: 5px; }
 .mdi-code code { font-family: ui-monospace, Menlo, monospace; font-size: .9em; white-space: pre-wrap; background: var(--surface-2); padding: 2px 6px; border-radius: 4px; display: block; }
 .mdi-b hr { flex: 1; border: 0; border-top: 1px solid var(--line); }
 .tblk-c { min-width: 0; width: 100%; box-sizing: border-box; overflow-wrap: anywhere; }
+
+/* 구분선 모양 (블록마다) */
+.blocks .blk hr.hr-thin { border: 0; border-top: 1px solid var(--line); height: 0; background: none; }
+.blocks .blk hr.hr-bold { border: 0; border-top: 2px solid color-mix(in srgb, var(--text) 55%, transparent); height: 0; background: none; }
+.blocks .blk hr.hr-dash { border: 0; border-top: 1px dashed color-mix(in srgb, var(--muted) 55%, transparent); height: 0; background: none; }
+.blocks .blk hr.hr-double { border: 0; border-top: 3px double var(--line); height: 0; background: none; }
+.blocks .blk hr.hr-short { border: 0; border-top: 1px solid var(--line); width: 30%; margin-left: auto; margin-right: auto; height: 0; background: none; }
+.blocks .blk hr.hr-dots { border: 0; height: auto; background: none; text-align: center; line-height: 1; }
+.blocks .blk hr.hr-dots::after { content: '·  ·  ·'; color: var(--muted); letter-spacing: .3em; font-size: .95em; }
+.blocks .blk hr.hr-space { border: 0; height: 12px; background: none; }
+.blocks .hr-t.hr-dash::before, .blocks .hr-t.hr-dash::after { border-top-style: dashed; }
+.blocks .hr-t.hr-double::before, .blocks .hr-t.hr-double::after { border-top: 3px double var(--line); }
+.blocks .hr-t.hr-bold::before, .blocks .hr-t.hr-bold::after { border-top-width: 2px; border-top-color: color-mix(in srgb, var(--text) 55%, transparent); }
+.blocks .hr-t.hr-short { padding: 0 25%; }
+.blocks .hr-t.hr-space::before, .blocks .hr-t.hr-space::after, .blocks .hr-t.hr-dots::before, .blocks .hr-t.hr-dots::after { border-top-color: transparent; }
