@@ -4,7 +4,7 @@ import { pickQuote } from './quote.js'
 export const WIDGET_KINDS = [['', '기본'], ['공부', '공부'], ['할일', '할 일'], ['디데이', 'D-day'], ['달력', '공부 달력'], ['캘린더', '캘린더'], ['다짐', '다짐'], ['시간표', '시간표'], ['주간', '주간 공부'], ['과목', '과목별'], ['지금', '지금·다음'], ['진도', '진도'], ['목표', '이번 주 목표'], ['오늘', '오늘 한눈에'], ['대시보드', '대시보드'], ['내일', '내일 준비'], ['마감', '마감 임박'], ['일주일', '7일 일정'], ['디데이목록', 'D-day 목록'], ['바로가기', '바로 시작'], ['진행', '공부 진행'], ['남은분', '남은 시간'], ['타이머', '타이머·공부 시간'], ['노트', '노트'], ['구성1', '내 위젯 1'], ['구성2', '내 위젯 2'], ['구성3', '내 위젯 3']]
 
 // 스크립트 버전 — 위젯 모양이 바뀔 때 올림. 앱이 위젯 데이터에 같이 올려서, 예전 스크립트면 위젯에 '스크립트 업데이트' 표시
-export const SCRIPT_VER = 64
+export const SCRIPT_VER = 65
 
 // 전체 스크립트 (예전 방식 · 테스트용): 머리 + 본체
 export function buildScript({ widgetRaw, appUrl }) {
@@ -97,6 +97,10 @@ setParam(args.widgetParameter)
 const pickQuote = ${pickQuote.toString()}
 // 위젯에서 바로 처리(토큰을 Scriptable 보관함에 저장했을 때): 타이머 화면 대신 이 스크립트를 실행해 시작·정지·기록
 let RUN = null
+// GitHub 오류 설명 (404 = 이 토큰으로는 동기화 저장소가 안 보임 → Gist 권한 없는 토큰)
+const ghErr = (sc) => (sc === 401 ? '토큰이 만료됐거나 틀려요. 메뉴 › 위젯에서 바로 처리 끄기 → 다시 켜기로 새 토큰을 넣어 주세요.' : sc === 404 || sc === 403 ? '이 토큰으로는 동기화 저장소에 접근할 수 없어요 (오류 ' + sc + ').\\n앱 동기화에 쓰는 토큰(Gist 권한)을 넣어 주세요. 알림용 Actions 토큰은 안 돼요.\\n메뉴 › 위젯에서 바로 처리 끄기 → 다시 켜기' : 'GitHub 오류 ' + sc)
+// 토큰 저장 전에 실제로 동기화 저장소에 접근되는지 확인
+async function tokenOk(tok) { if (!data || !data.gid) return '위젯 데이터에 저장소 정보가 아직 없어요. 홈 화면 앱을 한 번 열어 동기화한 뒤 다시 해 주세요.'; try { const r = new Request('https://api.github.com/gists/' + data.gid); r.headers = { Authorization: 'Bearer ' + tok, Accept: 'application/vnd.github+json' }; await r.loadString(); const sc = r.response && r.response.statusCode; return sc && sc >= 300 ? ghErr(sc) : null } catch (e) { return String(e.message || e) } }
 const link = (path) => (/^(https?|scriptable):/.test(path || '') ? path : RUN && path === 'study.timer' ? RUN + '?act=timer' : RUN ? RUN + '?act=view&go=' + encodeURIComponent(path || '') : APP + (path ? '?go=' + path : ''))
 // 위젯에서 할 일 누르기: 확인 없이 바로 완료 (앱이 잠깐 열렸다가 완료 · 되돌리기 가능)
 const doneUrl = (id) => (RUN ? RUN + '?act=done&id=' + encodeURIComponent(id) : APP + '?done=' + encodeURIComponent(id) + '&quick=1')
@@ -215,7 +219,7 @@ async function sharePhotos(imgs) {
   const at = Date.now(), files = {}
   imgs.forEach((img, i) => { files['inbox-' + (title ? title + (imgs.length > 1 ? ' ' + (i + 1) : '') : '') + '~' + (at + i) + '.txt'] = { content: Data.fromJPEG(shrink(img)).toBase64String() } })
   const r = new Request('https://api.github.com/gists/' + gid); r.method = 'PATCH'; r.headers = { Authorization: 'Bearer ' + tok, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }; r.body = JSON.stringify({ files })
-  try { await r.loadString(); const sc = r.response && r.response.statusCode; if (sc && sc >= 300) throw new Error(sc === 401 ? '토큰이 만료됐거나 틀려요' : 'GitHub 오류 ' + sc) } catch (e) { return say('보내지 못했어요', String(e.message || e)) }
+  try { await r.loadString(); const sc = r.response && r.response.statusCode; if (sc && sc >= 300) throw new Error(ghErr(sc)) } catch (e) { return say('보내지 못했어요', String(e.message || e)) }
   const n = new Notification(); n.title = '앱으로 사진 ' + imgs.length + '장 보냈어요'; n.body = '앱을 열면 받은 편지함에 들어와요'; n.schedule()
 }
 // ── 위젯을 눌렀을 때 (바로 처리 켠 경우) ──
@@ -232,7 +236,7 @@ const ACT = (() => {
   const addSess = (sid, start, end) => { const m = Math.round((end - start) / 60000); if (m < 1) return; data.study.sessions = data.study.sessions || {}; data.study.sessions['wg-' + end] = { id: 'wg-' + end, subjectId: sid, date: ymdOf(end), start, dur: m } }
   const timer = () => (data.timer && !(data.timer.end && data.timer.end < now()) ? data.timer : null)
   let dirty = false
-  const patchGist = async (id, files) => { const r = new Request('https://api.github.com/gists/' + id); r.method = 'PATCH'; r.headers = { Authorization: 'Bearer ' + tok(), Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }; r.body = JSON.stringify({ files }); await r.loadString(); const sc = r.response && r.response.statusCode; if (sc && sc >= 300) throw new Error(sc === 401 ? '토큰이 만료됐거나 틀려요' : 'GitHub 오류 ' + sc) }
+  const patchGist = async (id, files) => { const r = new Request('https://api.github.com/gists/' + id); r.method = 'PATCH'; r.headers = { Authorization: 'Bearer ' + tok(), Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }; r.body = JSON.stringify({ files }); await r.loadString(); const sc = r.response && r.response.statusCode; if (sc && sc >= 300) throw new Error(ghErr(sc)) }
   // 명령 보내기 (실패하면 알림창)
   const send = async (cmd) => { cmd.at = cmd.at || now(); try { await patchGist(data.gid, { ['cmd-' + cmd.at + '.json']: { content: JSON.stringify(cmd) } }); dirty = true; return true } catch (e) { await say('보내지 못했어요', String(e.message || e)); return false } }
   // 위젯 데이터 반영 (캐시 + 위젯 gist)
@@ -1692,7 +1696,7 @@ else {
   // 미리보기: 위젯과 같은 Parameter 를 골라 그 크기로 그림 (기존엔 대형을 잘라 보여 줌)
   if (i === 11) {
     if (Keychain.contains('study-gh')) { Keychain.remove('study-gh'); const a = new Alert(); a.title = '껐어요'; a.message = '위젯을 누르면 다시 앱(사파리)으로 열려요.'; a.addAction('확인'); await a.present() }
-    else { const a = new Alert(); a.title = '위젯에서 바로 처리'; a.message = '할 일 완료 · 타이머 시작·정지 · 공부 기록을 앱을 열지 않고 처리해요.\\nGitHub 토큰(Gists 읽기·쓰기)을 넣어 주세요. 이 아이폰의 Scriptable 보관함에만 저장되고 스크립트에는 들어가지 않아요.'; a.addSecureTextField('ghp_… / github_pat_…', ''); a.addAction('저장'); a.addCancelAction('취소'); if (await a.present() === 0 && a.textFieldValue(0).trim()) Keychain.set('study-gh', a.textFieldValue(0).trim()) }
+    else { const a = new Alert(); a.title = '위젯에서 바로 처리'; a.message = '할 일 완료 · 타이머 시작·정지 · 공부 기록을 앱을 열지 않고 처리해요.\\nGitHub 토큰(Gists 읽기·쓰기)을 넣어 주세요. 이 아이폰의 Scriptable 보관함에만 저장되고 스크립트에는 들어가지 않아요.'; a.addSecureTextField('ghp_… / github_pat_…', ''); a.addAction('저장'); a.addCancelAction('취소'); if (await a.present() === 0 && a.textFieldValue(0).trim()) { const tk = a.textFieldValue(0).trim(), err = await tokenOk(tk); const b = new Alert(); if (err) { b.title = '저장하지 않았어요'; b.message = err } else { Keychain.set('study-gh', tk); b.title = '켰어요'; b.message = '이제 위젯을 누르면 사파리 대신 바로 처리돼요. (위젯이 다시 그려진 뒤부터)' } b.addAction('확인'); await b.present() } }
     Script.complete(); return
   }
   if (i <= 2 || (i >= 8 && i <= 10)) {
