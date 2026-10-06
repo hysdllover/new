@@ -21,5 +21,5 @@ export function notesForWidget(st, n = 8) {
   const all = Object.values(st.notes || {}).filter((x) => !x.deleted && !x.trashed && x.type !== 'event')
   // 고정 → 일반 노트 최근순 → 데일리 노트 ('노트:데일리' 로 데일리만 고를 수 있음)
   all.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (a.type === 'daily' ? 1 : 0) - (b.type === 'daily' ? 1 : 0) || (b.updatedAt || 0) - (a.updatedAt || 0))
-  return all.slice(0, n).map((x) => ({ id: x.id, t: (x.type === 'daily' && x.date ? `${+x.date.slice(5, 7)}/${+x.date.slice(8)} 데일리` : x.title || '제목 없음').slice(0, 40), i: x.icon || '', p: !!x.pinned, u: x.updatedAt || 0, dd: x.type === 'daily' ? x.date : null, l: noteLines(x, st) }))
+  return all.slice(0, n).map((x) => ({ id: x.id, t: (x.type === 'daily' && x.date ? `${+x.date.slice(5, 7)}/${+x.date.slice(8)} 데일리` : x.title || '제목 없음').slice(0, 40), p: !!x.pinned, u: x.updatedAt || 0, dd: x.type === 'daily' ? x.date : null, l: noteLines(x, st) }))
 }

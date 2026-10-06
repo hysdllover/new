@@ -209,6 +209,16 @@ function goalsPayload() {
   return weekGoals().map((g) => { const p = goalProgress(g, tasks); return { t: g.title, done: !!g.done || (p.linked > 0 && p.ratio >= 1), r: p.ratio, n: p.done, of: p.linked } })
 }
 
+// 위젯 '내 위젯' 칸용: 오늘 습관 · 오늘 볼 복습 수 · 오늘의 하나
+function extraPayload() {
+  const d = today(), day = getState().days?.[d], one = day?.one
+  const oneT = one?.taskId ? getState().tasks?.[one.taskId] : null
+  return {
+    habits: list('habits').filter((h) => !h.archived).slice(0, 8).map((h) => ({ t: h.title, on: !!h.days?.[d] })),
+    rev: list('reviews').filter((r) => r.next && r.next <= d && !r.done).length,
+    one: one ? { t: oneT ? oneT.title : one.text || '', d: oneT ? !!oneT.done : !!one.done } : null,
+  }
+}
 function widgetPayload() {
   const st = getState()
   const keep = (c, fn = () => true) => Object.fromEntries(Object.values(st[c] || {}).filter((r) => !r.deleted && fn(r)).map((r) => [r.id, r]))
@@ -225,6 +235,7 @@ function widgetPayload() {
     prog: progPayload(),
     goals: goalsPayload(),
     notes: excluded().has('notes') ? [] : notesForWidget(getState()),
+    extra: extraPayload(),
     sv: SCRIPT_VER,
     settings: { settings: { main: { goalDaily: main.goalDaily, weekStart: main.weekStart, widgetFont: main.widgetFont, widgetScale: main.widgetScale, widgetWeight: main.widgetWeight, widgetClear: main.widgetClear, widgetTheme: main.widgetTheme, dashTiles: main.dashTiles, customWidgets: main.customWidgets } }, quotes: keep('quotes') },
   })

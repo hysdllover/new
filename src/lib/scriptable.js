@@ -4,7 +4,7 @@ import { pickQuote } from './quote.js'
 export const WIDGET_KINDS = [['', '기본'], ['공부', '공부'], ['할일', '할 일'], ['디데이', 'D-day'], ['달력', '공부 달력'], ['캘린더', '캘린더'], ['다짐', '다짐'], ['시간표', '시간표'], ['주간', '주간 공부'], ['과목', '과목별'], ['지금', '지금·다음'], ['진도', '진도'], ['목표', '이번 주 목표'], ['오늘', '오늘 한눈에'], ['대시보드', '대시보드'], ['내일', '내일 준비'], ['마감', '마감 임박'], ['일주일', '7일 일정'], ['디데이목록', 'D-day 목록'], ['바로가기', '바로 시작'], ['진행', '공부 진행'], ['남은분', '남은 시간'], ['타이머', '타이머·공부 시간'], ['노트', '노트'], ['구성1', '내 위젯 1'], ['구성2', '내 위젯 2'], ['구성3', '내 위젯 3']]
 
 // 스크립트 버전 — 위젯 모양이 바뀔 때 올림. 앱이 위젯 데이터에 같이 올려서, 예전 스크립트면 위젯에 '스크립트 업데이트' 표시
-export const SCRIPT_VER = 59
+export const SCRIPT_VER = 60
 
 // 전체 스크립트 (예전 방식 · 테스트용): 머리 + 본체
 export function buildScript({ widgetRaw, appUrl }) {
@@ -95,7 +95,7 @@ function setParam(raw) {
 }
 setParam(args.widgetParameter)
 const pickQuote = ${pickQuote.toString()}
-const link = (path) => APP + (path ? '?go=' + path : '')
+const link = (path) => (/^https?:/.test(path || '') ? path : APP + (path ? '?go=' + path : ''))
 // 위젯에서 할 일 누르기: 확인 없이 바로 완료 (앱이 잠깐 열렸다가 완료 · 되돌리기 가능)
 const doneUrl = (id) => APP + '?done=' + encodeURIComponent(id) + '&quick=1'
 
@@ -577,7 +577,7 @@ if (!data) {
     } else if (KIND === 'note') {
       const n = pickNote(); w.url = noteUrl(n)
       if (inl) inline(n ? n.t : '노트 없음')
-      else if (circ) cRows([[n && n.i ? n.i : '✎', tw(15)], [n ? n.t : 'NOTE', label(7)]])
+      else if (circ) cRows([['NOTE', label(7)], [n ? n.t : '없음', tw(11)]])
       else { rRow(n ? n.t : '노트 없음', n ? noteAgo(n.u) : '', tw(12), label(7)); for (const l of (n ? n.l : []).slice(0, 2)) t(w, (noteMark(l) ? noteMark(l) + ' ' : '') + l.x, tw(10), null, 1) }
     } else if (KIND === 'quote') {
       const q = quote || '앱에서 다짐을 적어 보세요'
@@ -1014,7 +1014,7 @@ if (!data) {
     const left = items.filter((x) => !x.done).length, c = nCur || nNext
     const LG = fam === 'large' || fam === 'extraLarge' // 대형은 글자 크게
     // 칸 고르기 (앱 설정 › 위젯 › 대시보드 칸): dday · next · todo · study · prog · goals · week 중 4개
-    const DK = ['dday', 'next', 'todo', 'study', 'prog', 'goals', 'week', 'bars', 'subjbar', 'ring', 'heat', 'hours', 'compare', 'date', 'quote', 'class', 'agenda', 'ddl']
+    const DK = ['dday', 'next', 'todo', 'study', 'prog', 'goals', 'week', 'bars', 'subjbar', 'ring', 'heat', 'hours', 'compare', 'date', 'quote', 'class', 'agenda', 'ddl', 'note', 'notes', 'month', 'left', 'tmrw', 'due', 'start', 'habits', 'review', 'one']
     const CW = KIND === 'custom' ? ((st.customWidgets || [])[DDI] || {}) : null
     const LAY = CW ? (CW.layout === 'rows' ? 'rows' : 'grid') : 'grid'
     const maxN = CW ? (fam === 'small' ? (LAY === 'rows' ? 3 : 4) : fam === 'medium' ? 4 : 6) : 4
@@ -1090,6 +1090,23 @@ if (!data) {
         for (const [l, v, c] of [['이번 주', weekTot, GOLD], ['지난주', lastWeek, SOFT]]) { const r = b.addStack(); r.centerAlignContent(); t(r, l, tw(LGd ? 11 : 9), INK); r.addSpacer(); t(r, hm(v), tw(LGd ? 11 : 9), c); b.addSpacer(2); const bb = b.addStack(); bb.size = new Size(wd, 3); bb.cornerRadius = 1.5; bb.backgroundColor = RULE; const fi = bb.addStack(); fi.size = new Size(Math.max(2, Math.round((wd * v) / mx)), 3); fi.cornerRadius = 1.5; fi.backgroundColor = c; bb.addSpacer(); b.addSpacer(LGd ? 6 : 4) }
       }, (weekTot >= lastWeek ? '+' : '−') + hm(Math.abs(weekTot - lastWeek)), null, 'study.records', GOLD],
     }
+    // ── 노트 · 이번 달 · 남은 목표 · 내일 · 마감 · 바로 시작 · 습관 · 복습 · 오늘의 하나 ──
+    const nt0 = pickNote(), ntOth = NOTES().filter((x) => x !== nt0), EX = data.extra || {}
+    const mDays = Object.entries(DM).filter(([k2, v]) => k2.startsWith(mPre) && v > 0).length
+    const habs = Array.isArray(EX.habits) ? EX.habits : [], habOn = habs.filter((x) => x.on).length
+    const nLn = (b, n) => { for (const l of (nt0 ? nt0.l : []).slice(0, n)) { const r = b.addStack(); r.centerAlignContent(); r.spacing = 4; const mk = noteMark(l); if (mk) t(r, mk, tw(LGd ? 11 : 9), SOFT); t(r, l.x, tw(LGd ? 12 : 10), l.d ? SOFT : INK).minimumScaleFactor = 0.75; r.addSpacer(); b.addSpacer(2) } }
+    Object.assign(TL, {
+      note: ['NOTE', (b, f, wd) => { b.addSpacer(2); t(b, nt0 ? nt0.t : '노트가 없어요', F(LGd ? 14 : 12, 'Regular'), INK, 1).minimumScaleFactor = 0.75; b.addSpacer(3); nLn(b, LGd ? 4 : fam === 'small' ? 2 : 3) }, '', null, noteUrl(nt0), SOFT],
+      notes: ['NOTES', (b, f, wd) => { b.addSpacer(3); for (const x of NOTES().slice(0, LGd ? 4 : 3)) { const r = b.addStack(); r.url = noteUrl(x); r.centerAlignContent(); t(r, x.t, tw(LGd ? 12 : 10), INK).minimumScaleFactor = 0.75; r.addSpacer(4); t(r, noteAgo(x.u), label(6), SOFT); b.addSpacer(2) } if (!NOTES().length) t(b, '노트 없음', tw(10), SOFT) }, '', null, 'notes.pages', SOFT],
+      month: ['THIS MONTH', hm(monthTot), mDays + '일 공부', null, 'study.records', GOLD],
+      left: [mins >= goal ? 'GOAL DONE' : 'LEFT', hm(Math.max(0, goal - mins)), mins >= goal ? '오늘 목표 달성' : '목표까지 남음', mins / goal, 'study.timer', GOLD],
+      tmrw: ['TOMORROW', (b, f, wd) => { b.addSpacer(3); const rows = [...TMR.ev.map((e) => [e.s == null ? '종일' : clk(e.s % 1440), e.t]), ...TMR.tk.map((x) => ['–', x.title])].slice(0, LGd ? 4 : 3); for (const [a2, b2] of rows) { const r = b.addStack(); r.centerAlignContent(); t(r, a2, tw(LGd ? 10 : 8), GOLD); r.addSpacer(5); t(r, b2, tw(LGd ? 12 : 10), INK).minimumScaleFactor = 0.75; r.addSpacer(); b.addSpacer(2) } if (!rows.length) t(b, '내일은 비어 있어요', tw(10), SOFT) }, TMR.cl.length ? '수업 ' + TMR.cl.length : '', null, 'planner.week', SOFT],
+      due: ['DUE', (b, f, wd) => { b.addSpacer(3); for (const x of DUE.slice(0, LGd ? 4 : 3)) { const r = b.addStack(); r.centerAlignContent(); if (x.id) r.url = doneUrl(x.id); t(r, dueTxt(x), tw(LGd ? 10 : 8), dueIn(x) <= 0 ? GOLD : SOFT); r.addSpacer(5); t(r, x.title, tw(LGd ? 12 : 10), INK).minimumScaleFactor = 0.75; r.addSpacer(); b.addSpacer(2) } if (!DUE.length) t(b, '2주 안에 마감 없음', tw(10), SOFT) }, '', null, 'tasks', SOFT],
+      start: ['START', (b, f, wd) => { b.addSpacer(4); const n = Math.min(QS.length, wd > 200 ? 4 : 2) || 1, g2 = 6, bw = Math.floor((wd - g2 * (n - 1)) / n), r = b.addStack(); r.spacing = g2; for (const sj of (QS.length ? QS : [null]).slice(0, n)) { const x = r.addStack(); x.size = new Size(bw, LGd ? 32 : 26); x.cornerRadius = 8; x.backgroundColor = RULE; x.centerAlignContent(); x.url = startUrl(sj); if (sj && sj.color) { const d = x.addStack(); d.size = new Size(5, 5); d.cornerRadius = 2.5; d.backgroundColor = new Color(sj.color); x.addSpacer(4) } t(x, sj ? sj.name : '공부', tw(LGd ? 12 : 10), INK).minimumScaleFactor = 0.6 } }, '', null, 'study.timer', SOFT],
+      habits: ['HABITS', habs.length ? habOn + '/' + habs.length : '—', habs.length ? (habs.find((x) => !x.on) || {}).t || '오늘 모두 완료' : '습관 없음', habs.length ? habOn / habs.length : null, '', SOFT],
+      review: ['REVIEW', (EX.rev || 0) + '개', EX.rev ? '오늘 볼 복습' : '오늘 복습 없음', null, 'study.review', GOLD],
+      one: ['TODAY ONE', (b, f, wd) => { b.addSpacer(2); t(b, EX.one ? EX.one.t : '오늘의 하나를 정해 보세요', tw(LGd ? 15 : fam === 'small' ? 11 : 12), EX.one ? (EX.one.d ? SOFT : INK) : SOFT, 2).minimumScaleFactor = 0.75 }, EX.one && EX.one.d ? '완료' : '', null, '', GOLD],
+    })
     const tilesA = [
       // 할 일: 개수 대신 남은 할 일 제목 (위에서 두 개)
       ['TO DO', (b) => {
@@ -1138,7 +1155,7 @@ if (!data) {
       const row = w.addStack()
       const L = row.addStack(); L.layoutVertically(); L.size = new Size(lw, innerH)
       // 그래프 칸이 끼면 높이가 모자라 왼쪽은 두 칸까지
-      const isG = (k) => ['bars', 'subjbar', 'ring', 'heat', 'hours', 'compare'].includes(k)
+      const isG = (k) => ['bars', 'subjbar', 'ring', 'heat', 'hours', 'compare', 'note', 'notes', 'tmrw', 'due', 'agenda', 'ddl'].includes(k)
       col(L, hasTodo ? others.slice(0, others.slice(0, 3).some(isG) ? 2 : 3) : others.slice(0, 2), lw)
       row.addSpacer(12); vrule(row, innerH); row.addSpacer(12)
       const R = row.addStack(); R.layoutVertically(); R.size = new Size(rw, innerH)
@@ -1376,10 +1393,10 @@ if (!data) {
     const head = (P2, wd) => {
       const h = P2.addStack(); h.size = new Size(wd, 0); h.centerAlignContent(); cap(h, n && n.dd ? 'DAILY' : n && n.p ? 'PINNED' : 'NOTE'); h.addSpacer(); if (n) t(h, noteAgo(n.u), label(8), SOFT)
       P2.addSpacer(fam === 'small' ? 6 : 8)
-      t(P2, n ? (n.i ? n.i + ' ' : '') + n.t : '노트가 없어요', F(fam === 'small' ? 14 : 16, 'Regular'), INK, 1).minimumScaleFactor = 0.8
+      t(P2, n ? n.t : '노트가 없어요', F(fam === 'small' ? 14 : 16, 'Regular'), INK, 1).minimumScaleFactor = 0.8
       P2.addSpacer(fam === 'small' ? 6 : 8)
     }
-    const list2 = (P2, max, wd) => { for (const x of others.slice(0, max)) { const r = P2.addStack(); r.size = new Size(wd, 0); r.url = noteUrl(x); r.centerAlignContent(); t(r, (x.i ? x.i + ' ' : '') + x.t, tw(12), INK, 1).minimumScaleFactor = 0.8; r.addSpacer(); r.addSpacer(4); t(r, noteAgo(x.u), label(7), SOFT); P2.addSpacer(7) } }
+    const list2 = (P2, max, wd) => { for (const x of others.slice(0, max)) { const r = P2.addStack(); r.size = new Size(wd, 0); r.url = noteUrl(x); r.centerAlignContent(); t(r, x.t, tw(12), INK, 1).minimumScaleFactor = 0.8; r.addSpacer(); r.addSpacer(4); t(r, noteAgo(x.u), label(7), SOFT); P2.addSpacer(7) } }
     if (fam === 'small') { head(w, inner); lines(w, 3, inner, 12) }
     else if (fam === 'medium') {
       const lw = Math.round(inner * 0.58), row = w.addStack()
