@@ -74,6 +74,7 @@ export function Heatmap({ values, weeks = 15, max, color = 'var(--c2)', onPick }
   )
 }
 
+const hmT = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`
 // 월별 공부 달력: 칸 진하기 = 목표 대비 공부량
 export function MonthHeat({ values, goal = 240, weekStartDow = 1, color = 'var(--c2)', onPick, compact, fixed }) {
   const t = today()
@@ -108,16 +109,16 @@ export function MonthHeat({ values, goal = 240, weekStartDow = 1, color = 'var(-
         {days.map((d, i) => {
           const v = vals[i], r = Math.min(1, v / goal)
           return (
-            <button key={d} className={'mheat-cell' + (d === t ? ' today' : '') + (r >= .6 ? ' dark' : '')} disabled={d > t} onClick={() => onPick?.(d)}
-              style={{ background: v ? `color-mix(in srgb, ${color} ${Math.round(18 + 72 * r)}%, var(--surface))` : 'var(--surface-2)' }}>
+            <button key={d} className={'mheat-cell' + (d === t ? ' today' : '') + (r >= .6 ? ' dark' : '') + (v ? '' : ' empty')} disabled={d > t} onClick={() => onPick?.(d)}
+              style={v ? { background: `color-mix(in srgb, ${color} ${Math.round(16 + 70 * r)}%, var(--surface))` } : null}>
               <span className="mheat-d">{i + 1}</span>
               {!compact && v > 0 && <span className="mheat-v">{Math.floor(v / 60)}:{String(v % 60).padStart(2, '0')}</span>}
             </button>
           )
         })}
       </div>
-      <div className="row between tiny muted mheat-sum">
-        <span>합계 {fmtDur(total)}</span><span>공부 {studied}일</span><span>목표 달성 {hit}일</span><span>평균 {fmtDur(studied ? Math.round(total / studied) : 0)}</span>
+      <div className="mheat-sum">
+        {[['합계', hmT(total)], ['공부한 날', studied + '일'], ['목표 달성', hit + '일'], ['하루 평균', hmT(studied ? Math.round(total / studied) : 0)]].map(([l, v]) => <span key={l} className="stat-mini"><i>{l}</i><b>{v}</b></span>)}
       </div>
     </div>
   )
@@ -138,21 +139,23 @@ export function Bars({ items, unit = '' }) {
   )
 }
 
-// 요일별 막대 (최근 7일)
+// 요일별 막대 (최근 7일): 가는 막대 · 목표 점선 · 칸 위에 시간
 export function WeekBars({ values, goal }) {
-  const days = Array.from({ length: 7 }, (_, i) => addDays(today(), i - 6))
+  const t = today(), days = Array.from({ length: 7 }, (_, i) => addDays(t, i - 6))
   const max = Math.max(goal || 1, ...days.map((d) => values[d] || 0))
+  const hm = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`
   return (
     <div className="wbars">
-      {days.map((d) => (
-        <div key={d} className="wbar">
-          <div className="wbar-t">
-            {goal && <span className="wbar-goal" style={{ bottom: (goal / max) * 100 + '%' }} />}
-            <i style={{ height: ((values[d] || 0) / max) * 100 + '%' }} />
+      <div className="wbars-plot">
+        {goal > 0 && <span className="wbars-goal" style={{ bottom: (goal / max) * 100 + '%' }}><em>목표 {hm(goal)}</em></span>}
+        {days.map((d) => { const v = values[d] || 0; return (
+          <div key={d} className={'wbar' + (d === t ? ' now' : '') + (goal && v >= goal ? ' hit' : '')}>
+            {v > 0 && <span className="wbar-v">{hm(v)}</span>}
+            <i className="wbar-b" style={{ height: Math.max(v ? 3 : 0, (v / max) * 100) + '%' }} />
           </div>
-          <span className="tiny muted">{'일월화수목금토'[parseYmd(d).getDay()]}</span>
-        </div>
-      ))}
+        ) })}
+      </div>
+      <div className="wbars-l">{days.map((d) => <span key={d} className={d === t ? 'now' : ''}>{'일월화수목금토'[parseYmd(d).getDay()]}</span>)}</div>
     </div>
   )
 }

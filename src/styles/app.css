@@ -133,12 +133,13 @@ svg { display: block; }
 [data-note] .card { background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px), var(--page); background-size: 18px 18px, 18px 18px, auto; background-position: -1px -1px; }
 [data-note] .card > .card-h { border-bottom-color: color-mix(in srgb, var(--accent) 22%, transparent); }
 [data-note] .card-h h3, [data-note] .topbar .title, [data-note] h1, [data-note] h2 { font-family: var(--font-head, inherit); font-weight: 400; letter-spacing: .01em; }
-[data-note] .card-h h3 { font-size: 1.15em; }
+[data-note] .card-h h3 { font-size: 1.02em; color: var(--text); }
 [data-note] .topbar .title, [data-note] h1 { font-size: 1.55em; }
 [data-note] .sheet { background-image: linear-gradient(90deg, transparent 22px, color-mix(in srgb, var(--c4) 35%, transparent) 22px, color-mix(in srgb, var(--c4) 35%, transparent) 23px, transparent 23px), var(--page); }
 @media print { [data-note] .card, [data-note] .sheet { background-image: none; } }
 .card-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
-.card-h h3 { font-size: .95em; font-family: var(--font-head, inherit); }
+/* 카드 소제목: 작고 얇게 통일 */
+.card-h h3 { font-size: .86em; font-weight: var(--fw); letter-spacing: .02em; color: color-mix(in srgb, var(--text) 78%, var(--muted)); font-family: var(--font-head, inherit); }
 .grid { display: grid; gap: var(--gap); }
 .grid.two { grid-template-columns: 1fr; }
 @media (min-width: 768px) { .grid.two { grid-template-columns: 1fr 1fr; } .grid.three { grid-template-columns: repeat(3, 1fr); } }
@@ -333,3 +334,16 @@ html.sc-away .content { --fade-t: 16px; }
   .tabbar .tb-l { opacity: 0; max-height: 0; }
   .fab { width: 44px; height: 44px; }
 }
+
+/* 종이 테마: 연필 선 체크박스 · 연필로 칠한 진행선 */
+[data-card="paper"] .check { border-width: 1.2px; border-color: color-mix(in srgb, var(--text) 55%, transparent); border-radius: 3px 4px 3px 5px / 4px 3px 5px 3px; }
+[data-card="paper"] .check.round { border-radius: 48% 52% 50% 46% / 52% 46% 54% 48%; }
+[data-card="paper"] .check.on { background: transparent !important; animation: none; }
+[data-card="paper"] .check.on::after { width: 6px; height: 11px; border-style: solid; border-color: inherit; border-width: 0 1.6px 1.6px 0; border-radius: 0 0 2px 0; transform: rotate(40deg) skewX(-6deg) translate(1px, -2px); }
+[data-card="paper"] .check.on:not([style*="border-color"]) { border-color: color-mix(in srgb, var(--text) 55%, transparent); }
+[data-card="paper"] .check.on:not([style*="border-color"])::after { border-color: var(--accent); }
+[data-card="paper"] .burst { display: none; }
+[data-card="paper"] :is(.prog, .subj-bar, .bar-t, .rp-track) { background: linear-gradient(color-mix(in srgb, var(--text) 22%, transparent), color-mix(in srgb, var(--text) 22%, transparent)) 0 50% / 100% 1px no-repeat; border-radius: 0; }
+[data-card="paper"] :is(.prog > i, .subj-bar i, .bar-t i, .rp-track i, .rp-stack i, .wbar-b) { -webkit-mask-image: repeating-linear-gradient(-62deg, #000 0 1.6px, rgba(0, 0, 0, .45) 1.6px 3.2px); mask-image: repeating-linear-gradient(-62deg, #000 0 1.6px, rgba(0, 0, 0, .45) 1.6px 3.2px); border-radius: 1px 2px 1px 3px; }
+[data-card="paper"] :is(.prog, .subj-bar, .bar-t, .rp-track) { height: 5px; overflow: visible; }
+[data-card="paper"] .subj-bar i { height: 100%; }

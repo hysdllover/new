@@ -4,7 +4,7 @@ import { pickQuote } from './quote.js'
 export const WIDGET_KINDS = [['', '기본'], ['공부', '공부'], ['할일', '할 일'], ['디데이', 'D-day'], ['달력', '공부 달력'], ['캘린더', '캘린더'], ['다짐', '다짐'], ['시간표', '시간표'], ['주간', '주간 공부'], ['과목', '과목별'], ['지금', '지금·다음'], ['진도', '진도'], ['목표', '이번 주 목표'], ['오늘', '오늘 한눈에'], ['대시보드', '대시보드'], ['내일', '내일 준비'], ['마감', '마감 임박'], ['일주일', '7일 일정'], ['디데이목록', 'D-day 목록'], ['바로가기', '바로 시작'], ['진행', '공부 진행'], ['남은분', '남은 시간'], ['타이머', '타이머·공부 시간'], ['노트', '노트'], ['습관', '습관'], ['구성1', '내 위젯 1'], ['구성2', '내 위젯 2'], ['구성3', '내 위젯 3']]
 
 // 스크립트 버전 — 위젯 모양이 바뀔 때 올림. 앱이 위젯 데이터에 같이 올려서, 예전 스크립트면 위젯에 '스크립트 업데이트' 표시
-export const SCRIPT_VER = 70
+export const SCRIPT_VER = 71
 
 // 전체 스크립트 (예전 방식 · 테스트용): 머리 + 본체
 export function buildScript({ widgetRaw, appUrl }) {
@@ -166,8 +166,9 @@ function line(ratio, w, fg, bg) {
   c.setFillColor(new Color(fg || (dark() ? '#9fadc4' : '#66778f'))); c.fillRect(new Rect(0, 0.5, Math.max(2, w * Math.min(1, ratio)), 2))
   return c.getImage()
 }
-function rule(parent, w) { const s = parent.addStack(); s.size = new Size(w, 0.6); s.backgroundColor = RULE }
-function vrule(parent, h) { const s = parent.addStack(); s.size = new Size(0.6, h); s.backgroundColor = RULE }
+let RW = 0.6 // 구분선 굵기 (앱 설정 › 위젯 구분선)
+function rule(parent, w) { const s = parent.addStack(); s.size = new Size(w, RW || 0.1); if (RW) s.backgroundColor = RULE }
+function vrule(parent, h) { const s = parent.addStack(); s.size = new Size(RW || 0.1, h); if (RW) s.backgroundColor = RULE }
 // 노트: Parameter '노트' → 고정·최근 노트, '노트:제목' → 제목에 그 말이 든 노트
 const NOTES = () => (data && Array.isArray(data.notes) ? data.notes : [])
 const pickNote = () => { const ns = NOTES(); return (ARG && ns.find((n) => n.t.includes(ARG))) || ns[0] || null }
@@ -448,7 +449,10 @@ let w = new ListWidget()
 const inline = (s) => { s = String(s); const x = w.addText(s.length > 26 ? s.slice(0, 25) + '…' : s); x.lineLimit = 1; return x }
 w.url = link({ todo: 'tasks', due: 'tasks', cal: 'planner.month', week7: 'planner.week', tmrw: 'planner.week', class: 'planner.timetable', default: '', dash: '', quick: 'study.timer', timer: 'study.timer', ddl: 'study.progress', prog: 'study.progress' }[KIND] ?? 'study.records')
 w.refreshAfterDate = new Date(Date.now() + 5 * 60000) // 5분 뒤 다시 그려 달라고 요청 (실제 시점은 iOS 가 정함)
-const P = fam === 'small' ? 16 : 18
+// 앱 설정: 위젯 여백 단계 · 구분선 굵기
+const STM = (data && data.settings && data.settings.settings && data.settings.settings.main) || {}
+const P = Math.round((fam === 'small' ? 16 : 18) * ({ tight: 0.72, roomy: 1.25 }[STM.widgetPad] || 1))
+RW = { none: 0, thin: 0.4, bold: 1 }[STM.widgetRule] ?? 0.6
 // 기기별 위젯 크기(pt) — 아이폰은 화면 폭별 실제 크기표(가장 가까운 폭), 아이패드는 고정값
 const SZ = (() => {
   if (Device.isPad()) return { small: 158, medium: 342, large: 342, extraLarge: 715, h: { small: 158, medium: 158, large: 342, extraLarge: 342 } }
