@@ -35,6 +35,7 @@ export default function NotePage({ id }) {
   const parent = n.parentId ? notes.find((x) => x.id === n.parentId) : null
   const up = (p) => patch('notes', id, p)
   const menu = (e) => openMenu(e, [
+    { label: '마크다운 가져오기', icon: 'upload', onClick: () => import('../../components/MdImport.jsx').then((m) => openSheet((c) => <m.default close={c} noteId={id} />, { title: '마크다운 가져오기' })) },
     { label: '마크다운 내보내기', icon: 'download', onClick: () => download(`${noteTitle(n)}.md`, toMarkdown(n), 'text/markdown') },
     { label: 'PDF (A4 인쇄)', icon: 'print', onClick: () => window.print() },
     { label: '노트 전체 복습 등록', icon: 'brain', onClick: () => addReview({ title: noteTitle(n), subjectId: n.subjectId, sourceType: 'note', sourceId: n.id }) },

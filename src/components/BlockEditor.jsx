@@ -76,7 +76,11 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
   const [dropOn, setDropOn] = useState(false)
   const dropIn = async (files, text, afterId, replaceId) => {
     const nbs = []
-    for (const f of files) { try { const r = await addFile(f, { subjectId: note?.subjectId, noteId: note?.id }); nbs.push({ id: newBlock().id, type: 'file', fileId: r.id }) } catch (e) { toast(e.message) } }
+    for (const f of files) {
+      // .md 파일은 첨부 대신 블록으로 펼침
+      if (/\.(md|markdown)$/i.test(f.name) || f.type === 'text/markdown') { try { text = (text ? text + '\n' : '') + await f.text() } catch {} continue }
+      try { const r = await addFile(f, { subjectId: note?.subjectId, noteId: note?.id }); nbs.push({ id: newBlock().id, type: 'file', fileId: r.id }) } catch (e) { toast(e.message) }
+    }
     if (text) for (const nb of mdToBlocks(text.split(/\r?\n/).filter((x) => !/^#[^#\s]/.test(x.trim())).join('\n')).slice(0, 300)) nbs.push(nb.type === 'todo' ? commitBlock(nb, note) : nb)
     if (!nbs.length) return
     const cur = (note && find('notes', note.id)?.blocks) || list
