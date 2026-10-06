@@ -370,7 +370,7 @@ async function takeInbox(inbox) {
       const bin = atob(txt), u8 = new Uint8Array(bin.length)
       for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i)
       const type = u8[0] === 0x89 && u8[1] === 0x50 ? 'image/png' : 'image/jpeg'
-      const label = decodeURIComponent(name.replace(/^inbox-/, '').replace(/\.[a-z]+$/i, '')).trim()
+      const label = decodeURIComponent(name.replace(/^inbox-/, '').replace(/\.[a-z]+$/i, '').replace(/~\d+$/, '')).trim()
       const title = !label || /^[\d\s:.\-_T]+$/.test(label) ? '사진' : label
       const rec = await addFile(new File([u8], `photo-${Date.now()}.${type === 'image/png' ? 'png' : 'jpg'}`, { type }))
       addTask({ title, inbox: true, files: [rec.id] })
