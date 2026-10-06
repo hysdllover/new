@@ -18,10 +18,11 @@ export function reminderTimes(t) {
 
 export function reminderBody(t, off) {
   const time = t.dueTime != null ? ' ' + hm(t.dueTime) : ''
-  if (off === 'am') return `오늘${time} 마감`
-  if (off >= 1440) return `내일${time} 마감`
-  if (off === 0) return time ? `${time.trim()} 마감` : '오늘 할 일'
-  return `${off >= 60 ? off / 60 + '시간' : off + '분'} 뒤 마감`
+  // 차분한 문구: '마감' 대신 '까지'
+  if (off === 'am') return time ? `오늘${time}까지` : '오늘까지'
+  if (off >= 1440) return time ? `내일${time}까지` : '내일까지'
+  if (off === 0) return time ? `${time.trim()}까지` : '오늘 할 일'
+  return `${off >= 60 ? off / 60 + '시간' : off + '분'} 뒤까지`
 }
 
 // 알림 요약: 정한 시각(예: 07:30·12:30·18:00)에 다음 요약 시각 전까지의 할 일 알림을 한 번에
@@ -46,9 +47,9 @@ export function digestDue(tasks, date, now, times = DIGEST_TIMES, win = 15) {
   return null
 }
 export function digestText(items) {
-  const lines = items.slice(0, 5).map(({ t, off }) => `· ${t.title} — ${reminderBody(t, off)}`)
-  if (items.length > 5) lines.push(`외 ${items.length - 5}개`)
-  return { title: `할 일 알림 ${items.length}개`, body: lines.join('\n') }
+  const lines = items.slice(0, 5).map(({ t, off }) => `· ${t.title}  ${reminderBody(t, off)}`)
+  if (items.length > 5) lines.push('그리고 몇 가지 더')
+  return { title: '할 일', body: lines.join('\n') }
 }
 
 // 기상·취침: 자는 시간(취침~기상)엔 알림을 보내지 않음, 기상 때 자는 동안 쌓인 할 일 알림을 한 번에

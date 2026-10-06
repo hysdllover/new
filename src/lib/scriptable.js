@@ -4,7 +4,7 @@ import { pickQuote } from './quote.js'
 export const WIDGET_KINDS = [['', '기본'], ['공부', '공부'], ['할일', '할 일'], ['디데이', 'D-day'], ['달력', '공부 달력'], ['캘린더', '캘린더'], ['다짐', '다짐'], ['시간표', '시간표'], ['주간', '주간 공부'], ['과목', '과목별'], ['지금', '지금·다음'], ['진도', '진도'], ['목표', '이번 주 목표'], ['오늘', '오늘 한눈에'], ['대시보드', '대시보드'], ['내일', '내일 준비'], ['마감', '마감 임박'], ['일주일', '7일 일정'], ['디데이목록', 'D-day 목록'], ['바로가기', '바로 시작'], ['진행', '공부 진행'], ['남은분', '남은 시간'], ['타이머', '타이머·공부 시간'], ['노트', '노트'], ['습관', '습관'], ['구성1', '내 위젯 1'], ['구성2', '내 위젯 2'], ['구성3', '내 위젯 3']]
 
 // 스크립트 버전 — 위젯 모양이 바뀔 때 올림. 앱이 위젯 데이터에 같이 올려서, 예전 스크립트면 위젯에 '스크립트 업데이트' 표시
-export const SCRIPT_VER = 68
+export const SCRIPT_VER = 69
 
 // 전체 스크립트 (예전 방식 · 테스트용): 머리 + 본체
 export function buildScript({ widgetRaw, appUrl }) {
@@ -323,6 +323,8 @@ async function widgetAct(Q) {
   else if (Q.act === 'start') msg = await ACT.start(Q.sid || null)
   else if (Q.act === 'log') msg = await ACT.log()
   else if (Q.act === 'habit') msg = await ACT.habit(Q.id)
+  else if (Q.act === 'addtask') msg = await ACT.addTask()
+  else if (Q.act === 'noteline') msg = await ACT.noteLine(Q.id ? NOTES().find((x) => x.id === Q.id) || null : null)
   else if (Q.act === 'timer') msg = await ACT.timerMenu()
   await ACT.flush(); ACT.notify(msg)
 }

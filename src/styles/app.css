@@ -287,3 +287,28 @@ svg.ic:not(.ic-fixed) { stroke-width: var(--icon-sw, 1.5); }
 .tabbar { view-transition-name: tabbar; }
 .sidebar { view-transition-name: sidebar; }
 ::view-transition-group(tabbar), ::view-transition-group(sidebar), ::view-transition-old(tabbar), ::view-transition-new(tabbar), ::view-transition-old(sidebar), ::view-transition-new(sidebar) { animation: none; }
+/* 떠 있는 탭바 (아이폰·좁은 화면): 둥글게 떠 있고, 내리면 작아짐 */
+@media (max-width: 1023px) {
+  .tabbar { left: calc(12px + var(--sal)); right: calc(12px + var(--sar)); bottom: calc(6px + var(--sab)); padding: 3px 6px; border: 1px solid color-mix(in srgb, var(--line) 80%, transparent); border-radius: 26px; box-shadow: 0 6px 24px rgba(20, 25, 40, .08); background: color-mix(in srgb, var(--surface) 95%, transparent); transition: transform .25s cubic-bezier(.2, .8, .2, 1), padding .25s ease; transform-origin: 50% 100%; }
+  .tabbar button { min-height: 46px; border-radius: 20px; transition: min-height .25s ease; }
+  .tabbar .tb-l { transition: opacity .2s ease, max-height .25s ease; max-height: 16px; overflow: hidden; }
+  html.sc-down .tabbar { transform: scale(.9); padding: 1px 6px; }
+  html.sc-down .tabbar button { min-height: 38px; }
+  html.sc-down .tabbar .tb-l { opacity: 0; max-height: 0; }
+  .fab { bottom: calc(78px + var(--sab)); transition: transform .25s ease; }
+  html.sc-down .fab { transform: translateY(14px) scale(.92); }
+  .content { padding-bottom: calc(110px + var(--sab)); }
+}
+@media (prefers-reduced-motion: reduce) { .tabbar, .tabbar button, .tabbar .tb-l, .fab { transition: none; } }
+/* 접히는 큰 제목: 맨 위에선 크게, 내리면 작게 */
+.topbar .title { transition: font-size .25s cubic-bezier(.2, .8, .2, 1); }
+@media (max-width: 1023px) {
+  .topbar .title { font-size: 1.65em; }
+  html.sc-away .topbar .title { font-size: 1.1em; }
+  html.sc-away .topbar { box-shadow: 0 1px 0 var(--line); }
+}
+/* 부드러운 연속 곡선 모서리 (지원하는 브라우저에서만 · 아니면 지금 모서리 그대로) */
+@supports (corner-shape: squircle) {
+  .card, .btn, .chip, .input, .sheet, .tabbar, .note-card, .wf, .subpage, .npage { corner-shape: squircle; }
+  .card, .note-card, .sheet { border-radius: calc(var(--radius) * 1.7); }
+}

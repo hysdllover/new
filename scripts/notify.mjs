@@ -101,11 +101,11 @@ if (morning != null) {
   const reviews = alive(S?.reviews).filter((r) => !r.done && r.next && r.next <= date).length
   const dd = alive(S?.ddays).filter((d) => d.date >= date).sort((a, b) => a.date.localeCompare(b.date))[0]
   const ddTxt = dd ? ` · ${dd.title} D-${Math.round((new Date(dd.date) - new Date(date)) / 86400000)}` : ''
-  add(`am:${date}`, morning, '오늘의 공부', `할 일 ${todo}개${reviews ? ` · 복습 ${reviews}개` : ''}${ddTxt}`)
+  add(`am:${date}`, morning, '좋은 아침', `${todo ? '오늘 할 일을 한 번 훑어볼까요' : '오늘은 여유 있는 하루예요'}${reviews ? ' · 복습도 있어요' : ''}${ddTxt}`)
 }
 const evening = parseT(settings.notifyEvening ?? '21:00')
 const goal = settings.goalDaily || 240
-if (evening != null && studied < goal) add(`pm:${date}`, evening, '오늘 공부 기록', `지금까지 ${studied}분 · 목표까지 ${goal - studied}분`, './')
+if (evening != null && studied < goal) add(`pm:${date}`, evening, '오늘 하루', studied ? `오늘 ${Math.floor(studied / 60) ? Math.floor(studied / 60) + '시간 ' : ''}${studied % 60 ? (studied % 60) + '분' : ''} 공부했어요` : '오늘 공부를 기록해 둘까요', './')
 
 // 자는 시간(취침~기상)엔 보내지 않음 · 기상 때 밤사이 할 일 알림을 한 번에
 const wake = settings.dayStart ?? 7 * 60, sleep = settings.dayEnd ?? 1440
@@ -113,7 +113,7 @@ if (settings.quietNight !== false) {
   if (isQuiet(now, wake, sleep)) { console.log(`${date} ${hm(now)} 자는 시간 · 보류`); for (const n of out) sentFile[n.key] = date; await finish(); process.exit(0) }
   if (now >= wake && now < wake + win && !sentFile[`night:${date}`]) {
     const miss = nightMissed(alive(T?.tasks), date, wake, sleep)
-    if (miss.length) { const x = digestText(miss); out.push({ key: `night:${date}`, title: '자는 동안 · ' + x.title, body: x.body, url: './' }) }
+    if (miss.length) { const x = digestText(miss); out.push({ key: `night:${date}`, title: '밤사이 할 일', body: x.body, url: './' }) }
   }
 }
 if (!out.length) { console.log(`${date} ${hm(now)} 보낼 알림 없음 (확인 범위 ${win}분)`); await finish(); process.exit(0) }
@@ -121,7 +121,7 @@ if (!out.length) { console.log(`${date} ${hm(now)} 보낼 알림 없음 (확인 
 const lateOnes = out.filter((n) => (n.late || 0) > 30)
 if (lateOnes.length > 1) {
   for (const n of lateOnes) { sentFile[n.key] = date; out.splice(out.indexOf(n), 1) }
-  out.push({ key: `miss:${date}:${now}`, title: `늦게 확인된 알림 ${lateOnes.length}개`, body: lateOnes.slice(0, 5).map((n) => `· ${n.title}${n.body ? ' — ' + n.body : ''}`).join('\n') + (lateOnes.length > 5 ? `\n외 ${lateOnes.length - 5}개` : ''), url: './' })
+  out.push({ key: `miss:${date}:${now}`, title: '놓친 알림', body: lateOnes.slice(0, 5).map((n) => `· ${n.title}${n.body ? ' — ' + n.body : ''}`).join('\n') + (lateOnes.length > 5 ? '\n그리고 몇 가지 더' : ''), url: './' })
 }
 
 webpush.setVapidDetails('mailto:study-dashboard@users.noreply.github.com', push.vapid.publicKey, push.vapid.privateKey)

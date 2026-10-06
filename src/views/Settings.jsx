@@ -571,7 +571,57 @@ function HomeWidgetCard() {
       </div>
       <div className="tiny muted" style={{ marginTop: 6 }}>스크립트에는 토큰이 들어가지 않아요(위젯 전용 비공개 주소만). 자동 업데이트 방식이라 한 번만 붙여 넣으면 앱이 바뀔 때 위젯도 같이 바뀌어요(예전 긴 스크립트를 쓰고 있다면 이번에 한 번만 새로 복사해 바꿔 주세요). 갱신 주기는 iOS가 정해요(보통 15분~1시간). 날짜 옆에 시각이 보이면 그때 받은 데이터예요.</div>
       <div className="tiny muted" style={{ marginTop: 6, lineHeight: 1.6 }}><b>위젯에서 바로 처리</b>: Scriptable 에서 이 스크립트를 한 번 실행 › 메뉴 › <b>위젯에서 바로 처리 켜기</b> › GitHub 토큰(Gists 읽기·쓰기) 입력. 그러면 위젯의 할 일을 누르면 바로 완료, 타이머·바로 시작 버튼은 시작·일시정지·정지, 그 밖의 칸을 누르면 Scriptable 안에 간단한 앱 화면(공부·타이머 · 오늘 할 일 체크 · 일정·D-day · 노트 읽기)이 열려요. 사파리를 거치지 않고, 앱을 열면 기록에도 반영돼요. 토큰은 그 아이폰의 Scriptable 보관함에만 저장돼요.</div>
+      <WidgetSets />
+      <ControlCenterGuide />
     </Card>
+  )
+}
+
+// 위젯 레이아웃 세트: 상황별로 어떤 위젯을 어디에 둘지 (Parameter 를 누르면 복사)
+const WSETS = [
+  ['공부 집중', [['홈 · 중', '대시보드'], ['홈 · 소', '타이머'], ['홈 · 소', '습관'], ['잠금 · 직사각형', '지금'], ['잠금 · 원형', '진행'], ['잠금 · 한 줄', '디데이']]],
+  ['시험 기간', [['홈 · 대', '디데이목록'], ['홈 · 중', '마감'], ['홈 · 소', '진도'], ['잠금 · 직사각형', '마감'], ['잠금 · 원형', '남은분'], ['잠금 · 한 줄', '공부']]],
+  ['노트 복습', [['홈 · 중', '노트'], ['홈 · 소', '노트:영어'], ['홈 · 소', '습관'], ['잠금 · 직사각형', '노트'], ['잠금 · 한 줄', '노트']]],
+  ['하루 계획', [['홈 · 대', '오늘'], ['홈 · 중', '캘린더'], ['홈 · 소', '할일'], ['잠금 · 직사각형', '캘린더'], ['잠금 · 한 줄', '지금']]],
+]
+function WidgetSets() {
+  const copy = async (v) => { try { await navigator.clipboard.writeText(v); toast(`‘${v}’ 복사 · 위젯 편집 › Parameter 에 붙여 넣기`) } catch { toast(v) } }
+  return (
+    <div style={{ marginTop: 12 }}>
+      <b className="small">위젯 레이아웃 세트</b>
+      <div className="tiny muted" style={{ margin: '2px 0 6px' }}>위치마다 위젯을 두고 Parameter 를 이렇게 적어요 (눌러서 복사)</div>
+      <div className="col" style={{ gap: 8 }}>
+        {WSETS.map(([name, items]) => (
+          <div key={name} className="wset">
+            <span className="small" style={{ minWidth: 64 }}>{name}</span>
+            <div className="row wrap" style={{ gap: 4 }}>{items.map(([where, p], k) => <button key={k} className="chip sm" onClick={() => copy(p)}><span className="tiny muted">{where}</span>&nbsp;{p}</button>)}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// 제어 센터 · 동작 버튼: 단축어 'URL 열기' 로 위젯 스크립트의 바로 처리 화면을 엶 (사파리 안 거침)
+function ControlCenterGuide() {
+  const [name, setName] = useState(() => { try { return localStorage.getItem('scriptable_name') || '' } catch { return '' } })
+  const save = (v) => { setName(v); try { localStorage.setItem('scriptable_name', v) } catch {} }
+  const url = (q) => `scriptable:///run/${encodeURIComponent(name.trim() || '스크립트이름')}?${q}`
+  const ACTS = [['타이머 시작·정지', 'act=timer'], ['공부 기록 추가', 'act=log'], ['할 일 추가', 'act=addtask'], ['노트에 한 줄', 'act=noteline'], ['오늘 한눈에', 'act=view']]
+  const copy = async (v) => { try { await navigator.clipboard.writeText(v); toast('주소를 복사했어요') } catch { toast('길게 눌러 복사해 주세요') } }
+  return (
+    <div style={{ marginTop: 14 }}>
+      <b className="small">제어 센터 · 동작 버튼</b>
+      <div className="small" style={{ lineHeight: 1.7, marginTop: 4 }}>
+        1. 단축어 앱 › 새 단축어 › 동작 <b>URL 열기</b> 에 아래 주소 붙여 넣기 (이름 예: ‘타이머’)<br />
+        2. 제어 센터 편집 › <b>컨트롤 추가</b> › 단축어 › 그 단축어 · 또는 설정 › <b>동작 버튼</b> › 단축어<br />
+        ※ ‘위젯에서 바로 처리’를 켜 둔 기기에서 돼요.
+      </div>
+      <input className="input" style={{ marginTop: 6 }} placeholder="Scriptable 에 붙여 넣은 스크립트 이름" value={name} onChange={(e) => save(e.target.value)} />
+      <div className="col" style={{ gap: 4, marginTop: 6 }}>
+        {ACTS.map(([l, q]) => <div key={q} className="row" style={{ gap: 6 }}><span className="small" style={{ width: 96, flexShrink: 0 }}>{l}</span><input className="input grow" readOnly value={url(q)} onFocus={(e) => e.target.select()} style={{ fontSize: 12 }} /><button className="btn sm" onClick={() => copy(url(q))}>복사</button></div>)}
+      </div>
+    </div>
   )
 }
 

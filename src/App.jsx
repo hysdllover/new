@@ -54,6 +54,16 @@ export default function App() {
   const toggleSb = (k) => { const v = { ...sbOpen, [k]: !(k === 'all' ? sbOpen.all : sbOpen[k] !== false) }; setSbOpen(v); try { localStorage.setItem('sb_open', JSON.stringify(v)) } catch {} }
   const sp = SPLIT[st.splitPane], pane = sp && !(sp[0] === tab && sp[1] === seg) ? { V: VIEWS[sp[0]], seg: sp[1] } : null
 
+  // 스크롤: 맨 위면 큰 제목, 내리면 제목 작게 · 탭바 작게 (올리면 다시 크게)
+  useEffect(() => {
+    const el = document.getElementById('content'), root = document.documentElement
+    if (!el) return
+    let last = el.scrollTop, raf = 0
+    const on = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { const y = el.scrollTop; root.classList.toggle('sc-away', y > 24); if (Math.abs(y - last) > 6) { root.classList.toggle('sc-down', y > last && y > 60); last = y } }) }
+    el.addEventListener('scroll', on, { passive: true })
+    return () => { el.removeEventListener('scroll', on); root.classList.remove('sc-away', 'sc-down') }
+  }, [tab])
+
   useEffect(() => {
     const onKey = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); openSearch() }
@@ -151,7 +161,7 @@ export default function App() {
       <nav className="tabbar no-print">
         {bar.map((t) => (
           <button key={t.key} className={tab === t.tab && (t.seg ? seg === t.seg : !bar.some((b) => b.tab === t.tab && b.seg && b.seg === seg)) ? 'on' : ''} onClick={() => go(t.tab, t.seg || freeSeg(t.tab))}>
-            <Icon name={t.icon} size={22} stroke={1.4} />{t.label}
+            <Icon name={t.icon} size={22} stroke={1.4} /><span className="tb-l">{t.label}</span>
           </button>
         ))}
       </nav>
