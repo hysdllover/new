@@ -4,7 +4,8 @@ import { TABS, EXTRA, SEGMENTS, useNav, go, segOf, tabOpt, DEFAULT_TABBAR } from
 import { useColl, useSettings, setSettings } from './store/store.js'
 import { useSyncStatus, syncNow } from './sync/sync.js'
 import { isStandalone } from './lib/push.js'
-import { fmtDate, today } from './engine/date.js'
+import { fmtDate, today, fmtClock } from './engine/date.js'
+import { useTimerState, useTick, elapsed, remaining } from './lib/timer.js'
 import QuickAdd from './components/QuickAdd.jsx'
 import { useResume } from './lib/resume.js'
 import CommandPalette from './components/CommandPalette.jsx'
@@ -137,6 +138,7 @@ export default function App() {
             </div>
           </div>
         )}
+        <StatusLine sync={sync} />
         <ResumeBanner />
         <main className="content" id="content">
           <div className="content-inner">{sync.state === 'off' && !isStandalone() && /iP(hone|ad)|Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 0 && <SafariNote />}<View seg={seg} params={nav.params[tab] || {}} /></div>
@@ -192,6 +194,23 @@ function ResumeBanner() {
     <div className="resume-bar no-print">
       <button className="grow ellipsis" style={{ textAlign: 'left' }} onClick={r.open}><span className="muted">{r.dev}에서 보던</span> <b>{r.label}</b> <span className="muted">이어 보기 →</span></button>
       <button className="icon-btn" aria-label="닫기" onClick={r.dismiss}><Icon name="close" size={12} /></button>
+    </div>
+  )
+}
+
+// 상단 상태 줄 (설정 › 디자인 세부): 진행 중 타이머 · 동기화 상태를 한 줄로
+function StatusLine({ sync }) {
+  const st = useSettings(), tm = useTimerState(), subjects = useColl('subjects')
+  useTick(!!tm && !tm.paused && !!st.statusLine)
+  if (!st.statusLine) return null
+  const sb = tm && subjects.find((x) => x.id === tm.subjectId)
+  const ago = sync.last ? Math.round((Date.now() - sync.last) / 60000) : null
+  const syncTxt = sync.state === 'off' ? '동기화 꺼짐' : sync.state === 'syncing' ? '동기화 중' : sync.state === 'error' ? '동기화 대기' : ago == null ? '' : ago < 1 ? '방금 동기화' : ago < 60 ? `${ago}분 전 동기화` : `${Math.round(ago / 60)}시간 전 동기화`
+  return (
+    <div className="status-line no-print">
+      {tm ? <button className="sl-timer" onClick={() => go('study', 'timer')}><i style={{ background: sb?.color || 'var(--accent)' }} className={tm.paused ? 'paused' : ''} />{sb?.name || '공부'} <b>{fmtClock((tm.mode === 'countdown' ? remaining(tm) : elapsed(tm)) / 1000)}</b>{tm.paused ? ' · 일시정지' : ''}</button> : <span>{fmtDate(today())}</span>}
+      <span className="grow" />
+      <span className={'sl-sync ' + sync.state}>{syncTxt}</span>
     </div>
   )
 }

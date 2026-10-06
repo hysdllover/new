@@ -104,6 +104,8 @@ export default function Settings() {
         </div>
       </Card>
 
+      <DesignDetail th={th} setTheme={setTheme} st={st} />
+
       <Card title="기능 켜기 / 끄기">
         <Toggle label="완료한 지 30일 지난 할 일은 보관함으로 자동 정리" checked={st.autoArchive !== false} onChange={(v) => setSettings({ autoArchive: v })} />
         {[['planning', '계획 기능 (자동 학습 계획·타임박싱·원형·10분 플래너)'], ['health', '건강 (컨디션·약)'], ['matrix', '아이젠하워 매트릭스'], ['kanban', '칸반'], ['gantt', '간트'], ['db', '표 · DB 뷰'], ['circle', '원형 계획표'], ['graph', '개념 그래프'], ['mindmap', '마인드맵'], ['mock', '모의고사 타이머']].map(([k, l]) => (
@@ -1226,5 +1228,32 @@ function Devices() {
       {live.map((d) => <div key={d.id} className="row between small"><span>{d.name}{d.id === 'dev-' + myDevice ? <span className="tiny muted"> · 이 기기</span> : ''}</span><span className="muted tiny">{ago(d.at)}</span></div>)}
       <div className="row" style={{ gap: 6 }}><span className="tiny muted nowrap">이 기기 이름</span><input className="input" style={{ maxWidth: 160 }} value={name} onChange={(e) => setName(e.target.value)} onBlur={() => { try { localStorage.setItem('device_name', name.trim()) } catch {} }} /></div>
     </div>
+  )
+}
+
+// 디자인 세부: 노트 요소 모양 · 체크박스 · 진행선 · 카드 테두리 · 탭바 · 종이 결
+function DesignDetail({ th, setTheme, st }) {
+  const paper = th.card === 'paper' || th.card === 'note', note = th.card === 'note'
+  const S = (label, key, opts, def) => <Field label={label}><Seg value={th[key] ?? def} onChange={(v) => setTheme({ [key]: v === '' ? null : v })} options={opts} /></Field>
+  return (
+    <Card title="디자인 세부">
+      <div className="form">
+        {S('형광펜 굵기', 'hlStyle', [['under', '밑줄형'], ['mid', '기본'], ['full', '칠한 형']], 'mid')}
+        {S('인용 모양', 'quoteStyle', [['line', '세로선'], ['mark', '따옴표'], ['slip', '쪽지']], 'line')}
+        {S('강조 상자', 'calloutStyle', [['tag', '이름표'], ['band', '색 띠만']], 'tag')}
+        {S('완료한 줄', 'doneStyle', [['strike', '취소선'], ['fade', '흐리게'], ['keep', '그대로']], 'strike')}
+        {S('구분선', 'divStyle', [['solid', '실선'], ['dot', '점선'], ['wave', '물결']], 'solid')}
+        {S('체크박스', 'checkShape', [['', '자동'], ['square', '네모'], ['round', '둥근'], ['pencil', '연필']], '')}
+        {S('진행선', 'progStyle', [['', '자동'], ['solid', '실선'], ['dot', '점선'], ['pencil', '연필 빗금']], '')}
+        {S('카드 테두리', 'cardBorder', [['none', '없음'], ['thin', '가늘게'], ['normal', '보통'], ['bold', '진하게']], 'normal')}
+        {S('아이콘', 'iconFill', [['line', '선'], ['fill', '옅게 채움']], 'line')}
+        <Field label="탭바 · 사이드바"><Seg value={th.tabLabels === false ? 'icon' : 'text'} onChange={(v) => setTheme({ tabLabels: v !== 'icon' })} options={[['text', '글자 함께'], ['icon', '아이콘만']]} /></Field>
+        {paper && <Field label={`종이 결 세기 ${Math.round((th.grain ?? 1) * 100)}%`}><input type="range" min="0" max="1.6" step="0.1" value={th.grain ?? 1} onChange={(e) => setTheme({ grain: +e.target.value })} /></Field>}
+        {note && <Field label="노트 모눈"><div className="row wrap" style={{ gap: 6 }}><Seg value={th.gridSize || 18} onChange={(v) => setTheme({ gridSize: v })} options={[[14, '촘촘'], [18, '기본'], [24, '넓게']]} /><Seg value={th.gridAlpha ?? 5.5} onChange={(v) => setTheme({ gridAlpha: v })} options={[[0, '없음'], [3, '옅게'], [5.5, '기본'], [9, '진하게']]} /></div></Field>}
+        {note && <Toggle label="카드 모서리 접힌 종이" checked={th.fold !== false} onChange={(v) => setTheme({ fold: v })} />}
+        <Toggle label="노트 머리에 날짜 도장" checked={th.stamp !== false} onChange={(v) => setTheme({ stamp: v })} />
+        <Toggle label="상단 상태 줄 (진행 중 타이머 · 동기화)" checked={!!st.statusLine} onChange={(v) => setSettings({ statusLine: v })} />
+      </div>
+    </Card>
   )
 }

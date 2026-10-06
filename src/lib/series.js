@@ -16,7 +16,7 @@ export function planSeries({ prefix = '', suffix = '', from = 1, to = 1, start, 
 }
 
 // 진행 중인 시리즈: [{ id, t, d (끝낸 수), n (전체), next (다음 할 일 제목), color }] — 남은 것이 있거나 최근 7일 안에 끝낸 것
-export function seriesSummary(tasks, subjects = []) {
+export function seriesSummary(tasks, subjects = [], colors = {}) {
   const by = {}
   for (const t of tasks) {
     if (!t.seriesId || t.deleted || t.archived) continue
@@ -27,6 +27,6 @@ export function seriesSummary(tasks, subjects = []) {
   }
   const week = Date.now() - 7 * 864e5
   return Object.values(by).filter((s) => s.d < s.n || s.last > week)
-    .map((s) => ({ id: s.id, t: s.t, d: s.d, n: s.n, next: s.next ? { id: s.next.id, title: s.next.title, due: s.next.due || null } : null, color: subjects.find((x) => x.id === s.sub)?.color || null }))
+    .map((s) => ({ id: s.id, t: s.t, d: s.d, n: s.n, next: s.next ? { id: s.next.id, title: s.next.title, due: s.next.due || null } : null, color: colors[s.id] || subjects.find((x) => x.id === s.sub)?.color || null }))
     .sort((a, b) => (a.d >= a.n) - (b.d >= b.n) || (a.next?.due || '9').localeCompare(b.next?.due || '9'))
 }

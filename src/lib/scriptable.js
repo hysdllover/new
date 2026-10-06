@@ -4,7 +4,7 @@ import { pickQuote } from './quote.js'
 export const WIDGET_KINDS = [['', '기본'], ['공부', '공부'], ['할일', '할 일'], ['디데이', 'D-day'], ['달력', '공부 달력'], ['캘린더', '캘린더'], ['다짐', '다짐'], ['시간표', '시간표'], ['주간', '주간 공부'], ['과목', '과목별'], ['지금', '지금·다음'], ['진도', '진도'], ['목표', '이번 주 목표'], ['오늘', '오늘 한눈에'], ['대시보드', '대시보드'], ['내일', '내일 준비'], ['마감', '마감 임박'], ['일주일', '7일 일정'], ['디데이목록', 'D-day 목록'], ['바로가기', '바로 시작'], ['진행', '공부 진행'], ['남은분', '남은 시간'], ['타이머', '타이머·공부 시간'], ['노트', '노트'], ['습관', '습관'], ['시리즈', '시리즈 진행'], ['배치', '이번 주 배치'], ['주차', 'D-day까지 주차'], ['구성1', '내 위젯 1'], ['구성2', '내 위젯 2'], ['구성3', '내 위젯 3']]
 
 // 스크립트 버전 — 위젯 모양이 바뀔 때 올림. 앱이 위젯 데이터에 같이 올려서, 예전 스크립트면 위젯에 '스크립트 업데이트' 표시
-export const SCRIPT_VER = 73
+export const SCRIPT_VER = 74
 
 // 전체 스크립트 (예전 방식 · 테스트용): 머리 + 본체
 export function buildScript({ widgetRaw, appUrl }) {
@@ -160,8 +160,15 @@ async function load() {
 
 const dark = () => Device.isUsingDarkAppearance()
 // 가는 진행선
+let PENCIL = false // 종이 테마: 연필 빗금 진행선 · 연필 체크
 function line(ratio, w, fg, bg) {
   const c = new DrawContext(); c.size = new Size(w, 3); c.opaque = false; c.respectScreenScale = true
+  if (PENCIL) {
+    c.setFillColor(new Color(bg || '#c9cbcf')); c.fillRect(new Rect(0, 1.25, w, 0.5))
+    c.setStrokeColor(new Color(fg || '#66778f')); c.setLineWidth(0.9)
+    for (let x = 0; x < Math.max(2, w * Math.min(1, ratio)) - 1; x += 2.2) { const p = new Path(); p.move(new Point(x, 3)); p.addLine(new Point(x + 1.8, 0)); c.addPath(p); c.strokePath() }
+    return c.getImage()
+  }
   c.setFillColor(new Color(bg || (dark() ? '#2a2f37' : '#dce1e7'))); c.fillRect(new Rect(0, 1, w, 1))
   c.setFillColor(new Color(fg || (dark() ? '#9fadc4' : '#66778f'))); c.fillRect(new Rect(0, 0.5, Math.max(2, w * Math.min(1, ratio)), 2))
   return c.getImage()
@@ -182,7 +189,7 @@ function noteRow(P2, l, wd, fs, lim = 2) {
   if (l.k === 'todo' || l.k === 'b') {
     const m = r.addStack(); m.layoutVertically(); m.addSpacer(fs * 0.42); const bx = m.addStack(), z = l.k === 'todo' ? Math.round(fs * 0.55) : 3
     bx.size = new Size(z, z); bx.cornerRadius = l.k === 'todo' ? 1.5 : 1.5
-    if (l.k === 'todo') { bx.borderWidth = 0.8; bx.borderColor = SOFT; if (l.d) bx.backgroundColor = SOFT } else bx.backgroundColor = SOFT
+    if (l.k === 'todo') { bx.borderWidth = 0.8; bx.borderColor = SOFT; if (l.d) { if (PENCIL) { bx.centerAlignContent(); t(bx, '✓', F(Math.max(6, z * 0.95), 'Regular'), GOLD) } else bx.backgroundColor = SOFT } } else bx.backgroundColor = SOFT
   }
   t(r, l.x, l.k === 'h' ? F(fs + 0.5, 'Regular') : tw(fs), l.d ? SOFT : INK, l.k === 'h' ? 1 : lim)
   r.addSpacer()
@@ -469,6 +476,7 @@ let MH = innerH - 21 // 중형: 머리줄(제목 + 간격) 아래 남는 높이 
 const WT = (data && data.settings && data.settings.settings && data.settings.settings.main && data.settings.settings.main.widgetTheme) || 'auto'
 MONO = WT === 'mono'
 if (MONO) GOLD = new Color('#ffffff', 0.9)
+PENCIL = WT === 'paper'
 const inkMode = WT === 'white' || WT === 'night' || WT === 'mono' ? 'light' : WT === 'black' || WT === 'paper' ? 'dark' : Keychain.contains('study-ink') ? Keychain.get('study-ink') : 'auto'
 if (inkMode === 'light') { INK = new Color('#ffffff'); SOFT = new Color('#ffffff', 0.72); RULE = new Color('#ffffff', 0.3) }
 if (inkMode === 'dark') { INK = new Color('#1e232b'); SOFT = new Color('#1e232b', 0.6); RULE = new Color('#1e232b', 0.2) }
@@ -1118,7 +1126,7 @@ if (!data) {
   } else if (KIND === 'series') {
     // ── 시리즈 진행: 이름 · 끝낸 수/전체 · 가는 진행선 · 다음 회차 ──
     const SR = data.series || []
-    const bar = (parent, wd, k, c) => { const o = parent.addStack(); o.size = new Size(wd, 3); o.cornerRadius = 1.5; o.backgroundColor = RULE; if (k > 0) { const i = o.addStack(); i.size = new Size(Math.max(3, Math.round(wd * Math.min(1, k))), 3); i.cornerRadius = 1.5; i.backgroundColor = c ? new Color(c) : GOLD } o.addSpacer() }
+    const bar = (parent, wd, k, c) => { if (PENCIL) { const img = parent.addImage(line(k, wd, c || null)); img.imageSize = new Size(wd, 3); return } const o = parent.addStack(); o.size = new Size(wd, 3); o.cornerRadius = 1.5; o.backgroundColor = RULE; if (k > 0) { const i = o.addStack(); i.size = new Size(Math.max(3, Math.round(wd * Math.min(1, k))), 3); i.cornerRadius = 1.5; i.backgroundColor = c ? new Color(c) : GOLD } o.addSpacer() }
     const h = w.addStack(); h.centerAlignContent(); cap(h, 'SERIES'); h.addSpacer(); t(h, dateStr, label(8), SOFT)
     w.addSpacer(fam === 'small' ? 10 : 12)
     if (!SR.length) t(w, '진행 중인 시리즈가 없어요', tw(12), SOFT)
@@ -1764,7 +1772,7 @@ if (!data) {
     const hRow = (P2, x, wd) => {
       const r = P2.addStack(); r.size = new Size(wd, 0); r.centerAlignContent(); r.spacing = 7; r.url = habitUrl(x)
       const z = Math.round(fs * 0.95), b = r.addStack(); b.size = new Size(z, z); b.cornerRadius = z / 2; b.borderWidth = 1; b.borderColor = x.on ? (x.c ? new Color(x.c) : GOLD) : SOFT
-      if (x.on) b.backgroundColor = x.c ? new Color(x.c) : GOLD
+      if (x.on) { if (PENCIL) { b.centerAlignContent(); t(b, '✓', F(Math.max(7, z * 0.8), 'Regular'), x.c ? new Color(x.c) : GOLD) } else b.backgroundColor = x.c ? new Color(x.c) : GOLD }
       t(r, x.t, tw(fs), x.on ? SOFT : INK, 1).minimumScaleFactor = 0.8; r.addSpacer()
       if (showW) { const dots = r.addStack(); dots.spacing = 3; dots.centerAlignContent(); for (const v of (x.w || []).slice(0, 7)) { const d = dots.addStack(); d.size = new Size(4, 4); d.cornerRadius = 2; d.backgroundColor = v ? (x.c ? new Color(x.c) : GOLD) : RULE } }
       P2.addSpacer(fam === 'small' ? 6 : 8)

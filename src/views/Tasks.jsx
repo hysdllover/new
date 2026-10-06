@@ -391,6 +391,7 @@ function WeekBoard() {
     return (
       <div className={'wkb-item' + (t.done ? ' done' : '')} {...longPress(() => ({ label: t.title, onDrop: drop(t) }))} onClick={() => openDetail('task', t.id)}>
         <Check on={t.done} onClick={() => toggleTask(t.id)} color={sb?.color} />
+        {t.seriesId && <i className="wkb-sd" style={{ background: st.seriesColors?.[t.seriesId] || sb?.color || 'var(--muted)' }} />}
         <span className="wkb-t">{t.title}</span>
         {t.dueTime != null && <span className="tiny muted">{fmtTime(t.dueTime)}</span>}
       </div>

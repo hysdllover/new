@@ -39,6 +39,7 @@ export default function NotePage({ id }) {
     { label: '표지', icon: 'layers', onClick: () => openSheet((close) => <div className="row wrap" style={{ gap: 8 }}>{COVERS.map(([k, l]) => <button key={k} className={'chip' + ((n.cover || '') === k ? ' on' : '')} onClick={() => { up({ cover: k || null }); close() }}>{k && <i className={'cover-dot cv-' + k} />}{l}</button>)}</div>, { title: '페이지 표지' }) },
     { label: '이전 버전', icon: 'clock', onClick: () => openSheet((c) => <Versions id={id} close={c} />, { title: '이전 버전' }) },
     { label: '색 라벨', icon: 'tag', onClick: () => openSheet((close) => <div className="row wrap" style={{ gap: 8 }}><button className={'chip' + (!n.label ? ' on' : '')} onClick={() => { up({ label: null }); close() }}>없음</button>{NOTE_LABELS.map(([k, c, l]) => <button key={k} className={'chip' + (n.label === k ? ' on' : '')} onClick={() => { up({ label: k }); close() }}><span className="dot" style={{ background: c }} />{l}</button>)}</div>, { title: '색 라벨' }) },
+    { label: '배경', icon: 'layers', onClick: () => openSheet((close) => <div className="row wrap" style={{ gap: 8 }}>{[['', '무지'], ['line', '줄'], ['grid', '모눈'], ['dot', '점']].map(([k, l]) => <button key={k} className={'chip' + ((n.bg || '') === k ? ' on' : '')} onClick={() => { up({ bg: k || null }); close() }}><i className={'bg-sw note-bg-' + (k || 'plain')} />{l}</button>)}</div>, { title: '노트 배경' }) },
     { label: '이미지로 공유', icon: 'image', onClick: async () => { const { drawNote } = await import('../../lib/reportImage.js'); const { shareBlob } = await import('../../lib/shareCard.js'); const blob = await drawNote(n, { theme: settings?.reportTheme || 'app' }); const r = await shareBlob(blob, `${noteTitle(n)}.png`); if (r === 'saved') toast('이미지를 저장했어요') } },
     { label: n.pinned ? '고정 해제' : '상단 고정', icon: 'star', onClick: () => up({ pinned: !n.pinned }) },
     { label: n.isTemplate ? '템플릿에서 빼기' : '템플릿으로 저장', icon: 'layers', onClick: () => { up({ isTemplate: !n.isTemplate }); toast(n.isTemplate ? '템플릿에서 뺐어요' : '새 페이지에서 이 양식을 고를 수 있어요') } },
@@ -46,7 +47,7 @@ export default function NotePage({ id }) {
     { label: '삭제', icon: 'trash', danger: true, onClick: () => { remove('notes', id); setParams('notes', { noteId: null }); toast('노트 삭제됨', { label: '되돌리기', fn: () => { restore('notes', id); openNote(id) } }) } },
   ])
   return (
-    <div className={'note-page' + (reading ? ' reading' : '')}>
+    <div className={'note-page' + (reading ? ' reading' : '') + (n.bg ? ' note-bg note-bg-' + n.bg : '')}>
       <div className="row no-print" style={{ marginBottom: 6 }}>
         <button className="btn ghost sm" onClick={() => setParams('notes', { noteId: null })}><Icon name="back" size={14} />목록</button>
         {parent && <button className="btn ghost sm ellipsis" style={{ maxWidth: '45%' }} onClick={() => openNote(parent.id)}>› {noteTitle(parent)}</button>}
@@ -59,6 +60,7 @@ export default function NotePage({ id }) {
       <div className="note-head">
         <button className="note-icon" onClick={(e) => openMenu(e, ICONS.map((i) => ({ label: i, onClick: () => up({ icon: i }) })))}>{n.icon || '📄'}</button>
         {n.label && <span className="note-label-dot" style={{ background: labelColor(n.label) }} />}
+        {settings?.theme?.stamp !== false && n.createdAt && <span className="note-stamp" title="만든 날">{(() => { const d = new Date(n.createdAt); return `${d.getFullYear()}. ${d.getMonth() + 1}. ${d.getDate()}` })()}</span>}
         <AutoText className="note-title" value={n.title || ''} placeholder="제목 없음" readOnly={reading} onChange={(v) => up({ title: v })} />
       </div>
       {!reading && <div className="row wrap note-meta no-print">

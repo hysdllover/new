@@ -1,14 +1,16 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import { useColl, useSettings, put, find } from '../../store/store.js'
+import { useColl, useSettings, setSettings, put, find } from '../../store/store.js'
 import { Sticker, TAPES } from '../../components/Stickers.jsx'
 import { eventsOn } from '../../engine/scheduler.js'
-import { monthStart, weekStart, addDays, addMonths, parseYmd, WD, today, fmtDate, fmtTime, fmtDur } from '../../engine/date.js'
+import { monthStart, weekStart, addDays, addMonths, parseYmd, WD, today, fmtDate, fmtTime, fmtDur, diffDays } from '../../engine/date.js'
 import { holiday } from '../../engine/holidays.js'
 import { Icon, openDetail, Check, openSheet } from '../../components/ui.jsx'
 import { dayRec } from '../../store/actions.js'
 import { toggleTask } from '../../store/actions.js'
 import { go, setParams } from '../../nav.js'
 
+// 레이어별 색 농도 (설정에 저장 · 기기 공통)
+export const layerAlpha = (st, e) => (e.layer === 'academy' ? st.layerAlpha?.academy ?? 0.55 : st.layerAlpha?.events ?? 1)
 const LAYERS = [['events', '일정'], ['academy', '학원'], ['tasks', '할 일'], ['study', '공부기록'], ['habits', '습관'], ['meds', '약']]
 const loadLayers = () => { try { const v = JSON.parse(localStorage.getItem('layers')) || { events: 1, tasks: 1, study: 1 }; return { academy: 1, ...v } } catch { return { events: 1, academy: 1, tasks: 1, study: 1 } } }
 
@@ -28,6 +30,9 @@ export default function Month({ date, setDate }) {
   const medTotal = activeMeds.reduce((a, m) => a + (m.times?.length || 0), 0)
   const wdOrder = Array.from({ length: 7 }, (_, i) => (i + st.weekStart) % 7)
   const sel = date
+  // D-day까지 남은 주 (통계의 주차 달력에서 고른 D-day, 없으면 가장 먼 D-day)
+  const ddays = useColl('ddays').filter((x) => x.date >= today()).sort((a, b) => a.date.localeCompare(b.date))
+  const ddW = (() => { let k = null; try { k = localStorage.getItem('wk_dday') } catch {} return ddays.find((x) => x.id === k) || ddays[ddays.length - 1] || null })()
   const [peek, setPeek] = useState(false)
   const selRow = Math.floor(cells.indexOf(sel) / 7)
 
@@ -40,11 +45,15 @@ export default function Month({ date, setDate }) {
           <b style={{ fontSize: '1.15em' }}>{parseYmd(ms).getFullYear()}년 {month + 1}월</b>
           <button className="icon-btn" onClick={() => setDate(addMonths(ms, 1))} aria-label="다음 달"><Icon name="next" /></button>
         </div>
-        {ms !== monthStart(today()) && <button className="btn sm" onClick={() => setDate(today())}>오늘</button>}
+        <div className="row" style={{ gap: 8 }}>
+          {ddW && <span className="tiny muted">{ddW.title}까지 {Math.floor(diffDays(ddW.date, today()) / 7)}주 {diffDays(ddW.date, today()) % 7}일</span>}
+          {ms !== monthStart(today()) && <button className="btn sm" onClick={() => setDate(today())}>오늘</button>}
+        </div>
       </div>
       <div className="scroll-x no-print"><div className="row" style={{ gap: 6 }}>
         <Icon name="layers" size={16} />
         {LAYERS.map(([k, l]) => <button key={k} className={'chip' + (layers[k] ? ' on' : '')} onClick={() => toggle(k)}>{l}</button>)}
+        <button className="chip" onClick={() => openSheet(() => <LayerAlpha />, { title: '레이어 색 농도' })}>농도</button>
       </div></div>
       <div className="card month" style={{ padding: 6 }}>
         <div className="mgrid">
@@ -69,10 +78,13 @@ export default function Month({ date, setDate }) {
                 {hol && <div className="mhol ellipsis">{hol}</div>}
                 {(() => { const k = (find('days', d)?.deco || []).find((x) => !TAPES[x.k]); return k ? <span className="mcell-stk"><Sticker k={k.k} color={k.c} size={16} /></span> : null })()}
                 <div className="mitems">
-                  {evs.slice(0, 3).map((e) => <div key={e.id} className="mev ellipsis" style={{ '--c': e.color || 'var(--accent)' }}>{e.title}</div>)}
+                  {evs.slice(0, 3).map((e) => <div key={e.id} className="mev ellipsis" style={{ '--c': e.color || 'var(--accent)', opacity: layerAlpha(st, e) }}>{e.title}</div>)}
                   {evs.length > 3 && <div className="tiny muted">+{evs.length - 3}</div>}
                   {due.length > 0 && <div className="mtask tiny">☐ {due.filter((t) => !t.done).length}/{due.length}</div>}
                 </div>
+                {layers.study && mins > 0 && <i className="mstudy" style={{ width: Math.min(100, (mins / (st.goalDaily || 240)) * 100) + '%' }} />}
+                {ci % 7 === 0 && ddW && d <= ddW.date && <span className="mwk">{Math.ceil(diffDays(ddW.date, d) / 7)}주</span>}
+                {ddW && d === ddW.date && <span className="mdd" />}
                 <div className="mfoot">
                   {layers.study && mins > 0 && <span className="tiny">{Math.round(mins / 6) / 10}h</span>}
                   {hDone > 0 && <span className="tiny" style={{ color: 'var(--c2)' }}>●{hDone}</span>}
@@ -122,6 +134,18 @@ function DayPeek({ date, subjects, close }) {
         <span className="grow" />
         <button className="btn sm" onClick={open}>하루 보기</button>
       </div>
+    </div>
+  )
+}
+
+function LayerAlpha() {
+  const st = useSettings(), la = st.layerAlpha || {}
+  const set = (k, v) => setSettings({ layerAlpha: { ...la, [k]: v } })
+  const opts = [[0.35, '옅게'], [0.55, '중간'], [0.8, '진하게'], [1, '그대로']]
+  return (
+    <div className="form">
+      {[['events', '일정', 1], ['academy', '학원', 0.55]].map(([k, l, d]) => <div key={k} className="row between"><span className="small">{l}</span><div className="seg">{opts.map(([v, t]) => <button key={v} className={(la[k] ?? d) === v ? 'on' : ''} onClick={() => set(k, v)}>{t}</button>)}</div></div>)}
+      <div className="tiny muted">월·주 캘린더에서 레이어별로 색을 옅게 보여요</div>
     </div>
   )
 }
