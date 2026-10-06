@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { notesForWidget } from '../lib/notePreview.js'
+import { seriesSummary } from '../lib/series.js'
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval'
 import { getState, replaceColl, onChange, patch, settings, list } from '../store/store.js'
 import { COLLECTIONS, GIST_FILES } from '../store/schema.js'
@@ -236,9 +237,10 @@ function widgetPayload() {
     goals: goalsPayload(),
     notes: excluded().has('notes') ? [] : notesForWidget(getState()),
     extra: extraPayload(),
+    series: seriesSummary(list('tasks'), list('subjects')).slice(0, 6).map((x) => ({ t: x.t, d: x.d, n: x.n, x: x.next?.title || '', c: x.color })),
     sv: SCRIPT_VER,
     gid: gistId(), // 위젯에서 바로 처리할 때 명령을 남길 곳 (토큰은 위젯 쪽 보관함에만)
-    settings: { settings: { main: { goalDaily: main.goalDaily, weekStart: main.weekStart, widgetFont: main.widgetFont, widgetScale: main.widgetScale, widgetWeight: main.widgetWeight, widgetClear: main.widgetClear, widgetTheme: main.widgetTheme, dashTiles: main.dashTiles, customWidgets: main.customWidgets } }, quotes: keep('quotes') },
+    settings: { settings: { main: { goalDaily: main.goalDaily, weekStart: main.weekStart, widgetFont: main.widgetFont, widgetScale: main.widgetScale, widgetWeight: main.widgetWeight, widgetClear: main.widgetClear, widgetTheme: main.widgetTheme, widgetPad: main.widgetPad, widgetRule: main.widgetRule, dashTiles: main.dashTiles, customWidgets: main.customWidgets } }, quotes: keep('quotes') },
   })
 }
 const ATT_MAX = 7 * 1024 * 1024 // gist 한 파일로 올릴 수 있는 첨부 크기 (base64 로 늘어나는 걸 고려)
