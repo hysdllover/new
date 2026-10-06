@@ -22,10 +22,13 @@ export function dailyNote(date, create) {
 // 블록 텍스트 전체 (동기화 블록 포함)
 export function allBlocks(note) {
   const out = []
-  for (const b of note.blocks || []) {
-    if (b.type === 'sync') out.push(...(find('syncBlocks', b.syncId)?.blocks || []))
+  const walk = (bs) => { for (const b of bs || []) {
+    if (b.type === 'sync') walk(find('syncBlocks', b.syncId)?.blocks)
+    else if (b.type === 'cols') for (const c of b.cols || []) walk(c) // 두 단: 왼쪽 → 오른쪽
+    else if (b.type === 'toggle') { out.push(b); walk(b.children) }
     else out.push(b)
-  }
+  } }
+  walk(note.blocks)
   return out
 }
 export const noteText = (note) => allBlocks(note).map((b) => b.text || (b.rows ? b.rows.map((r) => r.join(' ')).join('\n') : '')).join('\n')

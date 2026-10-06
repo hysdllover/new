@@ -47,9 +47,14 @@ export const blobToDataUrl = (blob) => new Promise((res, rej) => { const r = new
 
 export function pickFiles(accept = 'image/*,application/pdf,.html,.htm', multiple = true) {
   return new Promise((res) => {
+    // iOS: 화면에 붙어 있지 않은 input 은 고른 뒤 change 가 안 오는 경우가 있어 잠깐 붙였다가 뗌
     const i = document.createElement('input')
     i.type = 'file'; i.accept = accept; i.multiple = multiple
-    i.onchange = () => res([...i.files])
+    i.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;width:1px;height:1px'
+    document.body.appendChild(i)
+    const done = (v) => { res(v); setTimeout(() => i.remove(), 0) }
+    i.onchange = () => done([...i.files])
+    i.addEventListener('cancel', () => done([]))
     i.click()
   })
 }

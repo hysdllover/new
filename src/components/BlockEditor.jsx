@@ -13,14 +13,18 @@ import { startDrag } from '../lib/drag.js'
 
 const TYPES = [['text', '텍스트'], ['h1', '제목 1'], ['h2', '제목 2'], ['bullet', '글머리'], ['todo', '체크박스 (할 일)'], ['callout', '강조 상자'], ['quote', '인용'], ['divider', '구분선']]
 const TONES = [['key', '핵심'], ['warn', '주의'], ['ex', '예시']]
-const SOLID = ['divider', 'embed', 'sync', 'file', 'table', 'page'] // 글자를 직접 쓰지 않는 블록
-const INLINE_RE = /(\[\[[^\]]+\]\]|@(?:오늘|내일|모레|\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2})(?:\s+\d{1,2}:\d{2})?|https?:\/\/[^\s]+)/g
+const SOLID = ['divider', 'embed', 'sync', 'file', 'table', 'page', 'cols'] // 글자를 직접 쓰지 않는 블록
+const INLINE_RE = /(\*\*[^*\n]+\*\*|==[^=\n]+==|__[^_\n]+__|\[\[[^\]]+\]\]|@(?:오늘|내일|모레|\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2})(?:\s+\d{1,2}:\d{2})?|https?:\/\/[^\s]+)/g
 
 export function Inline({ text }) {
   if (!text) return null
   const parts = text.split(INLINE_RE)
   return parts.map((p, i) => {
     if (i % 2 === 0) return <Fragment key={i}>{p}</Fragment>
+    // 글자 꾸미기: **굵게** · ==형광펜== · __밑줄__
+    if (p.startsWith('**')) return <b key={i} className="mk-b">{p.slice(2, -2)}</b>
+    if (p.startsWith('==')) return <mark key={i} className="mk-hl">{p.slice(2, -2)}</mark>
+    if (p.startsWith('__')) return <u key={i} className="mk-u">{p.slice(2, -2)}</u>
     if (p.startsWith('[[')) {
       const t = p.slice(2, -2)
       return <button key={i} className="wikilink" onClick={(e) => { e.stopPropagation(); openNote(openOrCreateByTitle(t).id) }}>{t}</button>
@@ -63,6 +67,13 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
     }
     window.addEventListener('pointermove', mv); window.addEventListener('pointerup', off); window.addEventListener('pointercancel', off)
   }
+  // 여러 줄 선택: 손잡이 메뉴 › 여러 줄 선택 → 블록을 눌러 고르고 한 번에 옮기기·복제·삭제
+  const [sel, setSel] = useState(null) // Set | null
+  const togSel = (id) => setSel((x) => { const n = new Set(x); n.has(id) ? n.delete(id) : n.add(id); return n })
+  const clone = (b) => JSON.parse(JSON.stringify({ ...b, id: newBlock().id, taskId: undefined }))
+  const selMove = (d) => { const a = [...list], idx = a.map((b, i) => (sel.has(b.id) ? i : -1)).filter((i) => i >= 0); if (!idx.length) return; if (d < 0 && idx[0] === 0) return; if (d > 0 && idx[idx.length - 1] === a.length - 1) return; const order = d < 0 ? idx : [...idx].reverse(); for (const i of order) { [a[i], a[i + d]] = [a[i + d], a[i]] } set(a) }
+  const selDup = () => { const a = []; for (const b of list) { a.push(b); if (sel.has(b.id)) a.push(clone(b)) } set(a) }
+  const selDel = () => { const a = list.filter((b) => !sel.has(b.id)); set(a.length ? a : [newBlock()]); setSel(null) }
   const move = (id, d) => { const i = list.findIndex((b) => b.id === id), j = i + d; if (j < 0 || j >= list.length) return; const a = [...list];[a[i], a[j]] = [a[j], a[i]]; set(a) }
 
   const onText = (b, text) => {
@@ -109,6 +120,8 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
     b.text && { label: '복습 등록', icon: 'brain', onClick: () => addReview({ title: b.text.slice(0, 60), subjectId: note?.subjectId, sourceType: 'note', sourceId: note?.id }) },
     b.text && b.type !== 'todo' && { label: '할 일로 만들기', icon: 'tasks', onClick: () => { const t = addTask({ title: b.text, noteId: note?.id, subjectId: note?.subjectId }); upd(b.id, { type: 'todo', taskId: t.id }) } },
     !nested && b.type !== 'sync' && { label: '동기화 블록으로', icon: 'sync', onClick: () => { const s = put('syncBlocks', { blocks: [{ ...b, id: newBlock().id }] }); upd(b.id, { type: 'sync', syncId: s.id, text: '' }) } },
+    { label: '복제', icon: 'plus', onClick: () => { const i = list.findIndex((x) => x.id === b.id), a = [...list]; a.splice(i + 1, 0, clone(b)); set(a) } },
+    { label: '여러 줄 선택', icon: 'check', onClick: () => setSel(new Set([b.id])) },
     { label: '위로', icon: 'back', onClick: () => move(b.id, -1) },
     { label: '아래로', icon: 'next', onClick: () => move(b.id, 1) },
     { label: '삭제', icon: 'trash', danger: true, onClick: () => removeBlock(b.id) },
@@ -122,7 +135,7 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
         const editing = edit?.id === b.id
         const task = b.taskId && tasks.find((t) => t.id === b.taskId)
         return (
-          <div key={b.id} className={'blk blk-' + b.type + (b.type === 'callout' ? ' tone-' + (b.tone || 'key') : '')} data-drop={readOnly ? undefined : 'blk:' + b.id}>
+          <div key={b.id} className={'blk blk-' + b.type + (b.type === 'callout' ? ' tone-' + (b.tone || 'key') : '') + (sel?.has(b.id) ? ' sel' : '')} data-drop={readOnly ? undefined : 'blk:' + b.id} onClickCapture={sel ? (e) => { e.stopPropagation(); e.preventDefault(); togSel(b.id) } : undefined}>
             {!readOnly && <button className="blk-h" onPointerDown={(e) => gripDown(e, b)} onClick={(e) => { if (dragged.current) { dragged.current = false; return } blockMenu(e, b) }} aria-label="블록 메뉴 · 끌어서 순서 바꾸기"><Icon name="grip" size={14} /></button>}
             {b.type === 'bullet' && <span className="blk-dot">•</span>}
             {b.type === 'todo' && <span className="blk-chk"><Check on={!!task?.done} onClick={() => { if (task) toggleTask(task.id); else { const nb = commitBlock(b, note); upd(b.id, nb); if (nb.taskId) toggleTask(nb.taskId) } }} /></span>}
@@ -131,11 +144,14 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
                 b.type === 'file' ? <FileBlock b={b} /> :
                 b.type === 'table' ? <TableBlock b={b} readOnly={readOnly} onChange={(rows) => upd(b.id, { rows })} /> :
                 b.type === 'page' ? <SubPage b={b} /> :
+                b.type === 'cols' ? <div className="cols2">{[0, 1].map((k) => <div key={k} className="col-pane"><BlockEditor nested readOnly={readOnly} blocks={(b.cols || [[], []])[k] || []} note={note} onChange={(bs) => upd(b.id, { cols: [0, 1].map((j) => (j === k ? bs : (b.cols || [[], []])[j] || [])) })} /></div>)}</div> :
+                b.type === 'toggle' ? <ToggleBlock b={b} note={note} readOnly={readOnly} editing={editing} edit={edit} onTitle={(t) => onText(b, t)} onKeyDown={(e) => onKey(e, b)} onBlur={(t) => { commit({ ...b, text: t }); setEdit((x) => (x?.id === b.id ? null : x)) }} onEdit={() => setEdit({ id: b.id, pos: (b.text || '').length })} onChildren={(bs) => upd(b.id, { children: bs })} /> :
                 b.type === 'embed' ? <Embed b={b} note={note} onChange={(p) => upd(b.id, p)} /> :
                 b.type === 'sync' ? <SyncBlock b={b} note={note} /> :
                 editing && !readOnly ? (
-                  <EditArea b={b} pos={edit.pos} onChange={(t) => onText(b, t)} onKeyDown={(e) => onKey(e, b)}
+                  <><EditArea b={b} pos={edit.pos} onChange={(t) => onText(b, t)} onKeyDown={(e) => onKey(e, b)}
                     onBlur={(t) => { if (skip.current !== b.id) commit({ ...b, text: t }); setEdit((x) => (x?.id === b.id ? null : x)) }} />
+                  <MarkBar onApply={(t) => onText(b, t)} /></>
                 ) : (
                   <div className={'blk-v' + (task?.done ? ' done' : '')} onClick={() => !readOnly && setEdit({ id: b.id, pos: (b.text || '').length })}>{b.type === 'callout' && <span className="co-tag">{(TONES.find(([t]) => t === (b.tone || 'key')) || TONES[0])[1]}</span>}
                     {b.text ? <Inline text={b.text} /> : <span className="muted">{list.length === 1 ? '입력하세요… (# 제목, - 목록, [] 체크, [[링크]], @내일 15:00)' : ' '}</span>}
@@ -147,13 +163,24 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
           </div>
         )
       })}
-      {!nested && !readOnly && (
+      {sel && (
+        <div className="sel-bar no-print">
+          <div className="row between"><span className="small">{sel.size}줄 선택 · 블록을 눌러 고르기</span><button className="chip" onClick={() => setSel(null)}>끝</button></div>
+          <div className="row wrap" style={{ gap: 6, opacity: sel.size ? 1 : 0.45, pointerEvents: sel.size ? 'auto' : 'none' }}>
+            <button className="chip" onClick={() => selMove(-1)}>위로</button><button className="chip" onClick={() => selMove(1)}>아래로</button>
+            <button className="chip" onClick={selDup}>복제</button><button className="chip" style={{ color: 'var(--danger)' }} onClick={selDel}>삭제</button>
+          </div>
+        </div>
+      )}
+      {!nested && !readOnly && !sel && (
         <div className="blk-add no-print">
           <button className="chip" onClick={() => addEnd(newBlock())}>+ 텍스트</button>
           <button className="chip" onClick={() => addEnd(newBlock('h2'))}>제목</button>
           <button className="chip" onClick={() => addEnd(newBlock('todo'))}>☐ 체크</button>
           <button className="chip" onClick={() => addEnd({ ...newBlock('callout'), tone: 'key' })}>강조</button>
           <button className="chip" onClick={() => addEnd({ id: newBlock().id, type: 'table', rows: [['', ''], ['', '']] })}>표</button>
+          <button className="chip" onClick={() => addEnd({ id: newBlock().id, type: 'cols', cols: [[newBlock()], [newBlock()]] })}>두 단</button>
+          <button className="chip" onClick={() => addEnd({ ...newBlock('toggle'), children: [newBlock()], open: true })}>▸ 토글</button>
           <button className="chip" onClick={() => { const c = put('notes', { title: '', type: 'page', parentId: note?.id || null, subjectId: note?.subjectId || null, blocks: [newBlock()] }); addEnd({ id: newBlock().id, type: 'page', pageId: c.id }); setTimeout(() => openNote(c.id), 50) }}>+ 하위 페이지</button>
           <button className="chip" onClick={async () => { const fs = await pickFiles(); const nbs = []; for (const f of fs) { try { const r = await addFile(f, { subjectId: note?.subjectId, noteId: note?.id }); nbs.push({ id: newBlock().id, type: 'file', fileId: r.id }) } catch (e) { toast(e.message) } } if (nbs.length) set([...list, ...nbs]) }}><Icon name="image" size={14} />파일</button>
           <button className="chip" onClick={(e) => openMenu(e, [
@@ -335,4 +362,41 @@ function SubPage({ b }) {
   if (!c) return <div className="blk-v muted">삭제된 페이지</div>
   const todos = (c.blocks || []).filter((x) => x.type === 'todo' && (x.text || '').trim()).length
   return <button className="subpage" onClick={() => openNote(c.id)}><Icon name="file" size={15} /><span className="ellipsis grow">{c.title || '제목 없는 페이지'}</span>{todos > 0 && <span className="tiny muted">체크 {todos}</span>}<Icon name="next" size={13} /></button>
+}
+
+// 글자 꾸미기: 고른 글자를 **굵게** · ==형광펜== · __밑줄__ 로 감싸기 (편집 중인 칸 아래 작은 막대)
+function MarkBar({ onApply }) {
+  const wrap = (m) => (e) => {
+    e.preventDefault()
+    const el = e.currentTarget.closest('.blk-c')?.querySelector('textarea'); if (!el) return
+    const a = el.selectionStart, z = el.selectionEnd, v = el.value
+    const mid = v.slice(a, z) || '글자'
+    const next = v.slice(0, a) + m + mid + m + v.slice(z)
+    onApply(next)
+    requestAnimationFrame(() => { try { el.focus(); el.setSelectionRange(a + m.length, a + m.length + mid.length) } catch {} })
+  }
+  return (
+    <div className="markbar no-print">
+      <button onPointerDown={wrap('**')} aria-label="굵게"><b>B</b></button>
+      <button onPointerDown={wrap('==')} aria-label="형광펜"><span className="mk-hl">형광</span></button>
+      <button onPointerDown={wrap('__')} aria-label="밑줄"><u>밑줄</u></button>
+    </div>
+  )
+}
+
+// 토글: 제목 줄을 누르면 아래 내용이 펼쳐지고 접힘 (질문 → 답 정리)
+function ToggleBlock({ b, note, readOnly, editing, edit, onTitle, onKeyDown, onBlur, onEdit, onChildren }) {
+  const [open, setOpen] = useState(!!b.open)
+  return (
+    <div className="tgl">
+      <div className="row" style={{ gap: 4, alignItems: 'flex-start', flexWrap: 'nowrap' }}>
+        <button className={'tgl-arrow' + (open ? ' open' : '')} onClick={() => setOpen(!open)} aria-label={open ? '접기' : '펼치기'}>▸</button>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {editing && !readOnly ? <EditArea b={b} pos={edit.pos} onChange={onTitle} onKeyDown={onKeyDown} onBlur={onBlur} />
+            : <div className="blk-v tgl-t" onClick={() => (readOnly ? setOpen(!open) : onEdit())}>{b.text ? <Inline text={b.text} /> : <span className="muted">토글 제목 (예: 질문)</span>}</div>}
+        </div>
+      </div>
+      {open && <div className="tgl-body"><BlockEditor nested readOnly={readOnly} blocks={b.children || []} note={note} onChange={onChildren} /></div>}
+    </div>
+  )
 }

@@ -4,7 +4,7 @@ import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval'
 import { getState, replaceColl, onChange, patch, settings, list } from '../store/store.js'
 import { COLLECTIONS, GIST_FILES } from '../store/schema.js'
 import { mergeColl, stableFile } from './merge.js'
-import { blobToDataUrl, setRemoteRaw, MAX_FILE, addFile } from '../lib/files.js'
+import { blobToDataUrl, setRemoteRaw, addFile } from '../lib/files.js'
 import { eventsOn, classesOn } from '../engine/scheduler.js'
 import { weekGoals, goalProgress, addTask, toggleTask, addSession } from '../store/actions.js'
 import { today, addDays } from '../engine/date.js'
@@ -241,6 +241,7 @@ function widgetPayload() {
     settings: { settings: { main: { goalDaily: main.goalDaily, weekStart: main.weekStart, widgetFont: main.widgetFont, widgetScale: main.widgetScale, widgetWeight: main.widgetWeight, widgetClear: main.widgetClear, widgetTheme: main.widgetTheme, dashTiles: main.dashTiles, customWidgets: main.customWidgets } }, quotes: keep('quotes') },
   })
 }
+const ATT_MAX = 7 * 1024 * 1024 // gist 한 파일로 올릴 수 있는 첨부 크기 (base64 로 늘어나는 걸 고려)
 const WIDGET_GAP = 60000, WIDGET_FORCE_GAP = 15000 // 위젯 gist 쓰기 최소 간격 1분 (앱을 나갈 때·타이머는 15초) — GitHub 쓰기 제한 대비
 let widgetDirty = false, widgetTimer = null
 // 아이폰 캘린더 구독용 .ics (일정·할 일·D-day)
@@ -425,13 +426,11 @@ export async function syncNow({ flush = false } = {}) {
       for (const n of inboxDone) patchFiles[n] = null
       for (const [name, content] of Object.entries(files)) if (remoteText[name] !== content) patchFiles[name] = { content }
       // 첨부 파일 업로드 / 삭제
-      const uploaded = []
+      // 첨부는 본 데이터와 따로 한 개씩 올림 (큰 파일 하나가 실패해도 동기화 전체가 막히지 않게) — 아래 3) 에서
+      const attQueue = []
       for (const m of list('files')) {
-        if (m.gist || gist.files?.[`att-${m.id}.txt`]) continue
-        const blob = await idbGet('blob:' + m.id)
-        if (!blob || blob.size > MAX_FILE) continue
-        patchFiles[`att-${m.id}.txt`] = { content: await blobToDataUrl(blob) }
-        uploaded.push(m.id)
+        if (m.gist || gist.files?.[`att-${m.id}.txt`]) { if (!m.gist && gist.files?.[`att-${m.id}.txt`]) patch('files', m.id, { gist: true }); continue }
+        attQueue.push(m)
       }
       for (const r of Object.values(getState().files)) if (r.deleted && gist.files?.[`att-${r.id}.txt`]) patchFiles[`att-${r.id}.txt`] = null
       const fontsUp = await syncFonts(gist, patchFiles)
@@ -441,9 +440,21 @@ export async function syncNow({ flush = false } = {}) {
         const res = await gh(`/gists/${gistId()}`, { method: 'PATCH', body: JSON.stringify({ files: patchFiles }) })
         lastPush = Date.now()
         for (const [name, f] of Object.entries(res.files || {})) if (name.startsWith('att-')) setRemoteRaw(name.slice(4).replace(/\.txt$/, ''), f.raw_url)
-        for (const id of uploaded) patch('files', id, { gist: true })
         for (const id of fontsUp) await markSynced(id)
       }
+      // 3) 첨부 파일 올리기: 한 번에 최대 4개 · 하나씩 · 실패하면 이유를 기록하고 다음 동기화 때 다시
+      let attFail = 0
+      for (const m of attQueue.slice(0, 4)) {
+        try {
+          const blob = await idbGet('blob:' + m.id)
+          if (!blob) continue // 다른 기기에서 만든 첨부 (그 기기가 올림)
+          if (blob.size > ATT_MAX) { if (!m.tooBig) { patch('files', m.id, { tooBig: true }); addLog({ at: Date.now(), err: `‘${m.name}’ 은 ${Math.round(blob.size / 1048576)}MB 라 이 기기에만 있어요 (동기화는 ${ATT_MAX / 1048576}MB 까지)` }) } continue }
+          const res = await gh(`/gists/${gistId()}`, { method: 'PATCH', body: JSON.stringify({ files: { [`att-${m.id}.txt`]: { content: await blobToDataUrl(blob) } } }) })
+          const f = res.files?.[`att-${m.id}.txt`]; if (f) setRemoteRaw(m.id, f.raw_url)
+          patch('files', m.id, { gist: true })
+        } catch (e) { if (e.until) throw e; attFail++; addLog({ at: Date.now(), err: `첨부 ‘${m.name}’ 올리기 실패 · ${String(e.message || e).slice(0, 50)}` }) }
+      }
+      if (attQueue.length > 4 && !attFail) again = true // 남은 첨부는 이어서
       await clearDeletes()
       const now = Date.now()
       ls.set('gist_last', String(now))
