@@ -1,4 +1,5 @@
 import { list, put, patch, find, remove, settings, setSettings, batch } from '../store/store.js'
+import { plainText } from './marks.js'
 import { addTask, updateTask } from '../store/actions.js'
 import { parseMention, fmtTime } from '../engine/date.js'
 import { uid } from '../store/store.js'
@@ -56,7 +57,7 @@ export function commitBlock(block, note) {
   const text = (b.text || '').trim()
   if (b.type === 'todo' && text) {
     const m = parseMention(text)
-    const title = (m ? m.rest : text).replace(LINK_RE, '$1')
+    const title = plainText((m ? m.rest : text).replace(LINK_RE, '$1'))
     if (!b.taskId || !find('tasks', b.taskId)) {
       const t = addTask({ title, noteId: note?.id, subjectId: note?.subjectId || null, projectId: note?.projectId || null, due: m?.date || null, dueTime: m?.time ?? null })
       b.taskId = t.id
@@ -73,7 +74,7 @@ export function commitBlock(block, note) {
   if (b.type !== 'todo' && b.type !== 'divider') {
     const m = parseMention(text)
     if (m && (!b.ref || b.ref.date !== m.date || b.ref.time !== m.time)) {
-      const title = m.rest.replace(LINK_RE, '$1') || note?.title || '메모'
+      const title = plainText(m.rest.replace(LINK_RE, '$1')) || note?.title || '메모'
       if (b.ref?.type === 'event' && find('events', b.ref.id)) {
         patch('events', b.ref.id, { date: m.date, start: m.time, end: m.time != null ? m.time + 60 : null })
       } else if (b.ref?.type === 'task' && find('tasks', b.ref.id)) {
