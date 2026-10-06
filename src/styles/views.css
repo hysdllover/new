@@ -610,7 +610,7 @@ button.greet { display: block; width: 100%; text-align: left; }
 .note-page.reading .blk-v { line-height: 1.8; cursor: default; }
 .note-page.reading .note-title { pointer-events: none; }
 /* 글자 꾸미기 · 두 단 · 토글 · 표지 · 여러 줄 선택 */
-.mk-b { font-weight: var(--fw-b); }
+.mk-b { font-weight: 600; }
 .mk-hl { background: linear-gradient(transparent 55%, color-mix(in srgb, var(--c3) 45%, transparent) 55%); color: inherit; padding: 0 1px; }
 .mk-u { text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 60%, transparent); text-underline-offset: 3px; }
 .markbar { display: flex; gap: 4px; margin: 2px 0 4px; }
