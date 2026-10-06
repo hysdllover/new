@@ -58,6 +58,7 @@ function Pages({ params, compact }) {
       <div className="row wrap">
         <Seg value={mode} onChange={(v) => { setMode(v); setParams('notes', { mode: v }) }} options={[['list', '목록'], ['db', 'DB 뷰']]} />
         <span className="grow" />
+        <button className="btn" onClick={() => import('../components/MdImport.jsx').then((m) => openSheet((c) => <m.default close={c} />, { title: '마크다운 가져오기' }))}><Icon name="upload" size={15} />가져오기</button>
         <button className="btn primary" onClick={create}><Icon name="plus" size={16} />새 페이지</button>
       </div>
       {mode === 'db' ? <DBView source="notes" /> : (
