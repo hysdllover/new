@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { flushSync } from 'react-dom'
 
 // 탭·세그먼트 탐색 상태 (기기별 localStorage)
 const load = () => { try { return JSON.parse(localStorage.getItem('nav')) || null } catch { return null } }
@@ -52,8 +53,14 @@ export const useNav = () => useSyncExternalStore((f) => { L.add(f); return () =>
 export const getNav = () => nav
 export const onNav = (f) => { L.add(f); return () => L.delete(f) }
 export function go(tab, seg, params) {
+  const prev = nav
   nav = { ...nav, tab, seg: seg ? { ...nav.seg, [tab]: seg } : nav.seg, params: params !== undefined ? { ...nav.params, [tab]: params } : nav.params }
-  save(); L.forEach((l) => l())
+  save()
+  // 탭·화면이 바뀔 때만 부드럽게 이어지는 전환 (검색 입력 같은 작은 변화엔 안 씀 · 움직임 줄이기 존중)
+  const moved = prev.tab !== nav.tab || prev.seg[tab] !== nav.seg[tab] || (params && (prev.params[tab]?.noteId !== params.noteId || prev.params[tab]?.sid !== params.sid))
+  const calm = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (moved && !calm && typeof document !== 'undefined' && document.startViewTransition) document.startViewTransition(() => flushSync(() => L.forEach((l) => l())))
+  else L.forEach((l) => l())
 }
 export const setParams = (tab, params) => go(tab, undefined, { ...(nav.params[tab] || {}), ...params })
 export const segOf = (tab) => nav.seg[tab] || SEGMENTS[tab]?.[0][0]

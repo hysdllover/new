@@ -276,3 +276,14 @@ input[type="color"] { width: 36px; height: 30px; border: 1px solid var(--line); 
 .split-pane .week { grid-template-columns: 1fr !important; }
 
 .sidebar .sec-btn { background: none; border: 0; text-align: left; padding: 0; cursor: pointer; font-family: inherit; }
+/* 아이콘 선 굵기·모양 (설정) */
+svg.ic:not(.ic-fixed) { stroke-width: var(--icon-sw, 1.5); }
+[data-icons="square"] svg.ic { stroke-linecap: square; stroke-linejoin: miter; }
+/* 화면 전환: 살짝 겹쳐 이어지기 */
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .2s; animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
+::view-transition-new(root) { animation-name: vt-in; }
+@keyframes vt-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { ::view-transition-old(root), ::view-transition-new(root) { animation: none; } }
+.tabbar { view-transition-name: tabbar; }
+.sidebar { view-transition-name: sidebar; }
+::view-transition-group(tabbar), ::view-transition-group(sidebar), ::view-transition-old(tabbar), ::view-transition-new(tabbar), ::view-transition-old(sidebar), ::view-transition-new(sidebar) { animation: none; }

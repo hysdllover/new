@@ -109,6 +109,8 @@ Promise.all([loadState(), initFonts(), restoreSync()]).then(async () => {
   startServices()
   import('./lib/resume.js').then((m) => m.startResume())
   startSync()
+  // 완료 30일 지난 할 일 보관함으로 (동기화가 먼저 끝나도록 조금 뒤 · 6시간마다)
+  import('./store/actions.js').then((m) => { setTimeout(m.autoArchive, 8000); setInterval(m.autoArchive, 6 * 3600000) })
   // 동기화를 안 쓰면 바로 한 번 정리 (쓰면 첫 동기화 뒤에)
   if (!localStorage.getItem('gist_token')) import('./lib/notes.js').then((m) => setTimeout(() => m.cleanNoteTasksOnce(), 1500))
 })

@@ -52,7 +52,7 @@ const P = {
 }
 export function Icon({ name, size = 18, stroke = 1.5, fill = 'none', style }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={style} aria-hidden="true">
+    <svg className={'ic' + (stroke !== 1.5 ? ' ic-fixed' : '')} width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={style} aria-hidden="true">
       <path d={P[name] || P.more} />
     </svg>
   )

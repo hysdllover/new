@@ -297,3 +297,12 @@ export const subjectOf = (id) => (id && find('subjects', id)) || null
 export const projectOf = (id) => (id && find('projects', id)) || null
 export const newId = uid
 export { nowMin }
+
+// 완료한 지 30일 지난 할 일은 보관함으로 (설정에서 끌 수 있음)
+export function autoArchive() {
+  if (settings().autoArchive === false) return 0
+  const cut = Date.now() - 30 * 86400000
+  const old = list('tasks').filter((t) => t.done && !t.archived && t.doneAt && t.doneAt < cut)
+  if (old.length) batch(() => old.forEach((t) => patch('tasks', t.id, { archived: true })))
+  return old.length
+}

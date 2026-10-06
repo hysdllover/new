@@ -89,11 +89,13 @@ export default function Settings() {
           <Field label={`모서리 둥글기 ${th.radius}px`}><input type="range" min="0" max="20" value={th.radius} onChange={(e) => setTheme({ radius: +e.target.value })} /></Field>
           <Field label="간격 · 이 기기만 (아이패드 기본 여유)"><Seg value={eff.density} onChange={(v) => { setDeviceTheme({ density: v }, th); bump() }} options={[['compact', '촘촘'], ['normal', '보통'], ['relaxed', '여유']]} /></Field>
           <Field label="아이패드 가로 2단 (오른쪽에 함께 보기)"><Seg value={st.splitPane || ''} onChange={(v) => setSettings({ splitPane: v || null })} options={[['', '끔'], ['planner', '오늘 일정'], ['timer', '타이머'], ['tasks', '오늘 할 일'], ['notes', '데일리']]} /></Field>
+          <Field label="아이콘"><div className="row wrap" style={{ gap: 6 }}><Seg value={th.iconWeight || 'normal'} onChange={(v) => setTheme({ iconWeight: v })} options={[['thin', '가늘게'], ['normal', '보통'], ['bold', '굵게']]} /><Seg value={th.iconShape || 'round'} onChange={(v) => setTheme({ iconShape: v })} options={[['round', '둥글게'], ['square', '각지게']]} /></div></Field>
           <Field label="카드 스타일"><Seg value={th.card} onChange={(v) => setTheme({ card: v })} options={[['line', '선'], ['shadow', '그림자'], ['flat', '평면'], ['glass', '유리'], ['paper', '종이'], ['note', '노트']]} /></Field>
         </div>
       </Card>
 
       <Card title="기능 켜기 / 끄기">
+        <Toggle label="완료한 지 30일 지난 할 일은 보관함으로 자동 정리" checked={st.autoArchive !== false} onChange={(v) => setSettings({ autoArchive: v })} />
         {[['planning', '계획 기능 (자동 학습 계획·타임박싱·원형·10분 플래너)'], ['health', '건강 (컨디션·약)'], ['matrix', '아이젠하워 매트릭스'], ['kanban', '칸반'], ['gantt', '간트'], ['db', '표 · DB 뷰'], ['circle', '원형 계획표'], ['graph', '개념 그래프'], ['mindmap', '마인드맵'], ['mock', '모의고사 타이머']].map(([k, l]) => (
           <Toggle key={k} label={l} checked={st.modules[k] !== false} onChange={(v) => setSettings({ modules: { ...st.modules, [k]: v } })} />
         ))}

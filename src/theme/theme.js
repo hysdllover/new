@@ -70,6 +70,9 @@ export function applyTheme(t0) {
   // 노트: 종이 질감 + 노트 요소(모눈 · 머리줄 · 손글씨 제목)
   root.dataset.card = t.card === 'note' ? 'paper' : t.card
   root.toggleAttribute('data-note', t.card === 'note')
+  // 아이콘 선 굵기·끝 모양
+  root.style.setProperty('--icon-sw', { thin: 1.15, normal: 1.5, bold: 2 }[t.iconWeight] || 1.5)
+  root.dataset.icons = t.iconShape === 'square' ? 'square' : 'round'
   if (t.mode === 'system') delete root.dataset.theme
   else root.dataset.theme = t.mode
 }

@@ -632,3 +632,10 @@ button.greet { display: block; width: 100%; text-align: left; }
 .cover-dot { display: inline-block; width: 10px; height: 10px; border-radius: 5px; margin-right: 6px; border: 1px solid var(--line); }
 .blk.sel { background: color-mix(in srgb, var(--accent) 9%, transparent); border-radius: 4px; }
 @media print { .note-cover { display: none; } }
+/* 아이패드 넓은 화면: 노트 목록 + 노트 */
+.notes-split { display: grid; grid-template-columns: minmax(260px, 320px) minmax(0, 1fr); gap: 18px; align-items: start; }
+.ns-list { position: sticky; top: 0; max-height: calc(100vh - 140px); overflow-y: auto; padding-right: 4px; }
+.ns-page { min-width: 0; }
+.note-grid.ng-one { grid-template-columns: 1fr !important; }
+.note-grid.ng-one .note-prev { -webkit-line-clamp: 2; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+.note-card.on { border-color: var(--accent) !important; }
