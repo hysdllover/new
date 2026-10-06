@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { notesForWidget } from '../lib/notePreview.js'
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval'
 import { getState, replaceColl, onChange, patch, settings, list } from '../store/store.js'
 import { COLLECTIONS, GIST_FILES } from '../store/schema.js'
@@ -223,6 +224,7 @@ function widgetPayload() {
     classes: classesPayload(),
     prog: progPayload(),
     goals: goalsPayload(),
+    notes: excluded().has('notes') ? [] : notesForWidget(getState()),
     sv: SCRIPT_VER,
     settings: { settings: { main: { goalDaily: main.goalDaily, weekStart: main.weekStart, widgetFont: main.widgetFont, widgetScale: main.widgetScale, widgetWeight: main.widgetWeight, widgetClear: main.widgetClear, widgetTheme: main.widgetTheme, dashTiles: main.dashTiles, customWidgets: main.customWidgets } }, quotes: keep('quotes') },
   })

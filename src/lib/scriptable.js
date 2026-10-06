@@ -1,10 +1,10 @@
 import { pickQuote } from './quote.js'
 // iPhone·iPad 홈 화면·잠금 화면 위젯 (Scriptable) — 얇은 단일 서체 · 모노톤
 // 유형: 위젯 편집 › Parameter 에 공부 · 할일 · 디데이 · 달력 · 다짐 (비우면 기본)
-export const WIDGET_KINDS = [['', '기본'], ['공부', '공부'], ['할일', '할 일'], ['디데이', 'D-day'], ['달력', '공부 달력'], ['캘린더', '캘린더'], ['다짐', '다짐'], ['시간표', '시간표'], ['주간', '주간 공부'], ['과목', '과목별'], ['지금', '지금·다음'], ['진도', '진도'], ['목표', '이번 주 목표'], ['오늘', '오늘 한눈에'], ['대시보드', '대시보드'], ['내일', '내일 준비'], ['마감', '마감 임박'], ['일주일', '7일 일정'], ['디데이목록', 'D-day 목록'], ['바로가기', '바로 시작'], ['진행', '공부 진행'], ['남은분', '남은 시간'], ['타이머', '타이머·공부 시간'], ['구성1', '내 위젯 1'], ['구성2', '내 위젯 2'], ['구성3', '내 위젯 3']]
+export const WIDGET_KINDS = [['', '기본'], ['공부', '공부'], ['할일', '할 일'], ['디데이', 'D-day'], ['달력', '공부 달력'], ['캘린더', '캘린더'], ['다짐', '다짐'], ['시간표', '시간표'], ['주간', '주간 공부'], ['과목', '과목별'], ['지금', '지금·다음'], ['진도', '진도'], ['목표', '이번 주 목표'], ['오늘', '오늘 한눈에'], ['대시보드', '대시보드'], ['내일', '내일 준비'], ['마감', '마감 임박'], ['일주일', '7일 일정'], ['디데이목록', 'D-day 목록'], ['바로가기', '바로 시작'], ['진행', '공부 진행'], ['남은분', '남은 시간'], ['타이머', '타이머·공부 시간'], ['노트', '노트'], ['구성1', '내 위젯 1'], ['구성2', '내 위젯 2'], ['구성3', '내 위젯 3']]
 
 // 스크립트 버전 — 위젯 모양이 바뀔 때 올림. 앱이 위젯 데이터에 같이 올려서, 예전 스크립트면 위젯에 '스크립트 업데이트' 표시
-export const SCRIPT_VER = 58
+export const SCRIPT_VER = 59
 
 // 전체 스크립트 (예전 방식 · 테스트용): 머리 + 본체
 export function buildScript({ widgetRaw, appUrl }) {
@@ -84,7 +84,7 @@ const thin = (s) => F(s, 'Thin')
 const label = (s) => F(s, 'Regular')
 
 // Parameter → 유형 (앱에서 미리보기할 땐 고른 Parameter 로 다시 정함)
-const KINDS = { '공부': 'study', '할일': 'todo', '디데이': 'dday', 'd-day': 'dday', '달력': 'month', '캘린더': 'cal', '일정': 'cal', calendar: 'cal', '다짐': 'quote', '시간표': 'class', '수업': 'class', class: 'class', '주간': 'week', week: 'week', '과목': 'subj', subj: 'subj', '지금': 'now', '다음': 'now', now: 'now', '진도': 'prog', prog: 'prog', '목표': 'goals', goals: 'goals', '오늘': 'today', today: 'today', '대시보드': 'dash', dash: 'dash', '내일': 'tmrw', tomorrow: 'tmrw', '마감': 'due', due: 'due', '일주일': 'week7', '7일': 'week7', week7: 'week7', '디데이목록': 'ddl', ddl: 'ddl', '바로가기': 'quick', '시작': 'quick', quick: 'quick', '구성': 'custom', '내위젯': 'custom', custom: 'custom', '타이머': 'timer', '스톱워치': 'timer', timer: 'timer', '진행': 'pct', '공부진행': 'pct', pct: 'pct', '남은분': 'mins', '분': 'mins', mins: 'mins', study: 'study', todo: 'todo', dday: 'dday', month: 'month', quote: 'quote' }
+const KINDS = { '공부': 'study', '할일': 'todo', '디데이': 'dday', 'd-day': 'dday', '달력': 'month', '캘린더': 'cal', '일정': 'cal', calendar: 'cal', '다짐': 'quote', '시간표': 'class', '수업': 'class', class: 'class', '주간': 'week', week: 'week', '과목': 'subj', subj: 'subj', '지금': 'now', '다음': 'now', now: 'now', '진도': 'prog', prog: 'prog', '목표': 'goals', goals: 'goals', '오늘': 'today', today: 'today', '대시보드': 'dash', dash: 'dash', '내일': 'tmrw', tomorrow: 'tmrw', '마감': 'due', due: 'due', '일주일': 'week7', '7일': 'week7', week7: 'week7', '디데이목록': 'ddl', ddl: 'ddl', '바로가기': 'quick', '시작': 'quick', quick: 'quick', '구성': 'custom', '내위젯': 'custom', custom: 'custom', '타이머': 'timer', '스톱워치': 'timer', timer: 'timer', '진행': 'pct', '공부진행': 'pct', pct: 'pct', '남은분': 'mins', '분': 'mins', mins: 'mins', '노트': 'note', '메모': 'note', note: 'note', study: 'study', todo: 'todo', dday: 'dday', month: 'month', quote: 'quote' }
 let RAWP, PARAM, DDI, KIND, BASEKIND, ARG
 function setParam(raw) {
   RAWP = String(raw || '').replace(/\\s/g, '').toLowerCase()
@@ -162,6 +162,12 @@ function line(ratio, w, fg, bg) {
 }
 function rule(parent, w) { const s = parent.addStack(); s.size = new Size(w, 0.6); s.backgroundColor = RULE }
 function vrule(parent, h) { const s = parent.addStack(); s.size = new Size(0.6, h); s.backgroundColor = RULE }
+// 노트: Parameter '노트' → 고정·최근 노트, '노트:제목' → 제목에 그 말이 든 노트
+const NOTES = () => (data && Array.isArray(data.notes) ? data.notes : [])
+const pickNote = () => { const ns = NOTES(); return (ARG && ns.find((n) => n.t.includes(ARG))) || ns[0] || null }
+const noteUrl = (n) => (n ? APP + '?open=' + encodeURIComponent(n.id) : APP + '?go=notes.pages')
+const noteMark = (l) => (l.k === 'todo' ? (l.d ? '☑' : '☐') : l.k === 'b' ? '•' : '')
+const noteAgo = (u) => { if (!u) return ''; const m = Math.round((Date.now() - u) / 60000); return m < 60 ? Math.max(1, m) + '분 전' : m < 1440 ? Math.round(m / 60) + '시간 전' : Math.round(m / 1440) + '일 전' }
 function t(parent, s, font, color, lines = 1) {
   const x = parent.addText(String(s)); x.font = font; if (color) x.textColor = color; x.lineLimit = lines
   return x
@@ -568,6 +574,11 @@ if (!data) {
         for (const a of ag.slice(0, 3)) rRow(a.title, when(a), tw(11), label(8))
         if (!ag.length) t(w, '다가오는 일정 없음', tw(11))
       }
+    } else if (KIND === 'note') {
+      const n = pickNote(); w.url = noteUrl(n)
+      if (inl) inline(n ? n.t : '노트 없음')
+      else if (circ) cRows([[n && n.i ? n.i : '✎', tw(15)], [n ? n.t : 'NOTE', label(7)]])
+      else { rRow(n ? n.t : '노트 없음', n ? noteAgo(n.u) : '', tw(12), label(7)); for (const l of (n ? n.l : []).slice(0, 2)) t(w, (noteMark(l) ? noteMark(l) + ' ' : '') + l.x, tw(10), null, 1) }
     } else if (KIND === 'quote') {
       const q = quote || '앱에서 다짐을 적어 보세요'
       if (inl) inline(q)
@@ -1348,6 +1359,38 @@ if (!data) {
       const per = 4, gap = 8, bw = Math.floor((inner - gap * (per - 1)) / per), r2 = w.addStack(); r2.spacing = gap
       for (const sj of QS.slice(0, per)) { const b = r2.addStack(); b.size = new Size(bw, 32); b.cornerRadius = 10; b.backgroundColor = RULE; b.centerAlignContent(); b.url = startUrl(sj); if (sj.color) { const d = b.addStack(); d.size = new Size(6, 6); d.cornerRadius = 3; d.backgroundColor = new Color(sj.color); b.addSpacer(5) } t(b, sj.name, tw(12), INK).minimumScaleFactor = 0.6 }
       FILL = true
+    }
+  } else if (KIND === 'note') {
+    // ── 노트: 고른 노트 앞부분 (+ 중·대형은 다른 노트 목록) ──
+    const n = pickNote(), others = NOTES().filter((x) => x !== n)
+    w.url = noteUrl(n)
+    const lines = (P2, max, wd, fs) => {
+      for (const l of (n ? n.l : []).slice(0, max)) {
+        const r = P2.addStack(); r.size = new Size(wd, 0); r.centerAlignContent(); r.spacing = 5
+        const mk = noteMark(l); if (mk) t(r, mk, tw(fs - 1), l.k === 'todo' && !l.d ? GOLD : SOFT)
+        t(r, l.x, l.k === 'h' ? F(fs + 1, 'Regular') : tw(fs), l.d ? SOFT : INK, 1).minimumScaleFactor = 0.85
+        r.addSpacer(); P2.addSpacer(fam === 'small' ? 3 : 5)
+      }
+      if (n && !n.l.length) t(P2, '내용 없음', tw(fs), SOFT)
+    }
+    const head = (P2, wd) => {
+      const h = P2.addStack(); h.size = new Size(wd, 0); h.centerAlignContent(); cap(h, n && n.dd ? 'DAILY' : n && n.p ? 'PINNED' : 'NOTE'); h.addSpacer(); if (n) t(h, noteAgo(n.u), label(8), SOFT)
+      P2.addSpacer(fam === 'small' ? 6 : 8)
+      t(P2, n ? (n.i ? n.i + ' ' : '') + n.t : '노트가 없어요', F(fam === 'small' ? 14 : 16, 'Regular'), INK, 1).minimumScaleFactor = 0.8
+      P2.addSpacer(fam === 'small' ? 6 : 8)
+    }
+    const list2 = (P2, max, wd) => { for (const x of others.slice(0, max)) { const r = P2.addStack(); r.size = new Size(wd, 0); r.url = noteUrl(x); r.centerAlignContent(); t(r, (x.i ? x.i + ' ' : '') + x.t, tw(12), INK, 1).minimumScaleFactor = 0.8; r.addSpacer(); r.addSpacer(4); t(r, noteAgo(x.u), label(7), SOFT); P2.addSpacer(7) } }
+    if (fam === 'small') { head(w, inner); lines(w, 3, inner, 12) }
+    else if (fam === 'medium') {
+      const lw = Math.round(inner * 0.58), row = w.addStack()
+      const L = row.addStack(); L.layoutVertically(); L.size = new Size(lw, innerH); L.url = noteUrl(n); head(L, lw); lines(L, 4, lw, 12); L.addSpacer()
+      row.addSpacer(14); vrule(row, innerH); row.addSpacer(14)
+      const rw = inner - lw - 28.6, R = row.addStack(); R.layoutVertically(); R.size = new Size(rw, innerH)
+      cap(R, 'NOTES'); R.addSpacer(10); list2(R, 4, rw); if (!others.length) t(R, '다른 노트 없음', tw(11), SOFT); R.addSpacer()
+      row.addSpacer(); FILL = true
+    } else {
+      head(w, inner); lines(w, 10, inner, 13)
+      if (others.length) { w.addSpacer(); rule(w, inner); w.addSpacer(10); cap(w, 'NOTES'); w.addSpacer(8); list2(w, 3, inner) }
     }
   } else if (KIND === 'quote') {
     // ── 다짐 ──
