@@ -17,6 +17,19 @@ const TONES = [['key', '핵심'], ['warn', '주의'], ['ex', '예시']]
 const SOLID = ['divider', 'embed', 'sync', 'file', 'table', 'page', 'cols'] // 글자를 직접 쓰지 않는 블록
 const INLINE_RE = /(\*\*[^*\n]+\*\*|==[^=\n]+==|__[^_\n]+__|\[\[[^\]]+\]\]|@(?:오늘|내일|모레|\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2})(?:\s+\d{1,2}:\d{2})?|https?:\/\/[^\s]+)/g
 
+// 이 앱의 노트·줄 링크 (?open=노트id&b=줄id)
+const ownLink = (u) => { try { const x = new URL(u); if (x.origin !== location.origin || !x.pathname.startsWith(import.meta.env.BASE_URL)) return null; const id = x.searchParams.get('open'); return id ? { id, b: x.searchParams.get('b') } : null } catch { return null } }
+export const blockLink = (noteId, bid) => `${location.origin}${import.meta.env.BASE_URL}?open=${noteId}${bid ? '&b=' + bid : ''}`
+export async function copyBlockLink(noteId, bid) { const u = blockLink(noteId, bid); try { await navigator.clipboard.writeText(u); toast('링크를 복사했어요 · 다른 노트에 붙여 넣으면 바로 이동해요') } catch { prompt('링크', u) } }
+// 노트를 열고 그 줄로 스크롤 · 잠깐 표시
+export function goBlock(noteId, bid) {
+  openNote(noteId)
+  if (!bid) return
+  let n = 0
+  const tick = () => { const el = document.querySelector(`[data-bid="${CSS.escape(bid)}"]`); if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.add('blk-flash'); setTimeout(() => el.classList.remove('blk-flash'), 1800) } else if (n++ < 20) setTimeout(tick, 120) }
+  setTimeout(tick, 150)
+}
+
 export function Inline({ text }) {
   if (!text) return null
   const parts = text.split(INLINE_RE)
@@ -34,6 +47,8 @@ export function Inline({ text }) {
       const m = parseMention(p)
       return <button key={i} className="mention" onClick={(e) => { e.stopPropagation(); if (m) go('notes', 'daily', { date: m.date }) }}>{p}</button>
     }
+    const own = ownLink(p)
+    if (own) { const n = find('notes', own.id); return <button key={i} className="wikilink blk-link" onClick={(e) => { e.stopPropagation(); goBlock(own.id, own.b) }}>↗ {n ? (n.title || '제목 없음') : '삭제된 노트'}{own.b ? ' · 줄' : ''}</button> }
     return <a key={i} href={p} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>{p.replace(/^https?:\/\//, '').slice(0, 40)}</a>
   })
 }
@@ -152,6 +167,7 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
     b.text && b.type !== 'todo' && { label: '할 일로 만들기', icon: 'tasks', onClick: () => { const t = addTask({ title: plainText(b.text), noteId: note?.id, subjectId: note?.subjectId }); upd(b.id, { type: 'todo', taskId: t.id }) } },
     !nested && b.type !== 'sync' && { label: '동기화 블록으로', icon: 'sync', onClick: () => { const s = put('syncBlocks', { blocks: [{ ...b, id: newBlock().id }] }); upd(b.id, { type: 'sync', syncId: s.id, text: '' }) } },
     { label: '복제', icon: 'plus', onClick: () => { const i = list.findIndex((x) => x.id === b.id), a = [...list]; a.splice(i + 1, 0, clone(b)); set(a) } },
+    note && { label: '이 줄 링크 복사', icon: 'link', onClick: () => copyBlockLink(note.id, b.id) },
     { label: '여러 줄 선택', icon: 'check', onClick: () => setSel(new Set([b.id])) },
     { label: '위로', icon: 'back', onClick: () => move(b.id, -1) },
     { label: '아래로', icon: 'next', onClick: () => move(b.id, 1) },
@@ -166,7 +182,7 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
         const editing = edit?.id === b.id
         const task = b.taskId && tasks.find((t) => t.id === b.taskId)
         return (
-          <div key={b.id} className={'blk blk-' + b.type + (b.type === 'callout' ? ' tone-' + (b.tone || 'key') : '') + (sel?.has(b.id) ? ' sel' : '')} data-drop={readOnly ? undefined : 'blk:' + b.id} onClickCapture={sel ? (e) => { e.stopPropagation(); e.preventDefault(); togSel(b.id) } : undefined}>
+          <div key={b.id} data-bid={b.id} className={'blk blk-' + b.type + (b.type === 'callout' ? ' tone-' + (b.tone || 'key') : '') + (sel?.has(b.id) ? ' sel' : '')} data-drop={readOnly ? undefined : 'blk:' + b.id} onClickCapture={sel ? (e) => { e.stopPropagation(); e.preventDefault(); togSel(b.id) } : undefined}>
             {!readOnly && <button className="blk-h" onPointerDown={(e) => gripDown(e, b)} onClick={(e) => { if (dragged.current) { dragged.current = false; return } blockMenu(e, b) }} aria-label="블록 메뉴 · 끌어서 순서 바꾸기"><Icon name="grip" size={14} /></button>}
             {b.type === 'bullet' && <span className="blk-dot">•</span>}
             {b.type === 'todo' && <span className="blk-chk"><Check on={!!task?.done} onClick={() => { if (task) toggleTask(task.id); else { const nb = commitBlock(b, note); upd(b.id, nb); if (nb.taskId) toggleTask(nb.taskId) } }} /></span>}

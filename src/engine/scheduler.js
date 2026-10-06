@@ -5,8 +5,11 @@ import { addDays, today, nowMin } from './date.js'
 
 // 날짜별 일정(반복 전개 포함)
 export function eventsOn(date, events = list('events')) {
-  const out = []
-  for (const e of events) {
+  const out = [], subs = list('subjects')
+  // 색을 따로 안 고른 일정은 과목 색
+  const col = (e) => (e.color || !e.subjectId ? e : { ...e, color: subs.find((s) => s.id === e.subjectId)?.color || null })
+  for (const e0 of events) {
+    const e = col(e0)
     if (e.endDate && e.endDate > e.date && !e.repeat) {
       if (date >= e.date && date <= e.endDate) out.push({ ...e, occ: date })
       continue

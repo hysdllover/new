@@ -1,12 +1,12 @@
 import { useTimerState, useTick, elapsed, remaining } from '../lib/timer.js'
 import { Fragment, useEffect, useRef, useState } from 'react'
-import { useSettings, setSettings, useColl, put, remove, patch, exportJSON, importJSON, uid, getState } from '../store/store.js'
+import { useSettings, setSettings, useColl, put, remove, patch, exportJSON, importJSON, uid, getState, deviceId as myDevice } from '../store/store.js'
 import { notesForWidget } from '../lib/notePreview.js'
 import { PRESETS, FONTS, effTheme, setDeviceTheme } from '../theme/theme.js'
 import { PALETTE, SOFT_PALETTE } from '../store/schema.js'
 import { Card, Seg, Toggle, Field, Icon, toast, confirmSheet, openSheet } from '../components/ui.jsx'
 import { ColorPick, TimeInput, SubjectSelect } from '../components/common.jsx'
-import { useSyncStatus, connect, disconnect, syncNow, gistInfo, tokenExpiry, listBackups, backupNow, restoreBackup, calendarUrl, readGistFile, syncLog, connectLink } from '../sync/sync.js'
+import { deviceName, useSyncStatus, connect, disconnect, syncNow, gistInfo, tokenExpiry, listBackups, backupNow, restoreBackup, calendarUrl, readGistFile, syncLog, connectLink } from '../sync/sync.js'
 import { enablePush, disablePush, pushState, testLocal, isStandalone, pushSupported } from '../lib/push.js'
 import { buildLoader, WIDGET_KINDS } from '../lib/scriptable.js'
 import { TAB_OPTIONS, DEFAULT_TABBAR, tabOpt } from '../nav.js'
@@ -135,6 +135,7 @@ export default function Settings() {
           <Field label="복습 간격(일, 쉼표)"><input className="input" defaultValue={st.reviewIntervals.join(', ')} onBlur={(e) => { const v = e.target.value.split(/[,\s]+/).map(Number).filter((n) => n > 0); if (v.length) setSettings({ reviewIntervals: v }) }} /></Field>
           <Field label="일정 기본 이동·준비 버퍼(분)"><input className="input" type="number" min="0" step="5" value={st.defaultBuffer} onChange={(e) => setSettings({ defaultBuffer: +e.target.value })} /></Field>
           <Toggle label="요일 템플릿 자동 적용" checked={st.autoTemplate} onChange={(v) => setSettings({ autoTemplate: v })} />
+          <Toggle label="타이머 기록을 5분 단위로 맞추기 (예: 47분 → 45분)" checked={!!st.roundRec} onChange={(v) => setSettings({ roundRec: v })} />
           <Toggle label="타이머 중 화면 켜짐 유지" checked={st.wakeLock !== false} onChange={(v) => setSettings({ wakeLock: v })} />
           <Toggle label="알림" checked={st.notify} onChange={async (v) => { setSettings({ notify: v }); if (v) { const p = await requestPermission(); if (p === 'denied') toast('설정 앱에서 알림을 허용해 주세요') } }} />
           <div className="tiny muted">iPhone/iPad 는 Safari 공유 → ‘홈 화면에 추가’ 후 앱으로 열어야 시스템 알림이 표시돼요. 앱이 열려 있을 때 동작합니다.</div>
@@ -344,6 +345,7 @@ function SyncCard() {
       ) : (
         <div className="form">
           <div className="small muted">마지막 동기화: {s.last ? new Date(s.last).toLocaleString('ko-KR') : '-'}</div>
+          <Devices />
           {(() => { const e = tokenExpiry(); if (!e) return null; const d = new Date(e.replace(' UTC', 'Z').replace(' ', 'T')), left = Math.ceil((d - Date.now()) / 86400000)
             return <div className="small" style={{ color: left <= 7 ? 'var(--danger)' : 'var(--muted)' }}>토큰 만료: {d.toLocaleDateString('ko-KR')}{left <= 7 ? ` · ${Math.max(0, left)}일 남음 — 만료 없는 새 토큰으로 바꿔 주세요` : ''}</div> })()}
           {s.error && <div className="small" style={{ color: 'var(--danger)' }}>{s.error}</div>}
@@ -1211,5 +1213,18 @@ function AppIconPick() {
       </div>
       <div className="tiny muted" style={{ marginTop: 4 }}>모노는 iOS 아이콘 ‘색조’ 모드에서 깔끔하게 보여요.</div>
     </Field>
+  )
+}
+
+// 기기별 마지막 동기화 시각
+function Devices() {
+  const live = useColl('live').filter((x) => x.kind === 'device').sort((a, b) => (b.at || 0) - (a.at || 0))
+  const [name, setName] = useState(deviceName)
+  const ago = (t) => { const m = Math.round((Date.now() - t) / 60000); return m < 1 ? '방금' : m < 60 ? `${m}분 전` : m < 1440 ? `${Math.round(m / 60)}시간 전` : `${Math.round(m / 1440)}일 전` }
+  return (
+    <div className="dev-list">
+      {live.map((d) => <div key={d.id} className="row between small"><span>{d.name}{d.id === 'dev-' + myDevice ? <span className="tiny muted"> · 이 기기</span> : ''}</span><span className="muted tiny">{ago(d.at)}</span></div>)}
+      <div className="row" style={{ gap: 6 }}><span className="tiny muted nowrap">이 기기 이름</span><input className="input" style={{ maxWidth: 160 }} value={name} onChange={(e) => setName(e.target.value)} onBlur={() => { try { localStorage.setItem('device_name', name.trim()) } catch {} }} /></div>
+    </div>
   )
 }

@@ -107,7 +107,8 @@ export function useSettings() {
 export const settings = () => state.settings.main || DEFAULT_SETTINGS
 export const setSettings = (partial) => put('settings', { ...settings(), ...(typeof partial === 'function' ? partial(settings()) : partial), id: 'main' })
 
-// 휴지통 정리: 7일 지난 삭제 항목은 내용 비우고 표식만, 60일 지나면 완전 제거
+// 휴지통 정리: 30일 지난 삭제 항목은 내용 비우고 표식만, 90일 지나면 완전 제거
+export const TRASH_DAYS = 30
 function purge() {
   const now = Date.now(), D = 86400000
   let changed = false
@@ -117,8 +118,8 @@ function purge() {
     for (const r of Object.values(state[c])) {
       if (!r.deleted) continue
       const age = now - (r.deletedAt || r.updatedAt)
-      if (age > 60 * D) { coll = coll || { ...state[c] }; delete coll[r.id] }
-      else if (age > 7 * D && !r.purged) { coll = coll || { ...state[c] }; coll[r.id] = { id: r.id, deleted: true, purged: true, deletedAt: r.deletedAt, updatedAt: r.updatedAt, deviceId: r.deviceId } }
+      if (age > 90 * D) { coll = coll || { ...state[c] }; delete coll[r.id] }
+      else if (age > TRASH_DAYS * D && !r.purged) { coll = coll || { ...state[c] }; coll[r.id] = { id: r.id, deleted: true, purged: true, deletedAt: r.deletedAt, updatedAt: r.updatedAt, deviceId: r.deviceId } }
     }
     if (coll) { next[c] = coll; changed = true }
   }

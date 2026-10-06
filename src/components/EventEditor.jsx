@@ -86,7 +86,7 @@ export default function EventEditor({ id, occ }) {
         </div>
         {!allDay && <Toggle label="끝나면 공부 기록으로 (학원·인강·과외)" checked={!!e.studyLog} onChange={(v) => up({ studyLog: v })} />}
         {e.studyLog && !allDay && <div className="tiny muted" style={{ marginTop: -6 }}>일정이 끝나면 {e.subjectId ? '이 과목' : '과목 없이'} {e.end - e.start}분이 공부 기록에 자동으로 들어가요 (반복 일정은 매번). 기록을 지우면 다시 넣지 않아요.</div>}
-        <Field label="색상"><ColorPick value={e.color} onChange={(c) => up({ color: c })} colors={PALETTE} /></Field>
+        <Field label={e.subjectId ? '색상 (안 고르면 과목 색)' : '색상'}><div className="row wrap" style={{ gap: 6 }}><ColorPick value={e.color} onChange={(c) => up({ color: c })} colors={PALETTE} />{e.subjectId && e.color && <button className="chip" onClick={() => up({ color: null })}>과목 색으로</button>}</div></Field>
         <Field label="반복"><RepeatEditor rule={e.repeat} start={e.date} onChange={(r) => up({ repeat: r })} /></Field>
         <Field label="메모"><AutoText className="input" value={e.note || ''} onChange={(v) => up({ note: v })} style={{ minHeight: 60 }} /></Field>
       </div>
