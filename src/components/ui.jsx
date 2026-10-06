@@ -136,7 +136,7 @@ export function Check({ on, onClick, round, color }) {
   return (
     <button
       className={'check' + (on ? ' on' : '') + (round ? ' round' : '')}
-      style={color ? { borderColor: color, ...(on ? { background: color } : null) } : null}
+      style={color ? { borderColor: color, '--ck': color, ...(on ? { background: color } : null) } : null}
       onClick={(e) => { e.stopPropagation(); if (!on) { setBurst((b) => b + 1); haptic() } onClick?.() }}
       aria-label={on ? '완료 취소' : '완료'}
     >
