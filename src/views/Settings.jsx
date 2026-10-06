@@ -234,7 +234,14 @@ function PhotoInboxGuide() {
   const copy = async (v, m) => { try { await navigator.clipboard.writeText(v); toast(m) } catch { toast('길게 눌러 복사해 주세요') } }
   return (
     <>
-      <b className="small">사진 → 앱으로 바로 (사파리 안 거침)</b>
+      <b className="small">사진 앱 › 공유 › Scriptable 로 바로 보내기 (가장 간단)</b>
+      <div className="small" style={{ lineHeight: 1.75, marginTop: 4, marginBottom: 10 }}>
+        1. Scriptable 에서 위젯 스크립트 실행 › 메뉴 › <b>위젯에서 바로 처리 켜기</b> (토큰 저장 · 이미 했으면 생략)<br />
+        2. Scriptable 의 스크립트 목록에서 위젯 스크립트를 길게 눌러 <b>설정(ⓘ)</b> › <b>Share Sheet Inputs</b> › <b>Images</b> 켜기<br />
+        3. 사진 앱에서 사진(여러 장 가능) › 공유 › <b>Run Script</b> › 위젯 스크립트 → 제목 적고 <b>보내기</b><br />
+        → 앱을 열면 <b>받은 편지함</b>에 사진이 첨부된 할 일로 들어와요. 사파리는 열리지 않아요.
+      </div>
+      <b className="small">또는 단축어로 (사파리 안 거침)</b>
       <div className="small" style={{ lineHeight: 1.75, marginTop: 4 }}>
         사진 앱에서 <b>공유 › 앱에 사진</b> → 사진이 동기화 저장소에 올라가고, 홈 화면 앱을 열면 <b>받은 편지함</b> 할 일(사진 첨부)로 들어와요. 아이폰·아이패드 어디서 열어도 돼요.<br />
         1. 새 단축어 ‘앱에 사진’ · ⓘ › <b>공유 시트에서 보기</b> · 받는 유형: 이미지<br />

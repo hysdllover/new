@@ -4,7 +4,7 @@ import { pickQuote } from './quote.js'
 export const WIDGET_KINDS = [['', '기본'], ['공부', '공부'], ['할일', '할 일'], ['디데이', 'D-day'], ['달력', '공부 달력'], ['캘린더', '캘린더'], ['다짐', '다짐'], ['시간표', '시간표'], ['주간', '주간 공부'], ['과목', '과목별'], ['지금', '지금·다음'], ['진도', '진도'], ['목표', '이번 주 목표'], ['오늘', '오늘 한눈에'], ['대시보드', '대시보드'], ['내일', '내일 준비'], ['마감', '마감 임박'], ['일주일', '7일 일정'], ['디데이목록', 'D-day 목록'], ['바로가기', '바로 시작'], ['진행', '공부 진행'], ['남은분', '남은 시간'], ['타이머', '타이머·공부 시간'], ['노트', '노트'], ['구성1', '내 위젯 1'], ['구성2', '내 위젯 2'], ['구성3', '내 위젯 3']]
 
 // 스크립트 버전 — 위젯 모양이 바뀔 때 올림. 앱이 위젯 데이터에 같이 올려서, 예전 스크립트면 위젯에 '스크립트 업데이트' 표시
-export const SCRIPT_VER = 62
+export const SCRIPT_VER = 63
 
 // 전체 스크립트 (예전 방식 · 테스트용): 머리 + 본체
 export function buildScript({ widgetRaw, appUrl }) {
@@ -204,6 +204,22 @@ const QP = (typeof args !== 'undefined' && args && args.queryParameters) || {}
 try { RUN = Keychain.contains('study-gh') && data && data.gid ? 'scriptable:///run/' + encodeURIComponent(Script.name()) : null } catch (e) { RUN = null }
 // 위젯을 눌러 실행된 경우: 할 일 완료 · 타이머 시작/일시정지/정지 · 공부 기록 → 동기화 저장소에 명령을 남기고(앱이 열리면 반영) 위젯 데이터도 바로 고침
 if (QP.act && !config.runsInWidget) { await widgetAct(QP); Script.complete(); return }
+// 사진 앱 공유 › Run Script(이 스크립트): 사진을 동기화 저장소 받기함에 올림 → 앱을 열면 받은 편지함 할 일(사진 첨부)로
+if (!config.runsInWidget && typeof args !== 'undefined' && args && args.images && args.images.length) { await sharePhotos(args.images); Script.complete(); return }
+async function sharePhotos(imgs) {
+  const say = async (title, msg) => { const a = new Alert(); a.title = title; if (msg) a.message = msg; a.addAction('확인'); await a.present() }
+  const tok = Keychain.contains('study-gh') ? Keychain.get('study-gh') : '', gid = data && data.gid
+  if (!tok || !gid) return say('설정이 필요해요', 'Scriptable 에서 이 스크립트를 실행 › 메뉴 › 위젯에서 바로 처리 켜기 (토큰 저장) 후 다시 보내 주세요')
+  const a = new Alert(); a.title = '앱으로 사진 ' + imgs.length + '장'; a.message = '제목 (비우면 사진)'; a.addTextField('예: 수학 p.52 3번', ''); a.addAction('보내기'); a.addCancelAction('취소')
+  if (await a.present() < 0) return
+  const title = a.textFieldValue(0).trim().replace(/[\\/~]/g, ' ').slice(0, 40)
+  const shrink = (img) => { const z = img.size, k = Math.min(1, 1600 / Math.max(z.width, z.height)); if (k >= 1) return img; const c = new DrawContext(); c.size = new Size(Math.round(z.width * k), Math.round(z.height * k)); c.respectScreenScale = false; c.drawImageInRect(img, new Rect(0, 0, c.size.width, c.size.height)); return c.getImage() }
+  const at = Date.now(), files = {}
+  imgs.forEach((img, i) => { files['inbox-' + (title ? title + (imgs.length > 1 ? ' ' + (i + 1) : '') : '') + '~' + (at + i) + '.txt'] = { content: Data.fromJPEG(shrink(img)).toBase64String() } })
+  const r = new Request('https://api.github.com/gists/' + gid); r.method = 'PATCH'; r.headers = { Authorization: 'Bearer ' + tok, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }; r.body = JSON.stringify({ files })
+  try { await r.loadString(); const sc = r.response && r.response.statusCode; if (sc && sc >= 300) throw new Error(sc === 401 ? '토큰이 만료됐거나 틀려요' : 'GitHub 오류 ' + sc) } catch (e) { return say('보내지 못했어요', String(e.message || e)) }
+  const n = new Notification(); n.title = '앱으로 사진 ' + imgs.length + '장 보냈어요'; n.body = '앱을 열면 받은 편지함에 들어와요'; n.schedule()
+}
 async function widgetAct(Q) {
   const say = async (title, msg) => { const a = new Alert(); a.title = title; if (msg) a.message = msg; a.addAction('확인'); await a.present() }
   const tok = Keychain.contains('study-gh') ? Keychain.get('study-gh') : '', gid = data && data.gid
