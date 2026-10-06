@@ -28,7 +28,7 @@ export function allBlocks(note) {
   }
   return out
 }
-export const noteText = (note) => allBlocks(note).map((b) => b.text || '').join('\n')
+export const noteText = (note) => allBlocks(note).map((b) => b.text || (b.rows ? b.rows.map((r) => r.join(' ')).join('\n') : '')).join('\n')
 
 export function linksOf(note) {
   const set = new Set()
@@ -104,6 +104,9 @@ export function toMarkdown(note) {
       case 'divider': lines.push('---'); break
       case 'file': lines.push(`[첨부: ${find('files', b.fileId)?.name || '파일'}]`); break
       case 'embed': lines.push(`<!-- ${b.embed?.kind} -->`); break
+      case 'callout': lines.push(`> **${({ key: '핵심', warn: '주의', ex: '예시' })[b.tone || 'key']}** ${t}`); break
+      case 'table': { const rs = b.rows || []; if (rs.length) { lines.push('| ' + rs[0].join(' | ') + ' |', '|' + rs[0].map(() => ' --- |').join(''), ...rs.slice(1).map((r) => '| ' + r.join(' | ') + ' |')) } break }
+      case 'page': lines.push(`[하위 페이지: ${noteTitle(find('notes', b.pageId))}]`); break
       default: lines.push(t)
     }
     if (!['bullet', 'todo'].includes(b.type)) lines.push('')

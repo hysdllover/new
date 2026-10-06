@@ -591,3 +591,21 @@ button.greet { display: block; width: 100%; text-align: left; }
 .blk.dragging { opacity: .4; }
 .blk.drop-on { box-shadow: inset 0 2px 0 var(--accent); }
 .note-move { position: absolute; top: 4px; right: 4px; gap: 2px; background: var(--surface); border-radius: 8px; box-shadow: var(--shadow); z-index: 2; }
+/* 강조 상자 · 표 · 하위 페이지 · 노트 진도 · 읽기 모드 */
+.blk-callout .blk-c { --tc: var(--accent); background: color-mix(in srgb, var(--tc) 8%, transparent); border-left: 2px solid color-mix(in srgb, var(--tc) 55%, transparent); border-radius: 4px; padding: 4px 10px; margin: 2px 0; }
+.blk-callout.tone-warn .blk-c { --tc: var(--c4); }
+.blk-callout.tone-ex .blk-c { --tc: var(--c2); }
+.co-tag { display: inline-block; font-size: .72em; letter-spacing: .08em; color: var(--tc, var(--accent)); margin-right: 8px; }
+.tblk { overflow-x: auto; margin: 4px 0; }
+.tblk-grid { display: grid; border-top: 1px solid var(--line); border-left: 1px solid var(--line); min-width: max-content; }
+.tblk-c { border: 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 6px 8px; font: inherit; color: inherit; background: transparent; resize: none; outline: none; min-height: 32px; line-height: 1.45; white-space: pre-wrap; font-size: max(16px, .95em); }
+@media (min-width: 768px) { .tblk-c { font-size: .95em; } }
+.tblk-c.th { background: var(--surface-2); font-weight: var(--fw-b); }
+.tblk-c:focus { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.subpage { display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 10px; margin: 2px 0; border: 1px solid var(--line); border-radius: 6px; text-align: left; color: inherit; background: var(--surface); }
+.note-prog { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.note-prog-t { flex: 1; height: 2px; background: var(--line); border-radius: 1px; overflow: hidden; }
+.note-prog-t i { display: block; height: 2px; background: var(--accent); }
+.note-page.reading { font-size: 1.07em; }
+.note-page.reading .blk-v { line-height: 1.8; cursor: default; }
+.note-page.reading .note-title { pointer-events: none; }

@@ -11,7 +11,9 @@ import { useTimerState, useTick, elapsed, startStopwatch, pause, resume, stop } 
 import { applyFilter } from '../views/tasks/filter.js'
 import { startDrag } from '../lib/drag.js'
 
-const TYPES = [['text', '텍스트'], ['h1', '제목 1'], ['h2', '제목 2'], ['bullet', '글머리'], ['todo', '체크박스 (할 일)'], ['quote', '인용'], ['divider', '구분선']]
+const TYPES = [['text', '텍스트'], ['h1', '제목 1'], ['h2', '제목 2'], ['bullet', '글머리'], ['todo', '체크박스 (할 일)'], ['callout', '강조 상자'], ['quote', '인용'], ['divider', '구분선']]
+const TONES = [['key', '핵심'], ['warn', '주의'], ['ex', '예시']]
+const SOLID = ['divider', 'embed', 'sync', 'file', 'table', 'page'] // 글자를 직접 쓰지 않는 블록
 const INLINE_RE = /(\[\[[^\]]+\]\]|@(?:오늘|내일|모레|\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2})(?:\s+\d{1,2}:\d{2})?|https?:\/\/[^\s]+)/g
 
 export function Inline({ text }) {
@@ -31,7 +33,7 @@ export function Inline({ text }) {
   })
 }
 
-export default function BlockEditor({ blocks = [], onChange, note, nested }) {
+export default function BlockEditor({ blocks = [], onChange, note, nested, readOnly }) {
   const tasks = useColl('tasks')
   const [edit, setEdit] = useState(null) // { id, pos }
   const skip = useRef(null) // 구조 변경(Enter/Backspace) 직후 들어오는 blur 무시
@@ -94,7 +96,7 @@ export default function BlockEditor({ blocks = [], onChange, note, nested }) {
       if (!prev) return
       e.preventDefault()
       skipBlur(b.id)
-      if (['divider', 'embed', 'sync', 'file'].includes(prev.type)) { if (!b.text) removeBlock(b.id); else set(list.filter((x) => x.id !== prev.id)); return }
+      if (SOLID.includes(prev.type)) { if (!b.text) removeBlock(b.id); else set(list.filter((x) => x.id !== prev.id)); return }
       const pos = (prev.text || '').length
       set(list.filter((x) => x.id !== b.id).map((x) => (x.id === prev.id ? { ...x, text: (x.text || '') + b.text } : x)))
       setEdit({ id: prev.id, pos })
@@ -102,7 +104,8 @@ export default function BlockEditor({ blocks = [], onChange, note, nested }) {
   }
 
   const blockMenu = (e, b) => openMenu(e, [
-    ...TYPES.filter(([t]) => t !== b.type && !['embed', 'sync', 'file'].includes(b.type)).slice(0, 6).map(([t, l]) => ({ label: `→ ${l}`, onClick: () => { upd(b.id, { type: t }); if (t === 'todo') setEdit({ id: b.id, pos: (b.text || '').length }) } })),
+    ...(b.type === 'callout' ? TONES.filter(([t]) => t !== (b.tone || 'key')).map(([t, l]) => ({ label: `색 → ${l}`, onClick: () => upd(b.id, { tone: t }) })) : []),
+    ...TYPES.filter(([t]) => t !== b.type && !SOLID.includes(b.type)).slice(0, 7).map(([t, l]) => ({ label: `→ ${l}`, onClick: () => { upd(b.id, { type: t }); if (t === 'todo') setEdit({ id: b.id, pos: (b.text || '').length }) } })),
     b.text && { label: '복습 등록', icon: 'brain', onClick: () => addReview({ title: b.text.slice(0, 60), subjectId: note?.subjectId, sourceType: 'note', sourceId: note?.id }) },
     b.text && b.type !== 'todo' && { label: '할 일로 만들기', icon: 'tasks', onClick: () => { const t = addTask({ title: b.text, noteId: note?.id, subjectId: note?.subjectId }); upd(b.id, { type: 'todo', taskId: t.id }) } },
     !nested && b.type !== 'sync' && { label: '동기화 블록으로', icon: 'sync', onClick: () => { const s = put('syncBlocks', { blocks: [{ ...b, id: newBlock().id }] }); upd(b.id, { type: 'sync', syncId: s.id, text: '' }) } },
@@ -119,20 +122,22 @@ export default function BlockEditor({ blocks = [], onChange, note, nested }) {
         const editing = edit?.id === b.id
         const task = b.taskId && tasks.find((t) => t.id === b.taskId)
         return (
-          <div key={b.id} className={'blk blk-' + b.type} data-drop={'blk:' + b.id}>
-            <button className="blk-h" onPointerDown={(e) => gripDown(e, b)} onClick={(e) => { if (dragged.current) { dragged.current = false; return } blockMenu(e, b) }} aria-label="블록 메뉴 · 끌어서 순서 바꾸기"><Icon name="grip" size={14} /></button>
+          <div key={b.id} className={'blk blk-' + b.type + (b.type === 'callout' ? ' tone-' + (b.tone || 'key') : '')} data-drop={readOnly ? undefined : 'blk:' + b.id}>
+            {!readOnly && <button className="blk-h" onPointerDown={(e) => gripDown(e, b)} onClick={(e) => { if (dragged.current) { dragged.current = false; return } blockMenu(e, b) }} aria-label="블록 메뉴 · 끌어서 순서 바꾸기"><Icon name="grip" size={14} /></button>}
             {b.type === 'bullet' && <span className="blk-dot">•</span>}
             {b.type === 'todo' && <span className="blk-chk"><Check on={!!task?.done} onClick={() => { if (task) toggleTask(task.id); else { const nb = commitBlock(b, note); upd(b.id, nb); if (nb.taskId) toggleTask(nb.taskId) } }} /></span>}
             <div className="blk-c">
               {b.type === 'divider' ? <hr /> :
                 b.type === 'file' ? <FileBlock b={b} /> :
+                b.type === 'table' ? <TableBlock b={b} readOnly={readOnly} onChange={(rows) => upd(b.id, { rows })} /> :
+                b.type === 'page' ? <SubPage b={b} /> :
                 b.type === 'embed' ? <Embed b={b} note={note} onChange={(p) => upd(b.id, p)} /> :
                 b.type === 'sync' ? <SyncBlock b={b} note={note} /> :
-                editing ? (
+                editing && !readOnly ? (
                   <EditArea b={b} pos={edit.pos} onChange={(t) => onText(b, t)} onKeyDown={(e) => onKey(e, b)}
                     onBlur={(t) => { if (skip.current !== b.id) commit({ ...b, text: t }); setEdit((x) => (x?.id === b.id ? null : x)) }} />
                 ) : (
-                  <div className={'blk-v' + (task?.done ? ' done' : '')} onClick={() => setEdit({ id: b.id, pos: (b.text || '').length })}>
+                  <div className={'blk-v' + (task?.done ? ' done' : '')} onClick={() => !readOnly && setEdit({ id: b.id, pos: (b.text || '').length })}>{b.type === 'callout' && <span className="co-tag">{(TONES.find(([t]) => t === (b.tone || 'key')) || TONES[0])[1]}</span>}
                     {b.text ? <Inline text={b.text} /> : <span className="muted">{list.length === 1 ? '입력하세요… (# 제목, - 목록, [] 체크, [[링크]], @내일 15:00)' : ' '}</span>}
                     {b.ref && <button className="ref-chip" onClick={(e) => { e.stopPropagation(); openDetail(b.ref.type, b.ref.id, { occ: b.ref.date }) }}>→ {refLabel(b.ref)}</button>}
                     {task && task.due && !b.ref && <span className="ref-chip">{task.due.slice(5).replace('-', '/')}</span>}
@@ -142,11 +147,14 @@ export default function BlockEditor({ blocks = [], onChange, note, nested }) {
           </div>
         )
       })}
-      {!nested && (
+      {!nested && !readOnly && (
         <div className="blk-add no-print">
           <button className="chip" onClick={() => addEnd(newBlock())}>+ 텍스트</button>
           <button className="chip" onClick={() => addEnd(newBlock('h2'))}>제목</button>
           <button className="chip" onClick={() => addEnd(newBlock('todo'))}>☐ 체크</button>
+          <button className="chip" onClick={() => addEnd({ ...newBlock('callout'), tone: 'key' })}>강조</button>
+          <button className="chip" onClick={() => addEnd({ id: newBlock().id, type: 'table', rows: [['', ''], ['', '']] })}>표</button>
+          <button className="chip" onClick={() => { const c = put('notes', { title: '', type: 'page', parentId: note?.id || null, subjectId: note?.subjectId || null, blocks: [newBlock()] }); addEnd({ id: newBlock().id, type: 'page', pageId: c.id }); setTimeout(() => openNote(c.id), 50) }}>+ 하위 페이지</button>
           <button className="chip" onClick={async () => { const fs = await pickFiles(); const nbs = []; for (const f of fs) { try { const r = await addFile(f, { subjectId: note?.subjectId, noteId: note?.id }); nbs.push({ id: newBlock().id, type: 'file', fileId: r.id }) } catch (e) { toast(e.message) } } if (nbs.length) set([...list, ...nbs]) }}><Icon name="image" size={14} />파일</button>
           <button className="chip" onClick={(e) => openMenu(e, [
             { label: '할 일 목록 (오늘)', icon: 'tasks', onClick: () => addEnd({ id: newBlock().id, type: 'embed', embed: { kind: 'tasks', filter: note?.projectId ? 'project' : 'today' } }) },
@@ -299,3 +307,32 @@ function TimerEmbed({ subjectId }) {
   )
 }
 
+
+// 표: 첫 줄은 머리줄 · 칸을 눌러 바로 입력 · 줄·칸 더하기/빼기
+function TableBlock({ b, onChange, readOnly }) {
+  const rows = b.rows?.length ? b.rows : [['', ''], ['', '']], cols = Math.max(...rows.map((r) => r.length))
+  const setCell = (i, j, v) => onChange(rows.map((r, k) => (k === i ? Array.from({ length: cols }, (_, c) => (c === j ? v : r[c] ?? '')) : r)))
+  return (
+    <div className="tblk">
+      <div className="tblk-grid" style={{ gridTemplateColumns: `repeat(${cols}, minmax(70px, 1fr))` }}>
+        {rows.map((r, i) => Array.from({ length: cols }, (_, j) => readOnly
+          ? <div key={i + '-' + j} className={'tblk-c' + (i === 0 ? ' th' : '')}>{r[j] || ''}</div>
+          : <textarea key={i + '-' + j} rows={1} className={'tblk-c' + (i === 0 ? ' th' : '')} value={r[j] || ''} placeholder={i === 0 ? '제목' : ''} onChange={(e) => setCell(i, j, e.target.value)} />))}
+      </div>
+      {!readOnly && <div className="row no-print" style={{ gap: 4, marginTop: 4 }}>
+        <button className="chip sm" onClick={() => onChange([...rows, Array(cols).fill('')])}>+ 줄</button>
+        <button className="chip sm" onClick={() => onChange(rows.map((r) => [...r, '']))}>+ 칸</button>
+        {rows.length > 1 && <button className="chip sm" onClick={() => onChange(rows.slice(0, -1))}>− 줄</button>}
+        {cols > 1 && <button className="chip sm" onClick={() => onChange(rows.map((r) => r.slice(0, cols - 1)))}>− 칸</button>}
+      </div>}
+    </div>
+  )
+}
+
+// 하위 페이지 링크 (누르면 그 페이지로)
+function SubPage({ b }) {
+  const notes = useColl('notes'), c = notes.find((x) => x.id === b.pageId)
+  if (!c) return <div className="blk-v muted">삭제된 페이지</div>
+  const todos = (c.blocks || []).filter((x) => x.type === 'todo' && (x.text || '').trim()).length
+  return <button className="subpage" onClick={() => openNote(c.id)}><Icon name="file" size={15} /><span className="ellipsis grow">{c.title || '제목 없는 페이지'}</span>{todos > 0 && <span className="tiny muted">체크 {todos}</span>}<Icon name="next" size={13} /></button>
+}
