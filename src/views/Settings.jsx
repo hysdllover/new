@@ -1238,22 +1238,54 @@ function DesignDetail({ th, setTheme, st }) {
   return (
     <Card title="디자인 세부">
       <div className="form">
+        <DesignPreview />
+        <div className="row wrap" style={{ gap: 12 }}>{S('제목 1 크기', 'h1Size', [['s', '작게'], ['m', '기본'], ['l', '크게']], 'm')}{S('제목 2 크기', 'h2Size', [['s', '작게'], ['m', '기본'], ['l', '크게']], 'm')}</div>
+        {S('본문 줄 간격', 'noteLH', [['tight', '좁게'], ['normal', '보통'], ['loose', '넓게']], 'normal')}
+        {S('글머리 모양', 'bulletStyle', [['dot', '점'], ['dash', '짧은 선'], ['square', '작은 네모']], 'dot')}
+        {S('링크 모양', 'linkStyle', [['under', '밑줄'], ['color', '색만'], ['arrow', '↗ 표시']], 'under')}
         {S('형광펜 굵기', 'hlStyle', [['under', '밑줄형'], ['mid', '기본'], ['full', '칠한 형']], 'mid')}
+        {S('형광펜 모서리', 'hlCorner', [['square', '각지게'], ['round', '둥글게'], ['brush', '붓 자국']], 'square')}
         {S('인용 모양', 'quoteStyle', [['line', '세로선'], ['mark', '따옴표'], ['slip', '쪽지']], 'line')}
         {S('강조 상자', 'calloutStyle', [['tag', '이름표'], ['band', '색 띠만']], 'tag')}
         {S('완료한 줄', 'doneStyle', [['strike', '취소선'], ['fade', '흐리게'], ['keep', '그대로']], 'strike')}
         {S('구분선', 'divStyle', [['solid', '실선'], ['dot', '점선'], ['wave', '물결']], 'solid')}
         {S('체크박스', 'checkShape', [['', '자동'], ['square', '네모'], ['round', '둥근'], ['pencil', '연필']], '')}
         {S('진행선', 'progStyle', [['', '자동'], ['solid', '실선'], ['dot', '점선'], ['pencil', '연필 빗금']], '')}
+        {S('표 머리줄', 'thColor', [['gray', '회색'], ['none', '무색'], ['tint', '옅은 포인트색']], 'gray')}
+        {S('칩·배지 색 농도', 'tint', [['light', '옅게'], ['normal', '보통'], ['strong', '진하게']], 'normal')}
+        {S('탭바 선택 표시', 'tabSel', [['color', '색만'], ['dot', '점'], ['line', '밑줄'], ['bg', '옅은 바탕']], 'color')}
+        <Field label="모서리 둥글기 따로"><div className="col" style={{ gap: 4 }}>{[['rCard', '카드', th.radius ?? 10], ['rBtn', '버튼', Math.max(0, (th.radius ?? 10) - 2)], ['rInput', '입력칸', Math.max(0, (th.radius ?? 10) - 2)]].map(([k, l, d]) => <div key={k} className="row" style={{ gap: 8 }}><span className="tiny muted" style={{ width: 40 }}>{l}</span><input type="range" min="0" max="20" value={th[k] ?? d} onChange={(e) => setTheme({ [k]: +e.target.value })} /><span className="tiny muted" style={{ width: 30 }}>{th[k] ?? d}px</span></div>)}{(th.rCard != null || th.rBtn != null || th.rInput != null) && <button className="chip" style={{ alignSelf: 'flex-start' }} onClick={() => setTheme({ rCard: null, rBtn: null, rInput: null })}>전체 둥글기에 맞추기</button>}</div></Field>
         {S('카드 테두리', 'cardBorder', [['none', '없음'], ['thin', '가늘게'], ['normal', '보통'], ['bold', '진하게']], 'normal')}
         {S('아이콘', 'iconFill', [['line', '선'], ['fill', '옅게 채움']], 'line')}
         <Field label="탭바 · 사이드바"><Seg value={th.tabLabels === false ? 'icon' : 'text'} onChange={(v) => setTheme({ tabLabels: v !== 'icon' })} options={[['text', '글자 함께'], ['icon', '아이콘만']]} /></Field>
         {paper && <Field label={`종이 결 세기 ${Math.round((th.grain ?? 1) * 100)}%`}><input type="range" min="0" max="1.6" step="0.1" value={th.grain ?? 1} onChange={(e) => setTheme({ grain: +e.target.value })} /></Field>}
         {note && <Field label="노트 모눈"><div className="row wrap" style={{ gap: 6 }}><Seg value={th.gridSize || 18} onChange={(v) => setTheme({ gridSize: v })} options={[[14, '촘촘'], [18, '기본'], [24, '넓게']]} /><Seg value={th.gridAlpha ?? 5.5} onChange={(v) => setTheme({ gridAlpha: v })} options={[[0, '없음'], [3, '옅게'], [5.5, '기본'], [9, '진하게']]} /></div></Field>}
+        {paper && S('카드 그림자', 'shadowDepth', [['none', '없음'], ['soft', '옅게'], ['normal', '보통'], ['deep', '깊게']], 'normal')}
+        <Toggle label="노트 왼쪽 세로줄 (공책 여백선)" checked={!!th.noteMargin} onChange={(v) => setTheme({ noteMargin: v })} />
+        {S('월 달력 칸 높이', 'monthDensity', [['compact', '촘촘'], ['normal', '보통'], ['roomy', '넉넉']], 'normal')}
+        <Toggle label="달력 주말 칸 옅은 바탕" checked={th.weekendTint !== false} onChange={(v) => setTheme({ weekendTint: v })} />
+        <Toggle label="하루 타임라인 30분 눈금" checked={!!th.tlHalf} onChange={(v) => setTheme({ tlHalf: v })} />
+        <Field label={`홈 카드 투명도 ${Math.round((th.homeAlpha ?? 1) * 100)}%`}><input type="range" min="0.4" max="1" step="0.05" value={th.homeAlpha ?? 1} onChange={(e) => setTheme({ homeAlpha: +e.target.value })} /></Field>
         {note && <Toggle label="카드 모서리 접힌 종이" checked={th.fold !== false} onChange={(v) => setTheme({ fold: v })} />}
         <Toggle label="노트 머리에 날짜 도장" checked={th.stamp !== false} onChange={(v) => setTheme({ stamp: v })} />
         <Toggle label="상단 상태 줄 (진행 중 타이머 · 동기화)" checked={!!st.statusLine} onChange={(v) => setSettings({ statusLine: v })} />
       </div>
     </Card>
+  )
+}
+
+// 디자인 세부 미리보기: 실제 노트·체크·진행선 모양 그대로
+function DesignPreview() {
+  return (
+    <div className="dz-prev">
+      <div className="blk blk-h2"><div className="blk-c"><div className="blk-v">제목 예시</div></div></div>
+      <div className="blk blk-text"><div className="blk-c"><div className="blk-v">본문 <mark className="mk-hl">형광펜</mark>과 <u className="mk-u">밑줄</u>, <span className="wikilink">링크</span></div></div></div>
+      <div className="blk blk-bullet"><span className="blk-dot">•</span><div className="blk-c"><div className="blk-v">글머리 줄</div></div></div>
+      <div className="blk blk-quote"><div className="blk-c"><div className="blk-v">인용 문장</div></div></div>
+      <div className="blk blk-callout tone-key"><div className="blk-c"><div className="blk-v"><span className="co-tag">핵심</span>강조 상자</div></div></div>
+      <div className="blk"><div className="blk-c"><hr /></div></div>
+      <div className="row" style={{ gap: 8, alignItems: 'center' }}><span className="check on" /><span className="small muted" style={{ textDecoration: 'line-through' }}>끝낸 일</span><span className="grow" /><span className="chip on">칩</span><span className="badge acc">배지</span></div>
+      <div className="rp-track" style={{ marginTop: 8 }}><i style={{ width: '62%' }} /></div>
+    </div>
   )
 }

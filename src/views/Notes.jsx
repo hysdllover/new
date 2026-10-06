@@ -4,7 +4,7 @@ import { useColl, put, patch, useSettings, setSettings } from '../store/store.js
 import { Card, Icon, Empty, Seg, openDetail, openSheet, toast, useMedia } from '../components/ui.jsx'
 import TemplatePicker from '../components/TemplatePicker.jsx'
 import BlockEditor from '../components/BlockEditor.jsx'
-import NotePage, { NOTE_LABELS, labelColor } from './notes/NotePage.jsx'
+import NotePage, { NOTE_LABELS, labelColor, labelName } from './notes/NotePage.jsx'
 import Hub from './notes/Hub.jsx'
 import Graph from './notes/Graph.jsx'
 import Library from './notes/Library.jsx'
@@ -68,13 +68,14 @@ function Pages({ params, compact }) {
             {manual && <button className={'chip' + (arrange ? ' on' : '')} onClick={() => setArrange(!arrange)}>{arrange ? '순서 편집 끝' : '순서 편집'}</button>}
             {[['all', '전체'], ['page', '페이지'], ['memo', '메모'], ['event', '일정 노트'], ['template', '템플릿']].map(([k, l]) => <button key={k} className={'chip' + (type === k ? ' on' : '')} onClick={() => setType(k)}>{l}</button>)}
             {notes.some((n) => n.label) && <button className={'chip' + (byLab ? ' on' : '')} onClick={() => { const v = !byLab; setByLab(v); try { localStorage.setItem('notes_bylabel', v ? '1' : '0') } catch {} }}>라벨별</button>}
-            {NOTE_LABELS.filter(([k]) => notes.some((n) => n.label === k)).map(([k, c, l]) => <button key={k} className={'chip lab-chip' + (lab === k ? ' on' : '')} onClick={() => setLab(lab === k ? null : k)} aria-label={'라벨 ' + l}><span className="dot" style={{ background: c }} /></button>)}
+            {NOTE_LABELS.filter(([k]) => notes.some((n) => n.label === k)).map(([k, c]) => <button key={k} className={'chip lab-chip' + (lab === k ? ' on' : '')} onClick={() => setLab(lab === k ? null : k)} aria-label={'라벨 ' + labelName(k, st)} title={labelName(k, st)}><span className="dot" style={{ background: c }} />{st.labelNames?.[k] ? <span className="tiny">{st.labelNames[k]}</span> : null}</button>)}
+            <button className="chip" onClick={() => setSettings({ notesCard: { s: 'm', m: 'l', l: 's' }[st.notesCard || 'm'] })}>카드 {{ s: '작게', m: '보통', l: '크게' }[st.notesCard || 'm']}</button>
           </div>
-          {(byLab && !arrange ? [...NOTE_LABELS.map(([k, c, l]) => [k, c, l, list.filter((n) => n.label === k)]), ['', null, '라벨 없음', list.filter((n) => !n.label)]].filter((g) => g[3].length) : [['all', null, null, list]]).map(([gk, gc, gl, glist]) => <Fragment key={gk}>
+          {(byLab && !arrange ? [...NOTE_LABELS.map(([k, c]) => [k, c, labelName(k, st), list.filter((n) => n.label === k)]), ['', null, '라벨 없음', list.filter((n) => !n.label)]].filter((g) => g[3].length) : [['all', null, null, list]]).map(([gk, gc, gl, glist]) => <Fragment key={gk}>
           {gl && <div className="lab-head"><span className="dot" style={{ background: gc || 'var(--line)' }} />{gl}<span className="tiny muted">{glist.length}</span></div>}
-          <div className={'note-grid' + (compact ? ' ng-one' : '')}>
+          <div className={'note-grid nc-' + (st.notesCard || 'm') + (compact ? ' ng-one' : '')}>
             {glist.map((n) => { const i = list.indexOf(n); return (
-              <button key={n.id} className={'card note-card' + (compact && params.noteId === n.id ? ' on' : '') + (n.label ? ' has-label' : '')} style={{ position: 'relative', ...(n.label ? { '--nl': labelColor(n.label) } : null) }} onClick={() => !arrange && openNote(n.id)}>
+              <button key={n.id} className={'card note-card' + (compact && params.noteId === n.id ? ' on' : '') + (n.label ? ' has-label' : '') + (n.bg ? ' nc-bg note-bg-' + n.bg : '')} style={{ position: 'relative', ...(n.label ? { '--nl': labelColor(n.label) } : null) }} onClick={() => !arrange && openNote(n.id)}>
                 {arrange && <span className="note-move row no-print" onClick={(e) => e.stopPropagation()}><span className="icon-btn" role="button" aria-label="앞으로" onClick={() => shift(i, -1)}>‹</span><span className="icon-btn" role="button" aria-label="뒤로" onClick={() => shift(i, 1)}>›</span></span>}
                 <div className="row"><span>{n.icon || (n.type === 'memo' ? '🗒️' : n.type === 'event' ? '📅' : '📄')}</span><b className="ellipsis grow">{noteTitle(n)}</b>{n.pinned && <Icon name="star" size={12} fill="currentColor" />}</div>
                 <div className="note-prev">{plainText(noteText(n)).replace(/\[\[|\]\]/g, '').replace(/https?:\/\/\S*[?&]open=\S+/g, '↗ 링크').slice(0, 120)}</div>

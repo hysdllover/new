@@ -86,7 +86,7 @@ svg { display: block; }
 
 /* ── 공통 요소 ── */
 .card {
-  background: var(--surface); border-radius: var(--radius); padding: calc(var(--gap) + 2px); min-width: 0;
+  background: var(--surface); border-radius: var(--r-card, var(--radius)); padding: calc(var(--gap) + 2px); min-width: 0;
   border: 1px solid var(--line);
 }
 [data-card="shadow"] .card { border-color: transparent; box-shadow: var(--shadow); }
@@ -146,7 +146,7 @@ svg { display: block; }
 
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 0 14px;
-  border-radius: calc(var(--radius) - 2px); border: 1px solid var(--line); background: var(--surface); white-space: nowrap;
+  border-radius: var(--r-btn, calc(var(--radius) - 2px)); border: 1px solid var(--line); background: var(--surface); white-space: nowrap;
 }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 .btn.ghost { border-color: transparent; background: transparent; }
@@ -159,19 +159,19 @@ svg { display: block; }
   display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; font-size: .86em;
   background: var(--surface-2); border: 1px solid transparent; white-space: nowrap; min-height: 28px;
 }
-.chip.on { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+.chip.on { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) var(--tint-a, 8%), var(--surface)); }
 .tag { display: inline-flex; align-items: center; gap: 4px; font-size: .8em; padding: 0 7px; border-radius: 5px; line-height: 1.7; white-space: nowrap; }
 .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
 .badge { font-size: .76em; padding: 0 6px; border-radius: 5px; background: var(--surface-2); color: var(--muted); white-space: nowrap; line-height: 1.8; }
 .badge.warn { background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger); }
-.badge.acc { background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); }
+.badge.acc { background: color-mix(in srgb, var(--accent) calc(var(--tint-a, 8%) * 1.5), transparent); color: var(--accent); }
 
 .seg { display: inline-flex; background: var(--surface-2); border-radius: 9px; padding: 3px; gap: 2px; }
 .seg button { padding: 5px 13px; border-radius: 7px; color: var(--muted); white-space: nowrap; min-height: 30px; font-size: .95em; }
 .seg button.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, .08); font-weight: var(--fw-b); }
 
 .input, select.input, textarea.input {
-  width: 100%; min-height: 40px; padding: 8px 11px; border: 1px solid var(--line); border-radius: calc(var(--radius) - 2px);
+  width: 100%; min-height: 40px; padding: 8px 11px; border: 1px solid var(--line); border-radius: var(--r-input, calc(var(--radius) - 2px));
   background: var(--surface); outline: none; font-weight: var(--fw);
 }
 .input:focus { border-color: var(--accent); }
@@ -377,3 +377,15 @@ html[data-fold] .card::after { content: ''; position: absolute; top: -1px; right
 .wf[data-rs]::before { content: attr(data-rs); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 4; font-size: .78em; padding: 3px 8px; border-radius: 6px; background: var(--surface); box-shadow: var(--shadow); }
 .wf-pad-tight > .wf-body > .card, .wf-pad-tight > .wf-body > * > .card { padding: calc(var(--gap) * .55); }
 .wf-pad-roomy > .wf-body > .card, .wf-pad-roomy > .wf-body > * > .card { padding: calc(var(--gap) * 1.6); }
+
+/* 탭바 선택 표시: 색만 · 점 · 밑줄 · 옅은 바탕 */
+html[data-tabsel="dot"] .tabbar button.on, html[data-tabsel="line"] .tabbar button.on { position: relative; }
+html[data-tabsel="dot"] .tabbar button.on::after { content: ''; position: absolute; bottom: 3px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--accent); }
+html[data-tabsel="line"] .tabbar button.on::after { content: ''; position: absolute; bottom: 2px; left: 30%; right: 30%; height: 2px; border-radius: 1px; background: var(--accent); }
+html[data-tabsel="bg"] .tabbar button.on { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+html[data-tabsel="dot"] .sidebar .nav.on, html[data-tabsel="line"] .sidebar .nav.on { background: transparent; box-shadow: none; }
+html[data-tabsel="line"] .sidebar .nav.on { box-shadow: inset 2px 0 0 var(--accent); border-radius: 0; }
+/* 종이 테마 그림자 깊이 */
+html[data-shadow="none"][data-card="paper"] .card { box-shadow: none; }
+html[data-shadow="soft"][data-card="paper"] .card { box-shadow: 0 1px 2px rgba(0, 0, 0, .035); }
+html[data-shadow="deep"][data-card="paper"] .card { box-shadow: 0 1px 3px rgba(0, 0, 0, .07), 0 6px 18px rgba(0, 0, 0, .07); }

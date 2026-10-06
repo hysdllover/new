@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useRec, useColl, patch, remove, restore } from '../../store/store.js'
+import { useRec, useColl, patch, remove, restore, useSettings, setSettings } from '../../store/store.js'
 import { addReview } from '../../store/actions.js'
 import BlockEditor from '../../components/BlockEditor.jsx'
 import { Icon, openMenu, toast, Seg, AutoText, openDetail, openSheet } from '../../components/ui.jsx'
@@ -18,6 +18,8 @@ const COVERS = [['', '없음'], ['paper', '종이'], ['navy', '네이비'], ['ol
 // 색 라벨 (목록에서 왼쪽 가는 띠)
 export const NOTE_LABELS = [['rose', '#c9a0a8', '로즈'], ['olive', '#7a8660', '올리브'], ['navy', '#55658a', '네이비'], ['violet', '#a99bc4', '바이올렛'], ['sand', '#b5a47a', '모래'], ['gray', '#9aa3ad', '회색']]
 export const labelColor = (k) => NOTE_LABELS.find((x) => x[0] === k)?.[1] || null
+// 라벨 이름 (설정에서 바꾼 이름 우선)
+export const labelName = (k, st) => st?.labelNames?.[k] || NOTE_LABELS.find((x) => x[0] === k)?.[2] || ''
 const ICONS = ['📄', '📘', '🧪', '🧮', '🌏', '✏️', '💡', '📌', '🎯', '🗂️', '📝', '🔖']
 
 export default function NotePage({ id }) {
@@ -38,7 +40,8 @@ export default function NotePage({ id }) {
     { label: '노트 전체 복습 등록', icon: 'brain', onClick: () => addReview({ title: noteTitle(n), subjectId: n.subjectId, sourceType: 'note', sourceId: n.id }) },
     { label: '표지', icon: 'layers', onClick: () => openSheet((close) => <div className="row wrap" style={{ gap: 8 }}>{COVERS.map(([k, l]) => <button key={k} className={'chip' + ((n.cover || '') === k ? ' on' : '')} onClick={() => { up({ cover: k || null }); close() }}>{k && <i className={'cover-dot cv-' + k} />}{l}</button>)}</div>, { title: '페이지 표지' }) },
     { label: '이전 버전', icon: 'clock', onClick: () => openSheet((c) => <Versions id={id} close={c} />, { title: '이전 버전' }) },
-    { label: '색 라벨', icon: 'tag', onClick: () => openSheet((close) => <div className="row wrap" style={{ gap: 8 }}><button className={'chip' + (!n.label ? ' on' : '')} onClick={() => { up({ label: null }); close() }}>없음</button>{NOTE_LABELS.map(([k, c, l]) => <button key={k} className={'chip' + (n.label === k ? ' on' : '')} onClick={() => { up({ label: k }); close() }}><span className="dot" style={{ background: c }} />{l}</button>)}</div>, { title: '색 라벨' }) },
+    { label: '색 라벨', icon: 'tag', onClick: () => openSheet((close) => <LabelSheet n={n} up={up} close={close} />, { title: '색 라벨' }) },
+    { label: '페이지 너비', icon: 'layers', onClick: () => openSheet((close) => <div className="row wrap" style={{ gap: 8 }}>{[['narrow', '좁게 (읽기)'], ['', '보통'], ['wide', '넓게 (표·두 단)']].map(([k, l]) => <button key={k} className={'chip' + ((n.width || '') === k ? ' on' : '')} onClick={() => { up({ width: k || null }); close() }}>{l}</button>)}</div>, { title: '페이지 너비' }) },
     { label: '배경', icon: 'layers', onClick: () => openSheet((close) => <div className="row wrap" style={{ gap: 8 }}>{[['', '무지'], ['line', '줄'], ['grid', '모눈'], ['dot', '점']].map(([k, l]) => <button key={k} className={'chip' + ((n.bg || '') === k ? ' on' : '')} onClick={() => { up({ bg: k || null }); close() }}><i className={'bg-sw note-bg-' + (k || 'plain')} />{l}</button>)}</div>, { title: '노트 배경' }) },
     { label: '이미지로 공유', icon: 'image', onClick: async () => { const { drawNote } = await import('../../lib/reportImage.js'); const { shareBlob } = await import('../../lib/shareCard.js'); const blob = await drawNote(n, { theme: settings?.reportTheme || 'app' }); const r = await shareBlob(blob, `${noteTitle(n)}.png`); if (r === 'saved') toast('이미지를 저장했어요') } },
     { label: n.pinned ? '고정 해제' : '상단 고정', icon: 'star', onClick: () => up({ pinned: !n.pinned }) },
@@ -47,7 +50,7 @@ export default function NotePage({ id }) {
     { label: '삭제', icon: 'trash', danger: true, onClick: () => { remove('notes', id); setParams('notes', { noteId: null }); toast('노트 삭제됨', { label: '되돌리기', fn: () => { restore('notes', id); openNote(id) } }) } },
   ])
   return (
-    <div className={'note-page' + (reading ? ' reading' : '') + (n.bg ? ' note-bg note-bg-' + n.bg : '')}>
+    <div className={'note-page' + (n.width ? ' nw-' + n.width : '') + (reading ? ' reading' : '') + (n.bg ? ' note-bg note-bg-' + n.bg : '')}>
       <div className="row no-print" style={{ marginBottom: 6 }}>
         <button className="btn ghost sm" onClick={() => setParams('notes', { noteId: null })}><Icon name="back" size={14} />목록</button>
         {parent && <button className="btn ghost sm ellipsis" style={{ maxWidth: '45%' }} onClick={() => openNote(parent.id)}>› {noteTitle(parent)}</button>}
@@ -76,6 +79,22 @@ export default function NotePage({ id }) {
           {bl.map((b) => <button key={b.id} className="chip" onClick={() => openNote(b.id)}>{b.icon || '📄'} {noteTitle(b)}</button>)}
         </div>
       )}
+    </div>
+  )
+}
+
+// 라벨 고르기 + 이름 바꾸기 (이름은 모든 노트에 공통)
+function LabelSheet({ n, up, close }) {
+  const st = useSettings(), names = st.labelNames || {}
+  return (
+    <div className="col" style={{ gap: 10 }}>
+      <div className="row wrap" style={{ gap: 8 }}>
+        <button className={'chip' + (!n.label ? ' on' : '')} onClick={() => { up({ label: null }); close() }}>없음</button>
+        {NOTE_LABELS.map(([k, c]) => <button key={k} className={'chip' + (n.label === k ? ' on' : '')} onClick={() => { up({ label: k }); close() }}><span className="dot" style={{ background: c }} />{labelName(k, st)}</button>)}
+      </div>
+      <details><summary className="tiny muted">라벨 이름 바꾸기</summary>
+        <div className="col" style={{ gap: 6, marginTop: 8 }}>{NOTE_LABELS.map(([k, c, l]) => <div key={k} className="row" style={{ gap: 8 }}><span className="dot" style={{ background: c }} /><input className="input" placeholder={l} defaultValue={names[k] || ''} onBlur={(e) => setSettings((s) => ({ labelNames: { ...(s.labelNames || {}), [k]: e.target.value.trim() || undefined } }))} /></div>)}</div>
+      </details>
     </div>
   )
 }

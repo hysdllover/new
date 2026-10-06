@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { weekGoals } from '../store/actions.js'
 import { REMINDER_OPTS, taskReminders } from '../engine/reminders.js'
-import { useRec, useColl, useSettings, patch, uid, list, find } from '../store/store.js'
+import { useRec, useColl, useSettings, patch, uid, list, find, settings } from '../store/store.js'
 import { updateTask, toggleTask, deleteTask, scheduleTask, splitTask, addReview, taskSpent, dayRec, setDay } from '../store/actions.js'
-import { Icon, Check, Field, AutoText, closeDetail, openSheet, toast, Prog } from './ui.jsx'
+import { Icon, Check, Field, AutoText, closeDetail, openSheet, toast, Prog, openDetail } from './ui.jsx'
 import { PRI, SubjectSelect, ProjectSelect, RepeatEditor, TimeInput } from './common.jsx'
 import { LinksEditor, FilesEditor } from './Attach.jsx'
 import { fmtDur, today, fmtShort, addDays } from '../engine/date.js'
@@ -12,6 +12,7 @@ import { openNote } from '../nav.js'
 import { startStopwatch } from '../lib/timer.js'
 import { go } from '../nav.js'
 
+const settingsColor = (sid) => settings().seriesColors?.[sid] || null
 export default function TaskEditor({ id }) {
   const t = useRec('tasks', id)
   useColl('days'); const goals = weekGoals()
@@ -39,6 +40,13 @@ export default function TaskEditor({ id }) {
       </div>
       <div className="pane-b form">
         <AutoText className="input title-input" value={t.title} onChange={(v) => patch('tasks', id, { title: v })} placeholder="할 일 제목" />
+        {t.seriesId && (() => { const all = list('tasks').filter((x) => x.seriesId === t.seriesId), d = all.filter((x) => x.done).length, nx = all.filter((x) => !x.done).sort((a, b) => (a.seriesN ?? 0) - (b.seriesN ?? 0))[0], col = settingsColor(t.seriesId) || subjects.find((s) => s.id === t.subjectId)?.color; return (
+          <div className="series-in">
+            <div className="row between small"><span className="ellipsis">{t.seriesName || '시리즈'}{t.seriesN != null ? ` · ${t.seriesN}번째` : ''}</span><span className="tiny muted">{d}/{all.length}</span></div>
+            <div className="rp-track"><i style={{ width: (d / (all.length || 1)) * 100 + '%', background: col || 'var(--accent)' }} /></div>
+            {nx && nx.id !== t.id && <button className="tiny muted" style={{ textAlign: 'left' }} onClick={() => openDetail('task', nx.id)}>다음 · {nx.title}{nx.due ? ' (' + nx.due.slice(5).replace('-', '/') + ')' : ''} →</button>}
+          </div>
+        ) })()}
 
         <div className="row wrap" style={{ gap: 6 }}>
           {planning && <button className="chip" onClick={() => { scheduleTask(id); toast('오늘 빈 시간에 배정했어요') }}><Icon name="clock" size={14} />오늘 배정</button>}
