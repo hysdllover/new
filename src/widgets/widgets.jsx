@@ -8,6 +8,7 @@ import { openRecord } from '../views/study/Log.jsx'
 import { Card, Check, Ring, Empty, Icon, AddInput, openDetail, useNow } from '../components/ui.jsx'
 import TaskItem from '../components/TaskItem.jsx'
 import { WeekGoals } from '../components/WeekGoals.jsx'
+import { seriesSummary } from '../lib/series.js'
 import { lectureStats } from '../engine/lecture.js'
 import { plusOne, listen, lectureLine } from '../views/study/Lectures.jsx'
 import { LinkPreview } from '../components/Attach.jsx'
@@ -42,6 +43,23 @@ function Now() {
         </button>
       ) : <div className="small muted">진행 중인 일정이 없어요</div>}
       {next && <div className="small" style={{ marginTop: 8 }}>다음 <b>{next.title}</b> · {fmtTime(next.s)} <span className="muted">({fmtDur(next.s - m)} 후)</span></div>}
+    </Card>
+  )
+}
+
+// 시리즈 진행: 이름 · 끝낸 수/전체 · 가는 진행선 · 다음 회차 (누르면 완료)
+function SeriesW() {
+  const tasks = useColl('tasks'), subjects = useColl('subjects')
+  const list = seriesSummary(tasks, subjects).slice(0, 5)
+  return (
+    <Card title="시리즈 진행" action={<button className="tiny muted" onClick={() => go('tasks', 'board')}>배치 →</button>}>
+      {list.length ? <div className="col" style={{ gap: 10 }}>{list.map((x) => (
+        <div key={x.id} className="col" style={{ gap: 4 }}>
+          <div className="row between small"><span className="ellipsis">{x.t}</span><span className="muted tiny" style={{ fontVariantNumeric: 'tabular-nums' }}>{x.d}/{x.n}</span></div>
+          <div className="rp-track"><i style={{ width: (x.d / (x.n || 1)) * 100 + '%', background: x.color || 'var(--accent)' }} /></div>
+          {x.next && <div className="row tiny muted" style={{ gap: 6 }}><Check on={false} onClick={() => toggleTask(x.next.id)} color={x.color} /><span className="ellipsis grow">다음 {x.next.title}</span>{x.next.due && <span>{fmtShort(x.next.due)}</span>}</div>}
+        </div>
+      ))}</div> : <Empty>할 일 › 시리즈로 회차 묶음을 만들어 보세요</Empty>}
     </Card>
   )
 }
@@ -709,4 +727,5 @@ export const WIDGETS = {
   weekgoals: { label: '이번 주 목표 3개', C: WeekGoalsW, size: 'm' },
   classes: { label: '오늘 시간표', C: TodayClasses, size: 'm' },
   lectures: { label: '오늘 들을 인강', C: LecturesW, size: 'm' },
+  series: { label: '시리즈 진행', C: SeriesW, size: 'm' },
 }

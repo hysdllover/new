@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useColl, patch, put, remove, batch } from '../store/store.js'
-import { addTask, toggleTask, moveTasks, QUICK_DATES } from '../store/actions.js'
+import { addTask, toggleTask, moveTasks, updateTask, QUICK_DATES } from '../store/actions.js'
 import TaskQuickInput from '../components/TaskQuickInput.jsx'
-import { AddInput, Empty, Icon, openSheet, openMenu, toast, openDetail } from '../components/ui.jsx'
+import { AddInput, Empty, Icon, openSheet, openMenu, toast, openDetail, Check } from '../components/ui.jsx'
 import TaskItem from '../components/TaskItem.jsx'
 import { WeekGoalsCard } from '../components/WeekGoals.jsx'
 import { SMART, applyFilter, quadrant, openCount } from './tasks/filter.js'
@@ -25,6 +25,7 @@ export default function Tasks({ seg, params }) {
   if (seg === 'table') return <DBView />
   if (seg === 'archive') return <Archive />
   if (seg === 'list') return <TaskList params={params} />
+  if (seg === 'board') return <WeekBoard />
   return <DayView params={params} />
 }
 
@@ -89,6 +90,7 @@ function TaskList({ params }) {
         <input className="input grow" placeholder="검색" value={f.q || ''} onChange={(e) => setParams('tasks', { q: e.target.value })} />
         <button className={'btn' + (nFilter ? ' on-acc' : '')} onClick={() => setParams('tasks', { showFilter: !params.showFilter })}>필터{nFilter ? ' ' + nFilter : ''}</button>
         {f.smart !== 'done' && <button className={'btn' + (sel.mode ? ' on-acc' : '')} onClick={sel.toggleMode}>선택</button>}
+        <button className="btn" onClick={openSeries}>시리즈</button>
       </div>
       {params.showFilter && (
         <div className="row wrap" style={{ gap: 6 }}>
@@ -370,3 +372,56 @@ function Kanban() {
   )
 }
 
+
+// 시리즈 할 일 만들기 시트
+const openSeries = () => import('../components/SeriesSheet.jsx').then((m) => openSheet((c) => <m.default close={c} />, { title: '시리즈 할 일 만들기' }))
+
+// 주간 배치판: 날짜 없는 할 일 + 이번 주 7일 칸 — 길게 눌러 끌어다 놓으면 그날로
+function WeekBoard() {
+  const st = useSettings()
+  const [ws, setWs] = useState(() => weekStart(today(), st.weekStart ?? 1))
+  const tasks = useColl('tasks').filter((t) => !t.archived)
+  const subjects = useColl('subjects')
+  const days = Array.from({ length: 7 }, (_, i) => addDays(ws, i)), t0 = today()
+  const ord = (a, b) => (a.done - b.done) || (a.dueTime == null) - (b.dueTime == null) || (a.dueTime ?? 0) - (b.dueTime ?? 0) || (a.order ?? 0) - (b.order ?? 0)
+  const loose = tasks.filter((t) => !t.done && !t.due).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).slice(0, 40)
+  const drop = (t) => (z) => { const k = z.dataset.drop; if (!k?.startsWith('wd:')) return; const due = k.slice(3) || null; if ((t.due || null) === due) return; updateTask(t.id, due ? { due } : { due: null, dueTime: null }); toast(due ? `${fmtDate(due)}로 옮겼어요` : '날짜를 뺐어요') }
+  const Card = ({ t }) => {
+    const sb = subjects.find((x) => x.id === t.subjectId)
+    return (
+      <div className={'wkb-item' + (t.done ? ' done' : '')} {...longPress(() => ({ label: t.title, onDrop: drop(t) }))} onClick={() => openDetail('task', t.id)}>
+        <Check on={t.done} onClick={() => toggleTask(t.id)} color={sb?.color} />
+        <span className="wkb-t">{t.title}</span>
+        {t.dueTime != null && <span className="tiny muted">{fmtTime(t.dueTime)}</span>}
+      </div>
+    )
+  }
+  const col = (key, head, list, cls = '') => (
+    <div key={key} className={'wkb-col' + cls} data-drop={'wd:' + key}>
+      <div className="wkb-h">{head}<span className="tiny muted">{list.filter((t) => !t.done).length || ''}</span></div>
+      {list.map((t) => <Card key={t.id} t={t} />)}
+      {!list.length && <div className="wkb-empty">여기로 끌어 놓기</div>}
+    </div>
+  )
+  return (
+    <div className="col">
+      <div className="row between">
+        <div className="row" style={{ gap: 2 }}>
+          <button className="icon-btn" onClick={() => setWs(addDays(ws, -7))} aria-label="지난주"><Icon name="back" size={16} /></button>
+          <b style={{ fontWeight: 'var(--fw)' }}>{fmtDate(ws, { wd: false })} – {fmtDate(addDays(ws, 6), { wd: false })}</b>
+          <button className="icon-btn" onClick={() => setWs(addDays(ws, 7))} aria-label="다음 주"><Icon name="next" size={16} /></button>
+        </div>
+        <div className="row" style={{ gap: 6 }}>
+          {ws !== weekStart(t0, st.weekStart ?? 1) && <button className="btn sm" onClick={() => setWs(weekStart(t0, st.weekStart ?? 1))}>이번 주</button>}
+          <button className="btn sm" onClick={openSeries}>시리즈</button>
+        </div>
+      </div>
+      <div className="tiny muted">할 일을 길게 눌러 원하는 날 칸으로 끌어다 놓으세요</div>
+      <div className="wkb">
+        {col('', '날짜 없음', loose, ' loose')}
+        {days.map((d) => col(d, <span>{WD[parseYmd(d).getDay()]} <b>{parseYmd(d).getDate()}</b></span>, tasks.filter((t) => t.due === d).sort(ord), d === t0 ? ' now' : d < t0 ? ' past' : ''))}
+      </div>
+      <AddInput placeholder="+ 날짜 없는 할 일 추가" onAdd={(title) => addTask({ title, inbox: true })} />
+    </div>
+  )
+}

@@ -8,6 +8,7 @@ import { Heatmap, Bars, WeekBars, LineChart, MonthHeat } from '../../components/
 import { today, addDays, weekStart, fmtDur, fmtShort, fmtDate, fmtTime, tsToMin, diffDays } from '../../engine/date.js'
 import { PALETTE } from '../../store/schema.js'
 import { DdayCard } from './Plan.jsx'
+import { FileThumb } from '../../components/Attach.jsx'
 
 export function useStudyStats() {
   const st = useSettings()
@@ -52,6 +53,7 @@ export default function Records() {
         <MonthHeat values={s.byDay} goal={st.goalDaily} weekStartDow={st.weekStart} onPick={(d) => openSheet(() => <DayRecords date={d} />, { title: fmtDate(d) })} />
       </Card>
       <DdayCard />
+      <WeeksToDday byDay={s.byDay} st={st} />
       <Habits />
       <Grades />
     </div>
@@ -139,7 +141,7 @@ function ShareCardSheet() {
 // 달력에서 고른 날의 공부 기록
 export function DayRecords({ date }) {
   const sessions = useColl('sessions').filter((x) => x.date === date).sort((a, b) => (a.start ?? 0) - (b.start ?? 0))
-  const subjects = useColl('subjects')
+  const subjects = useColl('subjects'), files = useColl('files')
   const total = sessions.reduce((a, x) => a + x.dur, 0)
   return (
     <div className="col">
@@ -151,6 +153,7 @@ export function DayRecords({ date }) {
             <span className="grow ellipsis">{sb?.name || '기타'}{x.note ? ` · ${x.note}` : ''}</span>
             {x.start != null && <span className="tiny muted">{fmtTime(tsToMin(x.start))}</span>}
             <span className="small">{fmtDur(x.dur)}</span>
+            {(x.files || []).map((id) => files.find((f) => f.id === id)).filter(Boolean).slice(0, 2).map((f) => <FileThumb key={f.id} file={f} size={34} />)}
           </div>
         ) })}
         {!sessions.length && <Empty>기록이 없어요</Empty>}
@@ -239,5 +242,35 @@ function GradeForm({ close, subjectId }) {
       </div>
       <button className="btn primary" onClick={() => { if (f.score === '' || !f.subjectId) return; put('grades', { ...f, subjectId: f.subjectId, score: +f.score, target: f.target ? +f.target : null }); close() }}>저장</button>
     </div>
+  )
+}
+
+// D-day까지 주차 달력: 한 칸 = 한 주 · 지난 주는 공부량 농도, 이번 주는 테두리, 남은 주는 빈칸
+function WeeksToDday({ byDay, st }) {
+  const ddays = useColl('ddays').filter((d) => d.date >= today()).sort((a, b) => a.date.localeCompare(b.date))
+  const [pick, setPick] = useState(() => { try { return localStorage.getItem('wk_dday') || '' } catch { return '' } })
+  const dd = ddays.find((d) => d.id === pick) || ddays[ddays.length - 1]
+  if (!dd) return null
+  const wsd = st.weekStart ?? 1, t0 = today(), cur = weekStart(t0, wsd), end = weekStart(dd.date, wsd)
+  const first = Object.keys(byDay).filter((k) => byDay[k]).sort()[0]
+  const start = first ? [weekStart(first, wsd), addDays(cur, -7 * 15)].sort().pop() : cur
+  const weeks = []; for (let w = start; w <= end && weeks.length < 80; w = addDays(w, 7)) weeks.push(w)
+  const wm = (w) => Array.from({ length: 7 }, (_, i) => byDay[addDays(w, i)] || 0).reduce((a, v) => a + v, 0)
+  const goal = st.goalWeekly || 1500, left = diffDays(dd.date, t0), lw = Math.floor(left / 7)
+  const past = weeks.filter((w) => w < cur), avg = past.length ? Math.round(past.slice(-4).reduce((a, w) => a + wm(w), 0) / Math.min(4, past.length)) : 0
+  return (
+    <Card title={`${dd.title}까지`} action={ddays.length > 1 && <div className="row" style={{ gap: 4 }}>{ddays.map((d) => <button key={d.id} className={'chip' + (d.id === dd.id ? ' on' : '')} onClick={() => { setPick(d.id); try { localStorage.setItem('wk_dday', d.id) } catch {} }}>{d.title}</button>)}</div>}>
+      <div className="row" style={{ alignItems: 'baseline', gap: 10, marginBottom: 10 }}>
+        <span className="wk-big">{lw}<small>주</small> {left % 7}<small>일</small></span>
+        <span className="tiny muted">최근 4주 평균 {hmS(avg)} · 주간 목표 {hmS(goal)}</span>
+      </div>
+      <div className="wk-grid">
+        {weeks.map((w) => { const m = w < cur ? wm(w) : w === cur ? wm(w) : 0, r = Math.min(1, m / goal); return (
+          <span key={w} className={'wk-c' + (w === cur ? ' now' : w > cur ? ' fut' : '') + (w === end ? ' end' : '')} title={`${fmtShort(w)} 주 ${m ? hmS(m) : ''}`}
+            style={w <= cur && m ? { background: `color-mix(in srgb, var(--c2) ${Math.round(18 + 72 * r)}%, var(--surface))` } : null}>{w === end ? <i /> : null}</span>
+        ) })}
+      </div>
+      <div className="row between tiny muted" style={{ marginTop: 6 }}><span>{fmtShort(start)}</span><span>이번 주</span><span>{fmtShort(dd.date)}</span></div>
+    </Card>
   )
 }

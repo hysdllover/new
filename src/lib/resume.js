@@ -9,7 +9,7 @@ export const deviceName = () => {
   return /iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) ? '아이패드' : /iPhone/.test(ua) ? '아이폰' : '다른 기기'
 }
 const TAB = { tasks: '할 일', study: '공부 기록', planner: '캘린더', notes: '노트', health: '건강' }
-const SEG = { day: '일별', list: '리스트', timer: '타이머', records: '통계', progress: '진도', review: '복습', today: '오늘', week: '주', month: '월', timetable: '시간표', daily: '데일리', pages: '페이지' }
+const SEG = { day: '일별', list: '리스트', board: '주간 배치', timer: '타이머', records: '통계', progress: '진도', review: '복습', today: '오늘', week: '주', month: '월', timetable: '시간표', daily: '데일리', pages: '페이지' }
 
 function describe(n) {
   const p = n.params?.[n.tab] || {}, seg = n.seg?.[n.tab]
