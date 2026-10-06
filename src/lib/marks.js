@@ -92,3 +92,6 @@ export function markRuns(text) {
   }
   return out
 }
+
+// 꾸밈 기호를 뺀 글자 (할 일·일정 제목, 위젯 등)
+export const plainText = (s) => String(s || '').replace(/==(?:[rgby]:)?([^=\n]+)==/g, '$1').replace(/\*\*([^*\n]+)\*\*/g, '$1').replace(/__([^_\n]+)__/g, '$1')

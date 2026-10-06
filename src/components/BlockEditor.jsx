@@ -10,7 +10,7 @@ import { openNote, go, setParams } from '../nav.js'
 import { useTimerState, useTick, elapsed, startStopwatch, pause, resume, stop } from '../lib/timer.js'
 import { applyFilter } from '../views/tasks/filter.js'
 import { startDrag } from '../lib/drag.js'
-import { applyMark, activeMarks, markRuns } from '../lib/marks.js'
+import { applyMark, activeMarks, markRuns, plainText } from '../lib/marks.js'
 
 const TYPES = [['text', '텍스트'], ['h1', '제목 1'], ['h2', '제목 2'], ['bullet', '글머리'], ['todo', '체크박스 (할 일)'], ['callout', '강조 상자'], ['quote', '인용'], ['divider', '구분선']]
 const TONES = [['key', '핵심'], ['warn', '주의'], ['ex', '예시']]
@@ -149,7 +149,7 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
     ...(b.type === 'callout' ? TONES.filter(([t]) => t !== (b.tone || 'key')).map(([t, l]) => ({ label: `색 → ${l}`, onClick: () => upd(b.id, { tone: t }) })) : []),
     ...TYPES.filter(([t]) => t !== b.type && !SOLID.includes(b.type)).slice(0, 7).map(([t, l]) => ({ label: `→ ${l}`, onClick: () => { upd(b.id, { type: t }); if (t === 'todo') setEdit({ id: b.id, pos: (b.text || '').length }) } })),
     b.text && { label: '복습 등록', icon: 'brain', onClick: () => addReview({ title: b.text.slice(0, 60), subjectId: note?.subjectId, sourceType: 'note', sourceId: note?.id }) },
-    b.text && b.type !== 'todo' && { label: '할 일로 만들기', icon: 'tasks', onClick: () => { const t = addTask({ title: b.text, noteId: note?.id, subjectId: note?.subjectId }); upd(b.id, { type: 'todo', taskId: t.id }) } },
+    b.text && b.type !== 'todo' && { label: '할 일로 만들기', icon: 'tasks', onClick: () => { const t = addTask({ title: plainText(b.text), noteId: note?.id, subjectId: note?.subjectId }); upd(b.id, { type: 'todo', taskId: t.id }) } },
     !nested && b.type !== 'sync' && { label: '동기화 블록으로', icon: 'sync', onClick: () => { const s = put('syncBlocks', { blocks: [{ ...b, id: newBlock().id }] }); upd(b.id, { type: 'sync', syncId: s.id, text: '' }) } },
     { label: '복제', icon: 'plus', onClick: () => { const i = list.findIndex((x) => x.id === b.id), a = [...list]; a.splice(i + 1, 0, clone(b)); set(a) } },
     { label: '여러 줄 선택', icon: 'check', onClick: () => setSel(new Set([b.id])) },
