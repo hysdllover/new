@@ -154,7 +154,7 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
                   <MarkBar onApply={(t) => onText(b, t)} /></>
                 ) : (
                   <div className={'blk-v' + (task?.done ? ' done' : '')} onClick={() => !readOnly && setEdit({ id: b.id, pos: (b.text || '').length })}>{b.type === 'callout' && <span className="co-tag">{(TONES.find(([t]) => t === (b.tone || 'key')) || TONES[0])[1]}</span>}
-                    {b.text ? <Inline text={b.text} /> : <span className="muted">{list.length === 1 ? '입력하세요… (# 제목, - 목록, [] 체크, [[링크]], @내일 15:00)' : ' '}</span>}
+                    {b.text ? <Inline text={b.text} /> : <span className="muted">{list.length === 1 && nested ? '입력…' : list.length === 1 ? '입력하세요… (# 제목, - 목록, [] 체크, [[링크]], @내일 15:00)' : ' '}</span>}
                     {b.ref && <button className="ref-chip" onClick={(e) => { e.stopPropagation(); openDetail(b.ref.type, b.ref.id, { occ: b.ref.date }) }}>→ {refLabel(b.ref)}</button>}
                     {task && task.due && !b.ref && <span className="ref-chip">{task.due.slice(5).replace('-', '/')}</span>}
                   </div>
