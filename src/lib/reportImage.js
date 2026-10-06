@@ -35,11 +35,20 @@ async function paperGrain(g, W, H) {
   x.putImageData(im, 0, 0)
   g.fillStyle = g.createPattern(t, 'repeat'); g.fillRect(0, 0, W, H)
 }
-const finish = async (c, g, T, ops, W, y) => {
+const finish = async (c, g, T, ops, W, y, square) => {
   c.width = W; c.height = Math.max(Math.round(W * 0.8), y)
   g.fillStyle = T.bg; g.fillRect(0, 0, W, c.height); g.textBaseline = 'top'
   if (T.grain) await paperGrain(g, W, c.height)
   for (const op of ops) op()
+  if (square) {
+    // 정사각형: 내용 전체를 1080×1080 안에 줄여 가운데 배치
+    const c2 = document.createElement('canvas'); c2.width = c2.height = W
+    const g2 = c2.getContext('2d'); g2.fillStyle = T.bg; g2.fillRect(0, 0, W, W)
+    if (T.grain) await paperGrain(g2, W, W)
+    const k = Math.min(1, W / c.height), w2 = W * k, h2 = c.height * k
+    g2.drawImage(c, (W - w2) / 2, (W - h2) / 2, w2, h2)
+    return await new Promise((res) => c2.toBlob(res, 'image/png'))
+  }
   return await new Promise((res) => c.toBlob(res, 'image/png'))
 }
 
@@ -65,7 +74,7 @@ function calGrid(ctx, x0, y0, w, { month, values, goal, weekStartDow = 1 }, draw
   return h
 }
 
-export async function drawReport(d, secs, lines, title, { theme = 'app', head = 'DAILY REPORT', dateTxt } = {}) {
+export async function drawReport(d, secs, lines, title, { theme = 'app', head = 'DAILY REPORT', dateTxt, square = false, barScale = 1 } = {}) {
   await document.fonts.ready.catch(() => {})
   const W = 1080, P = 96, IW = W - P * 2
   const ctx = setup(theme), { T, c, g, f, spaced } = ctx
@@ -80,7 +89,7 @@ export async function drawReport(d, secs, lines, title, { theme = 'app', head = 
   const pct = Math.round(Math.min(1, d.mins / (d.goal || 1)) * 100)
   // 가는 막대 + 바닥선 + (있으면) 목표 점선
   const bars = (vals, labels, bh, goal) => add(bh + 66, (y0) => {
-    const n = vals.length, gap = n > 20 ? 6 : 12, cw = (IW - gap * (n - 1)) / n, bw = Math.min(n > 20 ? 12 : 18, cw), mx = Math.max(60, goal || 0, ...vals)
+    const n = vals.length, gap = n > 20 ? 6 : 12, cw = (IW - gap * (n - 1)) / n, bw = Math.min((n > 20 ? 12 : 18) * barScale, cw), mx = Math.max(60, goal || 0, ...vals)
     vals.forEach((m, i) => { if (!m) return; const h = Math.max(4, (m / mx) * bh), x = P + i * (cw + gap) + (cw - bw) / 2; g.fillStyle = acc; g.globalAlpha = goal ? (m >= goal ? 1 : 0.55) : 0.4 + 0.6 * (m / mx); rr(x, y0 + bh - h, bw, h, [bw / 2, bw / 2, 2, 2]); g.fill(); if (n <= 7) { g.globalAlpha = 1; g.font = f(18); g.fillStyle = soft; const tv = hm(m); g.fillText(tv, x + bw / 2 - g.measureText(tv).width / 2, y0 + bh - h - 28) } })
     g.globalAlpha = 1; g.fillStyle = rule; g.fillRect(P, y0 + bh, IW, 1.5)
     if (goal) { const gy = y0 + bh - (goal / mx) * bh; g.strokeStyle = soft; g.globalAlpha = 0.6; g.lineWidth = 1.5; g.setLineDash([6, 6]); g.beginPath(); g.moveTo(P, gy); g.lineTo(W - P, gy); g.stroke(); g.setLineDash([]); g.globalAlpha = 1 }
@@ -157,7 +166,7 @@ export async function drawReport(d, secs, lines, title, { theme = 'app', head = 
     }
     add(26, () => {})
   }
-  return finish(c, g, T, ops, W, y + P - 26)
+  return finish(c, g, T, ops, W, y + P - 26, square)
 }
 
 // 월별 공부 달력 이미지

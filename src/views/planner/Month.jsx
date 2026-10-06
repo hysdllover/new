@@ -72,7 +72,7 @@ export default function Month({ date, setDate }) {
             const medDone = layers.meds && medTotal ? medLogs.filter((l) => l.date === d && l.taken).length : 0
             return (
               <Fragment key={d}>
-              <button className={'mcell' + (inM ? '' : ' out') + (d === today() ? ' is-today' : '') + (d === sel ? ' sel' : '') + (wd === 0 || wd === 6 ? ' wkend' : '')}
+              <button className={'mcell' + (inM ? '' : ' out') + (d === today() ? ' is-today' : '') + (d === sel ? ' sel' : '') + (wd === 0 || wd === 6 ? ' wkend' : '') + (d < today() ? ' past' : '')}
                 onClick={() => { if (d === sel) setPeek(!peek); else { setDate(d); setPeek(true) } }}
                 style={heat ? { background: `color-mix(in srgb, var(--c2) ${Math.round(heat * 32)}%, var(--surface))` } : null}>
                 <div className="mnum"><span className={wd === 0 || hol ? 'sun' : wd === 6 ? 'sat' : ''}>{parseYmd(d).getDate()}</span>
@@ -82,7 +82,7 @@ export default function Month({ date, setDate }) {
                 <div className="mitems">
                   {evs.slice(0, 3).map((e) => <div key={e.id} className="mev ellipsis" style={{ '--c': e.color || 'var(--accent)', opacity: layerAlpha(st, e) }}>{e.title}</div>)}
                   {evs.length > 3 && <div className="tiny muted">+{evs.length - 3}</div>}
-                  {due.length > 0 && <div className="mtask tiny">☐ {due.filter((t) => !t.done).length}/{due.length}</div>}
+                  {due.length > 0 && (st.theme?.calTaskDots ? <div className="mtdots">{due.slice(0, 8).map((t) => <i key={t.id} className={t.done ? 'on' : ''} />)}</div> : <div className="mtask tiny">☐ {due.filter((t) => !t.done).length}/{due.length}</div>)}
                 </div>
                 {layers.study && mins > 0 && <span className="mstudy" style={{ width: Math.min(100, (mins / (st.goalDaily || 240)) * 100) + '%' }}>{Object.entries(subBy[d] || {}).sort((a, b) => b[1] - a[1]).map(([sid, m]) => <i key={sid} style={{ flex: m, background: subjects.find((x) => x.id === sid)?.color || 'var(--c2)' }} />)}</span>}
                 {ci % 7 === 0 && ddW && d <= ddW.date && <span className="mwk">{Math.ceil(diffDays(ddW.date, d) / 7)}주</span>}

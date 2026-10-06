@@ -688,6 +688,7 @@ function WidgetFontField() {
       <Field label="위젯 글자 크기"><Seg value={String(st.widgetScale || 1)} onChange={(v) => setSettings({ widgetScale: +v })} options={[['0.9', '작게'], ['1', '기본'], ['1.1', '크게'], ['1.2', '더 크게']]} /></Field>
       <Field label="위젯 글자 굵기"><Seg value={String(st.widgetWeight || 0)} onChange={(v) => setSettings({ widgetWeight: +v })} options={[['-1', '더 얇게'], ['0', '기본'], ['1', '보통'], ['2', '진하게']]} /></Field>
       <Field label="위젯 여백"><Seg value={st.widgetPad || 'normal'} onChange={(v) => setSettings({ widgetPad: v })} options={[['tight', '좁게'], ['normal', '기본'], ['roomy', '넓게']]} /></Field>
+      <Field label="위젯 배경 무늬"><Seg value={st.widgetPattern || 'plain'} onChange={(v) => setSettings({ widgetPattern: v })} options={[['plain', '무지'], ['grid', '모눈'], ['line', '줄']]} /></Field>
       <Field label="위젯 구분선"><Seg value={st.widgetRule || 'normal'} onChange={(v) => setSettings({ widgetRule: v })} options={[['none', '없음'], ['thin', '가늘게'], ['normal', '기본'], ['bold', '굵게']]} /></Field>
       <Field label="위젯 테마"><Seg value={st.widgetTheme || 'auto'} onChange={(v) => setSettings({ widgetTheme: v })} options={[['auto', '자동'], ['white', '흰 글씨'], ['black', '검은 글씨'], ['paper', '종이'], ['night', '다크'], ['mono', '단색']]} /></Field>
       <div className="tiny muted" style={{ marginTop: -4 }}>흰·검은 글씨는 투명 배경(Scriptable 메뉴)과 함께, 종이·다크는 배경색까지 바꿔요. 자동은 Scriptable 메뉴의 글자색을 따라요.</div>
@@ -1240,6 +1241,11 @@ function DesignDetail({ th, setTheme, st }) {
       <div className="form">
         <DesignPreview />
         <div className="row wrap" style={{ gap: 12 }}>{S('제목 1 크기', 'h1Size', [['s', '작게'], ['m', '기본'], ['l', '크게']], 'm')}{S('제목 2 크기', 'h2Size', [['s', '작게'], ['m', '기본'], ['l', '크게']], 'm')}</div>
+        {S('본문 글자 색', 'textTone', [['dark', '진하게'], ['ink', '먹색'], ['pencil', '연필 회색']], 'ink')}
+        <Field label="노트 본문 글꼴 (앱 글꼴과 따로)"><select className="input" value={th.noteFont || ''} onChange={(e) => setTheme({ noteFont: e.target.value || null })}><option value="">앱 글꼴과 같게</option>{Object.entries(FONTS).map(([k, f]) => <option key={k} value={k}>{f.name}</option>)}</select></Field>
+        {S('노트 줄 맞춤', 'noteAlign', [['left', '왼쪽'], ['justify', '양쪽 맞춤']], 'left')}
+        {S('노트 이미지', 'noteImg', [['round', '둥글게'], ['square', '각지게'], ['frame', '사진 테두리']], 'round')}
+        <Toggle label="노트 제목 아래 가는 선" checked={!!th.titleLine} onChange={(v) => setTheme({ titleLine: v })} />
         {S('본문 줄 간격', 'noteLH', [['tight', '좁게'], ['normal', '보통'], ['loose', '넓게']], 'normal')}
         {S('글머리 모양', 'bulletStyle', [['dot', '점'], ['dash', '짧은 선'], ['square', '작은 네모']], 'dot')}
         {S('링크 모양', 'linkStyle', [['under', '밑줄'], ['color', '색만'], ['arrow', '↗ 표시']], 'under')}
@@ -1253,6 +1259,9 @@ function DesignDetail({ th, setTheme, st }) {
         {S('진행선', 'progStyle', [['', '자동'], ['solid', '실선'], ['dot', '점선'], ['pencil', '연필 빗금']], '')}
         {S('표 머리줄', 'thColor', [['gray', '회색'], ['none', '무색'], ['tint', '옅은 포인트색']], 'gray')}
         {S('칩·배지 색 농도', 'tint', [['light', '옅게'], ['normal', '보통'], ['strong', '진하게']], 'normal')}
+        {S('버튼 모양', 'btnStyle', [['line', '테두리'], ['soft', '옅은 바탕'], ['text', '글자만']], 'line')}
+        {S('고르기 탭 모양', 'segStyle', [['pill', '알약'], ['under', '밑줄 탭']], 'pill')}
+        {S('그래프 막대 굵기', 'chartBar', [['thin', '가늘게'], ['normal', '보통'], ['thick', '굵게']], 'normal')}
         {S('탭바 선택 표시', 'tabSel', [['color', '색만'], ['dot', '점'], ['line', '밑줄'], ['bg', '옅은 바탕']], 'color')}
         <Field label="모서리 둥글기 따로"><div className="col" style={{ gap: 4 }}>{[['rCard', '카드', th.radius ?? 10], ['rBtn', '버튼', Math.max(0, (th.radius ?? 10) - 2)], ['rInput', '입력칸', Math.max(0, (th.radius ?? 10) - 2)]].map(([k, l, d]) => <div key={k} className="row" style={{ gap: 8 }}><span className="tiny muted" style={{ width: 40 }}>{l}</span><input type="range" min="0" max="20" value={th[k] ?? d} onChange={(e) => setTheme({ [k]: +e.target.value })} /><span className="tiny muted" style={{ width: 30 }}>{th[k] ?? d}px</span></div>)}{(th.rCard != null || th.rBtn != null || th.rInput != null) && <button className="chip" style={{ alignSelf: 'flex-start' }} onClick={() => setTheme({ rCard: null, rBtn: null, rInput: null })}>전체 둥글기에 맞추기</button>}</div></Field>
         {S('카드 테두리', 'cardBorder', [['none', '없음'], ['thin', '가늘게'], ['normal', '보통'], ['bold', '진하게']], 'normal')}
@@ -1263,6 +1272,10 @@ function DesignDetail({ th, setTheme, st }) {
         {paper && S('카드 그림자', 'shadowDepth', [['none', '없음'], ['soft', '옅게'], ['normal', '보통'], ['deep', '깊게']], 'normal')}
         <Toggle label="노트 왼쪽 세로줄 (공책 여백선)" checked={!!th.noteMargin} onChange={(v) => setTheme({ noteMargin: v })} />
         {S('월 달력 칸 높이', 'monthDensity', [['compact', '촘촘'], ['normal', '보통'], ['roomy', '넉넉']], 'normal')}
+        {S('달력 날짜 숫자', 'calNum', [['body', '기본'], ['head', '손글씨'], ['large', '크고 얇게']], 'body')}
+        {S('달력 오늘 표시', 'calToday', [['circle', '동그라미'], ['under', '밑줄'], ['box', '칸 테두리']], 'circle')}
+        <Toggle label="달력 지난 날짜 흐리게" checked={!!th.calPastDim} onChange={(v) => setTheme({ calPastDim: v })} />
+        <Toggle label="달력 할 일을 점으로 (채운 점 = 끝냄)" checked={!!th.calTaskDots} onChange={(v) => setTheme({ calTaskDots: v })} />
         <Toggle label="달력 주말 칸 옅은 바탕" checked={th.weekendTint !== false} onChange={(v) => setTheme({ weekendTint: v })} />
         <Toggle label="하루 타임라인 30분 눈금" checked={!!th.tlHalf} onChange={(v) => setTheme({ tlHalf: v })} />
         <Field label={`홈 카드 투명도 ${Math.round((th.homeAlpha ?? 1) * 100)}%`}><input type="range" min="0.4" max="1" step="0.05" value={th.homeAlpha ?? 1} onChange={(e) => setTheme({ homeAlpha: +e.target.value })} /></Field>

@@ -871,3 +871,28 @@ html[data-div="dot"] .hr-t::before, html[data-div="dot"] .hr-t::after { border-t
 .wpbg-paper { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.06' numOctaves='4' seed='5'/%3E%3CfeDiffuseLighting lighting-color='%23fff' surfaceScale='1'%3E%3CfeDistantLight azimuth='225' elevation='70'/%3E%3C/feDiffuseLighting%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)' opacity='.45'/%3E%3C/svg%3E"), color-mix(in srgb, var(--surface) 70%, var(--bg)); }
 .wpbg-grid { background-image: linear-gradient(color-mix(in srgb, var(--accent) 6%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--accent) 6%, transparent) 1px, transparent 1px); background-size: 18px 18px; }
 .wpbg-dot { background-image: radial-gradient(color-mix(in srgb, var(--text) 14%, transparent) 1px, transparent 1.4px); background-size: 16px 16px; }
+/* 노트: 제목 아래 선 · 본문 글꼴 · 줄 맞춤 · 이미지 모양 */
+html[data-titleline] .note-head { padding-bottom: 10px; border-bottom: 1px solid color-mix(in srgb, var(--text) 18%, transparent); margin-bottom: 14px; }
+.note-page .blocks { font-family: var(--font-note, inherit); }
+html[data-nalign="justify"] .note-page .blk-v { text-align: justify; text-justify: inter-character; }
+html[data-nimg="square"] .file-blk .thumb { border-radius: 0; }
+html[data-nimg="frame"] .file-blk .thumb { border-radius: 2px; padding: 6px 6px 18px; background: #fff; border-color: color-mix(in srgb, var(--line) 80%, transparent); box-shadow: 0 1px 3px rgba(0, 0, 0, .08); transform: rotate(-.6deg); }
+/* 강조 상자 색 추가 */
+.blk-callout.tone-rose .blk-c { --tc: #c9a0a8; }
+.blk-callout.tone-olive .blk-c { --tc: #7a8660; }
+.blk-callout.tone-sand .blk-c { --tc: #b5a47a; }
+/* 달력: 날짜 숫자 · 오늘 표시 · 지난 날 흐리게 · 할 일 점 */
+html[data-calnum="head"] .mnum > span:first-child { font-family: var(--font-head, inherit); font-size: 1.15em; }
+html[data-calnum="large"] .mnum > span:first-child { font-size: 1.25em; font-weight: 200; }
+html[data-caltoday="under"] .mcell.is-today .mnum > span:first-child { background: none; color: var(--accent); border-radius: 0; padding: 0; box-shadow: inset 0 -2px 0 var(--accent); }
+html[data-caltoday="box"] .mcell.is-today .mnum > span:first-child { background: none; color: var(--accent); padding: 0; }
+html[data-caltoday="box"] .mcell.is-today { box-shadow: inset 0 0 0 1.5px var(--accent); }
+html[data-pastdim] .mcell.past:not(.sel) > :not(.mstudy) { opacity: .5; }
+.mtdots { display: flex; gap: 2px; flex-wrap: wrap; margin-top: 1px; }
+.mtdots i { width: 5px; height: 5px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--muted); }
+.mtdots i.on { background: var(--muted); box-shadow: none; }
+/* 그래프 막대 굵기 */
+html[data-bar="thin"] { --bar-w: 5px; --bar-h: 2px; }
+html[data-bar="thick"] { --bar-w: 14px; --bar-h: 5px; }
+.wbar-b { width: var(--bar-w, 8px) !important; }
+.bar-t { height: var(--bar-h, 3px); }

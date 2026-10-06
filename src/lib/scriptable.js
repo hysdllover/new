@@ -4,7 +4,7 @@ import { pickQuote } from './quote.js'
 export const WIDGET_KINDS = [['', '기본'], ['공부', '공부'], ['할일', '할 일'], ['디데이', 'D-day'], ['달력', '공부 달력'], ['캘린더', '캘린더'], ['다짐', '다짐'], ['시간표', '시간표'], ['주간', '주간 공부'], ['과목', '과목별'], ['지금', '지금·다음'], ['진도', '진도'], ['목표', '이번 주 목표'], ['오늘', '오늘 한눈에'], ['대시보드', '대시보드'], ['내일', '내일 준비'], ['마감', '마감 임박'], ['일주일', '7일 일정'], ['디데이목록', 'D-day 목록'], ['바로가기', '바로 시작'], ['진행', '공부 진행'], ['남은분', '남은 시간'], ['타이머', '타이머·공부 시간'], ['노트', '노트'], ['습관', '습관'], ['시리즈', '시리즈 진행'], ['배치', '이번 주 배치'], ['주차', 'D-day까지 주차'], ['구성1', '내 위젯 1'], ['구성2', '내 위젯 2'], ['구성3', '내 위젯 3']]
 
 // 스크립트 버전 — 위젯 모양이 바뀔 때 올림. 앱이 위젯 데이터에 같이 올려서, 예전 스크립트면 위젯에 '스크립트 업데이트' 표시
-export const SCRIPT_VER = 74
+export const SCRIPT_VER = 75
 
 // 전체 스크립트 (예전 방식 · 테스트용): 머리 + 본체
 export function buildScript({ widgetRaw, appUrl }) {
@@ -487,6 +487,19 @@ if (!lock) {
   else if (WT === 'mono') w.backgroundColor = new  Color('#1c1d21')
   else if (FM.fileExists(bgPath(fam, RAWP))) w.backgroundImage = FM.readImage(bgPath(fam, RAWP))
   else w.backgroundColor = BG
+  // 배경 무늬 (앱 설정 › 위젯 배경 무늬): 모눈·줄
+  const PAT = STM.widgetPattern
+  if ((PAT === 'grid' || PAT === 'line') && !FM.fileExists(bgPath(fam, RAWP))) {
+    const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large, dk = WT === 'night' || WT === 'mono' || (WT !== 'paper' && WT !== 'white' && WT !== 'black' && dark())
+    const c = new DrawContext(); c.size = new Size(W2, H2); c.opaque = true; c.respectScreenScale = true
+    if (WT === 'paper' && PAPER) c.drawImageInRect(paperBg(W2, H2), new Rect(0, 0, W2, H2))
+    else { c.setFillColor(new Color(WT === 'night' ? '#1b1d22' : WT === 'mono' ? '#1c1d21' : WT === 'paper' ? '#f2f2f1' : dk ? '#15181d' : '#f2f4f6')); c.fillRect(new Rect(0, 0, W2, H2)) }
+    c.setFillColor(new Color(dk ? '#ffffff' : '#55658a', dk ? 0.07 : 0.1))
+    const g = PAT === 'grid' ? 14 : 20
+    for (let y = g; y < H2; y += g) c.fillRect(new Rect(0, y, W2, 0.5))
+    if (PAT === 'grid') for (let x = g; x < W2; x += g) c.fillRect(new Rect(x, 0, 0.5, H2))
+    w.backgroundImage = c.getImage()
+  }
 }
 
 if (!data) {
