@@ -4,7 +4,7 @@ import { pickQuote } from './quote.js'
 export const WIDGET_KINDS = [['', '기본'], ['공부', '공부'], ['할일', '할 일'], ['디데이', 'D-day'], ['달력', '공부 달력'], ['캘린더', '캘린더'], ['다짐', '다짐'], ['시간표', '시간표'], ['주간', '주간 공부'], ['과목', '과목별'], ['지금', '지금·다음'], ['진도', '진도'], ['목표', '이번 주 목표'], ['오늘', '오늘 한눈에'], ['대시보드', '대시보드'], ['내일', '내일 준비'], ['마감', '마감 임박'], ['일주일', '7일 일정'], ['디데이목록', 'D-day 목록'], ['바로가기', '바로 시작'], ['진행', '공부 진행'], ['남은분', '남은 시간'], ['타이머', '타이머·공부 시간'], ['노트', '노트'], ['습관', '습관'], ['구성1', '내 위젯 1'], ['구성2', '내 위젯 2'], ['구성3', '내 위젯 3']]
 
 // 스크립트 버전 — 위젯 모양이 바뀔 때 올림. 앱이 위젯 데이터에 같이 올려서, 예전 스크립트면 위젯에 '스크립트 업데이트' 표시
-export const SCRIPT_VER = 69
+export const SCRIPT_VER = 70
 
 // 전체 스크립트 (예전 방식 · 테스트용): 머리 + 본체
 export function buildScript({ widgetRaw, appUrl }) {
@@ -1013,21 +1013,50 @@ if (!data) {
       subBars(w, inner, 3)
     }
   } else if (KIND === 'class') {
-    // ── 시간표 ──
-    const h = w.addStack(); h.centerAlignContent(); cap(h, 'CLASSES'); h.addSpacer(); t(h, dateStr, label(8), SOFT)
-    w.addSpacer(fam === 'small' ? 8 : 10)
-    const max = fam === 'small' ? 6 : fam === 'medium' ? 5 : 10
-    const start = Math.max(0, Math.min(CL.findIndex((c) => c.end > nm), CL.length - max))
-    for (const c of CL.slice(start < 0 ? 0 : start, (start < 0 ? 0 : start) + max)) {
-      const r = w.addStack(); r.centerAlignContent(); r.spacing = 8
-      const col = c === clCur ? GOLD : c.end <= nm ? SOFT : INK
-      const pn = r.addStack(); pn.size = new Size(12, 0); t(pn, c.period, tw(10), SOFT)
-      t(r, c.title, tw(fam === 'small' ? 13 : 14), col).minimumScaleFactor = 0.8
-      if (fam !== 'small' && c.room) t(r, c.room, tw(10), SOFT)
-      r.addSpacer(); t(r, clk(c.start), tw(10), SOFT)
-      w.addSpacer(fam === 'large' ? 7 : 4)
+    // ── 시간표: 오늘 남은 수업 · 오늘 끝났으면 다음 수업일 · 대형은 이번 주 표 ──
+    const WDS = ['일', '월', '화', '수', '목', '금', '토']
+    const offD = (k) => { const d = new Date(d0); d.setDate(d.getDate() + k); return d }
+    const clsOf = (key) => (data.classes && data.classes[key]) || []
+    if (fam === 'large' || fam === 'extraLarge') {
+      const h = w.addStack(); h.centerAlignContent(); cap(h, 'THIS WEEK'); h.addSpacer(); t(h, dateStr, label(8), SOFT)
+      w.addSpacer(10)
+      const wd0 = (d0.getDay() + 6) % 7, cols = []
+      for (let k = 0; k < 7; k++) { const d = offD(k - wd0), key = ymd(d), l = clsOf(key); if (l.length || k < 5) cols.push({ key, wd: d.getDay(), l }) }
+      const np = cols.some((c) => c.l.length) ? Math.max(1, ...cols.map((c) => c.l.reduce((a, x) => Math.max(a, x.period), 0))) : 0
+      const cellBg = (a) => inkMode === 'light' ? new Color('#ffffff', a * 1.6) : inkMode === 'dark' ? new Color('#1e232b', a) : dyn('#2a2f38', '#e6e9ee', a)
+      const pw = 14, gap = 3, cw = Math.floor((inner - pw - gap * cols.length) / cols.length), rh = Math.max(16, Math.min(34, Math.floor((innerH - 44) / np) - gap))
+      if (np) { const hr = w.addStack(); hr.spacing = gap; const hp = hr.addStack(); hp.size = new Size(pw, 12)
+      for (const c of cols) { const s = hr.addStack(); s.size = new Size(cw, 12); s.centerAlignContent(); t(s, WDS[c.wd], c.key === today ? F(9, 'Medium') : label(9), c.key === today ? INK : SOFT) }
+      w.addSpacer(4) }
+      for (let p = 1; p <= np; p++) {
+        const r = w.addStack(); r.spacing = gap; const pc = r.addStack(); pc.size = new Size(pw, rh); pc.centerAlignContent(); t(pc, p, tw(9), SOFT)
+        for (const c of cols) {
+          const x = c.l.find((y) => y.period === p), cell = r.addStack(); cell.size = new Size(cw, rh); cell.cornerRadius = 4; cell.centerAlignContent(); cell.setPadding(0, 2, 0, 2)
+          const now = c.key === today && x && x.start <= nm && x.end > nm
+          if (x) { cell.backgroundColor = cellBg(now ? 0.16 : c.key === today ? 0.09 : 0.05); cell.addSpacer(); const tx = t(cell, x.title, tw(cols.length > 5 ? 9 : 10), now ? GOLD : c.key < today ? SOFT : INK); tx.minimumScaleFactor = 0.6; cell.addSpacer() }
+        }
+        w.addSpacer(gap)
+      }
+      if (!np) t(w, '이번 주 수업이 없어요', tw(13), SOFT)
+    } else {
+      // 오늘 남은 수업이 없으면 다음 수업일 (앞으로 7일 안)
+      let key = today, L = CL, head = 'CLASSES', sub = dateStr
+      if (!CL.some((c) => c.end > nm)) for (let k = 1; k < 8; k++) { const d = offD(k), kk = ymd(d); if (clsOf(kk).length) { key = kk; L = clsOf(kk); head = k === 1 ? 'TOMORROW' : 'NEXT'; sub = (d.getMonth() + 1) + '/' + d.getDate() + ' ' + WDS[d.getDay()]; break } }
+      const h = w.addStack(); h.centerAlignContent(); cap(h, head); h.addSpacer(); t(h, sub, label(8), SOFT)
+      w.addSpacer(fam === 'small' ? 8 : 10)
+      const max = fam === 'small' ? 6 : 5, live = key === today
+      const st0 = live ? Math.max(0, Math.min(L.findIndex((c) => c.end > nm), L.length - max)) : 0
+      for (const c of L.slice(st0, st0 + max)) {
+        const r = w.addStack(); r.centerAlignContent(); r.spacing = 8
+        const col = live && c === clCur ? GOLD : live && c.end <= nm ? SOFT : INK
+        const pn = r.addStack(); pn.size = new Size(12, 0); t(pn, c.period, tw(10), SOFT)
+        t(r, c.title, tw(fam === 'small' ? 13 : 14), col).minimumScaleFactor = 0.8
+        if (fam !== 'small' && c.room) t(r, c.room, tw(10), SOFT)
+        r.addSpacer(); t(r, clk(c.start), tw(10), SOFT)
+        w.addSpacer(4)
+      }
+      if (!L.length) t(w, '수업이 없어요', tw(13), SOFT)
     }
-    if (!CL.length) t(w, '오늘은 수업이 없어요', tw(13), SOFT)
   } else if (KIND === 'todo') {
     // ── 할 일 ──
     const h = w.addStack(); h.centerAlignContent(); cap(h, 'TODAY'); h.addSpacer(); t(h, done + ' DONE', label(8), GOLD)

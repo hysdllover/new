@@ -183,6 +183,9 @@ input[type="checkbox"].sw { appearance: none; width: 40px; height: 24px; border-
 input[type="checkbox"].sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: .2s; box-shadow: 0 1px 2px rgba(0, 0, 0, .2); }
 input[type="checkbox"].sw:checked { background: var(--accent); }
 input[type="checkbox"].sw:checked::after { left: 18px; }
+/* iOS 18+ Safari: 기본 스위치로 (누를 때 가벼운 진동) */
+html.has-switch input[type="checkbox"].sw[switch] { appearance: auto; width: auto; height: auto; background: none; border-radius: 0; accent-color: var(--accent); color: var(--accent); transition: none; }
+html.has-switch input[type="checkbox"].sw[switch]::after { content: none; }
 input[type="range"] { accent-color: var(--accent); width: 100%; }
 input[type="color"] { width: 36px; height: 30px; border: 1px solid var(--line); border-radius: 6px; padding: 2px; background: var(--surface); }
 
@@ -311,4 +314,22 @@ svg.ic:not(.ic-fixed) { stroke-width: var(--icon-sw, 1.5); }
 @supports (corner-shape: squircle) {
   .card, .btn, .chip, .input, .sheet, .tabbar, .note-card, .wf, .subpage, .npage { corner-shape: squircle; }
   .card, .note-card, .sheet { border-radius: calc(var(--radius) * 1.7); }
+}
+/* 스크롤 끝 페이드: 블러 없이 위(내렸을 때)·아래 끝이 옅어짐 */
+.content { --fade-t: 0px; --fade-b: 0px; -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--fade-t), #000 calc(100% - var(--fade-b)), transparent 100%); mask-image: linear-gradient(to bottom, transparent 0, #000 var(--fade-t), #000 calc(100% - var(--fade-b)), transparent 100%); }
+html.sc-away .content { --fade-t: 16px; }
+@media (max-width: 1023px) { .content { --fade-b: calc(36px + var(--sab)); } }
+.segbar { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 22px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 22px), transparent); }
+@media print { .content, .segbar { -webkit-mask-image: none; mask-image: none; } }
+
+/* 창 크기별 배치 (아이패드 분할 화면·스테이지 매니저·가로 아이폰) */
+@media (min-width: 600px) { .grid.two { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1440px) { .content-inner { max-width: 1280px; } .grid.three { grid-template-columns: repeat(3, 1fr); } }
+@media (max-height: 520px) and (orientation: landscape) {
+  .topbar { padding-top: calc(var(--sat) + 4px); padding-bottom: 2px; }
+  .topbar .title, html.sc-away .topbar .title { font-size: 1.05em; }
+  .segbar { padding-bottom: 4px; }
+  .tabbar button { min-height: 38px; }
+  .tabbar .tb-l { opacity: 0; max-height: 0; }
+  .fab { width: 44px; height: 44px; }
 }

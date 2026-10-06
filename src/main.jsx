@@ -8,6 +8,9 @@ import App from './App.jsx'
 import { loadState, useSettings, settings } from './store/store.js'
 import { applyTheme } from './theme/theme.js'
 import { initFonts } from './lib/fonts.js'
+import { applyAppIcon } from './lib/appIcon.js'
+import { startNoteVersions } from './lib/noteVersions.js'
+applyAppIcon()
 import { TABS, EXTRA, go } from './nav.js'
 import { addTask } from './store/actions.js'
 import { toast } from './components/ui.jsx'
@@ -107,6 +110,7 @@ Promise.all([loadState(), initFonts(), restoreSync()]).then(async () => {
   if (openIn || target || added || link || noteIn != null || healthIn || aiIn != null || doneIn || timerIn != null || newIn || photoIn) history.replaceState(null, '', location.pathname + location.hash)
   createRoot(document.getElementById('root')).render(<StrictMode><Root /></StrictMode>)
   startServices()
+  startNoteVersions()
   import('./lib/resume.js').then((m) => m.startResume())
   startSync()
   // 완료 30일 지난 할 일 보관함으로 (동기화가 먼저 끝나도록 조금 뒤 · 6시간마다)

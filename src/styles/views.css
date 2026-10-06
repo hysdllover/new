@@ -649,3 +649,27 @@ button.greet { display: block; width: 100%; text-align: left; }
 .wsw-pip { width: 5px; height: 5px; border-radius: 3px; background: var(--line); transition: background .2s, width .2s; }
 .wsw-pip.on { width: 14px; background: var(--accent); }
 .wset { display: flex; gap: 8px; align-items: flex-start; }
+
+/* 설정 검색 · 앱 아이콘 */
+.set-search { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; color: var(--muted); }
+.set-search .input { flex: 1; }
+.set-none { grid-column: 1 / -1; padding: 4px 2px; }
+.ss-hit { background: color-mix(in srgb, var(--c3, var(--accent)) 14%, transparent); border-radius: 6px; box-shadow: 0 0 0 4px color-mix(in srgb, var(--c3, var(--accent)) 14%, transparent); }
+.app-ic { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px; border-radius: 12px; border: 1px solid transparent; color: var(--muted); }
+.app-ic img { border-radius: 10px; display: block; border: 1px solid var(--line); }
+.app-ic.on { border-color: var(--accent); color: var(--text); }
+
+/* 형광펜 색 */
+.mk-hl.hl-r { --hl: #d6a9b1; } .mk-hl.hl-g { --hl: #a7b38a; } .mk-hl.hl-b { --hl: #9db0cc; } .mk-hl.hl-y { --hl: #d8c69c; }
+.mk-hl[class*="hl-"] { background: linear-gradient(transparent 55%, color-mix(in srgb, var(--hl) 55%, transparent) 55%); }
+.markbar .mb-hl { padding: 2px 5px; display: grid; place-items: center; }
+.hl-dot { display: block; width: 12px; height: 12px; border-radius: 50%; background: var(--hl); }
+.hl-dot.hl-r { --hl: #d6a9b1; } .hl-dot.hl-g { --hl: #a7b38a; } .hl-dot.hl-b { --hl: #9db0cc; } .hl-dot.hl-y { --hl: #d8c69c; }
+.blocks.drop-in { outline: 1.5px dashed color-mix(in srgb, var(--accent) 60%, transparent); outline-offset: 6px; border-radius: 8px; background: color-mix(in srgb, var(--accent) 4%, transparent); }
+/* 노트 이전 버전 */
+.nv-row { border: 1px solid var(--line); border-radius: 8px; }
+.nv-row.on { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+.nv-h { width: 100%; padding: 8px 10px; gap: 8px; }
+.nv-body { padding: 2px 12px 10px; border-top: 1px solid var(--line); max-height: 46vh; overflow-y: auto; }
+.nv-l { font-size: .88em; padding: 2px 0; white-space: pre-wrap; }
+.nv-l.k-h { font-weight: var(--fw-b); margin-top: 4px; }

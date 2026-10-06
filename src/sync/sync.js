@@ -189,7 +189,7 @@ function timerPayload() {
 // 앞으로 8일 수업 — 앱을 며칠 안 열어도 위젯이 그날 시간표를 보여 줌
 function classesPayload() {
   const out = {}
-  for (let i = 0; i < 8; i++) {
+  for (let i = -6; i < 8; i++) { // 이번 주 지난 요일(대형 위젯 주간 표) ~ 앞으로 7일
     const k = addDays(today(), i), l = classesOn(k)
     if (l.length) out[k] = l.map(({ period, title, start, end, room }) => ({ period, title, start, end, room }))
   }

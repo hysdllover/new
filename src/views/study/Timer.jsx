@@ -137,7 +137,7 @@ function TodayRecords() {
 function WakeCard() {
   const [on, setOn] = useState(false)
   return (
-    <Card title="화면 켜짐 유지" action={<input type="checkbox" className="sw" checked={on} onChange={async (e) => { const ok = await keepAwake(e.target.checked); setOn(e.target.checked && ok) }} />}>
+    <Card title="화면 켜짐 유지" action={<input type="checkbox" className="sw" switch="" checked={on} onChange={async (e) => { const ok = await keepAwake(e.target.checked); setOn(e.target.checked && ok) }} />}>
       <div className="small muted">타이머 실행 중에는 자동으로 켜집니다. 공부하는 동안 화면이 꺼지지 않게 합니다 (iOS 16.4+).</div>
     </Card>
   )

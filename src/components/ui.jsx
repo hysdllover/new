@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { haptic } from '../lib/haptic.js'
 
 /* ── 아이콘 (얇은 선) ── */
 const P = {
@@ -136,7 +137,7 @@ export function Check({ on, onClick, round, color }) {
     <button
       className={'check' + (on ? ' on' : '') + (round ? ' round' : '')}
       style={color ? { borderColor: color, ...(on ? { background: color } : null) } : null}
-      onClick={(e) => { e.stopPropagation(); if (!on) setBurst((b) => b + 1); onClick?.() }}
+      onClick={(e) => { e.stopPropagation(); if (!on) { setBurst((b) => b + 1); haptic() } onClick?.() }}
       aria-label={on ? '완료 취소' : '완료'}
     >
       {on && burst > 0 && <span key={burst} className="burst" style={color ? { borderColor: color } : null} />}
@@ -184,7 +185,7 @@ export function Toggle({ checked, onChange, label }) {
   return (
     <label className="row between" style={{ minHeight: 40 }}>
       <span>{label}</span>
-      <input type="checkbox" className="sw" checked={!!checked} onChange={(e) => onChange(e.target.checked)} />
+      <input type="checkbox" className="sw" switch="" checked={!!checked} onChange={(e) => onChange(e.target.checked)} />
     </label>
   )
 }
