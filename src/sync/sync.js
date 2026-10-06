@@ -355,6 +355,8 @@ async function takeCmds(cmds) {
       if (c.act === 'done') { const tk = findRec('tasks', c.id); if (tk && !tk.done) { toggleTask(c.id); patch('tasks', c.id, { doneAt: at }) } }
       else if (['start', 'pause', 'resume', 'stop'].includes(c.act)) widgetTimer(c.act, at, c.sid)
       else if (c.act === 'habit') { const h = findRec('habits', c.id); if (h) { const dd = new Date(at), k = `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, '0')}-${String(dd.getDate()).padStart(2, '0')}`; patch('habits', c.id, { days: { ...(h.days || {}), [k]: !!c.on } }) } }
+      else if (c.act === 'addtask' && c.title) addTask({ title: String(c.title).slice(0, 200), due: c.due || null })
+      else if (c.act === 'noteline' && c.text) { const n = findRec('notes', c.id); if (n) patch('notes', n.id, { blocks: [...(n.blocks || []).filter((b, i, arr) => !(i === arr.length - 1 && b.type === 'text' && !b.text)), { id: 'wg' + at, type: 'text', text: String(c.text).slice(0, 2000) }] }) }
       else if (c.act === 'log' && c.dur > 0) addSession({ id: 'wg-' + at, subjectId: c.sid || null, start: at - c.dur * 60000, end: at, kind: 'manual' })
     } catch (e) { addLog({ at: Date.now(), err: '위젯 명령 실패 · ' + String(e.message || e).slice(0, 60) }) }
     done.push(name)

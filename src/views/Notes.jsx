@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useColl, put, patch, useSettings, setSettings } from '../store/store.js'
-import { Card, Icon, Empty, Seg, openDetail, openSheet, toast } from '../components/ui.jsx'
+import { Card, Icon, Empty, Seg, openDetail, openSheet, toast, useMedia } from '../components/ui.jsx'
 import TemplatePicker from '../components/TemplatePicker.jsx'
 import BlockEditor from '../components/BlockEditor.jsx'
 import NotePage from './notes/NotePage.jsx'
@@ -17,6 +17,14 @@ import { SubjectTag } from '../components/common.jsx'
 import { FileThumb } from '../components/Attach.jsx'
 
 export default function Notes({ seg, params }) {
+  // 넓은 아이패드: 목록 + 노트를 나란히 (사이드바까지 3단)
+  const wide = useMedia('(min-width: 1100px)')
+  if (wide && seg === 'pages' && params.mode !== 'db') return (
+    <div className="notes-split">
+      <div className="ns-list"><Pages params={params} compact /></div>
+      <div className="ns-page">{params.noteId ? <NotePage key={params.noteId} id={params.noteId} /> : <div className="empty" style={{ marginTop: 80 }}>왼쪽에서 노트를 고르세요</div>}</div>
+    </div>
+  )
   if (params.noteId && seg === 'pages') return <NotePage id={params.noteId} />
   if (seg === 'daily') return <Daily date={params.date || today()} />
   if (seg === 'hub') return <Hub hubId={params.hubId} />
@@ -26,7 +34,7 @@ export default function Notes({ seg, params }) {
   return <Pages params={params} />
 }
 
-function Pages({ params }) {
+function Pages({ params, compact }) {
   const notes = useColl('notes')
   const subjects = useColl('subjects')
   const [mode, setMode] = useState(params.mode || 'list')
@@ -58,9 +66,9 @@ function Pages({ params }) {
             {manual && <button className={'chip' + (arrange ? ' on' : '')} onClick={() => setArrange(!arrange)}>{arrange ? '순서 편집 끝' : '순서 편집'}</button>}
             {[['all', '전체'], ['page', '페이지'], ['memo', '메모'], ['event', '일정 노트'], ['template', '템플릿']].map(([k, l]) => <button key={k} className={'chip' + (type === k ? ' on' : '')} onClick={() => setType(k)}>{l}</button>)}
           </div>
-          <div className="note-grid">
+          <div className={'note-grid' + (compact ? ' ng-one' : '')}>
             {list.map((n, i) => (
-              <button key={n.id} className="card note-card" style={{ position: 'relative' }} onClick={() => !arrange && openNote(n.id)}>
+              <button key={n.id} className={'card note-card' + (compact && params.noteId === n.id ? ' on' : '')} style={{ position: 'relative' }} onClick={() => !arrange && openNote(n.id)}>
                 {arrange && <span className="note-move row no-print" onClick={(e) => e.stopPropagation()}><span className="icon-btn" role="button" aria-label="앞으로" onClick={() => shift(i, -1)}>‹</span><span className="icon-btn" role="button" aria-label="뒤로" onClick={() => shift(i, 1)}>›</span></span>}
                 <div className="row"><span>{n.icon || (n.type === 'memo' ? '🗒️' : n.type === 'event' ? '📅' : '📄')}</span><b className="ellipsis grow">{noteTitle(n)}</b>{n.pinned && <Icon name="star" size={12} fill="currentColor" />}</div>
                 <div className="note-prev">{noteText(n).replace(/\[\[|\]\]/g, '').slice(0, 120)}</div>

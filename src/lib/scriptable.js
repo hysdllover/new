@@ -4,7 +4,7 @@ import { pickQuote } from './quote.js'
 export const WIDGET_KINDS = [['', '기본'], ['공부', '공부'], ['할일', '할 일'], ['디데이', 'D-day'], ['달력', '공부 달력'], ['캘린더', '캘린더'], ['다짐', '다짐'], ['시간표', '시간표'], ['주간', '주간 공부'], ['과목', '과목별'], ['지금', '지금·다음'], ['진도', '진도'], ['목표', '이번 주 목표'], ['오늘', '오늘 한눈에'], ['대시보드', '대시보드'], ['내일', '내일 준비'], ['마감', '마감 임박'], ['일주일', '7일 일정'], ['디데이목록', 'D-day 목록'], ['바로가기', '바로 시작'], ['진행', '공부 진행'], ['남은분', '남은 시간'], ['타이머', '타이머·공부 시간'], ['노트', '노트'], ['습관', '습관'], ['구성1', '내 위젯 1'], ['구성2', '내 위젯 2'], ['구성3', '내 위젯 3']]
 
 // 스크립트 버전 — 위젯 모양이 바뀔 때 올림. 앱이 위젯 데이터에 같이 올려서, 예전 스크립트면 위젯에 '스크립트 업데이트' 표시
-export const SCRIPT_VER = 67
+export const SCRIPT_VER = 68
 
 // 전체 스크립트 (예전 방식 · 테스트용): 머리 + 본체
 export function buildScript({ widgetRaw, appUrl }) {
@@ -285,6 +285,25 @@ const ACT = (() => {
     if (!T.paused) addSess(T.sid || null, T.start + (T.acc || 0), at)
     const m = Math.round((T.paused ? T.acc : at - T.start) / 60000); data.timer = null; return '정지 · ' + m + '분 공부'
   }
+  // 할 일 추가 (오늘) · 노트에 한 줄 덧붙이기
+  const addTask = async () => {
+    const a = new Alert(); a.title = '오늘 할 일 추가'; a.addTextField('예: 수학 문제집 3단원', ''); a.addAction('추가'); a.addCancelAction('취소')
+    if (await a.present() < 0) return null
+    const title = a.textFieldValue(0).trim(); if (!title) return null
+    const at = now(), td = ymdOf(at); if (!(await send({ act: 'addtask', title, due: td, at }))) return null
+    data.tasks = data.tasks || { tasks: {} }; data.tasks.tasks['wg-' + at] = { id: 'wg-' + at, title, due: td, done: false, order: at }
+    return '할 일 추가 · ' + title
+  }
+  const noteLine = async (n0) => {
+    let n = n0
+    if (!n) { const ns = NOTES(); if (!ns.length) { await say('노트가 없어요'); return null } const i = await sheet('어느 노트에?', ns.slice(0, 8).map((x) => x.t)); if (i < 0) return null; n = ns[i] }
+    const a = new Alert(); a.title = n.t; a.message = '끝에 한 줄 덧붙여요'; a.addTextField('내용', ''); a.addAction('추가'); a.addCancelAction('취소')
+    if (await a.present() < 0) return null
+    const text = a.textFieldValue(0).trim(); if (!text) return null
+    if (!(await send({ act: 'noteline', id: n.id, text, at: now() }))) return null
+    n.l = [...(n.l || []), { k: 't', x: text }]; n.u = now()
+    return '노트에 추가 · ' + n.t
+  }
   const habit = async (id) => {
     const h = ((data.extra && data.extra.habits) || []).find((x) => x.id === id)
     if (!h) { await say('습관을 찾지 못했어요', '앱에서 동기화한 뒤 다시 해 보세요'); return null }
@@ -293,7 +312,7 @@ const ACT = (() => {
     return (on ? '습관 완료 · ' : '습관 취소 · ') + h.t
   }
   const notify = (msg) => { if (!msg) return; const n = new Notification(); n.title = msg; n.body = '위젯은 곧 바뀌고, 앱을 열면 기록에도 반영돼요'; n.schedule() }
-  return { tok, say, done, start, log, timerMenu, habit, flush, notify, timer, subs, ymdOf }
+  return { tok, say, done, start, log, timerMenu, habit, addTask, noteLine, flush, notify, timer, subs, ymdOf }
 })()
 
 async function widgetAct(Q) {
@@ -338,6 +357,7 @@ async function miniApp(Q) {
       const all = Object.values((data.tasks && data.tasks.tasks) || {}).filter((x) => !x.deleted && !x.archived && ((x.due && x.due <= td && !x.done) || (x.done && x.doneAt && ACT.ymdOf(x.doneAt) === td)))
       all.sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0) || String(a.due).localeCompare(String(b.due)) || (a.dueTime == null) - (b.dueTime == null) || (a.dueTime || 0) - (b.dueTime || 0) || (a.order || 0) - (b.order || 0))
       head('오늘 할 일 ' + all.filter((x) => x.done).length + '/' + all.length)
+      row('+ 할 일 추가', null, { color: C.acc, onSelect: () => act(ACT.addTask) })
       for (const x of all) row((x.done ? '✓  ' : '○  ') + x.title, x.due < td && !x.done ? '지난 할 일 · ' + x.due.slice(5).replace('-', '/') : null, { color: x.done ? C.soft : C.ink, onSelect: x.done ? null : () => act(() => ACT.done(x.id)) })
       if (!all.length) row('오늘 할 일이 없어요', null, { color: C.soft })
     },
@@ -357,6 +377,7 @@ async function miniApp(Q) {
     notes: () => {
       const ns = NOTES(); if (!ns.length) return
       head('노트')
+      row('+ 노트에 한 줄 추가', null, { color: C.acc, onSelect: () => act(() => ACT.noteLine(null)) })
       for (const n of ns.slice(0, 6)) row(n.t, (n.l[0] && n.l[0].x) || null, { onSelect: () => noteView(n) })
     },
   }
