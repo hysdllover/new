@@ -7,6 +7,7 @@ import NotePage from './notes/NotePage.jsx'
 import Hub from './notes/Hub.jsx'
 import Graph from './notes/Graph.jsx'
 import Library from './notes/Library.jsx'
+import Todos from './notes/Todos.jsx'
 import DBView from './tasks/DBView.jsx'
 import { setParams, openNote } from '../nav.js'
 import { today, addDays, fmtDate, fmtTime, fmtDur, tsToMin, tsToYmd } from '../engine/date.js'
@@ -21,6 +22,7 @@ export default function Notes({ seg, params }) {
   if (seg === 'hub') return <Hub hubId={params.hubId} />
   if (seg === 'graph') return <Graph />
   if (seg === 'library') return <Library />
+  if (seg === 'todos') return <Todos />
   return <Pages params={params} />
 }
 
