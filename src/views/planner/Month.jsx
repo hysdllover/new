@@ -9,8 +9,8 @@ import { dayRec } from '../../store/actions.js'
 import { toggleTask } from '../../store/actions.js'
 import { go, setParams } from '../../nav.js'
 
-const LAYERS = [['events', '일정'], ['tasks', '할 일'], ['study', '공부기록'], ['habits', '습관'], ['meds', '약']]
-const loadLayers = () => { try { return JSON.parse(localStorage.getItem('layers')) || { events: 1, tasks: 1, study: 1 } } catch { return { events: 1, tasks: 1, study: 1 } } }
+const LAYERS = [['events', '일정'], ['academy', '학원'], ['tasks', '할 일'], ['study', '공부기록'], ['habits', '습관'], ['meds', '약']]
+const loadLayers = () => { try { const v = JSON.parse(localStorage.getItem('layers')) || { events: 1, tasks: 1, study: 1 }; return { academy: 1, ...v } } catch { return { events: 1, academy: 1, tasks: 1, study: 1 } } }
 
 export default function Month({ date, setDate }) {
   const st = useSettings()
@@ -53,7 +53,7 @@ export default function Month({ date, setDate }) {
             const inM = parseYmd(d).getMonth() === month
             const hol = holiday(d)
             const wd = parseYmd(d).getDay()
-            const evs = layers.events ? eventsOn(d, events) : []
+            const evs = eventsOn(d, events).filter((e) => (e.layer === 'academy' ? layers.academy : layers.events))
             const due = layers.tasks ? tasks.filter((t) => t.due === d && !t.archived) : []
             const mins = studyBy[d] || 0
             const heat = layers.study && mins ? Math.min(1, mins / (st.goalDaily || 240)) : 0

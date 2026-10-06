@@ -190,8 +190,10 @@ export function autoTemplate(date = today()) {
 
 /* ── 공부 세션 ── */
 export function addSession({ id, subjectId, taskId, lectureId, start, end, kind = 'stopwatch', note }) {
-  const dur = Math.round((end - start) / 60000)
-  if (dur < 1) return null
+  const raw = Math.round((end - start) / 60000)
+  if (raw < 1) return null
+  // 설정: 타이머 기록을 5분 단위로 (2분 이하 짧은 기록은 그대로)
+  const dur = settings().roundRec && raw > 2 ? Math.max(5, Math.round(raw / 5) * 5) : raw
   // id 를 구간 시작으로 고정하면 두 기기가 같은 구간을 기록해도 하나로 합쳐짐
   const s = put('sessions', { ...(id ? { id } : {}), subjectId, taskId, ...(lectureId ? { lectureId } : {}), start, end, dur, date: tsToYmd(start), kind, ...(note ? { note } : {}) })
   if (taskId) log(taskId, 'study', `${dur}분 공부`)

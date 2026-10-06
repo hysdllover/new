@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react'
 import { notesForWidget } from '../lib/notePreview.js'
 import { seriesSummary } from '../lib/series.js'
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval'
-import { getState, replaceColl, onChange, patch, settings, list } from '../store/store.js'
+import { getState, replaceColl, onChange, patch, settings, list, put, find, deviceId } from '../store/store.js'
 import { COLLECTIONS, GIST_FILES } from '../store/schema.js'
 import { mergeColl, stableFile } from './merge.js'
 import { blobToDataUrl, setRemoteRaw, addFile } from '../lib/files.js'
@@ -220,6 +220,14 @@ function extraPayload() {
     one: one ? { t: oneT ? oneT.title : one.text || '', d: oneT ? !!oneT.done : !!one.done } : null,
   }
 }
+// 기기별 마지막 동기화 (다른 기기에서도 보이게, 30분에 한 번만 기록)
+export const deviceName = () => { try { const n = localStorage.getItem('device_name'); if (n) return n } catch {} const u = navigator.userAgent; return /iPad/.test(u) || (/Macintosh/.test(u) && navigator.maxTouchPoints > 1) ? '아이패드' : /iPhone/.test(u) ? '아이폰' : /Android/.test(u) ? '안드로이드' : '컴퓨터' }
+function markDevice(now) {
+  const me = find('live', 'dev-' + deviceId)
+  if (me && now - (me.at || 0) < 30 * 60000 && me.name === deviceName()) return
+  put('live', { id: 'dev-' + deviceId, kind: 'device', name: deviceName(), at: now })
+}
+
 function widgetPayload() {
   const st = getState()
   const keep = (c, fn = () => true) => Object.fromEntries(Object.values(st[c] || {}).filter((r) => !r.deleted && fn(r)).map((r) => [r.id, r]))
@@ -240,7 +248,7 @@ function widgetPayload() {
     series: seriesSummary(list('tasks'), list('subjects')).slice(0, 6).map((x) => ({ t: x.t, d: x.d, n: x.n, x: x.next?.title || '', c: x.color })),
     sv: SCRIPT_VER,
     gid: gistId(), // 위젯에서 바로 처리할 때 명령을 남길 곳 (토큰은 위젯 쪽 보관함에만)
-    settings: { settings: { main: { goalDaily: main.goalDaily, weekStart: main.weekStart, widgetFont: main.widgetFont, widgetScale: main.widgetScale, widgetWeight: main.widgetWeight, widgetClear: main.widgetClear, widgetTheme: main.widgetTheme, widgetPad: main.widgetPad, widgetRule: main.widgetRule, dashTiles: main.dashTiles, customWidgets: main.customWidgets } }, quotes: keep('quotes') },
+    settings: { settings: { main: { goalDaily: main.goalDaily, goalWeekly: main.goalWeekly, weekStart: main.weekStart, widgetFont: main.widgetFont, widgetScale: main.widgetScale, widgetWeight: main.widgetWeight, widgetClear: main.widgetClear, widgetTheme: main.widgetTheme, widgetPad: main.widgetPad, widgetRule: main.widgetRule, dashTiles: main.dashTiles, customWidgets: main.customWidgets } }, quotes: keep('quotes') },
   })
 }
 const ATT_MAX = 7 * 1024 * 1024 // gist 한 파일로 올릴 수 있는 첨부 크기 (base64 로 늘어나는 걸 고려)
@@ -465,6 +473,7 @@ export async function syncNow({ flush = false } = {}) {
       const sent = Object.keys(patchFiles).filter((k) => k.endsWith('.json') && !k.startsWith('backup-')).length
       if (got || sent || clash) addLog({ at: now, got, sent, clash })
       setStatus({ state: 'ok', last: now })
+      markDevice(now)
       if (!settings().noteTaskClean1) import('../lib/notes.js').then((m) => m.cleanNoteTasksOnce()).catch(() => {})
     } catch (e) {
       if (e.until) pause(e.until)

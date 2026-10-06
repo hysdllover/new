@@ -1,8 +1,9 @@
+import { useState } from 'react'
 // 학교 시간표: 요일 × 교시 격자 편집, 오늘·지금 교시 강조
-import { useSettings, setSettings, useColl } from '../../store/store.js'
+import { useSettings, setSettings, useColl, put, remove, restore } from '../../store/store.js'
 import { DEFAULT_TIMETABLE, defaultPeriods, isSchoolDay } from '../../engine/timetable.js'
 import { WD, fmtTime, today, nowMin, parseYmd } from '../../engine/date.js'
-import { Card, Field, Toggle, openSheet, useNow, Icon } from '../../components/ui.jsx'
+import { Card, Field, Toggle, openSheet, useNow, Icon, openDetail, toast } from '../../components/ui.jsx'
 import { SubjectSelect, TimeInput } from '../../components/common.jsx'
 
 const ORDER = [1, 2, 3, 4, 5, 6, 0]
@@ -47,6 +48,7 @@ export default function Timetable() {
         </div>
       </Card>
       <div className="tiny muted no-print">칸을 눌러 과목을 넣어요. 수업 시간은 캘린더·지금 위젯·빈 시간 계산에 반영돼요.</div>
+      <Academy />
     </div>
   )
 }
@@ -111,6 +113,53 @@ function TTSettings() {
           <button className="btn sm" style={{ alignSelf: 'flex-start' }} onClick={() => saveTT((t) => ({ off: [...t.off, { from: today(), to: today() }] }))}>기간 추가</button>
         </div>
       </Field>
+    </div>
+  )
+}
+
+// 학원 시간표: 매주 반복하는 학원·과외 일정 (캘린더에선 '학원' 레이어로 따로 켜고 끔)
+function Academy() {
+  const subjects = useColl('subjects')
+  const list = useColl('events').filter((e) => e.layer === 'academy').sort((a, b) => (a.repeat?.byDay?.[0] ?? 9) - (b.repeat?.byDay?.[0] ?? 9) || (a.start ?? 0) - (b.start ?? 0))
+  const sc = (id) => subjects.find((s) => s.id === id)
+  return (
+    <Card title="학원 시간표" action={<button className="btn sm no-print" onClick={() => openSheet((c) => <AcademyForm close={c} />, { title: '학원 추가' })}><Icon name="plus" size={14} />추가</button>}>
+      {list.length ? <div className="list">{list.map((e) => (
+        <button key={e.id} className="item" style={{ textAlign: 'left', alignItems: 'center' }} onClick={() => openDetail('event', e.id)}>
+          <span className="mpeek-bar" style={{ background: e.color || sc(e.subjectId)?.color || 'var(--accent)', minHeight: 26 }} />
+          <div className="t"><div>{e.title}</div><div className="meta">{(e.repeat?.byDay || []).slice().sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7)).map((d) => WD[d]).join('·')} · {fmtTime(e.start)}–{fmtTime(e.end)}{e.location ? ' · ' + e.location : ''}</div></div>
+          {e.studyLog && <span className="badge">공부 기록</span>}
+        </button>
+      ))}</div> : <div className="small muted">학원·과외처럼 매주 같은 시간 일정을 넣어 두세요</div>}
+    </Card>
+  )
+}
+
+function AcademyForm({ close }) {
+  const [f, setF] = useState({ title: '', days: [], start: 18 * 60, end: 20 * 60, subjectId: null, location: '', studyLog: true })
+  const set = (p) => setF((x) => ({ ...x, ...p }))
+  const save = () => {
+    if (!f.title.trim() || !f.days.length) return toast('이름과 요일을 정해 주세요')
+    const wd = parseYmd(today()).getDay(), first = [0, 1, 2, 3, 4, 5, 6].map((k) => (wd + k) % 7).find((d) => f.days.includes(d))
+    const date = new Date(); date.setDate(date.getDate() + ((first - wd + 7) % 7))
+    const ymd = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+    const e = put('events', { title: f.title.trim(), date: ymd, start: f.start, end: Math.max(f.start + 10, f.end), subjectId: f.subjectId, location: f.location, studyLog: f.studyLog, layer: 'academy', repeat: { freq: 'weekly', interval: 1, byDay: f.days } })
+    close(); toast('학원 시간표에 넣었어요', { label: '되돌리기', fn: () => remove('events', e.id) })
+  }
+  return (
+    <div className="form">
+      <Field label="이름"><input className="input" autoFocus value={f.title} placeholder="예: 국어 학원" onChange={(e) => set({ title: e.target.value })} /></Field>
+      <Field label="요일"><div className="row" style={{ gap: 4 }}>{ORDER.map((d) => <button key={d} className={'chip' + (f.days.includes(d) ? ' on' : '')} onClick={() => set({ days: f.days.includes(d) ? f.days.filter((x) => x !== d) : [...f.days, d] })}>{WD[d]}</button>)}</div></Field>
+      <div className="row">
+        <Field label="시작"><TimeInput allowEmpty={false} value={f.start} onChange={(v) => set({ start: v, end: Math.max(v + 10, f.end) })} /></Field>
+        <Field label="끝"><TimeInput allowEmpty={false} value={f.end} onChange={(v) => set({ end: v })} /></Field>
+      </div>
+      <div className="row">
+        <Field label="과목 (색도 과목 색)"><SubjectSelect value={f.subjectId} onChange={(v) => set({ subjectId: v })} /></Field>
+        <Field label="장소"><input className="input" value={f.location} onChange={(e) => set({ location: e.target.value })} /></Field>
+      </div>
+      <Toggle label="끝나면 공부 기록으로 넣기" checked={f.studyLog} onChange={(v) => set({ studyLog: v })} />
+      <button className="btn primary" onClick={save}>추가</button>
     </div>
   )
 }

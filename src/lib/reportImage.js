@@ -177,3 +177,67 @@ export async function drawMonthCal({ month, values, goal = 240, weekStartDow = 1
   add(96, (y0) => { const cw = IW / 4; stats.forEach(([l, v], i) => { const x = P + cw * i; spaced(l, 16, x, y0, T.soft); g.font = f(36, 200); g.fillStyle = T.ink; g.fillText(v, x, y0 + 32) }) })
   return finish(c, g, T, ops, W, y + P - 40)
 }
+
+// 노트 한 장 이미지: 제목 · 과목/날짜 · 블록 (형광·밑줄·굵게 그대로, 기호는 숨김)
+export async function drawNote(note, { theme = 'app' } = {}) {
+  await document.fonts.ready.catch(() => {})
+  const [{ allBlocks, noteTitle }, { markRuns }, { list, find }] = await Promise.all([import('./notes.js'), import('./marks.js'), import('../store/store.js')])
+  const W = 1080, P = 96, IW = W - P * 2
+  const ctx = setup(theme), { T, c, g, f, spaced } = ctx
+  const HLC = { d: '#a99bc4', r: '#d6a9b1', g: '#a7b38a', b: '#9db0cc', y: '#d8c69c' }
+  const ops = []; let y = P
+  const add = (h, fn) => { const y0 = y; ops.push(() => fn(y0)); y += h }
+  // 꾸밈 있는 글자 줄 나누기 → [[{ch, b, u, h}]]
+  const lines = (text, size, maxW, bold) => {
+    const chars = []; for (const r of markRuns(text)) if (!r.mk) for (const ch of r.x) chars.push({ ch, b: r.b || bold, u: r.u, h: r.h })
+    const out = []; let cur = [], w = 0
+    for (const x of chars) {
+      if (x.ch === '\n') { out.push(cur); cur = []; w = 0; continue }
+      g.font = f(size, x.b ? 500 : 300); const cw = g.measureText(x.ch).width
+      if (w + cw > maxW && cur.length) { out.push(cur); cur = []; w = 0 }
+      cur.push({ ...x, w: cw }); w += cw
+    }
+    if (cur.length || !out.length) out.push(cur)
+    return out
+  }
+  const drawLine = (ln, x, y0, size, color) => {
+    let cx = x
+    for (const ch of ln) {
+      if (ch.h) { g.fillStyle = HLC[ch.h] || HLC.d; g.globalAlpha = 0.5; g.fillRect(cx, y0 + size * 0.62, ch.w + 0.5, size * 0.5); g.globalAlpha = 1 }
+      g.font = f(size, ch.b ? 500 : 300); g.fillStyle = color; g.fillText(ch.ch, cx, y0)
+      if (ch.u) { g.fillStyle = T.acc; g.globalAlpha = 0.6; g.fillRect(cx, y0 + size * 1.18, ch.w + 0.5, 1.5); g.globalAlpha = 1 }
+      cx += ch.w
+    }
+  }
+  const para = (text, { size = 26, indent = 0, color = T.ink, bold = false, gap = 14, lead = null } = {}) => {
+    const ls = lines(text, size, IW - indent, bold), lh = Math.round(size * 1.6)
+    ls.forEach((ln, i) => add(i === ls.length - 1 ? lh + gap : lh, (y0) => { if (i === 0 && lead) lead(y0); drawLine(ln, P + indent, y0, size, color) }))
+  }
+  const sub = note.subjectId && find('subjects', note.subjectId)
+  const dt = new Date(note.updatedAt || Date.now())
+  add(40, (y0) => spaced('NOTE', 17, P, y0, T.soft))
+  para(noteTitle(note), { size: 44, bold: false, gap: 6 })
+  add(54, (y0) => { g.font = f(20); g.fillStyle = T.soft; g.fillText([sub?.name, `${dt.getFullYear()}. ${dt.getMonth() + 1}. ${dt.getDate()}`].filter(Boolean).join(' · '), P, y0) })
+  add(44, (y0) => { g.fillStyle = T.rule; g.fillRect(P, y0, IW, 1.5) })
+  const tasks = list('tasks')
+  for (const b of allBlocks(note)) {
+    const t = b.text || ''
+    if (b.type === 'divider') { add(40, (y0) => { g.fillStyle = T.rule; g.fillRect(P, y0 + 14, IW, 1.2) }); continue }
+    if (b.type === 'file' || b.type === 'embed' || b.type === 'cols' || b.type === 'sync') continue
+    if (b.type === 'table') { for (const [i, r] of (b.rows || []).entries()) { const x = r.filter(Boolean).join('  |  '); if (x) para(x, { size: 22, color: i ? T.ink : T.soft, gap: 4 }) } add(14, () => {}); continue }
+    if (b.type === 'page') { const pg = find('notes', b.pageId); para('↳ ' + (pg ? noteTitle(pg) : '하위 페이지'), { size: 24, color: T.soft }); continue }
+    if (!t.trim()) { add(18, () => {}); continue }
+    if (b.type === 'h1') { add(14, () => {}); para(t, { size: 36, bold: true, gap: 10 }); continue }
+    if (b.type === 'h2') { add(8, () => {}); para(t, { size: 30, bold: true, gap: 8 }); continue }
+    if (b.type === 'bullet') { para(t, { indent: 30, lead: (y0) => { g.fillStyle = T.soft; g.beginPath(); g.arc(P + 10, y0 + 22, 4, 0, Math.PI * 2); g.fill() } }); continue }
+    if (b.type === 'todo') { const done = !!tasks.find((x) => x.id === b.taskId)?.done; para(t, { indent: 38, color: done ? T.soft : T.ink, lead: (y0) => { g.strokeStyle = done ? T.acc : T.soft; g.lineWidth = 1.8; g.beginPath(); g.roundRect ? g.roundRect(P + 1, y0 + 9, 22, 22, 5) : g.rect(P + 1, y0 + 9, 22, 22); g.stroke(); if (done) { g.fillStyle = T.acc; g.beginPath(); g.roundRect ? g.roundRect(P + 6, y0 + 14, 12, 12, 3) : g.rect(P + 6, y0 + 14, 12, 12); g.fill() } } }); continue }
+    if (b.type === 'quote' || b.type === 'callout') {
+      const y1 = y; para(t, { indent: 24, color: b.type === 'quote' ? T.soft : T.ink, gap: 18 }); const h = y - y1 - 10
+      ops.push(() => { g.fillStyle = b.type === 'callout' ? T.acc : T.rule; g.globalAlpha = b.type === 'callout' ? 0.5 : 1; g.fillRect(P, y1 + 4, 3, h); g.globalAlpha = 1 })
+      continue
+    }
+    if (b.type === 'toggle') { para('▸ ' + t, { size: 26 }); continue }
+    para(t)
+  }
+  return finish(c, g, T, ops, W, y + P)
+}

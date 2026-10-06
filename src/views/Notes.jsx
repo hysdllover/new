@@ -1,9 +1,10 @@
 import { useState } from 'react'
+import { plainText } from '../lib/marks.js'
 import { useColl, put, patch, useSettings, setSettings } from '../store/store.js'
 import { Card, Icon, Empty, Seg, openDetail, openSheet, toast, useMedia } from '../components/ui.jsx'
 import TemplatePicker from '../components/TemplatePicker.jsx'
 import BlockEditor from '../components/BlockEditor.jsx'
-import NotePage from './notes/NotePage.jsx'
+import NotePage, { NOTE_LABELS, labelColor } from './notes/NotePage.jsx'
 import Hub from './notes/Hub.jsx'
 import Graph from './notes/Graph.jsx'
 import Library from './notes/Library.jsx'
@@ -39,7 +40,7 @@ function Pages({ params, compact }) {
   const subjects = useColl('subjects')
   const [mode, setMode] = useState(params.mode || 'list')
   const [type, setType] = useState('all')
-  const [q, setQ] = useState('')
+  const [q, setQ] = useState(''), [lab, setLab] = useState(null)
   const st = useSettings(), manual = st.notesSort === 'manual', [arrange, setArrange] = useState(false)
   // 상위 페이지 안에 링크된 하위 페이지는 목록에서 숨김 (검색하면 보임)
   const childIds = new Set(notes.flatMap((n) => (n.blocks || []).filter((b) => b.type === 'page').map((b) => b.pageId)))
@@ -47,6 +48,7 @@ function Pages({ params, compact }) {
   const prog = (n) => { const td = (n.blocks || []).filter((b) => b.type === 'todo' && (b.text || '').trim()); if (!td.length) return null; const d = td.filter((b) => tasksAll.find((t) => t.id === b.taskId)?.done).length; return [d, td.length] }
   const list = notes.filter((n) => (q || !childIds.has(n.id)) && n.type !== 'daily' && (type === 'template' ? n.isTemplate : type === 'all' || (n.type || 'page') === type))
     .filter((n) => !q || (n.title || '').includes(q) || noteText(n).includes(q))
+    .filter((n) => !lab || n.label === lab)
     .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (manual ? (a.order ?? -a.updatedAt) - (b.order ?? -b.updatedAt) : b.updatedAt - a.updatedAt))
   // 내 순서로 옮기기: 처음 옮길 때 지금 보이는 순서대로 번호를 매기고 바꿈
   const shift = (i, d) => { const j = i + d; if (j < 0 || j >= list.length || !!list[i].pinned !== !!list[j].pinned) return; const a = [...list];[a[i], a[j]] = [a[j], a[i]]; a.forEach((n, k) => { if (n.order !== k * 10) patch('notes', n.id, { order: k * 10 }) }) }
@@ -65,13 +67,14 @@ function Pages({ params, compact }) {
             <button className={'chip' + (manual ? ' on' : '')} onClick={() => { setSettings({ notesSort: manual ? 'recent' : 'manual' }); if (manual) setArrange(false) }}>{manual ? '내 순서' : '최근 수정순'}</button>
             {manual && <button className={'chip' + (arrange ? ' on' : '')} onClick={() => setArrange(!arrange)}>{arrange ? '순서 편집 끝' : '순서 편집'}</button>}
             {[['all', '전체'], ['page', '페이지'], ['memo', '메모'], ['event', '일정 노트'], ['template', '템플릿']].map(([k, l]) => <button key={k} className={'chip' + (type === k ? ' on' : '')} onClick={() => setType(k)}>{l}</button>)}
+            {NOTE_LABELS.filter(([k]) => notes.some((n) => n.label === k)).map(([k, c, l]) => <button key={k} className={'chip lab-chip' + (lab === k ? ' on' : '')} onClick={() => setLab(lab === k ? null : k)} aria-label={'라벨 ' + l}><span className="dot" style={{ background: c }} /></button>)}
           </div>
           <div className={'note-grid' + (compact ? ' ng-one' : '')}>
             {list.map((n, i) => (
-              <button key={n.id} className={'card note-card' + (compact && params.noteId === n.id ? ' on' : '')} style={{ position: 'relative' }} onClick={() => !arrange && openNote(n.id)}>
+              <button key={n.id} className={'card note-card' + (compact && params.noteId === n.id ? ' on' : '') + (n.label ? ' has-label' : '')} style={{ position: 'relative', ...(n.label ? { '--nl': labelColor(n.label) } : null) }} onClick={() => !arrange && openNote(n.id)}>
                 {arrange && <span className="note-move row no-print" onClick={(e) => e.stopPropagation()}><span className="icon-btn" role="button" aria-label="앞으로" onClick={() => shift(i, -1)}>‹</span><span className="icon-btn" role="button" aria-label="뒤로" onClick={() => shift(i, 1)}>›</span></span>}
                 <div className="row"><span>{n.icon || (n.type === 'memo' ? '🗒️' : n.type === 'event' ? '📅' : '📄')}</span><b className="ellipsis grow">{noteTitle(n)}</b>{n.pinned && <Icon name="star" size={12} fill="currentColor" />}</div>
-                <div className="note-prev">{noteText(n).replace(/\[\[|\]\]/g, '').slice(0, 120)}</div>
+                <div className="note-prev">{plainText(noteText(n)).replace(/\[\[|\]\]/g, '').replace(/https?:\/\/\S*[?&]open=\S+/g, '↗ 링크').slice(0, 120)}</div>
                 {(() => { const p = prog(n); return p && <div className="note-prog"><span className="note-prog-t"><i style={{ width: (p[0] / p[1]) * 100 + '%' }} /></span><span className="tiny muted">{p[0]}/{p[1]}</span></div> })()}
                 <div className="row small muted" style={{ gap: 6 }}><SubjectTag id={n.subjectId} subjects={subjects} /><span className="tiny">{new Date(n.updatedAt).toLocaleDateString('ko-KR')}</span></div>
               </button>

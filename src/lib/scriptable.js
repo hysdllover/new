@@ -1,10 +1,10 @@
 import { pickQuote } from './quote.js'
 // iPhone·iPad 홈 화면·잠금 화면 위젯 (Scriptable) — 얇은 단일 서체 · 모노톤
 // 유형: 위젯 편집 › Parameter 에 공부 · 할일 · 디데이 · 달력 · 다짐 (비우면 기본)
-export const WIDGET_KINDS = [['', '기본'], ['공부', '공부'], ['할일', '할 일'], ['디데이', 'D-day'], ['달력', '공부 달력'], ['캘린더', '캘린더'], ['다짐', '다짐'], ['시간표', '시간표'], ['주간', '주간 공부'], ['과목', '과목별'], ['지금', '지금·다음'], ['진도', '진도'], ['목표', '이번 주 목표'], ['오늘', '오늘 한눈에'], ['대시보드', '대시보드'], ['내일', '내일 준비'], ['마감', '마감 임박'], ['일주일', '7일 일정'], ['디데이목록', 'D-day 목록'], ['바로가기', '바로 시작'], ['진행', '공부 진행'], ['남은분', '남은 시간'], ['타이머', '타이머·공부 시간'], ['노트', '노트'], ['습관', '습관'], ['시리즈', '시리즈 진행'], ['구성1', '내 위젯 1'], ['구성2', '내 위젯 2'], ['구성3', '내 위젯 3']]
+export const WIDGET_KINDS = [['', '기본'], ['공부', '공부'], ['할일', '할 일'], ['디데이', 'D-day'], ['달력', '공부 달력'], ['캘린더', '캘린더'], ['다짐', '다짐'], ['시간표', '시간표'], ['주간', '주간 공부'], ['과목', '과목별'], ['지금', '지금·다음'], ['진도', '진도'], ['목표', '이번 주 목표'], ['오늘', '오늘 한눈에'], ['대시보드', '대시보드'], ['내일', '내일 준비'], ['마감', '마감 임박'], ['일주일', '7일 일정'], ['디데이목록', 'D-day 목록'], ['바로가기', '바로 시작'], ['진행', '공부 진행'], ['남은분', '남은 시간'], ['타이머', '타이머·공부 시간'], ['노트', '노트'], ['습관', '습관'], ['시리즈', '시리즈 진행'], ['배치', '이번 주 배치'], ['주차', 'D-day까지 주차'], ['구성1', '내 위젯 1'], ['구성2', '내 위젯 2'], ['구성3', '내 위젯 3']]
 
 // 스크립트 버전 — 위젯 모양이 바뀔 때 올림. 앱이 위젯 데이터에 같이 올려서, 예전 스크립트면 위젯에 '스크립트 업데이트' 표시
-export const SCRIPT_VER = 72
+export const SCRIPT_VER = 73
 
 // 전체 스크립트 (예전 방식 · 테스트용): 머리 + 본체
 export function buildScript({ widgetRaw, appUrl }) {
@@ -84,7 +84,7 @@ const thin = (s) => F(s, 'Thin')
 const label = (s) => F(s, 'Regular')
 
 // Parameter → 유형 (앱에서 미리보기할 땐 고른 Parameter 로 다시 정함)
-const KINDS = { '공부': 'study', '할일': 'todo', '디데이': 'dday', 'd-day': 'dday', '달력': 'month', '캘린더': 'cal', '일정': 'cal', calendar: 'cal', '다짐': 'quote', '시간표': 'class', '수업': 'class', class: 'class', '주간': 'week', week: 'week', '과목': 'subj', subj: 'subj', '지금': 'now', '다음': 'now', now: 'now', '진도': 'prog', prog: 'prog', '목표': 'goals', goals: 'goals', '오늘': 'today', today: 'today', '대시보드': 'dash', dash: 'dash', '내일': 'tmrw', tomorrow: 'tmrw', '마감': 'due', due: 'due', '일주일': 'week7', '7일': 'week7', week7: 'week7', '디데이목록': 'ddl', ddl: 'ddl', '바로가기': 'quick', '시작': 'quick', quick: 'quick', '구성': 'custom', '내위젯': 'custom', custom: 'custom', '타이머': 'timer', '스톱워치': 'timer', timer: 'timer', '진행': 'pct', '공부진행': 'pct', pct: 'pct', '남은분': 'mins', '분': 'mins', mins: 'mins', '노트': 'note', '메모': 'note', note: 'note', '습관': 'habit', habit: 'habit', '시리즈': 'series', series: 'series', study: 'study', todo: 'todo', dday: 'dday', month: 'month', quote: 'quote' }
+const KINDS = { '공부': 'study', '할일': 'todo', '디데이': 'dday', 'd-day': 'dday', '달력': 'month', '캘린더': 'cal', '일정': 'cal', calendar: 'cal', '다짐': 'quote', '시간표': 'class', '수업': 'class', class: 'class', '주간': 'week', week: 'week', '과목': 'subj', subj: 'subj', '지금': 'now', '다음': 'now', now: 'now', '진도': 'prog', prog: 'prog', '목표': 'goals', goals: 'goals', '오늘': 'today', today: 'today', '대시보드': 'dash', dash: 'dash', '내일': 'tmrw', tomorrow: 'tmrw', '마감': 'due', due: 'due', '일주일': 'week7', '7일': 'week7', week7: 'week7', '디데이목록': 'ddl', ddl: 'ddl', '바로가기': 'quick', '시작': 'quick', quick: 'quick', '구성': 'custom', '내위젯': 'custom', custom: 'custom', '타이머': 'timer', '스톱워치': 'timer', timer: 'timer', '진행': 'pct', '공부진행': 'pct', pct: 'pct', '남은분': 'mins', '분': 'mins', mins: 'mins', '노트': 'note', '메모': 'note', note: 'note', '습관': 'habit', habit: 'habit', '시리즈': 'series', series: 'series', '배치': 'board', '주간배치': 'board', board: 'board', '주차': 'weeks', weeks: 'weeks', study: 'study', todo: 'todo', dday: 'dday', month: 'month', quote: 'quote' }
 let RAWP, PARAM, DDI, KIND, BASEKIND, ARG
 function setParam(raw) {
   RAWP = String(raw || '').replace(/\\s/g, '').toLowerCase()
@@ -447,7 +447,7 @@ if (KIND === 'custom' && fam.startsWith('accessory')) KIND = 'dash' // 내 위�
 let w = new ListWidget()
 // 한 줄(시계 위) 위젯: iOS 가 텍스트 하나만 시스템 서체로 그림 → 서체·색 지정 없이 짧게 하나만
 const inline = (s) => { s = String(s); const x = w.addText(s.length > 26 ? s.slice(0, 25) + '…' : s); x.lineLimit = 1; return x }
-w.url = link({ todo: 'tasks', due: 'tasks', cal: 'planner.month', week7: 'planner.week', tmrw: 'planner.week', class: 'planner.timetable', default: '', dash: '', quick: 'study.timer', timer: 'study.timer', ddl: 'study.progress', prog: 'study.progress', series: 'tasks.board' }[KIND] ?? 'study.records')
+w.url = link({ todo: 'tasks', due: 'tasks', cal: 'planner.month', week7: 'planner.week', tmrw: 'planner.week', class: 'planner.timetable', default: '', dash: '', quick: 'study.timer', timer: 'study.timer', ddl: 'study.progress', prog: 'study.progress', series: 'tasks.board', board: 'tasks.board', weeks: 'study.records' }[KIND] ?? 'study.records')
 w.refreshAfterDate = new Date(Date.now() + 5 * 60000) // 5분 뒤 다시 그려 달라고 요청 (실제 시점은 iOS 가 정함)
 // 앱 설정: 위젯 여백 단계 · 구분선 굵기
 const STM = (data && data.settings && data.settings.settings && data.settings.settings.main) || {}
@@ -673,6 +673,33 @@ if (!data) {
   const startUrl = (s) => (RUN ? RUN + '?act=start&sid=' + encodeURIComponent(s ? s.id : '') : APP + '?timer=' + encodeURIComponent(s ? s.id : ''))
   const newUrl = (k) => APP + '?new=' + k
 
+  // ── 이번 주 배치 · D-day까지 주차 (공용) ──
+  const WKS = (st.weekStart ?? 1) % 7
+  const wkStartOf = (x) => { const d = new Date(x); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() - WKS + 7) % 7)); return d }
+  const bwStart = wkStartOf(d0)
+  const bwDays = Array.from({ length: 7 }, (_, i) => { const d = new Date(bwStart); d.setDate(d.getDate() + i); return ymd(d) })
+  const bwOf = (k) => tasksAll.filter((x) => x.due === k)
+  const WDN = ['일', '월', '화', '수', '목', '금', '토']
+  const dots = (parent, list, z, max) => { const r = parent.addStack(); r.spacing = 2; for (const x of list.slice(0, max)) { const c = r.addStack(); c.size = new Size(z, z); c.cornerRadius = z / 2; if (x.done) c.backgroundColor = GOLD; else { c.borderWidth = 1; c.borderColor = SOFT } } if (list.length > max) t(r, '+', label(7), SOFT); return r }
+  const wkDd = (() => { if (!ddAll.length) return null; if (ARG) { const f = ddAll.find((d) => String(d.title).split(' ').join('').toLowerCase().includes(ARG)); if (f) return f } return ddAll.slice().sort((a, b) => b.date.localeCompare(a.date))[0] })()
+  const wkInfo = (() => {
+    if (!wkDd) return null
+    const cur = ymd(bwStart), end = ymd(wkStartOf(new Date(wkDd.date + 'T12:00:00')))
+    const wGoal = +st.goalWeekly || (+st.goalDaily || 240) * 7
+    const weeks = []
+    const s0 = new Date(bwStart); s0.setDate(s0.getDate() - 7 * 8)
+    for (let d = new Date(s0); ymd(d) <= end && weeks.length < 80; d.setDate(d.getDate() + 7)) {
+      const k = ymd(d), e = new Date(d); e.setDate(e.getDate() + 6); const ke = ymd(e)
+      const m = k <= cur ? allSess.filter((x) => x.date >= k && x.date <= ke).reduce((a, x) => a + (x.dur || 0), 0) : 0
+      weeks.push({ k, m, r: Math.min(1, m / wGoal), now: k === cur, fut: k > cur, end: k === end })
+    }
+    const first = weeks.findIndex((x) => x.m > 0 || x.now)
+    const left = Math.max(0, Math.round((new Date(wkDd.date + 'T12:00:00') - new Date(today + 'T12:00:00')) / 864e5))
+    return { weeks: weeks.slice(Math.max(0, first)), left, lw: Math.floor(left / 7), ld: left % 7 }
+  })()
+  const sq = (parent, x, z) => { const c = parent.addStack(); c.size = new Size(z, z); c.cornerRadius = 2; if (x.fut) { c.borderWidth = 0.8; c.borderColor = SOFT } else if (x.m) { c.backgroundColor = lock ? new Color('#ffffff', 0.25 + 0.75 * x.r) : dyn('#66778f', '#9fadc4', 0.2 + 0.75 * x.r) } else { c.borderWidth = 0.8; c.borderColor = SOFT } if (x.now) { c.borderWidth = 1.5; c.borderColor = INK } return c }
+  const sqRows = (parent, list, z, gap, wd) => { const per = Math.max(1, Math.floor((wd + gap) / (z + gap))); for (let i = 0; i < list.length; i += per) { const r = parent.addStack(); r.spacing = gap; for (const x of list.slice(i, i + per)) sq(r, x, z); if (i + per < list.length) parent.addSpacer(gap) } }
+
   if (lock && KIND === 'class') {
     // ── 잠금 화면 · 시간표 ──
     const c = clCur || clNext
@@ -708,6 +735,33 @@ if (!data) {
       w.addSpacer(2)
       const r2 = w.addStack(); r2.size = new Size(LK.rw, 0); t(r2, dd.title, tw(12)).minimumScaleFactor = 0.7; r2.addSpacer(6); t(r2, dd.date.slice(5).replace('-', '.'), tw(10)); r2.addSpacer(); t(r2, '주말 ' + weekends(dd) + '번', tw(10))
       if (next) { w.addSpacer(2); const r3 = w.addStack(); t(r3, next.title + ' ' + ddT(next), tw(10)).textOpacity = 0.7; r3.addSpacer() }
+    }
+  } else if (lock && KIND === 'weeks') {
+    // ── 잠금 화면 · D-day까지 주차 ──
+    if (!wkInfo) inline('D-day 없음')
+    else if (fam === 'accessoryInline') inline(wkDd.title + '까지 ' + wkInfo.lw + '주 ' + wkInfo.ld + '일')
+    else if (fam === 'accessoryCircular') {
+      const z = w.addStack(); z.size = new Size(LK.c, LK.c); z.layoutVertically(); z.centerAlignContent()
+      const a = z.addStack(); a.addSpacer(); t(a, wkInfo.lw + '주', thin(20)).minimumScaleFactor = 0.6; a.addSpacer()
+      const b = z.addStack(); b.addSpacer(); t(b, wkDd.title, label(8)).minimumScaleFactor = 0.6; b.addSpacer()
+    } else {
+      const r = w.addStack(); r.size = new Size(LK.rw, 0); r.bottomAlignContent(); t(r, wkDd.title + '까지', tw(11)).minimumScaleFactor = 0.7; r.addSpacer(); t(r, wkInfo.lw + '주 ' + wkInfo.ld + '일', tw(13))
+      w.addSpacer(4)
+      const z = 8, gap = 3, per = Math.floor((LK.rw + gap) / (z + gap)), list = wkInfo.weeks.length > per * 2 ? wkInfo.weeks.slice(-per * 2) : wkInfo.weeks
+      sqRows(w, list, z, gap, LK.rw)
+    }
+  } else if (lock && KIND === 'board') {
+    // ── 잠금 화면 · 이번 주 배치 (요일별 남은 할 일 수) ──
+    const left = bwDays.map((k) => bwOf(k).filter((x) => !x.done).length)
+    if (fam === 'accessoryInline') inline('이번 주 남은 할 일 ' + left.reduce((a, v) => a + v, 0) + '개')
+    else if (fam === 'accessoryCircular') {
+      const z = w.addStack(); z.size = new Size(LK.c, LK.c); z.layoutVertically(); z.centerAlignContent()
+      const a = z.addStack(); a.addSpacer(); t(a, String(bwOf(today).filter((x) => !x.done).length), thin(22)); a.addSpacer()
+      const b = z.addStack(); b.addSpacer(); t(b, '오늘 남음', label(7)); b.addSpacer()
+    } else {
+      const cw = Math.floor(LK.rw / 7)
+      const r = w.addStack()
+      bwDays.forEach((k, i) => { const c = r.addStack(); c.size = new Size(cw, 0); c.layoutVertically(); const a = c.addStack(); a.addSpacer(); t(a, WDN[new Date(k + 'T12:00:00').getDay()], k === today ? F(10, 'Medium') : label(9), k === today ? INK : SOFT); a.addSpacer(); c.addSpacer(3); const b = c.addStack(); b.addSpacer(); t(b, left[i] ? String(left[i]) : '·', k === today ? tw(17) : tw(14), INK); b.addSpacer() })
     }
   } else if (lock && TM && (KIND === 'default' || KIND === 'study' || KIND === 'quick' || KIND === 'timer')) {
     // ── 잠금 화면 · 진행 중 타이머 (초 단위로 흐름) ──
@@ -1084,6 +1138,43 @@ if (!data) {
         if (x.x && fam !== 'medium') { w.addSpacer(3); t(w, '다음 ' + x.x, tw(9), SOFT) }
         w.addSpacer(fam === 'medium' ? 7 : 10)
       }
+    }
+  } else if (KIND === 'board') {
+    // ── 이번 주 배치: 요일별 점 (채운 점 = 끝냄) ──
+    const h = w.addStack(); h.centerAlignContent(); cap(h, 'THIS WEEK'); h.addSpacer(); const tot = bwDays.reduce((a, k) => a + bwOf(k).filter((x) => !x.done).length, 0); t(h, '남은 ' + tot, label(8), SOFT)
+    w.addSpacer(fam === 'small' ? 8 : 12)
+    if (fam === 'large' || fam === 'extraLarge') {
+      for (const k of bwDays) {
+        const l = bwOf(k), r = w.addStack(); r.centerAlignContent(); r.spacing = 8
+        const dd = r.addStack(); dd.size = new Size(34, 0); t(dd, WDN[new Date(k + 'T12:00:00').getDay()] + ' ' + (+k.slice(8)), k === today ? F(11, 'Medium') : tw(11), k === today ? INK : SOFT)
+        dots(r, l, 6, 8)
+        const nx = l.filter((x) => !x.done).map((x) => x.title).slice(0, 2).join(' · ')
+        t(r, nx || (l.length ? '다 했어요' : ''), tw(10), nx ? INK : SOFT).minimumScaleFactor = 0.7
+        r.addSpacer()
+        w.addSpacer(fam === 'large' ? 9 : 12)
+      }
+    } else {
+      const cw = Math.floor(inner / 7), r = w.addStack()
+      for (const k of bwDays) {
+        const l = bwOf(k), c = r.addStack(); c.size = new Size(cw, 0); c.layoutVertically()
+        const a = c.addStack(); a.addSpacer(); t(a, WDN[new Date(k + 'T12:00:00').getDay()], k === today ? F(10, 'Medium') : label(9), k === today ? INK : SOFT); a.addSpacer()
+        if (fam !== 'small') { const a2 = c.addStack(); a2.addSpacer(); t(a2, String(+k.slice(8)), tw(9), SOFT); a2.addSpacer() }
+        c.addSpacer(5)
+        for (let i = 0; i < Math.min(l.length, fam === 'small' ? 5 : 4); i += 1) { const row = c.addStack(); row.addSpacer(); const x = l[i], d = row.addStack(); d.size = new Size(6, 6); d.cornerRadius = 3; if (x.done) d.backgroundColor = GOLD; else { d.borderWidth = 1; d.borderColor = SOFT } row.addSpacer(); c.addSpacer(3) }
+        if (l.length > (fam === 'small' ? 5 : 4)) { const row = c.addStack(); row.addSpacer(); t(row, '+' + (l.length - (fam === 'small' ? 5 : 4)), label(7), SOFT); row.addSpacer() }
+      }
+      if (fam === 'medium') { w.addSpacer(); const td = bwOf(today).filter((x) => !x.done); t(w, td.length ? '오늘 · ' + td[0].title + (td.length > 1 ? ' 외 ' + (td.length - 1) + '개' : '') : '오늘 남은 할 일 없음', tw(10), SOFT).minimumScaleFactor = 0.7 }
+    }
+  } else if (KIND === 'weeks') {
+    // ── D-day까지 주차: 한 칸 = 한 주 ──
+    const h = w.addStack(); h.centerAlignContent(); cap(h, 'WEEKS'); h.addSpacer(); t(h, wkDd ? wkDd.title : '', label(8), SOFT)
+    w.addSpacer(fam === 'small' ? 6 : 10)
+    if (!wkInfo) t(w, 'D-day를 추가해 주세요', tw(12), SOFT)
+    else {
+      const r = w.addStack(); r.bottomAlignContent(); t(r, String(wkInfo.lw), thin(fam === 'small' ? 30 : 36), INK); t(r, '주 ', tw(12), SOFT); t(r, String(wkInfo.ld), thin(fam === 'small' ? 22 : 26), INK); t(r, '일', tw(12), SOFT)
+      w.addSpacer(fam === 'small' ? 8 : 12)
+      const z = fam === 'small' ? 10 : fam === 'medium' ? 11 : 16, gap = fam === 'large' || fam === 'extraLarge' ? 5 : 3
+      sqRows(w, wkInfo.weeks, z, gap, inner)
     }
   } else if (KIND === 'todo') {
     // ── 할 일 ──
