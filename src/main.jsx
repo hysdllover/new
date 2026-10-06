@@ -101,7 +101,10 @@ Promise.all([loadState(), initFonts(), restoreSync()]).then(async () => {
     const r = importHealth(q)
     if (r) { go('health'); setTimeout(() => toast(`건강 기록 · ${[r.sleep != null && `수면 ${r.sleep}시간`, r.steps != null && `걸음 ${r.steps.toLocaleString()}`].filter(Boolean).join(' · ')}`), 600) }
   }
-  if (target || added || link || noteIn != null || healthIn || aiIn != null || doneIn || timerIn != null || newIn || photoIn) history.replaceState(null, '', location.pathname + location.hash)
+  // 위젯에서 노트 열기: ?open=노트id
+  const openIn = q.get('open')
+  if (openIn) { const { openNote } = await import('./nav.js'); openNote(openIn) }
+  if (openIn || target || added || link || noteIn != null || healthIn || aiIn != null || doneIn || timerIn != null || newIn || photoIn) history.replaceState(null, '', location.pathname + location.hash)
   createRoot(document.getElementById('root')).render(<StrictMode><Root /></StrictMode>)
   startServices()
   import('./lib/resume.js').then((m) => m.startResume())
