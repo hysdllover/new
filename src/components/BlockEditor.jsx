@@ -13,7 +13,7 @@ import { applyFilter } from '../views/tasks/filter.js'
 import { startDrag } from '../lib/drag.js'
 import { applyMark, activeMarks, markRuns, plainText } from '../lib/marks.js'
 
-const TYPES = [['text', '텍스트'], ['h1', '제목 1'], ['h2', '제목 2'], ['bullet', '글머리'], ['todo', '체크박스 (할 일)'], ['callout', '강조 상자'], ['quote', '인용'], ['divider', '구분선']]
+const TYPES = [['text', '텍스트'], ['h1', '제목 1'], ['h2', '제목 2'], ['bullet', '글머리'], ['todo', '체크박스 (할 일)'], ['callout', '강조 상자'], ['quote', '인용'], ['code', '코드'], ['divider', '구분선']]
 const TONES = [['key', '핵심'], ['warn', '주의'], ['ex', '예시'], ['rose', '메모'], ['olive', '정리'], ['sand', '참고']]
 const SOLID = ['divider', 'embed', 'sync', 'file', 'table', 'page', 'cols'] // 글자를 직접 쓰지 않는 블록
 const INLINE_RE = /(\*\*[^*\n]+\*\*|==[^=\n]+==|__[^_\n]+__|\[\[[^\]]+\]\]|@(?:오늘|내일|모레|\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2})(?:\s+\d{1,2}:\d{2})?|https?:\/\/[^\s]+)/g
@@ -81,7 +81,7 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
       if (/\.(md|markdown)$/i.test(f.name) || f.type === 'text/markdown') { try { text = (text ? text + '\n' : '') + await f.text() } catch {} continue }
       try { const r = await addFile(f, { subjectId: note?.subjectId, noteId: note?.id }); nbs.push({ id: newBlock().id, type: 'file', fileId: r.id }) } catch (e) { toast(e.message) }
     }
-    if (text) for (const nb of mdToBlocks(text.split(/\r?\n/).filter((x) => !/^#[^#\s]/.test(x.trim())).join('\n')).slice(0, 300)) nbs.push(nb.type === 'todo' ? commitBlock(nb, note) : nb)
+    if (text) for (const nb of mdToBlocks(text.split(/\r?\n/).filter((x) => !/^#[^#\s]/.test(x.trim())).join('\n')).slice(0, 300)) { if (nb.type !== 'todo') { nbs.push(nb); continue } const { done, ...r } = nb, c = commitBlock(r, note); if (done && c.taskId) toggleTask(c.taskId); nbs.push(c) }
     if (!nbs.length) return
     const cur = (note && find('notes', note.id)?.blocks) || list
     const base = cur.filter((x, i) => x.id !== replaceId && !(i === cur.length - 1 && x.type === 'text' && !x.text && afterId == null))
@@ -148,15 +148,18 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
   const onKey = (e, b) => {
     if (e.nativeEvent.isComposing || e.keyCode === 229) return
     const el = e.target
+    if (e.key === 'Tab' && ['text', 'bullet', 'todo', 'quote'].includes(b.type)) { e.preventDefault(); const lv = Math.max(0, Math.min(3, (b.indent || 0) + (e.shiftKey ? -1 : 1))); return upd(b.id, { indent: lv || undefined }) }
+    if (e.key === 'Enter' && !e.shiftKey && b.type === 'code') return // 코드: 줄바꿈 그대로
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       skipBlur(b.id)
       const pos = el.selectionStart
       const before = b.text.slice(0, pos), after = b.text.slice(pos)
-      if (!before && !after && ['bullet', 'todo', 'quote'].includes(b.type)) return upd(b.id, { type: 'text' })
+      if (!before && !after && b.indent && ['bullet', 'todo'].includes(b.type)) return upd(b.id, { indent: b.indent - 1 || undefined }) // 빈 줄 Enter: 한 단계 내어쓰기
+      if (!before && !after && ['bullet', 'todo', 'quote'].includes(b.type)) return upd(b.id, { type: 'text', num: undefined })
       const keep = ['bullet', 'todo'].includes(b.type) ? b.type : 'text'
       const cur = commitBlock({ ...b, text: before }, note)
-      const nb = newBlock(keep, after)
+      const nb = { ...newBlock(keep, after), ...(b.indent && keep !== 'text' ? { indent: b.indent } : null), ...(b.num && keep === 'bullet' ? { num: b.num + 1 } : null) }
       const i = list.findIndex((x) => x.id === b.id)
       const a = [...list]; a[i] = cur; a.splice(i + 1, 0, nb)
       set(a); setEdit({ id: nb.id, pos: 0 })
@@ -182,6 +185,9 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
     !nested && b.type !== 'sync' && { label: '동기화 블록으로', icon: 'sync', onClick: () => { const s = put('syncBlocks', { blocks: [{ ...b, id: newBlock().id }] }); upd(b.id, { type: 'sync', syncId: s.id, text: '' }) } },
     b.type === 'divider' && { label: b.text ? '구분선 제목 바꾸기' : '구분선에 제목 넣기', icon: 'tag', onClick: () => { const v = prompt('구분선 제목 (비우면 선만)', b.text || ''); if (v != null) upd(b.id, { text: v.trim() }) } },
     b.type === 'cols' && { label: `두 단 비율 (${b.ratio || '1:1'} → ${{ '1:1': '2:1', '2:1': '1:2', '1:2': '1:1' }[b.ratio || '1:1']})`, icon: 'layers', onClick: () => upd(b.id, { ratio: { '1:1': '2:1', '2:1': '1:2', '1:2': '1:1' }[b.ratio || '1:1'] }) },
+    ['text', 'bullet', 'todo', 'quote'].includes(b.type) && (b.indent || 0) < 3 && { label: '들여쓰기', icon: 'next', onClick: () => upd(b.id, { indent: (b.indent || 0) + 1 }) },
+    b.indent > 0 && { label: '내어쓰기', icon: 'back', onClick: () => upd(b.id, { indent: b.indent - 1 || undefined }) },
+    b.type === 'bullet' && { label: b.num ? '번호 없애기' : '번호 매기기', icon: 'tasks', onClick: () => { if (b.num) return upd(b.id, { num: undefined }); const i = list.findIndex((x) => x.id === b.id); let n = 1; for (let k = i - 1; k >= 0 && list[k].type === 'bullet' && list[k].num; k--) n++; upd(b.id, { num: n }) } },
     { label: '복제', icon: 'plus', onClick: () => { const i = list.findIndex((x) => x.id === b.id), a = [...list]; a.splice(i + 1, 0, clone(b)); set(a) } },
     note && { label: '이 줄 링크 복사', icon: 'link', onClick: () => copyBlockLink(note.id, b.id) },
     { label: '여러 줄 선택', icon: 'check', onClick: () => setSel(new Set([b.id])) },
@@ -198,9 +204,9 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
         const editing = edit?.id === b.id
         const task = b.taskId && tasks.find((t) => t.id === b.taskId)
         return (
-          <div key={b.id} data-bid={b.id} className={'blk blk-' + b.type + (b.type === 'callout' ? ' tone-' + (b.tone || 'key') : '') + (sel?.has(b.id) ? ' sel' : '')} data-drop={readOnly ? undefined : 'blk:' + b.id} onClickCapture={sel ? (e) => { e.stopPropagation(); e.preventDefault(); togSel(b.id) } : undefined}>
+          <div key={b.id} data-bid={b.id} style={b.indent ? { paddingLeft: b.indent * 22 } : undefined} className={'blk blk-' + b.type + (b.type === 'callout' ? ' tone-' + (b.tone || 'key') : '') + (sel?.has(b.id) ? ' sel' : '')} data-drop={readOnly ? undefined : 'blk:' + b.id} onClickCapture={sel ? (e) => { e.stopPropagation(); e.preventDefault(); togSel(b.id) } : undefined}>
             {!readOnly && <button className="blk-h" onPointerDown={(e) => gripDown(e, b)} onClick={(e) => { if (dragged.current) { dragged.current = false; return } blockMenu(e, b) }} aria-label="블록 메뉴 · 끌어서 순서 바꾸기"><Icon name="grip" size={14} /></button>}
-            {b.type === 'bullet' && <span className="blk-dot">•</span>}
+            {b.type === 'bullet' && (b.num ? <span className="blk-num">{b.num}.</span> : <span className="blk-dot">•</span>)}
             {b.type === 'todo' && <span className="blk-chk"><Check on={!!task?.done} onClick={() => { if (task) toggleTask(task.id); else { const nb = commitBlock(b, note); upd(b.id, nb); if (nb.taskId) toggleTask(nb.taskId) } }} /></span>}
             <div className="blk-c">
               {b.type === 'divider' ? (b.text ? <div className="hr-t"><span>{b.text}</span></div> : <hr />) :
@@ -216,7 +222,7 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
                     onBlur={(t) => { if (skip.current !== b.id) commit({ ...b, text: t }); setEdit((x) => (x?.id === b.id ? null : x)) }} /></>
                 ) : (
                   <div className={'blk-v' + (task?.done ? ' done' : '')} onClick={() => !readOnly && setEdit({ id: b.id, pos: (b.text || '').length })}>{b.type === 'callout' && <span className="co-tag">{(TONES.find(([t]) => t === (b.tone || 'key')) || TONES[0])[1]}</span>}
-                    {b.text ? <Inline text={b.text} /> : <span className="muted">{list.length === 1 && nested ? '입력…' : list.length === 1 ? '입력하세요… (# 제목, - 목록, [] 체크, [[링크]], @내일 15:00)' : ' '}</span>}
+                    {b.type === 'code' ? (b.text ? <code className="blk-code-t">{b.text}</code> : <span className="muted">코드</span>) : b.text ? <Inline text={b.text} /> : <span className="muted">{list.length === 1 && nested ? '입력…' : list.length === 1 ? '입력하세요… (# 제목, - 목록, [] 체크, [[링크]], @내일 15:00)' : ' '}</span>}
                     {b.ref && <button className="ref-chip" onClick={(e) => { e.stopPropagation(); openDetail(b.ref.type, b.ref.id, { occ: b.ref.date }) }}>→ {refLabel(b.ref)}</button>}
                     {task && task.due && !b.ref && <span className="ref-chip">{task.due.slice(5).replace('-', '/')}</span>}
                   </div>
@@ -416,6 +422,13 @@ function TimerEmbed({ subjectId }) {
 
 
 // 표: 첫 줄은 머리줄 · 칸을 눌러 바로 입력 · 줄·칸 더하기/빼기
+// 표 칸: 내용만큼 높이가 늘어나는 입력칸
+function TCell({ value, onChange, ...rest }) {
+  const ref = useRef(null)
+  useEffect(() => { const el = ref.current; if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }, [value])
+  return <textarea ref={ref} rows={1} value={value} onChange={(e) => onChange(e.target.value)} {...rest} />
+}
+
 // 표: 열마다 너비(좁게·보통·넓게)와 정렬(왼쪽·가운데·오른쪽)
 const COLW = { s: 'minmax(56px, .6fr)', n: 'minmax(70px, 1fr)', w: 'minmax(130px, 2fr)' }
 function TableBlock({ b, onChange, onMeta, readOnly }) {
@@ -436,7 +449,7 @@ function TableBlock({ b, onChange, onMeta, readOnly }) {
       <div className="tblk-grid" style={{ gridTemplateColumns: tpl }}>
         {rows.map((r, i) => Array.from({ length: cols }, (_, j) => readOnly
           ? <div key={i + '-' + j} className={'tblk-c' + (i === 0 ? ' th' : '')} style={{ textAlign: AL[al(j)] }}>{r[j] || ''}</div>
-          : <textarea key={i + '-' + j} rows={1} className={'tblk-c' + (i === 0 ? ' th' : '')} style={{ textAlign: AL[al(j)] }} value={r[j] || ''} placeholder={i === 0 ? '제목' : ''} onChange={(e) => setCell(i, j, e.target.value)} />))}
+          : <TCell key={i + '-' + j} className={'tblk-c' + (i === 0 ? ' th' : '')} style={{ textAlign: AL[al(j)] }} value={r[j] || ''} placeholder={i === 0 ? '제목' : ''} onChange={(v) => setCell(i, j, v)} />))}
       </div>
       {!readOnly && <div className="row no-print" style={{ gap: 4, marginTop: 4 }}>
         <button className="chip sm" onClick={() => onChange([...rows, Array(cols).fill('')])}>+ 줄</button>

@@ -98,17 +98,19 @@ export function toMarkdown(note) {
   const tasks = list('tasks')
   const lines = [`# ${noteTitle(note)}`, '']
   for (const b of allBlocks(note)) {
-    const t = (b.text || '').replace(/==[rgby]:/g, '==')
+    const t = (b.text || '').replace(/==[rgby]:/g, '==').replace(/(^|[^_\w])__([^_\n]+?)__(?![_\w])/g, '$1<u>$2</u>') // 앱 밑줄 → <u>
+    const pad = '  '.repeat(b.indent || 0)
     switch (b.type) {
       case 'h1': lines.push(`## ${t}`); break
       case 'h2': lines.push(`### ${t}`); break
-      case 'bullet': lines.push(`- ${t}`); break
-      case 'todo': lines.push(`- [${tasks.find((x) => x.id === b.taskId)?.done ? 'x' : ' '}] ${t}`); break
-      case 'quote': lines.push(`> ${t}`); break
-      case 'divider': lines.push('---'); break
+      case 'bullet': lines.push(`${pad}${b.num ? b.num + '.' : '-'} ${t}`); break
+      case 'todo': lines.push(`${pad}- [${tasks.find((x) => x.id === b.taskId)?.done ? 'x' : ' '}] ${t}`); break
+      case 'code': lines.push('```' + (b.lang || ''), b.text || '', '```'); break
+      case 'quote': lines.push(t.split('\n').map((x) => `> ${x}`).join('\n')); break
+      case 'divider': lines.push(b.text ? `--- ${b.text} ---` : '---'); break
       case 'file': lines.push(`[첨부: ${find('files', b.fileId)?.name || '파일'}]`); break
       case 'embed': lines.push(`<!-- ${b.embed?.kind} -->`); break
-      case 'callout': lines.push(`> **${({ key: '핵심', warn: '주의', ex: '예시' })[b.tone || 'key']}** ${t}`); break
+      case 'callout': lines.push(`> [!${({ key: 'note', warn: 'warning', ex: 'example', rose: 'quote', olive: 'summary', sand: 'question' })[b.tone || 'key'] || 'note'}]`, ...t.split('\n').map((x) => `> ${x}`)); break
       case 'table': { const rs = b.rows || []; if (rs.length) { lines.push('| ' + rs[0].join(' | ') + ' |', '|' + rs[0].map(() => ' --- |').join(''), ...rs.slice(1).map((r) => '| ' + r.join(' | ') + ' |')) } break }
       case 'page': lines.push(`[하위 페이지: ${noteTitle(find('notes', b.pageId))}]`); break
       default: lines.push(t)
