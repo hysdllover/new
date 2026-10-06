@@ -17,6 +17,8 @@ import { applyMark, activeMarks, markRuns, plainText } from '../lib/marks.js'
 
 const TYPES = [['text', '텍스트'], ['h1', '제목 1'], ['h2', '제목 2'], ['bullet', '글머리'], ['todo', '체크박스 (할 일)'], ['callout', '강조 상자'], ['quote', '인용'], ['code', '코드'], ['divider', '구분선']]
 const TONES = [['key', '핵심'], ['warn', '주의'], ['ex', '예시'], ['rose', '메모'], ['olive', '정리'], ['sand', '참고']]
+// 구분선 모양 ('' = 설정 › 디자인의 기본 모양)
+const DIVS = [['', '기본'], ['thin', '얇은 실선'], ['bold', '굵은 선'], ['dash', '점선'], ['double', '두 줄'], ['short', '가운데 짧게'], ['dots', '점 세 개'], ['space', '여백만']]
 const SOLID = ['divider', 'embed', 'sync', 'file', 'table', 'page', 'cols'] // 글자를 직접 쓰지 않는 블록
 const INLINE_RE = /(\*\*[^*\n]+\*\*|==[^=\n]+==|__[^_\n]+__|\[\[[^\]]+\]\]|@(?:오늘|내일|모레|\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2})(?:\s+\d{1,2}:\d{2})?|https?:\/\/[^\s]+)/g
 
@@ -145,7 +147,7 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
     if (b.type === 'text') {
       const rules = [[/^# /, 'h1'], [/^## /, 'h2'], [/^[-*] /, 'bullet'], [/^\[ ?\] /, 'todo'], [/^> /, 'quote']]
       for (const [re, type] of rules) if (re.test(text)) return upd(b.id, { type, text: text.replace(re, '') })
-      if (text === '---') return upd(b.id, { type: 'divider', text: '' })
+      if (/^(---|\*\*\*|___|———?)$/.test(text)) { const i = list.findIndex((x) => x.id === b.id), nb = newBlock(), a = [...list]; a[i] = { ...b, type: 'divider', text: '' }; a.splice(i + 1, 0, nb); skipBlur(b.id); set(a); return setEdit({ id: nb.id, pos: 0 }) } // --- 입력 → 구분선 + 다음 줄
     }
     upd(b.id, { text })
   }
@@ -182,24 +184,26 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
     } else if (e.key === 'Escape') { el.blur() }
   }
 
-  const blockMenu = (e, b) => openMenu(e, [
+  const blockMenu = (e, b) => { const r = e.currentTarget.getBoundingClientRect(), at = { currentTarget: { getBoundingClientRect: () => r } }; return openMenu(e, [
     ...(b.type === 'callout' ? TONES.filter(([t]) => t !== (b.tone || 'key')).map(([t, l]) => ({ label: `색 → ${l}`, onClick: () => upd(b.id, { tone: t }) })) : []),
     ...TYPES.filter(([t]) => t !== b.type && !SOLID.includes(b.type)).slice(0, 7).map(([t, l]) => ({ label: `→ ${l}`, onClick: () => { upd(b.id, { type: t }); if (t === 'todo') setEdit({ id: b.id, pos: (b.text || '').length }) } })),
     b.text && { label: '복습 등록', icon: 'brain', onClick: () => addReview({ title: b.text.slice(0, 60), subjectId: note?.subjectId, sourceType: 'note', sourceId: note?.id }) },
     b.text && b.type !== 'todo' && { label: '할 일로 만들기', icon: 'tasks', onClick: () => { const t = addTask({ title: plainText(b.text), noteId: note?.id, subjectId: note?.subjectId }); upd(b.id, { type: 'todo', taskId: t.id }) } },
     !nested && b.type !== 'sync' && { label: '동기화 블록으로', icon: 'sync', onClick: () => { const s = put('syncBlocks', { blocks: [{ ...b, id: newBlock().id }] }); upd(b.id, { type: 'sync', syncId: s.id, text: '' }) } },
+    b.type === 'divider' && { label: `모양 · ${DIVS.find(([k]) => k === (b.ds || ''))[1]}`, icon: 'layers', onClick: () => openMenu(at, DIVS.map(([k, l]) => ({ label: (k === (b.ds || '') ? '✓ ' : '') + l, onClick: () => upd(b.id, { ds: k || undefined }) }))) },
     b.type === 'divider' && { label: b.text ? '구분선 제목 바꾸기' : '구분선에 제목 넣기', icon: 'tag', onClick: () => { const v = prompt('구분선 제목 (비우면 선만)', b.text || ''); if (v != null) upd(b.id, { text: v.trim() }) } },
     b.type === 'cols' && { label: `두 단 비율 (${b.ratio || '1:1'} → ${{ '1:1': '2:1', '2:1': '1:2', '1:2': '1:1' }[b.ratio || '1:1']})`, icon: 'layers', onClick: () => upd(b.id, { ratio: { '1:1': '2:1', '2:1': '1:2', '1:2': '1:1' }[b.ratio || '1:1'] }) },
     ['text', 'bullet', 'todo', 'quote'].includes(b.type) && (b.indent || 0) < 3 && { label: '들여쓰기', icon: 'next', onClick: () => upd(b.id, { indent: (b.indent || 0) + 1 }) },
     b.indent > 0 && { label: '내어쓰기', icon: 'back', onClick: () => upd(b.id, { indent: b.indent - 1 || undefined }) },
     b.type === 'bullet' && { label: b.num ? '번호 없애기' : '번호 매기기', icon: 'tasks', onClick: () => { if (b.num) return upd(b.id, { num: undefined }); const i = list.findIndex((x) => x.id === b.id); let n = 1; for (let k = i - 1; k >= 0 && list[k].type === 'bullet' && list[k].num; k--) n++; upd(b.id, { num: n }) } },
+    b.type !== 'divider' && { label: '아래에 구분선', icon: 'more', onClick: () => { const i = list.findIndex((x) => x.id === b.id), a = [...list]; a.splice(i + 1, 0, newBlock('divider')); set(a) } },
     { label: '복제', icon: 'plus', onClick: () => { const i = list.findIndex((x) => x.id === b.id), a = [...list]; a.splice(i + 1, 0, clone(b)); set(a) } },
     note && { label: '이 줄 링크 복사', icon: 'link', onClick: () => copyBlockLink(note.id, b.id) },
     { label: '여러 줄 선택', icon: 'check', onClick: () => setSel(new Set([b.id])) },
     { label: '위로', icon: 'back', onClick: () => move(b.id, -1) },
     { label: '아래로', icon: 'next', onClick: () => move(b.id, 1) },
     { label: '삭제', icon: 'trash', danger: true, onClick: () => removeBlock(b.id) },
-  ])
+  ]) }
 
   const addEnd = (nb) => { set([...list.filter((x, i) => !(i === list.length - 1 && x.type === 'text' && !x.text)), nb]); if (nb.text !== undefined && !['embed', 'sync', 'file', 'divider'].includes(nb.type)) setEdit({ id: nb.id, pos: 0 }) }
 
@@ -214,7 +218,7 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
             {b.type === 'bullet' && (b.num ? <span className="blk-num">{b.num}.</span> : <span className="blk-dot">•</span>)}
             {b.type === 'todo' && <span className="blk-chk"><Check on={!!task?.done} onClick={() => { if (task) toggleTask(task.id); else { const nb = commitBlock(b, note); upd(b.id, nb); if (nb.taskId) toggleTask(nb.taskId) } }} /></span>}
             <div className="blk-c">
-              {b.type === 'divider' ? (b.text ? <div className="hr-t"><span>{b.text}</span></div> : <hr />) :
+              {b.type === 'divider' ? (b.text ? <div className={'hr-t' + (b.ds ? ' hr-' + b.ds : '')}><span>{b.text}</span></div> : <hr className={b.ds ? 'hr-' + b.ds : undefined} />) :
                 b.type === 'file' ? <FileBlock b={b} /> :
                 b.type === 'table' ? <TableBlock b={b} readOnly={readOnly} onMeta={(p) => upd(b.id, p)} /> :
                 b.type === 'page' ? <SubPage b={b} /> :
@@ -251,6 +255,7 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
           <button className="chip" onClick={() => addEnd(newBlock('h2'))}>제목</button>
           <button className="chip" onClick={() => addEnd(newBlock('todo'))}>☐ 체크</button>
           <button className="chip" onClick={() => addEnd({ ...newBlock('callout'), tone: 'key' })}>강조</button>
+          <button className="chip" onClick={() => { const d = newBlock('divider'), t = newBlock(); set([...list.filter((x, i) => !(i === list.length - 1 && x.type === 'text' && !x.text)), d, t]); setEdit({ id: t.id, pos: 0 }) }}>― 구분선</button>
           <button className="chip" onClick={() => addEnd({ id: newBlock().id, type: 'table', rows: [['', ''], ['', '']] })}>표</button>
           <button className="chip" onClick={() => addEnd({ id: newBlock().id, type: 'cols', cols: [[newBlock()], [newBlock()]] })}>두 단</button>
           <button className="chip" onClick={() => addEnd({ ...newBlock('toggle'), children: [newBlock()], open: true })}>▸ 토글</button>
