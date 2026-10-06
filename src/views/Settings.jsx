@@ -222,7 +222,40 @@ function ShareCaptureCard() {
         <button className="btn" onClick={async () => { try { await navigator.clipboard.writeText(base + '?photo=1'); toast('주소를 복사했어요') } catch { toast('주소를 길게 눌러 복사해 주세요') } }}>복사</button>
       </div>
       <div className="tiny muted" style={{ marginTop: 6 }}>⋯ 메뉴 › 사진 넣기 로도 열 수 있어요. PDF 는 노트에서 파일 첨부로 추가해 주세요.</div>
+      <div style={{ borderTop: '1px solid var(--line)', margin: '12px 0' }} />
+      <PhotoInboxGuide />
     </Card>
+  )
+}
+
+// 사진 받기함: 단축어가 동기화 gist 에 사진을 올리면 앱(홈 화면 앱)이 다음 동기화 때 받은 편지함으로 가져옴 — 사파리를 거치지 않음
+function PhotoInboxGuide() {
+  const gid = gistInfo().gistId, api = gid ? `https://api.github.com/gists/${gid}` : ''
+  const copy = async (v, m) => { try { await navigator.clipboard.writeText(v); toast(m) } catch { toast('길게 눌러 복사해 주세요') } }
+  return (
+    <>
+      <b className="small">사진 → 앱으로 바로 (사파리 안 거침)</b>
+      <div className="small" style={{ lineHeight: 1.75, marginTop: 4 }}>
+        사진 앱에서 <b>공유 › 앱에 사진</b> → 사진이 동기화 저장소에 올라가고, 홈 화면 앱을 열면 <b>받은 편지함</b> 할 일(사진 첨부)로 들어와요. 아이폰·아이패드 어디서 열어도 돼요.<br />
+        1. 새 단축어 ‘앱에 사진’ · ⓘ › <b>공유 시트에서 보기</b> · 받는 유형: 이미지<br />
+        2. <b>이미지 크기 조절</b> → 너비 1600 (높이 자동)<br />
+        3. <b>이미지 변환</b> → JPEG · 품질 0.7 · 메타데이터 보존 끄기<br />
+        4. <b>Base64 인코딩</b> (줄 바꿈: 없음)<br />
+        5. <b>URL</b> → 아래 주소<br />
+        6. <b>URL의 콘텐츠 가져오기</b> · 방법 <b>PATCH</b><br />
+        　· 헤더 <code>Authorization</code> = <code>Bearer 토큰</code>, <code>Accept</code> = <code>application/vnd.github+json</code><br />
+        　· 요청 본문 <b>JSON</b>: <code>files</code> (사전) › 키 <code>inbox-</code>＋<b>현재 날짜</b> (사전) › <code>content</code> (텍스트) = <b>Base64 인코딩된 결과</b><br />
+        7. (선택) <b>알림 보기</b> ‘앱에 보냈어요’
+      </div>
+      {gid ? <div className="row" style={{ marginTop: 8 }}>
+        <input className="input grow" readOnly value={api} onFocus={(e) => e.target.select()} />
+        <button className="btn" onClick={() => copy(api, '주소를 복사했어요')}>복사</button>
+      </div> : <div className="small" style={{ color: 'var(--danger)', marginTop: 6 }}>먼저 위 ‘동기화’를 연결해 주세요.</div>}
+      <div className="tiny muted" style={{ marginTop: 6, lineHeight: 1.6 }}>
+        키를 <code>inbox-수학 p.52</code> 처럼 쓰면 그 글이 할 일 제목이 돼요(날짜만 있으면 ‘사진’).<br />
+        토큰은 이 단축어 안에만 넣고, 단축어를 남에게 공유하지 마세요. 따로 쓰려면 GitHub › Fine-grained token › 권한 <b>Gists: Read and write</b> 만 준 토큰을 새로 만들어 쓰면 안전해요.
+      </div>
+    </>
   )
 }
 
