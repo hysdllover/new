@@ -4,7 +4,7 @@ import { pickQuote } from './quote.js'
 export const WIDGET_KINDS = [['', '기본'], ['공부', '공부'], ['할일', '할 일'], ['디데이', 'D-day'], ['달력', '공부 달력'], ['캘린더', '캘린더'], ['다짐', '다짐'], ['시간표', '시간표'], ['주간', '주간 공부'], ['과목', '과목별'], ['지금', '지금·다음'], ['진도', '진도'], ['목표', '이번 주 목표'], ['오늘', '오늘 한눈에'], ['대시보드', '대시보드'], ['내일', '내일 준비'], ['마감', '마감 임박'], ['일주일', '7일 일정'], ['디데이목록', 'D-day 목록'], ['바로가기', '바로 시작'], ['진행', '공부 진행'], ['남은분', '남은 시간'], ['타이머', '타이머·공부 시간'], ['노트', '노트'], ['습관', '습관'], ['구성1', '내 위젯 1'], ['구성2', '내 위젯 2'], ['구성3', '내 위젯 3']]
 
 // 스크립트 버전 — 위젯 모양이 바뀔 때 올림. 앱이 위젯 데이터에 같이 올려서, 예전 스크립트면 위젯에 '스크립트 업데이트' 표시
-export const SCRIPT_VER = 66
+export const SCRIPT_VER = 67
 
 // 전체 스크립트 (예전 방식 · 테스트용): 머리 + 본체
 export function buildScript({ widgetRaw, appUrl }) {
@@ -652,7 +652,6 @@ if (!data) {
     if (fam === 'accessoryInline') {
       inline(c ? (clCur ? c.period + '교시 ' + c.title + ' ~' + clk(c.end) : '다음 ' + c.period + '교시 ' + c.title + ' ' + clk(c.start)) : CL.length ? '오늘 수업 끝' : '오늘 수업 없음')
     } else if (fam === 'accessoryCircular') {
-      w.addAccessoryWidgetBackground = true
       const z = w.addStack(); z.size = new Size(LK.c, LK.c); z.layoutVertically(); z.centerAlignContent()
       const row = (s, f) => { const a = z.addStack(); a.addSpacer(); t(a, s, f).minimumScaleFactor = 0.6; a.addSpacer() }
       if (c) { row(c.period + '교시', label(8)); row(c.title, tw(13)); row(clCur ? '~' + clk(c.end) : clk(c.start), label(8)) }
@@ -672,7 +671,6 @@ if (!data) {
     else if (fam === 'accessoryInline') {
       inline(ddTxt + ' ' + dd.title + ' · 주말 ' + weekends(dd) + '번')
     } else if (fam === 'accessoryCircular') {
-      w.addAccessoryWidgetBackground = true
       const z = w.addStack(); z.size = new Size(LK.c, LK.c); z.layoutVertically(); z.centerAlignContent()
       const a = z.addStack(); a.addSpacer(); t(a, ddN(dd) === 0 ? 'D-DAY' : ddN(dd), thin(ddN(dd) === 0 ? 14 : 24)).minimumScaleFactor = 0.5; a.addSpacer()
       const b = z.addStack(); b.addSpacer(); t(b, dd.title, label(8)).minimumScaleFactor = 0.6; b.addSpacer()
@@ -689,7 +687,6 @@ if (!data) {
     if (fam === 'accessoryInline') {
       if (TM.paused) inline('일시정지 ' + TM.name + ' ' + hm(TM.pm)); else { const d = w.addDate(new Date(TM.mode === 'countdown' ? TM.end : TM.start)); d.applyTimerStyle(); d.lineLimit = 1 }
     } else if (fam === 'accessoryCircular') {
-      w.addAccessoryWidgetBackground = true
       const z = w.addStack(); z.size = new Size(LK.c, LK.c); z.layoutVertically(); z.centerAlignContent()
       const a = z.addStack(); a.addSpacer(); t(a, TM.name, label(8)).minimumScaleFactor = 0.6; a.addSpacer()
       const b = z.addStack(); b.addSpacer(); if (TM.paused) t(b, hm(TM.pm), tw(13)); else timerDate(b, 12); b.addSpacer()
@@ -705,7 +702,6 @@ if (!data) {
     // ── 잠금 화면 · 유형별 (글자·스택만, 이미지 없음) ──
     const inl = fam === 'accessoryInline', circ = fam === 'accessoryCircular'
     const cRows = (rows, ratio) => { // 원형: 가운데 정렬 줄들 (+ 진행선)
-      w.addAccessoryWidgetBackground = true
       const z = w.addStack(); z.size = new Size(LK.c, LK.c); z.layoutVertically(); z.centerAlignContent()
       for (const [s, f] of rows) { const a = z.addStack(); a.addSpacer(); const x = t(a, s, f); x.minimumScaleFactor = 0.5; a.addSpacer() }
       if (ratio != null) cline(z, ratio)
@@ -716,7 +712,6 @@ if (!data) {
     } else if (KIND === 'mins') {
       // 원형 · 다음 일정까지(진행 중이면 끝까지) 흐르는 시간 크게
       const c = nCur || nNext
-      w.addAccessoryWidgetBackground = true
       const z = w.addStack(); z.size = new Size(LK.c, LK.c); z.layoutVertically(); z.centerAlignContent()
       const rowC = (fn) => { const a = z.addStack(); a.addSpacer(); fn(a); a.addSpacer() }
       if (c) { rowC((a) => t(a, nCur ? '끝까지' : '시작까지', label(7))); rowC((a) => timerTo(a, nCur ? c.e : c.s, thin(17))); rowC((a) => t(a, c.t, label(7)).minimumScaleFactor = 0.5) }
@@ -795,7 +790,7 @@ if (!data) {
     } else if (KIND === 'quote') {
       const q = quote || '앱에서 다짐을 적어 보세요'
       if (inl) inline(q)
-      else if (circ) { w.addAccessoryWidgetBackground = true; const z = w.addStack(); z.size = new Size(LK.c, LK.c); z.setPadding(4, 4, 4, 4); z.centerAlignContent(); const x = t(z, q, tw(9), null, 4); x.centerAlignText(); x.minimumScaleFactor = 0.5 }
+      else if (circ) { const z = w.addStack(); z.size = new Size(LK.c, LK.c); z.setPadding(4, 4, 4, 4); z.centerAlignContent(); const x = t(z, q, tw(9), null, 4); x.centerAlignText(); x.minimumScaleFactor = 0.5 }
       else t(w, q, tw(12), null, 3).minimumScaleFactor = 0.7
     } else if (KIND === 'week') {
       if (inl) inline('이번 주 ' + hm(weekTot) + ' · 하루 ' + hm(weekAvg))
@@ -820,7 +815,6 @@ if (!data) {
       const c = nCur || nNext || nTmr, k = nTmr ? tmr : today
       if (inl) inline(nCur ? nCur.t + ' ~' + clk(nCur.e) : c ? (nTmr ? '내일 ' : '다음 ') + clk(c.s) + ' ' + c.t : '남은 일정 없음')
       else if (circ) {
-        w.addAccessoryWidgetBackground = true
         const z = w.addStack(); z.size = new Size(LK.c, LK.c); z.layoutVertically(); z.centerAlignContent()
         const rowC = (fn) => { const a = z.addStack(); a.addSpacer(); fn(a); a.addSpacer() }
         if (c) { rowC((a) => t(a, nCur ? '남음' : nTmr ? '내일' : '다음', label(7))); rowC((a) => { if (nTmr) t(a, clk(c.s), tw(13)); else timerTo(a, nCur ? c.e : c.s, tw(12)) }); rowC((a) => t(a, c.t, label(7)).minimumScaleFactor = 0.5) }
@@ -864,7 +858,6 @@ if (!data) {
       // 타이머가 돌면 공부 시간 자리에 타이머
       if (inl) { if (TM && !TM.paused) { const d = w.addDate(new Date(TM.mode === 'countdown' ? TM.end : TM.start)); d.applyTimerStyle(); d.lineLimit = 1 } else inline((dd ? ddTxt + ' · ' : '') + (c ? clk(c.s) + ' · ' : '') + (TM ? TM.name + ' 일시정지 ' + hm(TM.pm) : '공부 ' + hm(mins))) }
       else if (circ && TM) {
-        w.addAccessoryWidgetBackground = true
         const z = w.addStack(); z.size = new Size(LK.c, LK.c); z.layoutVertically(); z.centerAlignContent()
         const rowC = (fn) => { const a2 = z.addStack(); a2.addSpacer(); fn(a2); a2.addSpacer() }
         rowC((a2) => t(a2, TM.name, label(8)).minimumScaleFactor = 0.6); rowC((a2) => { if (TM.paused) t(a2, hm(TM.pm), tw(13)); else timerDate(a2, 12) }); rowC((a2) => t(a2, TM.paused ? '일시정지' : '공부 중', label(7)))
@@ -932,7 +925,6 @@ if (!data) {
     if (fam === 'accessoryInline') {
       inline(hm(mins) + (dd ? ' · ' + ddTxt + ' ' + dd.title : ''))
     } else if (fam === 'accessoryCircular') {
-      w.addAccessoryWidgetBackground = true
       const z = w.addStack(); z.size = new Size(LK.c, LK.c); z.layoutVertically(); z.centerAlignContent()
       const row = (s, f) => { const a = z.addStack(); a.addSpacer(); t(a, s, f).minimumScaleFactor = 0.6; a.addSpacer() }
       if (KIND === 'dday' && dd) { row(ddN(dd) === 0 ? 'D' : String(ddN(dd)), thin(20)); row('D-DAY', label(7)) }
