@@ -1,5 +1,5 @@
 import { useTimerState, useTick, elapsed, remaining } from '../lib/timer.js'
-import { Fragment, useEffect, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { useSettings, setSettings, useColl, put, remove, patch, exportJSON, importJSON, uid, getState } from '../store/store.js'
 import { notesForWidget } from '../lib/notePreview.js'
 import { PRESETS, FONTS, effTheme, setDeviceTheme } from '../theme/theme.js'
@@ -20,6 +20,7 @@ import { requestPermission } from '../lib/notify.js'
 import { fmtTime, fmtClock, today, WD, weekStart } from '../engine/date.js'
 import { weekGoals, goalProgress } from '../store/actions.js'
 import { DIGEST_TIMES } from '../engine/reminders.js'
+import { APP_ICONS, iconSrc, getAppIcon, setAppIcon } from '../lib/appIcon.js'
 
 export default function Settings() {
   const st = useSettings()
@@ -27,8 +28,16 @@ export default function Settings() {
   const [, setTick] = useState(0), bump = () => setTick((x) => x + 1), eff = effTheme(th)
   const setTheme = (p) => setSettings({ theme: { ...th, ...p } })
   const myFonts = useMyFonts()
+  const [q, setQ] = useState(''), gridRef = useRef(null)
+  useSettingsSearch(gridRef, q)
   return (
-    <div className="grid two">
+    <div className="grid two settings-grid" ref={gridRef}>
+      <div className="set-search no-print">
+        <Icon name="search" size={15} />
+        <input className="input" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="설정 검색 · 예: 위젯, 알림, 폰트" />
+        {q && <button className="chip" onClick={() => setQ('')}>지우기</button>}
+      </div>
+      {q && <div className="set-none tiny muted">찾는 설정이 없어요</div>}
       <SyncCard />
       <PushCard />
       <HomeWidgetCard />
@@ -90,6 +99,7 @@ export default function Settings() {
           <Field label="간격 · 이 기기만 (아이패드 기본 여유)"><Seg value={eff.density} onChange={(v) => { setDeviceTheme({ density: v }, th); bump() }} options={[['compact', '촘촘'], ['normal', '보통'], ['relaxed', '여유']]} /></Field>
           <Field label="아이패드 가로 2단 (오른쪽에 함께 보기)"><Seg value={st.splitPane || ''} onChange={(v) => setSettings({ splitPane: v || null })} options={[['', '끔'], ['planner', '오늘 일정'], ['timer', '타이머'], ['tasks', '오늘 할 일'], ['notes', '데일리']]} /></Field>
           <Field label="아이콘"><div className="row wrap" style={{ gap: 6 }}><Seg value={th.iconWeight || 'normal'} onChange={(v) => setTheme({ iconWeight: v })} options={[['thin', '가늘게'], ['normal', '보통'], ['bold', '굵게']]} /><Seg value={th.iconShape || 'round'} onChange={(v) => setTheme({ iconShape: v })} options={[['round', '둥글게'], ['square', '각지게']]} /></div></Field>
+          <AppIconPick />
           <Field label="카드 스타일"><Seg value={th.card} onChange={(v) => setTheme({ card: v })} options={[['line', '선'], ['shadow', '그림자'], ['flat', '평면'], ['glass', '유리'], ['paper', '종이'], ['note', '노트']]} /></Field>
         </div>
       </Card>
@@ -1165,5 +1175,39 @@ function TabBarCard() {
         </div>
       )}
     </Card>
+  )
+}
+
+// 설정 검색: 글자가 들어 있는 카드만 보이고, 맞는 줄은 옅게 표시
+function useSettingsSearch(ref, q) {
+  useEffect(() => {
+    const root = ref.current; if (!root) return
+    const k = q.trim().toLowerCase().replace(/\s+/g, '')
+    const norm = (el) => (el.textContent + ' ' + [...el.querySelectorAll('input[placeholder]')].map((i) => i.placeholder).join(' ')).toLowerCase().replace(/\s+/g, '')
+    root.querySelectorAll('.ss-hit').forEach((x) => x.classList.remove('ss-hit'))
+    let any = false
+    for (const c of root.querySelectorAll(':scope > .card')) {
+      const hit = !k || norm(c).includes(k)
+      c.style.display = hit ? '' : 'none'
+      if (hit && k) { any = true; c.querySelectorAll('.field, label, .card-h').forEach((r) => { if (norm(r).includes(k) && !r.parentElement.closest('.ss-hit')) r.classList.add('ss-hit') }) }
+    }
+    root.querySelector('.set-none')?.classList.toggle('hide', !k || any)
+  }, [q])
+}
+
+// 홈 화면 앱 아이콘 (홈 화면에서 지우고 다시 추가하면 바뀜)
+function AppIconPick() {
+  const [k, setK] = useState(getAppIcon)
+  return (
+    <Field label="앱 아이콘">
+      <div className="row wrap" style={{ gap: 8 }}>
+        {APP_ICONS.map(([v, l]) => (
+          <button key={v} className={'app-ic' + (k === v ? ' on' : '')} onClick={() => { setAppIcon(v); setK(v); toast('홈 화면에서 앱을 지우고 Safari 공유 › 홈 화면에 추가하면 바뀌어요') }}>
+            <img src={iconSrc(v)} alt="" width="40" height="40" /><span className="tiny">{l}</span>
+          </button>
+        ))}
+      </div>
+      <div className="tiny muted" style={{ marginTop: 4 }}>모노는 iOS 아이콘 ‘색조’ 모드에서 깔끔하게 보여요.</div>
+    </Field>
   )
 }

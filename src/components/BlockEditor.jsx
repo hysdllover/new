@@ -23,7 +23,7 @@ export function Inline({ text }) {
     if (i % 2 === 0) return <Fragment key={i}>{p}</Fragment>
     // 글자 꾸미기: **굵게** · ==형광펜== · __밑줄__
     if (p.startsWith('**')) return <b key={i} className="mk-b">{p.slice(2, -2)}</b>
-    if (p.startsWith('==')) return <mark key={i} className="mk-hl">{p.slice(2, -2)}</mark>
+    if (p.startsWith('==')) { const m = /^([rgby]):/.exec(p.slice(2)); return <mark key={i} className={'mk-hl' + (m ? ' hl-' + m[1] : '')}>{p.slice(m ? 4 : 2, -2)}</mark> }
     if (p.startsWith('__')) return <u key={i} className="mk-u">{p.slice(2, -2)}</u>
     if (p.startsWith('[[')) {
       const t = p.slice(2, -2)
@@ -55,6 +55,26 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
     onChange(next)
   }
   const upd = (id, p) => set(list.map((b) => (b.id === id ? { ...b, ...p } : b)))
+  // 다른 앱에서 끌어다 놓기 · 사진 붙여넣기 → 파일 블록 / 글 줄
+  const [dropOn, setDropOn] = useState(false)
+  const dropIn = async (files, text, afterId) => {
+    const nbs = []
+    for (const f of files) { try { const r = await addFile(f, { subjectId: note?.subjectId, noteId: note?.id }); nbs.push({ id: newBlock().id, type: 'file', fileId: r.id }) } catch (e) { toast(e.message) } }
+    if (text) for (const line of text.split(/\r?\n/).map((x) => x.trim()).filter((x) => x && !x.startsWith('#')).slice(0, 200)) nbs.push({ ...newBlock(), text: line })
+    if (!nbs.length) return
+    const cur = (note && find('notes', note.id)?.blocks) || list
+    const base = cur.filter((x, i) => !(i === cur.length - 1 && x.type === 'text' && !x.text))
+    const i = afterId ? base.findIndex((b) => b.id === afterId) : -1
+    const a = [...base]; a.splice(i < 0 ? a.length : i + 1, 0, ...nbs)
+    onChange(a); toast(files.length ? `파일 ${files.length}개를 넣었어요` : '글을 넣었어요')
+  }
+  const isField = (t) => t?.tagName === 'TEXTAREA' || t?.tagName === 'INPUT'
+  const dnd = !nested && !readOnly ? {
+    onDragOver: (e) => { const ty = [...(e.dataTransfer?.types || [])], f = ty.includes('Files'); if (!f && (isField(e.target) || !ty.some((x) => x === 'text/plain' || x === 'text/uri-list'))) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; if (!dropOn) setDropOn(true) },
+    onDragLeave: (e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDropOn(false) },
+    onDrop: (e) => { const fs = [...(e.dataTransfer?.files || [])]; if (!fs.length && isField(e.target)) return; e.preventDefault(); setDropOn(false); dropIn(fs, fs.length ? '' : e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain')) },
+    onPaste: (e) => { const fs = [...(e.clipboardData?.files || [])]; if (!fs.length) return; e.preventDefault(); dropIn(fs, '', edit?.id) },
+  } : {}
   const commit = (b) => { const nb = commitBlock(b, note); if (JSON.stringify(nb) !== JSON.stringify(b)) upd(b.id, nb) }
   const insertAfter = (id, nb) => { const i = list.findIndex((b) => b.id === id); const a = [...list]; a.splice(i + 1, 0, nb); set(a); setEdit({ id: nb.id, pos: 0 }) }
   const removeBlock = (id) => { const i = list.findIndex((b) => b.id === id); const a = list.filter((b) => b.id !== id); set(a.length ? a : [newBlock()]); const prev = list[i - 1]; if (prev) setEdit({ id: prev.id, pos: (prev.text || '').length }) }
@@ -140,7 +160,7 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
   const addEnd = (nb) => { set([...list.filter((x, i) => !(i === list.length - 1 && x.type === 'text' && !x.text)), nb]); if (nb.text !== undefined && !['embed', 'sync', 'file', 'divider'].includes(nb.type)) setEdit({ id: nb.id, pos: 0 }) }
 
   return (
-    <div className={'blocks' + (nested ? ' nested' : '')}>
+    <div className={'blocks' + (nested ? ' nested' : '') + (dropOn ? ' drop-in' : '')} {...dnd}>
       {list.map((b) => {
         const editing = edit?.id === b.id
         const task = b.taskId && tasks.find((t) => t.id === b.taskId)
@@ -375,20 +395,23 @@ function SubPage({ b }) {
 }
 
 // 글자 꾸미기: 고른 글자를 **굵게** · ==형광펜== · __밑줄__ 로 감싸기 (편집 중인 칸 아래 작은 막대)
+const HL = [['r', '로즈'], ['g', '올리브'], ['b', '블루'], ['y', '모래']]
 function MarkBar({ onApply }) {
-  const wrap = (m) => (e) => {
+  const wrap = (m, pre = '') => (e) => {
     e.preventDefault()
     const el = e.currentTarget.closest('.blk-c')?.querySelector('textarea'); if (!el) return
     const a = el.selectionStart, z = el.selectionEnd, v = el.value
     const mid = v.slice(a, z) || '글자'
-    const next = v.slice(0, a) + m + mid + m + v.slice(z)
+    const next = v.slice(0, a) + m + pre + mid + m + v.slice(z)
     onApply(next)
-    requestAnimationFrame(() => { try { el.focus(); el.setSelectionRange(a + m.length, a + m.length + mid.length) } catch {} })
+    const at = a + m.length + pre.length
+    requestAnimationFrame(() => { try { el.focus(); el.setSelectionRange(at, at + mid.length) } catch {} })
   }
   return (
     <div className="markbar no-print">
       <button onPointerDown={wrap('**')} aria-label="굵게"><b>B</b></button>
       <button onPointerDown={wrap('==')} aria-label="형광펜"><span className="mk-hl">형광</span></button>
+      {HL.map(([k, l]) => <button key={k} className="mb-hl" onPointerDown={wrap('==', k + ':')} aria-label={'형광펜 ' + l}><i className={'hl-dot hl-' + k} /></button>)}
       <button onPointerDown={wrap('__')} aria-label="밑줄"><u>밑줄</u></button>
     </div>
   )

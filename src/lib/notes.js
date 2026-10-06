@@ -97,7 +97,7 @@ export function toMarkdown(note) {
   const tasks = list('tasks')
   const lines = [`# ${noteTitle(note)}`, '']
   for (const b of allBlocks(note)) {
-    const t = b.text || ''
+    const t = (b.text || '').replace(/==[rgby]:/g, '==')
     switch (b.type) {
       case 'h1': lines.push(`## ${t}`); break
       case 'h2': lines.push(`### ${t}`); break

@@ -11,6 +11,7 @@ import { download } from '../../lib/files.js'
 import { setParams, openNote } from '../../nav.js'
 import { fmtDate } from '../../engine/date.js'
 import Mindmap from './Mindmap.jsx'
+import Versions from './Versions.jsx'
 
 // 페이지 표지: 옅은 색 띠 · 종이 결
 const COVERS = [['', '없음'], ['paper', '종이'], ['navy', '네이비'], ['olive', '올리브'], ['violet', '바이올렛'], ['rose', '로즈']]
@@ -33,6 +34,7 @@ export default function NotePage({ id }) {
     { label: 'PDF (A4 인쇄)', icon: 'print', onClick: () => window.print() },
     { label: '노트 전체 복습 등록', icon: 'brain', onClick: () => addReview({ title: noteTitle(n), subjectId: n.subjectId, sourceType: 'note', sourceId: n.id }) },
     { label: '표지', icon: 'layers', onClick: () => openSheet((close) => <div className="row wrap" style={{ gap: 8 }}>{COVERS.map(([k, l]) => <button key={k} className={'chip' + ((n.cover || '') === k ? ' on' : '')} onClick={() => { up({ cover: k || null }); close() }}>{k && <i className={'cover-dot cv-' + k} />}{l}</button>)}</div>, { title: '페이지 표지' }) },
+    { label: '이전 버전', icon: 'clock', onClick: () => openSheet((c) => <Versions id={id} close={c} />, { title: '이전 버전' }) },
     { label: n.pinned ? '고정 해제' : '상단 고정', icon: 'star', onClick: () => up({ pinned: !n.pinned }) },
     { label: n.isTemplate ? '템플릿에서 빼기' : '템플릿으로 저장', icon: 'layers', onClick: () => { up({ isTemplate: !n.isTemplate }); toast(n.isTemplate ? '템플릿에서 뺐어요' : '새 페이지에서 이 양식을 고를 수 있어요') } },
     { label: '템플릿 붙이기', icon: 'plus', onClick: () => openSheet((c) => <TemplatePicker close={c} onPick={(tpl) => { up({ blocks: [...(n.blocks || []).filter((b) => b.type !== 'text' || b.text), ...blocksOf(tpl)] }); toast('양식을 아래에 붙였어요') }} />, { title: '템플릿 붙이기' }) },
