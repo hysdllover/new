@@ -15,6 +15,8 @@ const P = {
   close: 'M6 6l12 12M18 6 6 18',
   back: 'M15 5l-7 7 7 7',
   next: 'M9 5l7 7-7 7',
+  up: 'M5 15l7-7 7 7',
+  down: 'M5 9l7 7 7-7',
   trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',
   edit: 'M4 20h4L19 9l-4-4L4 16zM14 6l4 4',
   grip: 'M9 6h.01M9 12h.01M9 18h.01M15 6h.01M15 12h.01M15 18h.01',

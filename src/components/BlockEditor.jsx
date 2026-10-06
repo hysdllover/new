@@ -4,8 +4,10 @@ import { toggleTask, addReview, addTask } from '../store/actions.js'
 import { Icon, Check, openMenu, openSheet, openDetail, toast } from './ui.jsx'
 import { FileThumb, previewFile } from './Attach.jsx'
 import { addFile, pickFiles, fmtSize } from '../lib/files.js'
-import { newBlock, commitBlock, refLabel, openOrCreateByTitle } from '../lib/notes.js'
-import { mdToBlocks, looksMd } from '../lib/md.js'
+import { newBlock, commitBlock, refLabel, openOrCreateByTitle, linkTodos } from '../lib/notes.js'
+import { mdToBlocks, mdToNote, looksMd } from '../lib/md.js'
+import * as TB from '../lib/table.js'
+const { parseGrid } = TB
 import { parseMention, today, monthStart, weekStart, addDays, parseYmd, fmtClock } from '../engine/date.js'
 import { openNote, go, setParams } from '../nav.js'
 import { useTimerState, useTick, elapsed, startStopwatch, pause, resume, stop } from '../lib/timer.js'
@@ -79,9 +81,12 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
     for (const f of files) {
       // .md 파일은 첨부 대신 블록으로 펼침
       if (/\.(md|markdown)$/i.test(f.name) || f.type === 'text/markdown') { try { text = (text ? text + '\n' : '') + await f.text() } catch {} continue }
+      if (/\.(csv|tsv)$/i.test(f.name)) { try { nbs.push(...mdToNote(await f.text(), f.name).blocks) } catch {} continue }
       try { const r = await addFile(f, { subjectId: note?.subjectId, noteId: note?.id }); nbs.push({ id: newBlock().id, type: 'file', fileId: r.id }) } catch (e) { toast(e.message) }
     }
-    if (text) for (const nb of mdToBlocks(text.split(/\r?\n/).filter((x) => !/^#[^#\s]/.test(x.trim())).join('\n')).slice(0, 300)) { if (nb.type !== 'todo') { nbs.push(nb); continue } const { done, ...r } = nb, c = commitBlock(r, note); if (done && c.taskId) toggleTask(c.taskId); nbs.push(c) }
+    // 시트에서 복사한 칸(탭 구분) → 표 · 그 밖은 마크다운
+    if (text && /\t/.test(text) && text.trim().includes('\n')) nbs.push({ id: newBlock().id, type: 'table', rows: parseGrid(text) })
+    else if (text) nbs.push(...linkTodos(mdToBlocks(text.split(/\r?\n/).filter((x) => !/^#[^#\s]/.test(x.trim())).join('\n')).slice(0, 300), note))
     if (!nbs.length) return
     const cur = (note && find('notes', note.id)?.blocks) || list
     const base = cur.filter((x, i) => x.id !== replaceId && !(i === cur.length - 1 && x.type === 'text' && !x.text && afterId == null))
@@ -99,7 +104,7 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
       if (fs.length) { e.preventDefault(); return dropIn(fs, '', edit?.id) }
       // 마크다운 여러 줄 → 블록으로 (지금 칸이 비어 있으면 그 자리에)
       const tx = e.clipboardData?.getData('text/plain') || ''
-      if (!looksMd(tx)) return
+      if (!looksMd(tx) && !(/\t/.test(tx) && tx.trim().includes('\n'))) return
       e.preventDefault()
       const cur = edit && list.find((x) => x.id === edit.id)
       dropIn([], tx, cur && !(cur.text || '').trim() ? list[list.indexOf(cur) - 1]?.id || '__top' : edit?.id, cur && !(cur.text || '').trim() ? cur.id : null)
@@ -211,7 +216,7 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
             <div className="blk-c">
               {b.type === 'divider' ? (b.text ? <div className="hr-t"><span>{b.text}</span></div> : <hr />) :
                 b.type === 'file' ? <FileBlock b={b} /> :
-                b.type === 'table' ? <TableBlock b={b} readOnly={readOnly} onChange={(rows) => upd(b.id, { rows })} onMeta={(p) => upd(b.id, p)} /> :
+                b.type === 'table' ? <TableBlock b={b} readOnly={readOnly} onMeta={(p) => upd(b.id, p)} /> :
                 b.type === 'page' ? <SubPage b={b} /> :
                 b.type === 'cols' ? <div className="cols2" style={{ '--cols': { '2:1': '2fr 1fr', '1:2': '1fr 2fr' }[b.ratio] || '1fr 1fr' }}>{[0, 1].map((k) => <div key={k} className="col-pane"><BlockEditor nested readOnly={readOnly} blocks={(b.cols || [[], []])[k] || []} note={note} onChange={(bs) => upd(b.id, { cols: [0, 1].map((j) => (j === k ? bs : (b.cols || [[], []])[j] || [])) })} /></div>)}</div> :
                 b.type === 'toggle' ? <ToggleBlock b={b} note={note} readOnly={readOnly} editing={editing} edit={edit} onTitle={(t) => onText(b, t)} onKeyDown={(e) => onKey(e, b)} onBlur={(t) => { commit({ ...b, text: t }); setEdit((x) => (x?.id === b.id ? null : x)) }} onEdit={() => setEdit({ id: b.id, pos: (b.text || '').length })} onChildren={(bs) => upd(b.id, { children: bs })} /> :
@@ -421,7 +426,6 @@ function TimerEmbed({ subjectId }) {
 }
 
 
-// 표: 첫 줄은 머리줄 · 칸을 눌러 바로 입력 · 줄·칸 더하기/빼기
 // 표 칸: 내용만큼 높이가 늘어나는 입력칸
 function TCell({ value, onChange, ...rest }) {
   const ref = useRef(null)
@@ -429,33 +433,160 @@ function TCell({ value, onChange, ...rest }) {
   return <textarea ref={ref} rows={1} value={value} onChange={(e) => onChange(e.target.value)} {...rest} />
 }
 
-// 표: 열마다 너비(좁게·보통·넓게)와 정렬(왼쪽·가운데·오른쪽)
+// 표: 칸을 누르면 그 줄·칸 도구 · 왼쪽(줄)·위쪽(칸) 손잡이를 끌어 순서 바꾸기, 누르면 줄·칸 전체 선택
+// Tab 다음 칸 (마지막 칸이면 줄 추가) · ⌥↑↓ 줄 옮기기 · 시트에서 복사한 칸 붙여넣기
 const COLW = { s: 'minmax(56px, .6fr)', n: 'minmax(70px, 1fr)', w: 'minmax(130px, 2fr)' }
-function TableBlock({ b, onChange, onMeta, readOnly }) {
-  const rows = b.rows?.length ? b.rows : [['', ''], ['', '']], cols = Math.max(...rows.map((r) => r.length))
-  const setCell = (i, j, v) => onChange(rows.map((r, k) => (k === i ? Array.from({ length: cols }, (_, c) => (c === j ? v : r[c] ?? '')) : r)))
-  const cw = (j) => (b.colW || [])[j] || 'n', al = (j) => (b.align || [])[j] || 'l'
-  const tpl = Array.from({ length: cols }, (_, j) => COLW[cw(j)]).join(' ')
-  const setArr = (key, j, v) => { const a = Array.from({ length: cols }, (_, k) => (b[key] || [])[k] || (key === 'colW' ? 'n' : 'l')); a[j] = v; onMeta?.({ [key]: a }) }
-  const AL = { l: 'left', c: 'center', r: 'right' }
-  return (
-    <div className="tblk">
-      {!readOnly && <div className="tblk-tools no-print" style={{ gridTemplateColumns: tpl }}>
-        {Array.from({ length: cols }, (_, j) => <div key={j} className="row" style={{ gap: 2, justifyContent: 'center' }}>
-          <button className="tblk-t" onClick={() => setArr('align', j, { l: 'c', c: 'r', r: 'l' }[al(j)])} aria-label="정렬">{{ l: '왼', c: '가운', r: '오른' }[al(j)]}</button>
-          <button className="tblk-t" onClick={() => setArr('colW', j, { s: 'n', n: 'w', w: 's' }[cw(j)])} aria-label="너비">{{ s: '좁게', n: '보통', w: '넓게' }[cw(j)]}</button>
-        </div>)}
+const AL = { l: 'left', c: 'center', r: 'right' }
+function TableBlock({ b, onMeta, readOnly }) {
+  const { rows, cols, align, colW } = TB.norm(b)
+  const head = b.head !== false, headCol = !!b.headCol
+  const [sel, setSel] = useState(null) // { r, c, m: 'cell' | 'row' | 'col' }
+  const [drag, setDrag] = useState(null) // { k: 'row' | 'col', from, to }
+  const wrap = useRef(null)
+  useEffect(() => {
+    if (!sel) return
+    const f = (e) => { if (!wrap.current?.contains(e.target)) setSel(null) }
+    document.addEventListener('pointerdown', f)
+    return () => document.removeEventListener('pointerdown', f)
+  }, [!!sel])
+  const focusCell = (r, c) => setTimeout(() => wrap.current?.querySelector(`[data-rc="${r}-${c}"]`)?.focus(), 0)
+  const apply = (p, ns) => { onMeta(p); if (ns) { setSel(ns); if (ns.m === 'cell') focusCell(ns.r, ns.c) } }
+  const setCell = (i, j, v) => onMeta({ rows: rows.map((r, k) => (k === i ? r.map((x, c) => (c === j ? v : x)) : r)) })
+  const colsTpl = colW.map((w) => COLW[w] || COLW.n).join(' ')
+  const tpl = readOnly ? colsTpl : '18px ' + colsTpl
+
+  // 손잡이: 끌면 옮기기, 그냥 누르면 줄·칸 선택
+  const grip = (k, idx) => (e) => {
+    e.preventDefault()
+    const el = e.currentTarget, x0 = e.clientX, y0 = e.clientY
+    let moved = false, to = idx
+    try { el.setPointerCapture(e.pointerId) } catch {}
+    const mv = (ev) => {
+      if (!moved && Math.hypot(ev.clientX - x0, ev.clientY - y0) < 5) return
+      moved = true; to = idx
+      const p = k === 'row' ? ev.clientY : ev.clientX
+      wrap.current.querySelectorAll(k === 'row' ? '[data-rh]' : '[data-ch]').forEach((h, n) => {
+        const r = h.getBoundingClientRect(), mid = k === 'row' ? r.top + r.height / 2 : r.left + r.width / 2
+        if (n < idx && p < mid) to = Math.min(to, n)
+        if (n > idx && p > mid) to = Math.max(to, n)
+      })
+      setDrag({ k, from: idx, to })
+    }
+    const up = () => {
+      el.removeEventListener('pointermove', mv); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up)
+      setDrag(null)
+      if (moved) { if (to !== idx) apply(k === 'row' ? TB.moveRow(b, idx, to) : TB.moveCol(b, idx, to), { r: k === 'row' ? to : 0, c: k === 'col' ? to : 0, m: k }) }
+      else setSel((s) => (s?.m === k && (k === 'row' ? s.r === idx : s.c === idx) ? null : { r: k === 'row' ? idx : 0, c: k === 'col' ? idx : 0, m: k }))
+    }
+    el.addEventListener('pointermove', mv); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up)
+  }
+
+  const onKey = (e, i, j) => {
+    const ta = e.target
+    if (e.key === 'Tab') {
+      e.preventDefault()
+      const n = i * cols + j + (e.shiftKey ? -1 : 1)
+      if (n < 0) return
+      if (n >= rows.length * cols) return apply(TB.insRow(b, rows.length), { r: rows.length, c: 0, m: 'cell' })
+      return focusCell(Math.floor(n / cols), n % cols)
+    }
+    if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      e.preventDefault(); const to = i + (e.key === 'ArrowUp' ? -1 : 1)
+      if (to >= 0 && to < rows.length) apply(TB.moveRow(b, i, to), { r: to, c: j, m: 'cell' })
+      return
+    }
+    if (e.key === 'ArrowUp' && i > 0 && ta.selectionStart === 0 && ta.selectionEnd === 0) { e.preventDefault(); focusCell(i - 1, j) }
+    if (e.key === 'ArrowDown' && i < rows.length - 1 && ta.selectionStart === ta.value.length) { e.preventDefault(); focusCell(i + 1, j) }
+  }
+  const onPaste = (e, i, j) => {
+    e.stopPropagation() // 칸 안 붙여넣기는 블록으로 바꾸지 않음
+    const tx = e.clipboardData?.getData('text/plain') || ''
+    if (!tx.includes('\t')) return
+    e.preventDefault()
+    const g = TB.parseGrid(tx)
+    apply(TB.pasteGrid(b, i, j, g), { r: i, c: j, m: 'cell' })
+    toast(`${g.length}줄 × ${g[0]?.length || 0}칸을 붙였어요`)
+  }
+
+  const cls = (i, j) => {
+    let c = 'tblk-c' + (i === 0 ? ' r0' : '') + (j === 0 ? ' c0' : '')
+    if ((head && i === 0) || (headCol && j === 0)) c += ' th'
+    else if (b.stripe && (i - (head ? 1 : 0)) % 2 === 1) c += ' zb'
+    if (sel && ((sel.m === 'row' && sel.r === i) || (sel.m === 'col' && sel.c === j))) c += ' sel'
+    if (drag && drag.to !== drag.from) {
+      const x = drag.k === 'row' ? i : j
+      if (x === drag.from) c += ' dg'
+      if (x === drag.to) c += drag.k === 'row' ? (drag.to > drag.from ? ' db' : ' dt') : (drag.to > drag.from ? ' dr' : ' dl')
+    }
+    return c
+  }
+
+  const B = ({ on, children, dis, label, act }) => <button className={'tblk-b' + (act ? ' on' : '')} disabled={dis} aria-label={label} onClick={on}>{children}</button>
+  const r = sel?.r ?? 0, c = sel?.c ?? 0
+  const bar = sel && !readOnly && (
+    <div className="tblk-bar no-print" onPointerDown={(e) => { if (e.target.closest('button')) e.preventDefault() }}>
+      {sel.m !== 'col' && <div className="tblk-g">
+        <span className="tblk-l">{r + 1}번째 줄</span>
+        <B label="위로" dis={r === 0} on={() => apply(TB.moveRow(b, r, r - 1), { ...sel, r: r - 1 })}><Icon name="up" size={13} /></B>
+        <B label="아래로" dis={r === rows.length - 1} on={() => apply(TB.moveRow(b, r, r + 1), { ...sel, r: r + 1 })}><Icon name="down" size={13} /></B>
+        <B on={() => apply(TB.insRow(b, r), { r, c, m: 'cell' })}>위에 추가</B>
+        <B on={() => apply(TB.insRow(b, r + 1), { r: r + 1, c, m: 'cell' })}>아래에 추가</B>
+        <B on={() => apply(TB.dupRow(b, r), { ...sel, r: r + 1 })}>복제</B>
+        <B on={() => { apply(TB.delRow(b, r)); setSel(null) }}>지우기</B>
       </div>}
-      <div className="tblk-grid" style={{ gridTemplateColumns: tpl }}>
-        {rows.map((r, i) => Array.from({ length: cols }, (_, j) => readOnly
-          ? <div key={i + '-' + j} className={'tblk-c' + (i === 0 ? ' th' : '')} style={{ textAlign: AL[al(j)] }}>{r[j] || ''}</div>
-          : <TCell key={i + '-' + j} className={'tblk-c' + (i === 0 ? ' th' : '')} style={{ textAlign: AL[al(j)] }} value={r[j] || ''} placeholder={i === 0 ? '제목' : ''} onChange={(v) => setCell(i, j, v)} />))}
+      {sel.m !== 'row' && <div className="tblk-g">
+        <span className="tblk-l">{c + 1}번째 칸</span>
+        <B label="왼쪽으로" dis={c === 0} on={() => apply(TB.moveCol(b, c, c - 1), { ...sel, c: c - 1 })}><Icon name="back" size={13} /></B>
+        <B label="오른쪽으로" dis={c === cols - 1} on={() => apply(TB.moveCol(b, c, c + 1), { ...sel, c: c + 1 })}><Icon name="next" size={13} /></B>
+        <B on={() => apply(TB.insCol(b, c), { r, c, m: 'cell' })}>왼쪽에 추가</B>
+        <B on={() => apply(TB.insCol(b, c + 1), { r, c: c + 1, m: 'cell' })}>오른쪽에 추가</B>
+        <B on={() => { apply(TB.delCol(b, c)); setSel(null) }}>지우기</B>
+      </div>}
+      {sel.m !== 'row' && <div className="tblk-g">
+        <span className="tblk-l">맞춤</span>
+        {['l', 'c', 'r'].map((a) => <B key={a} act={align[c] === a} on={() => onMeta({ align: align.map((x, k) => (k === c ? a : x)) })}>{{ l: '왼쪽', c: '가운데', r: '오른쪽' }[a]}</B>)}
+      </div>}
+      {sel.m !== 'row' && <div className="tblk-g">
+        <span className="tblk-l">너비</span>
+        {['s', 'n', 'w'].map((w) => <B key={w} act={colW[c] === w} on={() => onMeta({ colW: colW.map((x, k) => (k === c ? w : x)) })}>{{ s: '좁게', n: '보통', w: '넓게' }[w]}</B>)}
+      </div>}
+      {sel.m !== 'row' && <div className="tblk-g">
+        <span className="tblk-l">정렬</span>
+        <B on={() => apply(TB.sortBy(b, c, 1))}>오름차순</B>
+        <B on={() => apply(TB.sortBy(b, c, -1))}>내림차순</B>
+      </div>}
+      <div className="tblk-g">
+        <span className="tblk-l">표</span>
+        <B act={head} on={() => onMeta({ head: !head })}>머리줄</B>
+        <B act={headCol} on={() => onMeta({ headCol: !headCol })}>머리칸</B>
+        <B act={!!b.stripe} on={() => onMeta({ stripe: !b.stripe })}>줄무늬</B>
+        <B on={async () => { try { await navigator.clipboard.writeText(TB.toTSV(b)); toast('표를 복사했어요 · 시트에 붙여 넣을 수 있어요') } catch { toast('복사하지 못했어요') } }}>복사</B>
       </div>
-      {!readOnly && <div className="row no-print" style={{ gap: 4, marginTop: 4 }}>
-        <button className="chip sm" onClick={() => onChange([...rows, Array(cols).fill('')])}>+ 줄</button>
-        <button className="chip sm" onClick={() => onChange(rows.map((r) => [...r, '']))}>+ 칸</button>
-        {rows.length > 1 && <button className="chip sm" onClick={() => onChange(rows.slice(0, -1))}>− 줄</button>}
-        {cols > 1 && <button className="chip sm" onClick={() => onChange(rows.map((r) => r.slice(0, cols - 1)))}>− 칸</button>}
+    </div>
+  )
+
+  return (
+    <div className="tblk" ref={wrap}>
+      <div className="tblk-scroll">
+        <div className="tblk-grid" style={{ gridTemplateColumns: tpl, '--tplp': colsTpl }}>
+          {!readOnly && <div className="tblk-corner no-print" />}
+          {!readOnly && Array.from({ length: cols }, (_, j) => <div key={'h' + j} data-ch={j} className={'tblk-ch no-print' + (sel?.m === 'col' && sel.c === j ? ' on' : '')} onPointerDown={grip('col', j)} aria-label={`${j + 1}번째 칸 선택·옮기기`}><span /></div>)}
+          {rows.map((row, i) => (
+            <Fragment key={i}>
+              {!readOnly && <div data-rh={i} className={'tblk-rh no-print' + (sel?.m === 'row' && sel.r === i ? ' on' : '')} onPointerDown={grip('row', i)} aria-label={`${i + 1}번째 줄 선택·옮기기`}><span /></div>}
+              {row.map((v, j) => readOnly
+                ? <div key={j} className={cls(i, j)} style={{ textAlign: AL[align[j]] }}><Inline text={v} /></div>
+                : <TCell key={j} data-rc={`${i}-${j}`} className={cls(i, j)} style={{ textAlign: AL[align[j]] }} value={v} placeholder={head && i === 0 ? '제목' : ''}
+                    onChange={(x) => setCell(i, j, x)} onFocus={() => setSel({ r: i, c: j, m: 'cell' })} onKeyDown={(e) => onKey(e, i, j)} onPaste={(e) => onPaste(e, i, j)} />)}
+            </Fragment>
+          ))}
+        </div>
+      </div>
+      {bar}
+      {!readOnly && !sel && <div className="row no-print" style={{ gap: 4, marginTop: 4 }}>
+        <button className="chip sm" onClick={() => apply(TB.insRow(b, rows.length), { r: rows.length, c: 0, m: 'cell' })}>+ 줄</button>
+        <button className="chip sm" onClick={() => apply(TB.insCol(b, cols), { r: 0, c: cols, m: 'cell' })}>+ 칸</button>
+        <span className="tiny muted grow" style={{ alignSelf: 'center' }}>칸을 누르면 줄·칸 도구 · 손잡이를 끌어 순서 바꾸기</span>
       </div>}
     </div>
   )

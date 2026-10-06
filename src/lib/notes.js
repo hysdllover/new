@@ -1,6 +1,7 @@
 import { list, put, patch, find, remove, settings, setSettings, batch } from '../store/store.js'
 import { plainText } from './marks.js'
-import { addTask, updateTask } from '../store/actions.js'
+import { tableMd } from './table.js'
+import { addTask, updateTask, toggleTask } from '../store/actions.js'
 import { parseMention, fmtTime } from '../engine/date.js'
 import { uid } from '../store/store.js'
 
@@ -97,7 +98,16 @@ export const refLabel = (ref) => ref ? `${ref.type === 'event' ? '일정' : '할
 export function toMarkdown(note) {
   const tasks = list('tasks')
   const lines = [`# ${noteTitle(note)}`, '']
-  for (const b of allBlocks(note)) {
+  // 토글은 <details> 로 감싸서 (끝 표시 _tend)
+  const flat = []
+  const walk = (bs) => { for (const b of bs || []) {
+    if (b.type === 'sync') walk(find('syncBlocks', b.syncId)?.blocks)
+    else if (b.type === 'cols') for (const c of b.cols || []) walk(c)
+    else if (b.type === 'toggle') { flat.push(b); walk(b.children); flat.push({ type: '_tend' }) }
+    else flat.push(b)
+  } }
+  walk(note.blocks)
+  for (const b of flat) {
     const t = (b.text || '').replace(/==[rgby]:/g, '==').replace(/(^|[^_\w])__([^_\n]+?)__(?![_\w])/g, '$1<u>$2</u>') // 앱 밑줄 → <u>
     const pad = '  '.repeat(b.indent || 0)
     switch (b.type) {
@@ -111,7 +121,9 @@ export function toMarkdown(note) {
       case 'file': lines.push(`[첨부: ${find('files', b.fileId)?.name || '파일'}]`); break
       case 'embed': lines.push(`<!-- ${b.embed?.kind} -->`); break
       case 'callout': lines.push(`> [!${({ key: 'note', warn: 'warning', ex: 'example', rose: 'quote', olive: 'summary', sand: 'question' })[b.tone || 'key'] || 'note'}]`, ...t.split('\n').map((x) => `> ${x}`)); break
-      case 'table': { const rs = b.rows || []; if (rs.length) { lines.push('| ' + rs[0].join(' | ') + ' |', '|' + rs[0].map(() => ' --- |').join(''), ...rs.slice(1).map((r) => '| ' + r.join(' | ') + ' |')) } break }
+      case 'table': lines.push(...tableMd(b)); break
+      case 'toggle': lines.push(`<details><summary>${t}</summary>`); break
+      case '_tend': lines.push('</details>'); break
       case 'page': lines.push(`[하위 페이지: ${noteTitle(find('notes', b.pageId))}]`); break
       default: lines.push(t)
     }
@@ -164,3 +176,12 @@ export async function cleanNoteTasksOnce() {
   if (gone.length) { const { toast } = await import('../components/ui.jsx'); const { restore } = await import('../store/store.js'); toast(`노트에 없는 할 일 ${gone.length}개를 정리했어요`, { label: '되돌리기', fn: () => gone.forEach((t) => restore('tasks', t.id)) }) }
 }
 
+// 체크 줄은 할 일로 연결 (완료 표시된 줄은 완료 상태로) · 하위 블록까지
+export const linkTodos = (blocks, note) => blocks.map((b) => {
+  if (b.type === 'toggle') return { ...b, children: linkTodos(b.children || [], note) }
+  if (b.type !== 'todo') return b
+  const { done, ...rest } = b
+  const nb = commitBlock(rest, note)
+  if (done && nb.taskId) toggleTask(nb.taskId)
+  return nb
+})
