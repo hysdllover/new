@@ -629,7 +629,9 @@ button.greet { display: block; width: 100%; text-align: left; }
 .note-page.reading .note-title { pointer-events: none; }
 /* 글자 꾸미기 · 두 단 · 토글 · 표지 · 여러 줄 선택 */
 .mk-b { font-weight: 600; }
-.mk-hl { background: linear-gradient(transparent 55%, color-mix(in srgb, var(--c3) 45%, transparent) 55%); color: inherit; padding: 0 1px; }
+.mk-hl { --hlc: color-mix(in srgb, var(--c3) 45%, transparent); background: linear-gradient(transparent var(--hl-top, 55%), var(--hlc) var(--hl-top, 55%)); color: inherit; padding: 0 1px; }
+html[data-hl="under"] { --hl-top: 80%; }
+html[data-hl="full"] { --hl-top: 8%; }
 .mk-u { text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 60%, transparent); text-underline-offset: 3px; }
 .markbar { display: flex; align-items: center; gap: 2px; margin: 4px 0 6px; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); width: max-content; max-width: 100%; overflow-x: auto; scrollbar-width: none; box-shadow: 0 2px 10px rgba(20, 25, 40, .05); }
 .markbar::-webkit-scrollbar { display: none; }
@@ -686,7 +688,7 @@ button.greet { display: block; width: 100%; text-align: left; }
 
 /* 형광펜 색 */
 .mk-hl.hl-r { --hl: #d6a9b1; } .mk-hl.hl-g { --hl: #a7b38a; } .mk-hl.hl-b { --hl: #9db0cc; } .mk-hl.hl-y { --hl: #d8c69c; }
-.mk-hl[class*="hl-"] { background: linear-gradient(transparent 55%, color-mix(in srgb, var(--hl) 55%, transparent) 55%); }
+.mk-hl[class*="hl-"] { --hlc: color-mix(in srgb, var(--hl) 55%, transparent); }
 .hl-dot { display: block; width: 14px; height: 14px; border-radius: 50%; background: var(--hl, color-mix(in srgb, var(--c3) 55%, transparent)); }
 .hl-dot.hl-r { --hl: #d6a9b1; } .hl-dot.hl-g { --hl: #a7b38a; } .hl-dot.hl-b { --hl: #9db0cc; } .hl-dot.hl-y { --hl: #d8c69c; }
 .blocks.drop-in { outline: 1.5px dashed color-mix(in srgb, var(--accent) 60%, transparent); outline-offset: 6px; border-radius: 8px; background: color-mix(in srgb, var(--accent) 4%, transparent); }
@@ -786,3 +788,34 @@ button.greet { display: block; width: 100%; text-align: left; }
 .note-label-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; align-self: center; }
 .lab-chip { padding-left: 9px; padding-right: 9px; }
 .dev-list { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; }
+
+/* 인용 · 강조 상자 · 구분선 모양 */
+html[data-quote="mark"] .blk-quote .blk-c { border-left: 0; padding-left: 22px; position: relative; }
+html[data-quote="mark"] .blk-quote .blk-c::before { content: '\201C'; position: absolute; left: 0; top: -4px; font-size: 1.9em; line-height: 1; color: color-mix(in srgb, var(--c3) 80%, transparent); font-family: Georgia, serif; }
+html[data-quote="slip"] .blk-quote .blk-c { border-left: 0; padding: 6px 12px; background: color-mix(in srgb, var(--c4) 9%, var(--surface)); border-radius: 2px 6px 3px 5px; box-shadow: 0 1px 2px rgba(0, 0, 0, .05); color: var(--text); margin: 2px 0; }
+html[data-callout="band"] .co-tag { display: none; }
+html[data-callout="band"] .blk-callout .blk-c { border-left-width: 3px; }
+html[data-div="dot"] .blk hr { border-top-style: dashed; border-top-color: color-mix(in srgb, var(--muted) 45%, transparent); }
+html[data-div="wave"] .blk hr { border: 0; height: 8px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='8'%3E%3Cpath d='M0 4q6-4 12 0t12 0' fill='none' stroke='%23999' stroke-opacity='.5' stroke-width='1'/%3E%3C/svg%3E") repeat-x 0 50%; }
+/* 노트 날짜 도장 */
+.note-stamp { order: 3; flex-shrink: 0; align-self: flex-start; margin-top: 8px; white-space: nowrap; font-family: var(--font-head, inherit); font-size: .82em; color: color-mix(in srgb, var(--text) 45%, transparent); transform: rotate(-3deg); padding: 1px 6px; border: 1px solid color-mix(in srgb, var(--text) 18%, transparent); border-radius: 4px 6px 4px 7px; pointer-events: none; }
+/* 노트별 배경 */
+.note-bg { padding: 10px 12px 24px; border-radius: var(--radius); background-color: var(--surface); }
+.note-bg-line { background-image: linear-gradient(color-mix(in srgb, var(--accent) 9%, transparent) 1px, transparent 1px); background-size: 100% 28px; background-position: 0 6px; }
+.note-bg-grid { background-image: linear-gradient(color-mix(in srgb, var(--accent) 7%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--accent) 7%, transparent) 1px, transparent 1px); background-size: 18px 18px; }
+.note-bg-dot { background-image: radial-gradient(color-mix(in srgb, var(--text) 16%, transparent) 1px, transparent 1.4px); background-size: 16px 16px; }
+.bg-sw { display: inline-block; width: 18px; height: 14px; border: 1px solid var(--line); border-radius: 3px; background-color: var(--surface); }
+.bg-sw.note-bg-plain { background-image: none; }
+@media print { .note-bg { background: none; padding: 0; } }
+.lab-head { display: flex; align-items: center; gap: 6px; font-size: .82em; color: var(--muted); margin: 6px 2px -2px; }
+.tblk-tools { display: grid; min-width: max-content; margin-bottom: 2px; }
+.tblk-t { font-size: .66em; color: var(--muted); padding: 1px 5px; border-radius: 4px; }
+.tblk-t:active { background: var(--surface-2); }
+/* 과목 누적 시간 줄: 10칸 옅은 눈금 */
+.subj-cum { height: 4px; margin-top: 3px; border-radius: 2px; background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), color-mix(in srgb, var(--line) 90%, transparent) calc(10% - 1px) 10%), color-mix(in srgb, var(--line) 45%, transparent); overflow: hidden; }
+.subj-cum i { display: block; height: 100%; background: color-mix(in srgb, var(--sc, var(--accent)) 55%, transparent); border-radius: 2px; }
+/* 월 달력: 공부 시간 가는 선 · D-day까지 남은 주 */
+.mstudy { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--c2); border-radius: 0 1px 1px 0; opacity: .8; }
+.mwk { position: absolute; right: 3px; top: 3px; font-size: .58em; color: color-mix(in srgb, var(--muted) 80%, transparent); }
+.mdd { position: absolute; right: 4px; bottom: 6px; width: 6px; height: 6px; border-radius: 50%; box-shadow: 0 0 0 1.5px var(--c4); }
+.wkb-sd { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; margin-left: -2px; }

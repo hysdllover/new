@@ -73,6 +73,15 @@ export function applyTheme(t0) {
   // 아이콘 선 굵기·끝 모양
   root.style.setProperty('--icon-sw', { thin: 1.15, normal: 1.5, bold: 2 }[t.iconWeight] || 1.5)
   root.dataset.icons = t.iconShape === 'square' ? 'square' : 'round'
+  // 디자인 세부 (설정 › 디자인 세부)
+  const paper = t.card === 'paper' || t.card === 'note'
+  const D = { check: t.checkShape || (paper ? 'pencil' : 'square'), prog: t.progStyle || (paper ? 'pencil' : 'solid'), hl: t.hlStyle || 'mid', quote: t.quoteStyle || 'line', callout: t.calloutStyle || 'tag', div: t.divStyle || 'solid', done: t.doneStyle || 'strike', cardb: t.cardBorder || 'normal', tabl: t.tabLabels === false ? 'icon' : 'text' }
+  for (const [k, v] of Object.entries(D)) root.dataset[k] = v
+  root.toggleAttribute('data-icofill', t.iconFill === 'fill')
+  root.toggleAttribute('data-fold', t.card === 'note' && t.fold !== false)
+  root.style.setProperty('--grain', t.grain ?? 1)
+  root.style.setProperty('--grid-size', (t.gridSize || 18) + 'px')
+  root.style.setProperty('--grid-a', (t.gridAlpha ?? 5.5) + '%')
   if (t.mode === 'system') delete root.dataset.theme
   else root.dataset.theme = t.mode
 }

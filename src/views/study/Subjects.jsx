@@ -17,7 +17,7 @@ export default function Subjects({ params }) {
   const t0 = today(), ws = weekStart(t0, st.weekStart ?? 1)
   const stat = (id) => { let wk = 0, all = 0, td = 0; for (const x of sessions) if (x.subjectId === id) { all += x.dur || 0; if (x.date >= ws) wk += x.dur || 0; if (x.date === t0) td += x.dur || 0 } return { wk, all, td } }
   const rows = subjects.map((x) => ({ s: x, ...stat(x.id) }))
-  const mx = Math.max(60, ...rows.map((r) => r.wk))
+  const mx = Math.max(60, ...rows.map((r) => r.wk)), mxAll = Math.max(60, ...rows.map((r) => r.all))
   return (
     <div className="subj-grid">
       {rows.map(({ s, wk, all, td }) => (
@@ -26,6 +26,8 @@ export default function Subjects({ params }) {
           <div className="subj-big"><Roll value={hm(wk)} /></div>
           <div className="tiny muted">이번 주 · 오늘 {hm(td)} · 전체 {fmtDur(all) || '0분'}</div>
           <div className="subj-bar"><i style={{ width: (wk / mx) * 100 + '%' }} /></div>
+          <div className="row between tiny muted" style={{ marginTop: 8 }}><span>누적</span><span style={{ fontVariantNumeric: 'tabular-nums' }}>{hm(all)}</span></div>
+          <div className="subj-cum" title={`누적 ${fmtDur(all)}`}><i style={{ width: (all / mxAll) * 100 + '%' }} /></div>
         </button>
       ))}
       {!subjects.length && <Empty>설정에서 과목을 추가하세요</Empty>}

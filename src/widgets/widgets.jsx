@@ -1,14 +1,15 @@
 import { Roll } from '../components/Roll.jsx'
-import { useColl, useSettings, put, patch, remove } from '../store/store.js'
+import { useColl, useSettings, setSettings, put, patch, remove } from '../store/store.js'
 import { dayRec, setDay, toggleTask, completeReview } from '../store/actions.js'
 import { eventsOn, classesOn } from '../engine/scheduler.js'
 import { today, nowMin, fmtTime, fmtDur, dday, fmtShort, fmtClock, addDays, weekStart, parseYmd, fmtDate, tsToYmd } from '../engine/date.js'
 import { WeekBars, MonthHeat } from '../components/charts.jsx'
 import { openRecord } from '../views/study/Log.jsx'
-import { Card, Check, Ring, Empty, Icon, AddInput, openDetail, useNow } from '../components/ui.jsx'
+import { Card, Check, Ring, Empty, Icon, AddInput, openDetail, useNow, openSheet } from '../components/ui.jsx'
 import TaskItem from '../components/TaskItem.jsx'
 import { WeekGoals } from '../components/WeekGoals.jsx'
 import { seriesSummary } from '../lib/series.js'
+import { PALETTE } from '../store/schema.js'
 import { lectureStats } from '../engine/lecture.js'
 import { plusOne, listen, lectureLine } from '../views/study/Lectures.jsx'
 import { LinkPreview } from '../components/Attach.jsx'
@@ -50,12 +51,13 @@ function Now() {
 // 시리즈 진행: 이름 · 끝낸 수/전체 · 가는 진행선 · 다음 회차 (누르면 완료)
 function SeriesW() {
   const tasks = useColl('tasks'), subjects = useColl('subjects')
-  const list = seriesSummary(tasks, subjects).slice(0, 5)
+  const st = useSettings(), list = seriesSummary(tasks, subjects, st.seriesColors || {}).slice(0, 5)
+  const pickColor = (x) => openSheet((c) => <div className="row wrap" style={{ gap: 8 }}>{PALETTE.map((col) => <button key={col} className="stk-color" style={{ background: col, width: 26, height: 26 }} onClick={() => { setSettings({ seriesColors: { ...(st.seriesColors || {}), [x.id]: col } }); c() }} aria-label="색" />)}<button className="chip" onClick={() => { const m = { ...(st.seriesColors || {}) }; delete m[x.id]; setSettings({ seriesColors: m }); c() }}>과목 색</button></div>, { title: x.t + ' 색' })
   return (
     <Card title="시리즈 진행" action={<button className="tiny muted" onClick={() => go('tasks', 'board')}>배치 →</button>}>
       {list.length ? <div className="col" style={{ gap: 10 }}>{list.map((x) => (
         <div key={x.id} className="col" style={{ gap: 4 }}>
-          <div className="row between small"><span className="ellipsis">{x.t}</span><span className="muted tiny" style={{ fontVariantNumeric: 'tabular-nums' }}>{x.d}/{x.n}</span></div>
+          <div className="row between small"><span className="row ellipsis" style={{ gap: 6 }}><button className="dot" style={{ background: x.color || 'var(--accent)', width: 9, height: 9 }} onClick={() => pickColor(x)} aria-label="시리즈 색" /><span className="ellipsis">{x.t}</span></span><span className="muted tiny" style={{ fontVariantNumeric: 'tabular-nums' }}>{x.d}/{x.n}</span></div>
           <div className="rp-track"><i style={{ width: (x.d / (x.n || 1)) * 100 + '%', background: x.color || 'var(--accent)' }} /></div>
           {x.next && <div className="row tiny muted" style={{ gap: 6 }}><Check on={false} onClick={() => toggleTask(x.next.id)} color={x.color} /><span className="ellipsis grow">다음 {x.next.title}</span>{x.next.due && <span>{fmtShort(x.next.due)}</span>}</div>}
         </div>

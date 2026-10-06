@@ -18,6 +18,21 @@ export const wCols = (w) => w.cols || { s: 2, m: 4, l: 4, t: 2 }[w.size || 's'] 
 export const wRows = (w) => w.rows || (w.size === 't' ? 2 : 1)
 // 벤토: 작은 위젯이 이어지면 [큰 칸(반 폭·2배 높이), 작은 칸, 작은 칸] 묶음으로 · 넓은 위젯은 한 줄
 const bento = (ws) => { let run = 0; return ws.map((w) => { const z = WIDGETS[w.type]?.size || 's'; if (z === 'm' || z === 'l') { run = 0; return { ...w, cols: 4, rows: 1, size: 'l' } } const big = run % 3 === 0; run++; const [cols, rows] = big ? [2, 2] : [2, 1]; return { ...w, cols, rows, size: sizeOf(cols, rows) } }) }
+// 편집 중 오른쪽 아래 손잡이를 끌어 크기 바꾸기 (4칸 격자 · 높이 1~3배)
+function startResize(e, w, done) {
+  e.preventDefault(); e.stopPropagation()
+  const card = e.currentTarget.closest('.wf'), grid = card?.parentElement; if (!card || !grid) return
+  const gap = parseFloat(getComputedStyle(grid).columnGap) || 12, colW = (grid.clientWidth - gap * 3) / 4, rowH = 120 + gap
+  const r = card.getBoundingClientRect(), x0 = e.clientX, y0 = e.clientY
+  let cols = wCols(w), rows = wRows(w)
+  const mv = (ev) => {
+    cols = Math.max(1, Math.min(4, Math.round((r.width + ev.clientX - x0 + gap) / (colW + gap))))
+    rows = Math.max(1, Math.min(3, Math.round((r.height + ev.clientY - y0 + gap) / rowH)))
+    card.style.gridColumn = `span ${cols}`; card.style.gridRow = rows > 1 ? `span ${rows}` : ''; card.dataset.rs = `${cols}/4${rows > 1 ? ' · ' + rows + '배' : ''}`
+  }
+  const up = () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); delete card.dataset.rs; done(cols, rows) }
+  window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up)
+}
 const sizeOf = (cols, rows) => (rows >= 2 && cols <= 2 ? 't' : cols >= 4 ? 'l' : cols === 3 ? 'm' : 's')
 
 export const DEFAULT_PAGES = [
@@ -102,7 +117,7 @@ export default function Home() {
                 const W = WIDGETS[w.type].C
                 const move = (id, toId) => { const a = [...p.widgets]; const i = a.findIndex((x) => x.id === id), j = a.findIndex((x) => x.id === toId); if (i < 0 || j < 0 || i === j) return; const [m] = a.splice(i, 1); a.splice(j, 0, m); setW(pi, a) }
                 return (
-                  <div key={w.id} className={`w-${w.size || 's'} wf wf-${w.style || 'card'}` + (editing ? ' w-edit draggable' : '')} style={{ gridColumn: `span ${wCols(w)}`, gridRow: wRows(w) > 1 ? `span ${wRows(w)}` : null, minHeight: wRows(w) > 1 ? wRows(w) * 120 + (wRows(w) - 1) * 12 : null, ...(w.color ? { '--wc': w.color } : null) }}
+                  <div key={w.id} className={`w-${w.size || 's'} wf wf-${w.style || 'card'}` + (w.pad ? ' wf-pad-' + w.pad : '') + (editing ? ' w-edit draggable' : '')} style={{ gridColumn: `span ${wCols(w)}`, gridRow: wRows(w) > 1 ? `span ${wRows(w)}` : null, minHeight: wRows(w) > 1 ? wRows(w) * 120 + (wRows(w) - 1) * 12 : null, ...(w.color ? { '--wc': w.color } : null) }}
                     data-drop={editing ? 'w:' + w.id : undefined}
                     onClick={editing ? () => widgetSettings(pi, w) : undefined}
                     {...(editing ? longPress(() => ({ label: WIDGETS[w.type].label, onDrop: (z) => move(w.id, z.dataset.drop.slice(2)) }), 250) : {})}>
@@ -111,6 +126,7 @@ export default function Home() {
                       <span>{wCols(w)}/4{wRows(w) > 1 ? ` · ${wRows(w)}배` : ''} · 탭해서 설정</span>
                       <button className="icon-btn" aria-label="뒤로" onClick={(e) => { e.stopPropagation(); const a = [...p.widgets], i = a.indexOf(w); if (i < a.length - 1) { [a[i + 1], a[i]] = [a[i], a[i + 1]]; setW(pi, a) } }}>›</button>
                     </div>}
+                    {editing && <span className="w-resize" aria-label="크기 조절" onClick={(e) => e.stopPropagation()} onPointerDown={(e) => startResize(e, w, (cols, rows) => setW(pi, p.widgets.map((x) => (x.id === w.id ? { ...x, cols, rows, size: sizeOf(cols, rows) } : x))))} />}
                     <div className="wf-body" style={editing ? { pointerEvents: 'none' } : null}>
                       <W w={w} update={(patchW) => setW(pi, p.widgets.map((x) => (x.id === w.id ? { ...x, ...patchW } : x)))} />
                     </div>
@@ -135,6 +151,7 @@ function WidgetSettings({ w, pages, pi, close, onSave, onDelete }) {
       <Field label="너비"><Seg value={f.cols} onChange={(v) => setF({ ...f, cols: v, size: sizeOf(v, f.rows) })} options={COLS} /></Field>
       <Field label="높이"><Seg value={f.rows} onChange={(v) => setF({ ...f, rows: v, size: sizeOf(f.cols, v) })} options={ROWS} /></Field>
       <Field label="형태"><Seg value={f.style} onChange={(v) => setF({ ...f, style: v })} options={STYLES} /></Field>
+      <Field label="안쪽 여백"><Seg value={f.pad || ''} onChange={(v) => setF({ ...f, pad: v || null })} options={[['tight', '좁게'], ['', '기본'], ['roomy', '넓게']]} /></Field>
       <Field label="포인트 색">
         <div className="row"><ColorPick value={f.color} onChange={(c) => setF({ ...f, color: c })} colors={PALETTE} />{f.color && <button className="chip" onClick={() => setF({ ...f, color: null })}>기본</button>}</div>
       </Field>

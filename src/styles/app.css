@@ -119,7 +119,7 @@ svg { display: block; }
 :root[data-card="paper"]:not([data-theme="dark"]) { --bg: #f2f2f1; --surface: #fbfbfa; --surface-2: #f3f3f2; --line: #e4e4e2; }
 @media (prefers-color-scheme: dark) { :root[data-card="paper"]:not([data-theme="light"]) { --bg: #1c1f26; --surface: #242832; --surface-2: #2c313c; --line: #353a46; --relief: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='360'%3E%3Cfilter id='p' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.06' numOctaves='5' seed='3' stitchTiles='stitch'/%3E%3CfeDiffuseLighting lighting-color='%23fff' surfaceScale='1.1'%3E%3CfeDistantLight azimuth='225' elevation='70'/%3E%3C/feDiffuseLighting%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)' opacity='.1'/%3E%3C/svg%3E"); --sheet-shadow: 0 1px 3px rgba(0, 0, 0, .3); --sheet-edge: #353a46; } }
 :root[data-card="paper"][data-theme="dark"] { --relief: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='360'%3E%3Cfilter id='p' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.06' numOctaves='5' seed='3' stitchTiles='stitch'/%3E%3CfeDiffuseLighting lighting-color='%23fff' surfaceScale='1.1'%3E%3CfeDistantLight azimuth='225' elevation='70'/%3E%3C/feDiffuseLighting%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)' opacity='.1'/%3E%3C/svg%3E"); --sheet-shadow: 0 1px 3px rgba(0, 0, 0, .3); --sheet-edge: #353a46; }
-[data-card="paper"] body { background-image: var(--relief); }
+[data-card="paper"] body::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background-image: var(--relief); opacity: var(--grain, 1); }
 [data-card="paper"] .topbar, [data-card="paper"] .segbar { background: transparent; }
 [data-card="paper"] .sidebar, [data-card="paper"] .tabbar { background-image: var(--relief); }
 [data-card="paper"] .tabbar { background-color: color-mix(in srgb, var(--bg) 90%, transparent); }
@@ -129,8 +129,8 @@ svg { display: block; }
 [data-card="paper"] .card > .card-h { padding-bottom: 6px; border-bottom: 1px solid var(--line); }
 @media print { [data-card="paper"] body, [data-card="paper"] .card { background-image: none; box-shadow: none; } }
 /* 노트: 종이 위 노트 한 장 — 옅은 모눈 · 머리줄 · 손글씨 제목 · 왼쪽 여백선 */
-[data-note] { --grid: color-mix(in srgb, var(--accent) 5.5%, transparent); }
-[data-note] .card { background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px), var(--page); background-size: 18px 18px, 18px 18px, auto; background-position: -1px -1px; }
+[data-note] { --grid: color-mix(in srgb, var(--accent) var(--grid-a, 5.5%), transparent); }
+[data-note] .card { background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px), var(--page); background-size: var(--grid-size, 18px) var(--grid-size, 18px), var(--grid-size, 18px) var(--grid-size, 18px), auto; background-position: -1px -1px; }
 [data-note] .card > .card-h { border-bottom-color: color-mix(in srgb, var(--accent) 22%, transparent); }
 [data-note] .card-h h3, [data-note] .topbar .title, [data-note] h1, [data-note] h2 { font-family: var(--font-head, inherit); font-weight: 400; letter-spacing: .01em; }
 [data-note] .card-h h3 { font-size: 1.02em; color: var(--text); }
@@ -336,12 +336,44 @@ html.sc-away .content { --fade-t: 16px; }
 }
 
 /* 종이 테마: 연필 선 체크박스 · 연필로 칠한 진행선 */
-[data-card="paper"] .check { border-width: 1.2px; border-color: color-mix(in srgb, var(--text) 55%, transparent); border-radius: 3px 4px 3px 5px / 4px 3px 5px 3px; }
-[data-card="paper"] .check.round { border-radius: 48% 52% 50% 46% / 52% 46% 54% 48%; }
-[data-card="paper"] .check.on { background: color-mix(in srgb, var(--ck, var(--accent)) 12%, transparent) !important; border-color: var(--ck, var(--accent)); animation: none; }
-[data-card="paper"] .check.on::after { width: 76%; height: 76%; border: 0; transform: none; background: var(--ck, var(--accent)); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.3 8.4c1.3.9 2.4 2.1 3.3 3.6 1.5-3.4 3.7-6.2 6.2-8.5' fill='none' stroke='%23000' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.3 8.4c1.3.9 2.4 2.1 3.3 3.6 1.5-3.4 3.7-6.2 6.2-8.5' fill='none' stroke='%23000' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat; }
-[data-card="paper"] .burst { display: none; }
-[data-card="paper"] :is(.prog, .subj-bar, .bar-t, .rp-track) { background: linear-gradient(color-mix(in srgb, var(--text) 22%, transparent), color-mix(in srgb, var(--text) 22%, transparent)) 0 50% / 100% 1px no-repeat; border-radius: 0; }
-[data-card="paper"] :is(.prog > i, .subj-bar i, .bar-t i, .rp-track i, .rp-stack i, .wbar-b) { -webkit-mask-image: repeating-linear-gradient(-62deg, #000 0 1.6px, rgba(0, 0, 0, .45) 1.6px 3.2px); mask-image: repeating-linear-gradient(-62deg, #000 0 1.6px, rgba(0, 0, 0, .45) 1.6px 3.2px); border-radius: 1px 2px 1px 3px; }
-[data-card="paper"] :is(.prog, .subj-bar, .bar-t, .rp-track) { height: 5px; overflow: visible; }
-[data-card="paper"] .subj-bar i { height: 100%; }
+html[data-check="pencil"] .check { border-width: 1.2px; border-color: color-mix(in srgb, var(--text) 55%, transparent); border-radius: 3px 4px 3px 5px / 4px 3px 5px 3px; }
+html[data-check="pencil"] .check.round { border-radius: 48% 52% 50% 46% / 52% 46% 54% 48%; }
+html[data-check="pencil"] .check.on { background: color-mix(in srgb, var(--ck, var(--accent)) 12%, transparent) !important; border-color: var(--ck, var(--accent)); animation: none; }
+html[data-check="pencil"] .check.on::after { width: 76%; height: 76%; border: 0; transform: none; background: var(--ck, var(--accent)); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.3 8.4c1.3.9 2.4 2.1 3.3 3.6 1.5-3.4 3.7-6.2 6.2-8.5' fill='none' stroke='%23000' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.3 8.4c1.3.9 2.4 2.1 3.3 3.6 1.5-3.4 3.7-6.2 6.2-8.5' fill='none' stroke='%23000' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat; }
+html[data-check="pencil"] .burst { display: none; }
+html[data-prog="pencil"] :is(.prog, .subj-bar, .bar-t, .rp-track) { background: linear-gradient(color-mix(in srgb, var(--text) 22%, transparent), color-mix(in srgb, var(--text) 22%, transparent)) 0 50% / 100% 1px no-repeat; border-radius: 0; }
+html[data-prog="pencil"] :is(.prog > i, .subj-bar i, .bar-t i, .rp-track i, .rp-stack i, .wbar-b) { -webkit-mask-image: repeating-linear-gradient(-62deg, #000 0 1.6px, rgba(0, 0, 0, .45) 1.6px 3.2px); mask-image: repeating-linear-gradient(-62deg, #000 0 1.6px, rgba(0, 0, 0, .45) 1.6px 3.2px); border-radius: 1px 2px 1px 3px; }
+html[data-prog="pencil"] :is(.prog, .subj-bar, .bar-t, .rp-track) { height: 5px; overflow: visible; }
+html[data-prog="pencil"] .subj-bar i { height: 100%; }
+
+/* 디자인 세부: 체크박스 모양 · 진행선 모양 · 카드 테두리 · 탭바 · 아이콘 채움 · 완료 모양 */
+html[data-check="round"] .check { border-radius: 50%; }
+html[data-prog="dot"] :is(.prog > i, .subj-bar i, .bar-t i, .rp-track i, .wbar-b) { -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 4px, transparent 4px 7px); mask-image: repeating-linear-gradient(90deg, #000 0 4px, transparent 4px 7px); }
+html[data-prog="dot"] .wbar-b { -webkit-mask-image: repeating-linear-gradient(180deg, #000 0 4px, transparent 4px 6px); mask-image: repeating-linear-gradient(180deg, #000 0 4px, transparent 4px 6px); }
+html[data-cardb="none"] .card { border-color: transparent; }
+html[data-cardb="thin"] .card { border-color: color-mix(in srgb, var(--line) 55%, transparent); }
+html[data-cardb="bold"] .card { border-color: color-mix(in srgb, var(--text) 22%, var(--line)); }
+html[data-tabl="icon"] .tabbar .tb-l { display: none; }
+html[data-tabl="icon"] .tabbar button { min-height: 44px; }
+html[data-tabl="icon"] .sidebar .nav span { display: none; }
+html[data-icofill] svg.ic:not(.ic-fixed) { fill: color-mix(in srgb, currentColor 16%, transparent); }
+html[data-done="fade"] :is(.item.done .title, .tl-item.done .tl-title, .blk-v.done, .one.done .one-title, .wgoal.done .wgoal-t, .mpeek-row.done .ellipsis, .wkb-item.done .wkb-t) { text-decoration: none; opacity: .5; }
+html[data-done="keep"] :is(.item.done .title, .tl-item.done .tl-title, .blk-v.done, .one.done .one-title, .wgoal.done .wgoal-t, .mpeek-row.done .ellipsis, .wkb-item.done .wkb-t) { text-decoration: none; color: inherit; }
+/* 노트 테마: 카드 오른쪽 위 접힌 종이 모서리 */
+html[data-fold] .card { position: relative; }
+html[data-fold] .card::after { content: ''; position: absolute; top: -1px; right: -1px; width: 14px; height: 14px; background: linear-gradient(225deg, var(--bg) 50%, color-mix(in srgb, var(--text) 9%, var(--surface)) 50%); border-bottom-left-radius: 3px; box-shadow: -1px 1px 1px rgba(0, 0, 0, .04); pointer-events: none; }
+@media print { html[data-fold] .card::after { display: none; } }
+/* 상단 상태 줄 */
+.status-line { display: flex; align-items: center; gap: 8px; padding: 0 calc(16px + var(--sar)) 4px calc(16px + var(--sal)); font-size: .72em; color: var(--muted); font-variant-numeric: tabular-nums; }
+.sl-timer { display: inline-flex; align-items: center; gap: 6px; color: var(--text); }
+.sl-timer i { width: 6px; height: 6px; border-radius: 3px; animation: slpulse 2s ease-in-out infinite; }
+.sl-timer i.paused { animation: none; opacity: .4; }
+.sl-timer b { font-weight: var(--fw); }
+@keyframes slpulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .sl-timer i { animation: none; } }
+.sl-sync.error { color: var(--c4); }
+/* 홈 카드: 크기 손잡이 · 안쪽 여백 */
+.w-resize { position: absolute; right: 2px; bottom: 2px; width: 22px; height: 22px; z-index: 3; cursor: nwse-resize; touch-action: none; background: linear-gradient(135deg, transparent 55%, color-mix(in srgb, var(--accent) 55%, transparent) 55% 62%, transparent 62% 72%, color-mix(in srgb, var(--accent) 55%, transparent) 72% 79%, transparent 79%); border-radius: 0 0 8px 0; }
+.wf[data-rs]::before { content: attr(data-rs); position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 4; font-size: .78em; padding: 3px 8px; border-radius: 6px; background: var(--surface); box-shadow: var(--shadow); }
+.wf-pad-tight > .wf-body > .card, .wf-pad-tight > .wf-body > * > .card { padding: calc(var(--gap) * .55); }
+.wf-pad-roomy > .wf-body > .card, .wf-pad-roomy > .wf-body > * > .card { padding: calc(var(--gap) * 1.6); }

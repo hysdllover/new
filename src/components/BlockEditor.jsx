@@ -5,6 +5,7 @@ import { Icon, Check, openMenu, openSheet, openDetail, toast } from './ui.jsx'
 import { FileThumb, previewFile } from './Attach.jsx'
 import { addFile, pickFiles, fmtSize } from '../lib/files.js'
 import { newBlock, commitBlock, refLabel, openOrCreateByTitle } from '../lib/notes.js'
+import { mdToBlocks, looksMd } from '../lib/md.js'
 import { parseMention, today, monthStart, weekStart, addDays, parseYmd, fmtClock } from '../engine/date.js'
 import { openNote, go, setParams } from '../nav.js'
 import { useTimerState, useTick, elapsed, startStopwatch, pause, resume, stop } from '../lib/timer.js'
@@ -73,23 +74,32 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
   const upd = (id, p) => set(list.map((b) => (b.id === id ? { ...b, ...p } : b)))
   // 다른 앱에서 끌어다 놓기 · 사진 붙여넣기 → 파일 블록 / 글 줄
   const [dropOn, setDropOn] = useState(false)
-  const dropIn = async (files, text, afterId) => {
+  const dropIn = async (files, text, afterId, replaceId) => {
     const nbs = []
     for (const f of files) { try { const r = await addFile(f, { subjectId: note?.subjectId, noteId: note?.id }); nbs.push({ id: newBlock().id, type: 'file', fileId: r.id }) } catch (e) { toast(e.message) } }
-    if (text) for (const line of text.split(/\r?\n/).map((x) => x.trim()).filter((x) => x && !x.startsWith('#')).slice(0, 200)) nbs.push({ ...newBlock(), text: line })
+    if (text) for (const nb of mdToBlocks(text.split(/\r?\n/).filter((x) => !/^#[^#\s]/.test(x.trim())).join('\n')).slice(0, 300)) nbs.push(nb.type === 'todo' ? commitBlock(nb, note) : nb)
     if (!nbs.length) return
     const cur = (note && find('notes', note.id)?.blocks) || list
-    const base = cur.filter((x, i) => !(i === cur.length - 1 && x.type === 'text' && !x.text))
-    const i = afterId ? base.findIndex((b) => b.id === afterId) : -1
-    const a = [...base]; a.splice(i < 0 ? a.length : i + 1, 0, ...nbs)
-    onChange(a); toast(files.length ? `파일 ${files.length}개를 넣었어요` : '글을 넣었어요')
+    const base = cur.filter((x, i) => x.id !== replaceId && !(i === cur.length - 1 && x.type === 'text' && !x.text && afterId == null))
+    const i = afterId === '__top' ? -1 : afterId ? base.findIndex((b) => b.id === afterId) : base.length - 1
+    const a = [...base]; a.splice(i + 1, 0, ...nbs)
+    onChange(a); setEdit(null); toast(files.length ? `파일 ${files.length}개를 넣었어요` : `${nbs.length}줄을 넣었어요`)
   }
   const isField = (t) => t?.tagName === 'TEXTAREA' || t?.tagName === 'INPUT'
   const dnd = !nested && !readOnly ? {
     onDragOver: (e) => { const ty = [...(e.dataTransfer?.types || [])], f = ty.includes('Files'); if (!f && (isField(e.target) || !ty.some((x) => x === 'text/plain' || x === 'text/uri-list'))) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; if (!dropOn) setDropOn(true) },
     onDragLeave: (e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDropOn(false) },
     onDrop: (e) => { const fs = [...(e.dataTransfer?.files || [])]; if (!fs.length && isField(e.target)) return; e.preventDefault(); setDropOn(false); dropIn(fs, fs.length ? '' : e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain')) },
-    onPaste: (e) => { const fs = [...(e.clipboardData?.files || [])]; if (!fs.length) return; e.preventDefault(); dropIn(fs, '', edit?.id) },
+    onPaste: (e) => {
+      const fs = [...(e.clipboardData?.files || [])]
+      if (fs.length) { e.preventDefault(); return dropIn(fs, '', edit?.id) }
+      // 마크다운 여러 줄 → 블록으로 (지금 칸이 비어 있으면 그 자리에)
+      const tx = e.clipboardData?.getData('text/plain') || ''
+      if (!looksMd(tx)) return
+      e.preventDefault()
+      const cur = edit && list.find((x) => x.id === edit.id)
+      dropIn([], tx, cur && !(cur.text || '').trim() ? list[list.indexOf(cur) - 1]?.id || '__top' : edit?.id, cur && !(cur.text || '').trim() ? cur.id : null)
+    },
   } : {}
   const commit = (b) => { const nb = commitBlock(b, note); if (JSON.stringify(nb) !== JSON.stringify(b)) upd(b.id, nb) }
   const insertAfter = (id, nb) => { const i = list.findIndex((b) => b.id === id); const a = [...list]; a.splice(i + 1, 0, nb); set(a); setEdit({ id: nb.id, pos: 0 }) }
@@ -189,7 +199,7 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
             <div className="blk-c">
               {b.type === 'divider' ? <hr /> :
                 b.type === 'file' ? <FileBlock b={b} /> :
-                b.type === 'table' ? <TableBlock b={b} readOnly={readOnly} onChange={(rows) => upd(b.id, { rows })} /> :
+                b.type === 'table' ? <TableBlock b={b} readOnly={readOnly} onChange={(rows) => upd(b.id, { rows })} onMeta={(p) => upd(b.id, p)} /> :
                 b.type === 'page' ? <SubPage b={b} /> :
                 b.type === 'cols' ? <div className="cols2">{[0, 1].map((k) => <div key={k} className="col-pane"><BlockEditor nested readOnly={readOnly} blocks={(b.cols || [[], []])[k] || []} note={note} onChange={(bs) => upd(b.id, { cols: [0, 1].map((j) => (j === k ? bs : (b.cols || [[], []])[j] || [])) })} /></div>)}</div> :
                 b.type === 'toggle' ? <ToggleBlock b={b} note={note} readOnly={readOnly} editing={editing} edit={edit} onTitle={(t) => onText(b, t)} onKeyDown={(e) => onKey(e, b)} onBlur={(t) => { commit({ ...b, text: t }); setEdit((x) => (x?.id === b.id ? null : x)) }} onEdit={() => setEdit({ id: b.id, pos: (b.text || '').length })} onChildren={(bs) => upd(b.id, { children: bs })} /> :
@@ -400,15 +410,27 @@ function TimerEmbed({ subjectId }) {
 
 
 // 표: 첫 줄은 머리줄 · 칸을 눌러 바로 입력 · 줄·칸 더하기/빼기
-function TableBlock({ b, onChange, readOnly }) {
+// 표: 열마다 너비(좁게·보통·넓게)와 정렬(왼쪽·가운데·오른쪽)
+const COLW = { s: 'minmax(56px, .6fr)', n: 'minmax(70px, 1fr)', w: 'minmax(130px, 2fr)' }
+function TableBlock({ b, onChange, onMeta, readOnly }) {
   const rows = b.rows?.length ? b.rows : [['', ''], ['', '']], cols = Math.max(...rows.map((r) => r.length))
   const setCell = (i, j, v) => onChange(rows.map((r, k) => (k === i ? Array.from({ length: cols }, (_, c) => (c === j ? v : r[c] ?? '')) : r)))
+  const cw = (j) => (b.colW || [])[j] || 'n', al = (j) => (b.align || [])[j] || 'l'
+  const tpl = Array.from({ length: cols }, (_, j) => COLW[cw(j)]).join(' ')
+  const setArr = (key, j, v) => { const a = Array.from({ length: cols }, (_, k) => (b[key] || [])[k] || (key === 'colW' ? 'n' : 'l')); a[j] = v; onMeta?.({ [key]: a }) }
+  const AL = { l: 'left', c: 'center', r: 'right' }
   return (
     <div className="tblk">
-      <div className="tblk-grid" style={{ gridTemplateColumns: `repeat(${cols}, minmax(70px, 1fr))` }}>
+      {!readOnly && <div className="tblk-tools no-print" style={{ gridTemplateColumns: tpl }}>
+        {Array.from({ length: cols }, (_, j) => <div key={j} className="row" style={{ gap: 2, justifyContent: 'center' }}>
+          <button className="tblk-t" onClick={() => setArr('align', j, { l: 'c', c: 'r', r: 'l' }[al(j)])} aria-label="정렬">{{ l: '왼', c: '가운', r: '오른' }[al(j)]}</button>
+          <button className="tblk-t" onClick={() => setArr('colW', j, { s: 'n', n: 'w', w: 's' }[cw(j)])} aria-label="너비">{{ s: '좁게', n: '보통', w: '넓게' }[cw(j)]}</button>
+        </div>)}
+      </div>}
+      <div className="tblk-grid" style={{ gridTemplateColumns: tpl }}>
         {rows.map((r, i) => Array.from({ length: cols }, (_, j) => readOnly
-          ? <div key={i + '-' + j} className={'tblk-c' + (i === 0 ? ' th' : '')}>{r[j] || ''}</div>
-          : <textarea key={i + '-' + j} rows={1} className={'tblk-c' + (i === 0 ? ' th' : '')} value={r[j] || ''} placeholder={i === 0 ? '제목' : ''} onChange={(e) => setCell(i, j, e.target.value)} />))}
+          ? <div key={i + '-' + j} className={'tblk-c' + (i === 0 ? ' th' : '')} style={{ textAlign: AL[al(j)] }}>{r[j] || ''}</div>
+          : <textarea key={i + '-' + j} rows={1} className={'tblk-c' + (i === 0 ? ' th' : '')} style={{ textAlign: AL[al(j)] }} value={r[j] || ''} placeholder={i === 0 ? '제목' : ''} onChange={(e) => setCell(i, j, e.target.value)} />))}
       </div>
       {!readOnly && <div className="row no-print" style={{ gap: 4, marginTop: 4 }}>
         <button className="chip sm" onClick={() => onChange([...rows, Array(cols).fill('')])}>+ 줄</button>

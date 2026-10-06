@@ -161,3 +161,4 @@ export async function cleanNoteTasksOnce() {
   setSettings({ noteTaskClean1: true })
   if (gone.length) { const { toast } = await import('../components/ui.jsx'); const { restore } = await import('../store/store.js'); toast(`노트에 없는 할 일 ${gone.length}개를 정리했어요`, { label: '되돌리기', fn: () => gone.forEach((t) => restore('tasks', t.id)) }) }
 }
+

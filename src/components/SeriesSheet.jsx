@@ -1,14 +1,15 @@
 // 시리즈 할 일 만들기: 앞 글자 + 번호 범위 + 뒤 글자 → 시작 날짜부터 하루 n개씩 (고른 요일만)
 import { useState } from 'react'
-import { batch, remove, uid } from '../store/store.js'
+import { batch, remove, uid, setSettings } from '../store/store.js'
+import { PALETTE } from '../store/schema.js'
 import { addTask } from '../store/actions.js'
 import { planSeries } from '../lib/series.js'
 import { today, fmtShort, WD } from '../engine/date.js'
 import { Field, toast } from './ui.jsx'
-import { SubjectSelect } from './common.jsx'
+import { SubjectSelect, ColorPick } from './common.jsx'
 
 export default function SeriesSheet({ close, subjectId = null }) {
-  const [f, setF] = useState({ prefix: '', suffix: '', from: 1, to: 10, start: today(), perDay: 1, days: [], subjectId })
+  const [f, setF] = useState({ prefix: '', suffix: '', from: 1, to: 10, start: today(), perDay: 1, days: [], subjectId, color: null })
   const set = (p) => setF((x) => ({ ...x, ...p }))
   const plan = planSeries(f)
   const name = `${f.prefix}${Math.min(f.from, f.to)}~${Math.max(f.from, f.to)}${f.suffix}`.trim()
@@ -16,6 +17,7 @@ export default function SeriesSheet({ close, subjectId = null }) {
     if (!f.prefix.trim() && !f.suffix.trim()) return toast('이름을 적어 주세요')
     const sid = uid(), base = Date.now()
     const made = batch(() => plan.map((x, i) => addTask({ title: x.title, due: x.due, subjectId: f.subjectId, seriesId: sid, seriesName: name, seriesN: x.n, inbox: false, order: base + i })))
+    if (f.color) setSettings((s) => ({ seriesColors: { ...(s.seriesColors || {}), [sid]: f.color } }))
     close()
     toast(`${made.length}개 만들었어요 · ${fmtShort(plan[0].due)}~${fmtShort(plan[plan.length - 1].due)}`, { label: '되돌리기', fn: () => batch(() => made.forEach((t) => remove('tasks', t.id))) })
   }
@@ -35,6 +37,7 @@ export default function SeriesSheet({ close, subjectId = null }) {
         <div className="row" style={{ gap: 4 }}>{[1, 2, 3, 4, 5, 6, 0].map((d) => <button key={d} className={'chip' + (f.days.includes(d) ? ' on' : '')} onClick={() => set({ days: f.days.includes(d) ? f.days.filter((x) => x !== d) : [...f.days, d] })}>{WD[d]}</button>)}</div>
       </Field>
       <Field label="과목"><SubjectSelect value={f.subjectId} onChange={(v) => set({ subjectId: v })} /></Field>
+      <Field label="시리즈 색 (안 고르면 과목 색)"><ColorPick value={f.color} onChange={(c) => set({ color: c })} colors={PALETTE} /></Field>
       {plan.length > 0 && (
         <div className="series-prev">
           <div className="tiny muted">{plan.length}개 · {fmtShort(plan[0].due)} ~ {fmtShort(plan[plan.length - 1].due)}</div>

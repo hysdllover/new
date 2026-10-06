@@ -245,7 +245,7 @@ function widgetPayload() {
     goals: goalsPayload(),
     notes: excluded().has('notes') ? [] : notesForWidget(getState()),
     extra: extraPayload(),
-    series: seriesSummary(list('tasks'), list('subjects')).slice(0, 6).map((x) => ({ t: x.t, d: x.d, n: x.n, x: x.next?.title || '', c: x.color })),
+    series: seriesSummary(list('tasks'), list('subjects'), settings().seriesColors || {}).slice(0, 6).map((x) => ({ t: x.t, d: x.d, n: x.n, x: x.next?.title || '', c: x.color })),
     sv: SCRIPT_VER,
     gid: gistId(), // 위젯에서 바로 처리할 때 명령을 남길 곳 (토큰은 위젯 쪽 보관함에만)
     settings: { settings: { main: { goalDaily: main.goalDaily, goalWeekly: main.goalWeekly, weekStart: main.weekStart, widgetFont: main.widgetFont, widgetScale: main.widgetScale, widgetWeight: main.widgetWeight, widgetClear: main.widgetClear, widgetTheme: main.widgetTheme, widgetPad: main.widgetPad, widgetRule: main.widgetRule, dashTiles: main.dashTiles, customWidgets: main.customWidgets } }, quotes: keep('quotes') },

@@ -6,6 +6,7 @@ import { openDetail, Check } from '../../components/ui.jsx'
 import { toggleTask } from '../../store/actions.js'
 import { go, setParams } from '../../nav.js'
 import { spanOn } from '../tasks/filter.js'
+import { layerAlpha } from './Month.jsx'
 
 export default function Week({ date }) {
   const st = useSettings()
@@ -43,7 +44,7 @@ export default function Week({ date }) {
                 </button>
               )}
               {evs.map((e) => (
-                <button key={e.id} className="wev" style={{ '--c': e.color || 'var(--accent)' }} onClick={() => openDetail('event', e.id, { occ: d })}>
+                <button key={e.id} className="wev" style={{ '--c': e.color || 'var(--accent)', opacity: layerAlpha(st, e) }} onClick={() => openDetail('event', e.id, { occ: d })}>
                   <span className="tiny">{e.start != null ? fmtTime(e.start) : '종일'}</span> <span className="ellipsis">{e.title}</span>
                 </button>
               ))}
