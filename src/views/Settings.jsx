@@ -683,6 +683,8 @@ function WidgetFontField() {
       </>}
       <Field label="위젯 글자 크기"><Seg value={String(st.widgetScale || 1)} onChange={(v) => setSettings({ widgetScale: +v })} options={[['0.9', '작게'], ['1', '기본'], ['1.1', '크게'], ['1.2', '더 크게']]} /></Field>
       <Field label="위젯 글자 굵기"><Seg value={String(st.widgetWeight || 0)} onChange={(v) => setSettings({ widgetWeight: +v })} options={[['-1', '더 얇게'], ['0', '기본'], ['1', '보통'], ['2', '진하게']]} /></Field>
+      <Field label="위젯 여백"><Seg value={st.widgetPad || 'normal'} onChange={(v) => setSettings({ widgetPad: v })} options={[['tight', '좁게'], ['normal', '기본'], ['roomy', '넓게']]} /></Field>
+      <Field label="위젯 구분선"><Seg value={st.widgetRule || 'normal'} onChange={(v) => setSettings({ widgetRule: v })} options={[['none', '없음'], ['thin', '가늘게'], ['normal', '기본'], ['bold', '굵게']]} /></Field>
       <Field label="위젯 테마"><Seg value={st.widgetTheme || 'auto'} onChange={(v) => setSettings({ widgetTheme: v })} options={[['auto', '자동'], ['white', '흰 글씨'], ['black', '검은 글씨'], ['paper', '종이'], ['night', '다크'], ['mono', '단색']]} /></Field>
       <div className="tiny muted" style={{ marginTop: -4 }}>흰·검은 글씨는 투명 배경(Scriptable 메뉴)과 함께, 종이·다크는 배경색까지 바꿔요. 자동은 Scriptable 메뉴의 글자색을 따라요.</div>
       <DashTilesField />
@@ -737,7 +739,7 @@ function WidgetPreview() {
   const st = useSettings()
   useEffect(() => { loadAllFonts() }, [])
   const WTH = { white: { background: 'linear-gradient(135deg, #5b6170, #8b8f86)', color: '#fff' }, black: { background: 'linear-gradient(135deg, #e9edf1, #cdd4dc)', color: '#1e232b' }, paper: { background: `#f2f2f1 url(${import.meta.env.BASE_URL}paper.jpg) 0 0 / 360px 360px`, color: '#2a2f38' }, night: { background: '#1b1d22', color: '#eceff3' }, mono: { background: '#1c1d21', color: '#fff', filter: 'grayscale(1)' } }[st.widgetTheme] || null
-  const ff = { ...(st.widgetFont ? { fontFamily: `"${st.widgetFont}", "Apple SD Gothic Neo", sans-serif` } : null), '--dw-scale': st.widgetScale || 1, fontWeight: [200, 300, 400, 500, 600][(+st.widgetWeight || 0) + 1 + (st.widgetClear !== false ? 1 : 0)] }
+  const ff = { ...(st.widgetFont ? { fontFamily: `"${st.widgetFont}", "Apple SD Gothic Neo", sans-serif` } : null), '--dw-scale': st.widgetScale || 1, '--dw-pad': { tight: 0.72, roomy: 1.25 }[st.widgetPad] || 1, '--dw-rw': ({ none: 0, thin: 0.4, bold: 1 }[st.widgetRule] ?? 0.6) + 'px', fontWeight: [200, 300, 400, 500, 600][(+st.widgetWeight || 0) + 1 + (st.widgetClear !== false ? 1 : 0)] }
   const tasks = useColl('tasks'), sessions = useColl('sessions'), ddays = useColl('ddays'), quotes = useColl('quotes'), subjects = useColl('subjects')
   const d = today()
   const today0 = sessions.filter((x) => x.date === d)

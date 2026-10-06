@@ -67,75 +67,97 @@ function calGrid(ctx, x0, y0, w, { month, values, goal, weekStartDow = 1 }, draw
 
 export async function drawReport(d, secs, lines, title, { theme = 'app', head = 'DAILY REPORT', dateTxt } = {}) {
   await document.fonts.ready.catch(() => {})
-  const W = 1080, P = 104, IW = W - P * 2
+  const W = 1080, P = 96, IW = W - P * 2
   const ctx = setup(theme), { T, c, g, f, spaced } = ctx
   const { ink, soft, acc, rule } = T
   const TH = 200 // 큰 숫자 굵기 (얇게)
   const fit = (text, size, maxW) => { g.font = f(size); let s = String(text); if (g.measureText(s).width <= maxW) return s; while (s && g.measureText(s + '…').width > maxW) s = s.slice(0, -1); return s + '…' }
   const wrap = (text, size, maxW) => { g.font = f(size); const out = []; let cur = ''; for (const ch of String(text)) { if (g.measureText(cur + ch).width > maxW && cur) { out.push(cur); cur = ch } else cur += ch } if (cur) out.push(cur); return out }
+  const rr = (x, y, w, h, r) => { g.beginPath(); g.roundRect ? g.roundRect(x, y, w, h, r) : g.rect(x, y, w, h) }
   const ops = []; let y = P
   const add = (h, fn) => { const y0 = y; ops.push(() => fn(y0)); y += h }
   if (!dateTxt) { const dd0 = new Date(d.date + 'T00:00'); dateTxt = `${dd0.getFullYear()}. ${dd0.getMonth() + 1}. ${dd0.getDate()} (${'일월화수목금토'[dd0.getDay()]})` }
   const pct = Math.round(Math.min(1, d.mins / (d.goal || 1)) * 100)
-  const bars = (vals, labels, bh) => add(bh + 64, (y0) => { const n = vals.length, gap = n > 20 ? 5 : 8, bw = (IW - gap * (n - 1)) / n, mx = Math.max(60, ...vals); vals.forEach((m, i) => { const h = Math.max(2, (m / mx) * bh); g.fillStyle = m ? acc : rule; g.globalAlpha = m ? 0.35 + 0.65 * (m / mx) : 1; g.fillRect(P + i * (bw + gap), y0 + bh - h, bw, h) }); g.globalAlpha = 1; g.font = f(18); g.fillStyle = soft; labels.forEach((l, i) => { if (!l) return; g.fillText(l, P + i * (bw + gap) + (bw - g.measureText(l).width) / 2, y0 + bh + 14) }) })
+  // 가는 막대 + 바닥선 + (있으면) 목표 점선
+  const bars = (vals, labels, bh, goal) => add(bh + 66, (y0) => {
+    const n = vals.length, gap = n > 20 ? 6 : 12, cw = (IW - gap * (n - 1)) / n, bw = Math.min(n > 20 ? 12 : 18, cw), mx = Math.max(60, goal || 0, ...vals)
+    vals.forEach((m, i) => { if (!m) return; const h = Math.max(4, (m / mx) * bh), x = P + i * (cw + gap) + (cw - bw) / 2; g.fillStyle = acc; g.globalAlpha = goal ? (m >= goal ? 1 : 0.55) : 0.4 + 0.6 * (m / mx); rr(x, y0 + bh - h, bw, h, [bw / 2, bw / 2, 2, 2]); g.fill(); if (n <= 7) { g.globalAlpha = 1; g.font = f(18); g.fillStyle = soft; const tv = hm(m); g.fillText(tv, x + bw / 2 - g.measureText(tv).width / 2, y0 + bh - h - 28) } })
+    g.globalAlpha = 1; g.fillStyle = rule; g.fillRect(P, y0 + bh, IW, 1.5)
+    if (goal) { const gy = y0 + bh - (goal / mx) * bh; g.strokeStyle = soft; g.globalAlpha = 0.6; g.lineWidth = 1.5; g.setLineDash([6, 6]); g.beginPath(); g.moveTo(P, gy); g.lineTo(W - P, gy); g.stroke(); g.setLineDash([]); g.globalAlpha = 1 }
+    g.font = f(18); g.fillStyle = soft; labels.forEach((l, i) => { if (!l) return; g.fillText(l, P + i * (cw + gap) + (cw - g.measureText(l).width) / 2, y0 + bh + 16) })
+  })
 
-  // 머리: 날짜 · REPORT + 가는 선
-  add(58, (y0) => { g.font = f(24); g.fillStyle = soft; g.fillText(dateTxt, P, y0); spaced(head, 18, W - P, y0 + 4, soft, true) })
-  add(60, (y0) => { g.fillStyle = rule; g.fillRect(P, y0, IW, 1.5) })
+  // 머리: REPORT 글자 · 날짜(크고 얇게)
+  add(40, (y0) => spaced(head, 17, P, y0, soft))
+  add(84, (y0) => { g.font = f(46, TH); g.fillStyle = ink; g.fillText(dateTxt, P - 2, y0) })
 
-  const secTitle = (k) => add(54, (y0) => { spaced(title(k, d).toUpperCase(), 18, P, y0, soft); g.fillStyle = rule; g.fillRect(P, y0 + 40, IW, 1) })
+  const secTitle = (k) => add(70, (y0) => { g.fillStyle = rule; g.fillRect(P, y0, IW, 1.2); spaced(title(k, d).toUpperCase(), 17, P, y0 + 30, soft) })
 
   for (const k of secs) {
     if (k === 'study') {
-      // 큰 공부 시간 + 목표·% + 가는 진행선 + 요약 숫자 셋
-      add(118, (y0) => { g.font = f(104, TH); g.fillStyle = ink; g.fillText(hm(d.mins), P - 4, y0); const w = g.measureText(hm(d.mins)).width; g.font = f(26); g.fillStyle = soft; g.fillText(`/ ${hm(d.goal)}`, P + w + 18, y0 + 68); g.fillStyle = acc; const t2 = `${pct}%`; g.fillText(t2, W - P - g.measureText(t2).width, y0 + 68) })
-      add(52, (y0) => { g.fillStyle = rule; g.fillRect(P, y0 + 14, IW, 2); g.fillStyle = acc; g.fillRect(P, y0 + 13, Math.max(4, IW * (pct / 100)), 4) })
+      // 옅은 바탕 위에 큰 공부 시간 · 진행선 · 요약 숫자 셋 (세로 구분선)
       const stats = d.stats || [['이번 주', hm(d.wk || 0)], ['공부 기록', String(d.sess?.length || 0)], ['끝낸 일', String(d.done.length)]]
-      add(140, (y0) => { const cw = IW / 3; stats.forEach(([l, v], i) => { const x = P + cw * i; spaced(l, 16, x, y0, soft); g.font = f(40, TH); g.fillStyle = ink; g.fillText(String(v), x, y0 + 34) }) })
+      add(330, (y0) => {
+        g.fillStyle = acc; g.globalAlpha = 0.06; rr(P - 28, y0, IW + 56, 300, 22); g.fill(); g.globalAlpha = 1
+        const X = P + 8, IW2 = IW - 16
+        g.font = f(112, TH); g.fillStyle = ink; g.fillText(hm(d.mins), X - 4, y0 + 28); const w = g.measureText(hm(d.mins)).width
+        g.font = f(26); g.fillStyle = soft; g.fillText(`/ ${hm(d.goal)}`, X + w + 18, y0 + 102); g.fillStyle = acc; const t2 = `${pct}%`; g.fillText(t2, X + IW2 - g.measureText(t2).width, y0 + 102)
+        g.fillStyle = rule; rr(X, y0 + 168, IW2, 5, 3); g.fill(); g.fillStyle = acc; rr(X, y0 + 168, Math.max(6, IW2 * (pct / 100)), 5, 3); g.fill()
+        const cw = IW2 / 3
+        stats.forEach(([l, v], i) => { const x = X + cw * i + (i ? 28 : 0); if (i) { g.fillStyle = rule; g.fillRect(X + cw * i, y0 + 206, 1.5, 64) } spaced(l, 15, x, y0 + 206, soft); g.font = f(40, TH); g.fillStyle = ink; g.fillText(String(v), x, y0 + 234) })
+      })
+      add(26, () => {})
       continue
     }
     if (k === 'subjects') {
       if (!d.subs.length) continue
-      secTitle(k); add(18, () => {})
-      const mx = d.subs[0].m || 1
-      for (const x of d.subs) {
-        add(66, (y0) => { g.font = f(28); g.fillStyle = ink; g.fillText(fit(x.sub?.name || '과목 없음', 28, IW - 200), P, y0); const tv = hm(x.m); g.fillStyle = soft; g.fillText(tv, W - P - g.measureText(tv).width, y0); g.fillStyle = rule; g.fillRect(P, y0 + 46, IW, 1.5); g.fillStyle = x.sub?.color || acc; g.fillRect(P, y0 + 45, Math.max(4, IW * (x.m / mx)), 3.5) })
-        for (const n of x.notes) for (const l of wrap(n, 22, IW)) add(34, (y0) => { g.font = f(22); g.fillStyle = soft; g.fillText(l, P, y0 - 6) })
-      }
-      add(30, () => {}); continue
+      secTitle(k)
+      const tot = d.subs.reduce((a, x) => a + x.m, 0) || 1
+      // 과목 비율 띠
+      add(46, (y0) => { let x = P; const gap = 4, avail = IW - gap * (d.subs.length - 1); g.save(); rr(P, y0, IW, 12, 6); g.clip(); d.subs.forEach((s2) => { const w = Math.max(6, avail * (s2.m / tot)); g.fillStyle = s2.sub?.color || soft; g.fillRect(x, y0, w, 12); x += w + gap }); g.restore() })
+      d.subs.forEach((x, i) => {
+        add(62, (y0) => { if (i) { g.strokeStyle = rule; g.lineWidth = 1.2; g.setLineDash([4, 6]); g.beginPath(); g.moveTo(P, y0 - 2); g.lineTo(W - P, y0 - 2); g.stroke(); g.setLineDash([]) }
+          g.fillStyle = x.sub?.color || soft; g.beginPath(); g.arc(P + 8, y0 + 28, 7, 0, Math.PI * 2); g.fill()
+          g.font = f(27); g.fillStyle = ink; g.fillText(fit(x.sub?.name || '과목 없음', 27, IW - 300), P + 30, y0 + 13)
+          const tv = hm(x.m); g.fillText(tv, W - P - g.measureText(tv).width, y0 + 13)
+          g.font = f(20); g.fillStyle = soft; const pc = Math.round((x.m / tot) * 100) + '%'; g.fillText(pc, W - P - 120 - g.measureText(pc).width, y0 + 18) })
+        for (const n of x.notes) for (const l of wrap(n, 21, IW - 30)) add(32, (y0) => { g.font = f(21); g.fillStyle = soft; g.fillText(l, P + 30, y0 - 6) })
+      })
+      add(26, () => {}); continue
     }
     if (k === 'hours') {
       if (!d.hours.some(Boolean)) continue
-      secTitle(k); add(24, () => {})
-      bars(d.hours, d.hours.map((_, i) => ([0, 6, 12, 17].includes(i) ? String(i + 6) : '')), 110)
+      secTitle(k); add(10, () => {})
+      bars(d.hours, d.hours.map((_, i) => ([0, 6, 12, 17].includes(i) ? String(i + 6) + '시' : '')), 120)
       continue
     }
     if (k === 'days') {
       if (!d.days?.some((x) => x.m)) continue
-      secTitle(k); add(24, () => {})
-      bars(d.days.map((x) => x.m), d.days.map((x) => x.l), 130)
+      secTitle(k); add(36, () => {})
+      bars(d.days.map((x) => x.m), d.days.map((x) => x.l), 150, d.dayGoal || 0)
       continue
     }
     if (k === 'cal') {
       if (!d.cal) continue
-      secTitle(k); add(24, () => {})
+      secTitle(k); add(10, () => {})
       add(calGrid(ctx, P, 0, IW, d.cal, false) + 30, (y0) => calGrid(ctx, P, y0, IW, d.cal))
       continue
     }
     const ls = lines(k, d)
     if (!ls.length) continue
-    secTitle(k); add(22, () => {})
-    // 목록이 길면 두 단으로
+    secTitle(k); add(4, () => {})
+    // 표시: 끝낸 것은 채운 작은 네모, 남은 것은 빈 네모, 그 밖은 짧은 선
     const items = ls.map((l) => { const m = /^(✓|–|↺) /.exec(l); return { mark: m ? m[1] : '', text: m ? l.slice(2) : l } })
+    const mark = (it, x, y0) => { if (it.mark === '✓') { g.fillStyle = acc; rr(x, y0 + 8, 16, 16, 4); g.fill() } else if (it.mark) { g.strokeStyle = soft; g.lineWidth = 1.6; rr(x + 0.8, y0 + 8.8, 14.4, 14.4, 4); g.stroke() } else { g.fillStyle = soft; g.fillRect(x + 2, y0 + 16, 10, 1.6) } }
     if (ls.length >= 6) {
       const half = Math.ceil(items.length / 2), colW = IW / 2 - 18
-      for (let i = 0; i < half; i++) add(46, (y0) => [items[i], items[i + half]].forEach((it, j) => { if (!it) return; const x = P + j * (colW + 36); g.font = f(24); if (it.mark) { g.fillStyle = it.mark === '✓' ? acc : soft; g.fillText(it.mark, x, y0) } g.fillStyle = ink; g.fillText(fit(it.text, 24, colW - (it.mark ? 34 : 0)), x + (it.mark ? 34 : 0), y0) }))
+      for (let i = 0; i < half; i++) add(46, (y0) => [items[i], items[i + half]].forEach((it, j) => { if (!it) return; const x = P + j * (colW + 36); mark(it, x, y0); g.font = f(24); g.fillStyle = ink; g.fillText(fit(it.text, 24, colW - 32), x + 32, y0) }))
     } else {
-      for (const it of items) { const ws2 = wrap(it.text, 26, IW - (it.mark ? 36 : 0)); ws2.forEach((w2, i) => add(i < ws2.length - 1 ? 38 : 48, (y0) => { g.font = f(26); if (i === 0 && it.mark) { g.fillStyle = it.mark === '✓' ? acc : soft; g.fillText(it.mark, P, y0) } g.fillStyle = ink; g.fillText(w2, P + (it.mark ? 36 : 0), y0) })) }
+      for (const it of items) { const ws2 = wrap(it.text, 26, IW - 34); ws2.forEach((w2, i) => add(i < ws2.length - 1 ? 38 : 50, (y0) => { if (i === 0) mark(it, P, y0 + 1); g.font = f(26); g.fillStyle = ink; g.fillText(w2, P + 34, y0) })) }
     }
-    add(30, () => {})
+    add(26, () => {})
   }
-  return finish(c, g, T, ops, W, y + P - 30)
+  return finish(c, g, T, ops, W, y + P - 26)
 }
 
 // 월별 공부 달력 이미지

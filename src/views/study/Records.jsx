@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { drawShareCard, shareBlob } from '../../lib/shareCard.js'
 import { pickQuote } from '../../lib/quote.js'
 import { useColl, useSettings, put, patch, remove } from '../../store/store.js'
-import { Card, Ring, Icon, Empty, AddInput, openSheet, Field, toast } from '../../components/ui.jsx'
+import { Card, Icon, Empty, AddInput, openSheet, Field, toast } from '../../components/ui.jsx'
 import { SubjectSelect } from '../../components/common.jsx'
 import { Heatmap, Bars, WeekBars, LineChart, MonthHeat } from '../../components/charts.jsx'
 import { today, addDays, weekStart, fmtDur, fmtShort, fmtDate, fmtTime, tsToMin, diffDays } from '../../engine/date.js'
@@ -37,22 +37,12 @@ export default function Records() {
   return (
     <div className="grid two">
       <WeekSwipe sessions={sessions} subjects={subjects} s={s} st={st} />
-      <Card title="목표 달성" action={<button className="btn sm" onClick={() => openSheet(() => <ShareCardSheet />, { title: '공부 인증 카드' })}><Icon name="share" size={14} />인증 카드</button>}>
-        <div className="row" style={{ justifyContent: 'space-around' }}>
-          <div className="col center" style={{ alignItems: 'center', gap: 4 }}>
-            <Ring value={s.today / st.goalDaily} size={96}><b>{Math.round(s.today / st.goalDaily * 100)}%</b></Ring>
-            <span className="small">오늘 {fmtDur(s.today)}</span>
-          </div>
-          <div className="col center" style={{ alignItems: 'center', gap: 4 }}>
-            <Ring value={s.week / st.goalWeekly} size={96} color="var(--c2)"><b>{Math.round(s.week / st.goalWeekly * 100)}%</b></Ring>
-            <span className="small">이번 주 {fmtDur(s.week)}</span>
-          </div>
-          <div className="col center" style={{ alignItems: 'center', gap: 4 }}>
-            <Ring value={doneRate} size={96} color="var(--c3)"><b>{Math.round(doneRate * 100)}%</b></Ring>
-            <span className="small">주간 할 일</span>
-          </div>
+      <Card title="목표" action={<button className="btn ghost sm" onClick={() => openSheet(() => <ShareCardSheet />, { title: '공부 인증 카드' })}><Icon name="share" size={13} />인증 카드</button>}>
+        <div className="goal-rows">
+          {[['오늘', s.today, st.goalDaily, 'var(--accent)'], ['이번 주', s.week, st.goalWeekly, 'var(--c2)']].map(([l, v, g, c]) => <GoalRow key={l} label={l} pct={v / (g || 1)} color={c} value={hmS(v)} of={hmS(g)} />)}
+          <GoalRow label="이번 주 할 일" pct={doneRate} color="var(--c3)" value={`${weekTasks.filter((t) => t.done).length}`} of={`${weekTasks.length}개`} />
         </div>
-        <div className="small muted center" style={{ marginTop: 8 }}>어제 {fmtDur(s.yesterday) || '0분'} · 이번 주 {fmtDur(s.week) || '0분'}</div>
+        <div className="tiny muted" style={{ marginTop: 10 }}>어제 {hmS(s.yesterday)} · 하루 평균 {hmS(Math.round(s.week / Math.max(1, diffDays(today(), s.ws) + 1)))}</div>
       </Card>
       <Card title="최근 7일">
         <WeekBars values={s.byDay} goal={st.goalDaily} />
@@ -64,6 +54,17 @@ export default function Records() {
       <DdayCard />
       <Habits />
       <Grades />
+    </div>
+  )
+}
+
+// 목표 한 줄: 이름 · 숫자 / 목표 · % + 가는 진행선
+function GoalRow({ label, pct, color, value, of }) {
+  const p = Math.round(Math.min(1, pct || 0) * 100)
+  return (
+    <div className="gl-row">
+      <div className="row between" style={{ alignItems: 'baseline' }}><span className="gl-l">{label}</span><span className="gl-v"><b>{value}</b><span className="muted"> / {of}</span><em style={{ color }}>{p}%</em></span></div>
+      <div className="rp-track"><i style={{ width: p + '%', background: color }} /></div>
     </div>
   )
 }
