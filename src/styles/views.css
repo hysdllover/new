@@ -609,3 +609,26 @@ button.greet { display: block; width: 100%; text-align: left; }
 .note-page.reading { font-size: 1.07em; }
 .note-page.reading .blk-v { line-height: 1.8; cursor: default; }
 .note-page.reading .note-title { pointer-events: none; }
+/* 글자 꾸미기 · 두 단 · 토글 · 표지 · 여러 줄 선택 */
+.mk-b { font-weight: 600; }
+.mk-hl { background: linear-gradient(transparent 55%, color-mix(in srgb, var(--c3) 45%, transparent) 55%); color: inherit; padding: 0 1px; }
+.mk-u { text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 60%, transparent); text-underline-offset: 3px; }
+.markbar { display: flex; gap: 4px; margin: 2px 0 4px; }
+.markbar button { font-size: .78em; padding: 2px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--muted); }
+.cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.cols2 .col-pane { min-width: 0; border-left: 1px solid var(--line); padding-left: 8px; }
+.cols2 .col-pane:first-child { border-left: 0; padding-left: 0; }
+@media (max-width: 430px) { .cols2 { grid-template-columns: 1fr; gap: 6px; } .cols2 .col-pane { border-left: 0; padding-left: 0; } }
+.tgl-arrow { width: 20px; height: 28px; color: var(--muted); transition: transform .2s ease; flex-shrink: 0; font-size: .85em; }
+.tgl-arrow.open { transform: rotate(90deg); }
+.tgl-t { font-weight: var(--fw-b); }
+.tgl-body { padding-left: 18px; }
+.note-cover { height: 84px; border-radius: 6px; margin: 0 0 10px; background-color: var(--surface-2); background-size: 360px 360px; }
+.cv-navy { background-color: color-mix(in srgb, #4a5a78 22%, var(--surface)); }
+.cv-olive { background-color: color-mix(in srgb, #7a8660 24%, var(--surface)); }
+.cv-violet { background-color: color-mix(in srgb, #a99bc4 30%, var(--surface)); }
+.cv-rose { background-color: color-mix(in srgb, #c9a0a8 30%, var(--surface)); }
+.cv-paper { background-color: #f2f2f1; }
+.cover-dot { display: inline-block; width: 10px; height: 10px; border-radius: 5px; margin-right: 6px; border: 1px solid var(--line); }
+.blk.sel { background: color-mix(in srgb, var(--accent) 9%, transparent); border-radius: 4px; }
+@media print { .note-cover { display: none; } }

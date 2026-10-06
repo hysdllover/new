@@ -2,7 +2,8 @@
 const clean = (s) => String(s || '').replace(/\[\[([^\]]+)\]\]/g, '$1').replace(/^\s*[-*]\s+/, '').trim()
 export function noteLines(n, st, max = 24) {
   const tasks = st.tasks || {}, sync = st.syncBlocks || {}
-  const blocks = (n.blocks || []).flatMap((b) => (b.type === 'sync' ? sync[b.syncId]?.blocks || [] : [b]))
+  const flat = (bs) => (bs || []).flatMap((b) => (b.type === 'sync' ? flat(sync[b.syncId]?.blocks) : b.type === 'cols' ? (b.cols || []).flatMap(flat) : b.type === 'toggle' ? [b, ...flat(b.children)] : [b]))
+  const blocks = flat(n.blocks)
   const out = []
   for (const b of blocks) {
     if (out.length >= max) break
