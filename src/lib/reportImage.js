@@ -238,7 +238,8 @@ export async function drawNote(note, { theme = 'app' } = {}) {
     if (!t.trim()) { add(18, () => {}); continue }
     if (b.type === 'h1') { add(14, () => {}); para(t, { size: 36, bold: true, gap: 10 }); continue }
     if (b.type === 'h2') { add(8, () => {}); para(t, { size: 30, bold: true, gap: 8 }); continue }
-    if (b.type === 'bullet') { para(t, { indent: 30, lead: (y0) => { g.fillStyle = T.soft; g.beginPath(); g.arc(P + 10, y0 + 22, 4, 0, Math.PI * 2); g.fill() } }); continue }
+    if (b.type === 'bullet') { const ind = (b.indent || 0) * 28; para(t, { indent: 30 + ind, lead: (y0) => { g.fillStyle = T.soft; if (b.num) { g.font = f(24); g.fillText(b.num + '.', P + ind, y0) } else { g.beginPath(); g.arc(P + ind + 10, y0 + 22, 4, 0, Math.PI * 2); g.fill() } } }); continue }
+    if (b.type === 'code') { const y1 = y; para(t, { size: 22, indent: 16, color: T.soft, gap: 16 }); const h = y - y1 - 8; ops.push(() => { g.fillStyle = T.rule; g.globalAlpha = 0.5; g.fillRect(P, y1 - 4, 3, h) ; g.globalAlpha = 1 }); continue }
     if (b.type === 'todo') { const done = !!tasks.find((x) => x.id === b.taskId)?.done; para(t, { indent: 38, color: done ? T.soft : T.ink, lead: (y0) => { g.strokeStyle = done ? T.acc : T.soft; g.lineWidth = 1.8; g.beginPath(); g.roundRect ? g.roundRect(P + 1, y0 + 9, 22, 22, 5) : g.rect(P + 1, y0 + 9, 22, 22); g.stroke(); if (done) { g.fillStyle = T.acc; g.beginPath(); g.roundRect ? g.roundRect(P + 6, y0 + 14, 12, 12, 3) : g.rect(P + 6, y0 + 14, 12, 12); g.fill() } } }); continue }
     if (b.type === 'quote' || b.type === 'callout') {
       const y1 = y; para(t, { indent: 24, color: b.type === 'quote' ? T.soft : T.ink, gap: 18 }); const h = y - y1 - 10
