@@ -20,12 +20,18 @@ import { FileThumb } from '../components/Attach.jsx'
 export default function Notes({ seg, params }) {
   // 넓은 아이패드: 목록 + 노트를 나란히 (사이드바까지 3단)
   const wide = useMedia('(min-width: 1100px)')
-  if (wide && seg === 'pages' && params.mode !== 'db') return (
-    <div className="notes-split">
-      <div className="ns-list"><Pages params={params} compact /></div>
-      <div className="ns-page">{params.noteId ? <NotePage key={params.noteId} id={params.noteId} /> : <div className="empty" style={{ marginTop: 80 }}>왼쪽에서 노트를 고르세요</div>}</div>
-    </div>
-  )
+  // 왼쪽 목록 접기 (노트를 연 상태에서만, 기기에 기억)
+  const [hide, setHide] = useState(() => { try { return localStorage.getItem('notes_list_hide') === '1' } catch { return false } })
+  const toggleList = () => { const v = !hide; setHide(v); try { localStorage.setItem('notes_list_hide', v ? '1' : '0') } catch {} }
+  if (wide && seg === 'pages' && params.mode !== 'db') {
+    const folded = hide && !!params.noteId
+    return (
+      <div className={'notes-split' + (folded ? ' folded' : '')}>
+        {!folded && <div className="ns-list"><Pages params={params} compact /></div>}
+        <div className="ns-page">{params.noteId ? <NotePage key={params.noteId} id={params.noteId} split={{ hidden: folded, toggle: toggleList }} /> : <div className="empty" style={{ marginTop: 80 }}>왼쪽에서 노트를 고르세요</div>}</div>
+      </div>
+    )
+  }
   if (params.noteId && seg === 'pages') return <NotePage id={params.noteId} />
   if (seg === 'daily') return <Daily date={params.date || today()} />
   if (seg === 'hub') return <Hub hubId={params.hubId} />

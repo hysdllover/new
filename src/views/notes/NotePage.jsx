@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRec, useColl, patch, remove, restore, useSettings, setSettings } from '../../store/store.js'
 import { addReview } from '../../store/actions.js'
 import BlockEditor from '../../components/BlockEditor.jsx'
@@ -22,7 +22,13 @@ export const labelColor = (k) => NOTE_LABELS.find((x) => x[0] === k)?.[1] || nul
 export const labelName = (k, st) => st?.labelNames?.[k] || NOTE_LABELS.find((x) => x[0] === k)?.[2] || ''
 const ICONS = ['📄', '📘', '🧪', '🧮', '🌏', '✏️', '💡', '📌', '🎯', '🗂️', '📝', '🔖']
 
-export default function NotePage({ id }) {
+// 페이지 전체 화면: 앱 메뉴·탭·목록을 숨기고 페이지만 (노트를 나가면 풀림)
+
+export default function NotePage({ id, split }) {
+  const [full, setFullS] = useState(() => { try { return sessionStorage.getItem('page_full') === '1' } catch { return false } })
+  useEffect(() => { document.documentElement.classList.toggle('page-full', full); return () => document.documentElement.classList.remove('page-full') }, [full])
+  const toggleFull = (v = !full) => { setFullS(v); try { sessionStorage.setItem('page_full', v ? '1' : '0') } catch {} }
+  useEffect(() => { if (!full) return; const k = (e) => { if (e.key === 'Escape' && !/INPUT|TEXTAREA/.test(document.activeElement?.tagName || '')) toggleFull(false) }; window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k) }, [full])
   const n = useRec('notes', id)
   const notes = useColl('notes')
   const settings = useRec('settings', 'main')
@@ -53,11 +59,14 @@ export default function NotePage({ id }) {
   return (
     <div className={'note-page' + (n.width ? ' nw-' + n.width : '') + (reading ? ' reading' : '') + (n.bg ? ' note-bg note-bg-' + n.bg : '')}>
       <div className="row no-print" style={{ marginBottom: 6 }}>
-        <button className="btn ghost sm" onClick={() => setParams('notes', { noteId: null })}><Icon name="back" size={14} />목록</button>
+        {split && !full
+          ? <button className={'icon-btn' + (split.hidden ? '' : ' on-acc')} onClick={split.toggle} aria-label={split.hidden ? '목록 펼치기' : '목록 접기'} title={split.hidden ? '목록 펼치기' : '목록 접기'}><Icon name="sidebar" size={18} /></button>
+          : !full && <button className="btn ghost sm" onClick={() => setParams('notes', { noteId: null })}><Icon name="back" size={14} />목록</button>}
         {parent && <button className="btn ghost sm ellipsis" style={{ maxWidth: '45%' }} onClick={() => openNote(parent.id)}>› {noteTitle(parent)}</button>}
         <span className="grow" />
         <button className={'btn sm' + (reading ? ' on-acc' : '')} onClick={toggleRead}>{reading ? '편집' : '읽기'}</button>
         {settings?.modules?.mindmap !== false && <Seg small value={view} onChange={setView} options={[['doc', '문서'], ['map', '마인드맵']]} />}
+        <button className={'icon-btn' + (full ? ' on-acc' : '')} onClick={() => toggleFull()} aria-label={full ? '전체 화면 끝내기' : '페이지 전체 화면'} title={full ? '전체 화면 끝내기' : '페이지 전체 화면'}><Icon name={full ? 'shrink' : 'expand'} size={18} /></button>
         <button className="icon-btn" onClick={menu} aria-label="노트 메뉴"><Icon name="more" size={20} stroke={2.4} /></button>
       </div>
       {n.cover && <div className={'note-cover cv-' + n.cover} style={n.cover === 'paper' ? { backgroundImage: `url(${import.meta.env.BASE_URL}paper.jpg)` } : null} />}
