@@ -248,7 +248,7 @@ function widgetPayload() {
     series: seriesSummary(list('tasks'), list('subjects'), settings().seriesColors || {}).slice(0, 6).map((x) => ({ t: x.t, d: x.d, n: x.n, x: x.next?.title || '', c: x.color })),
     sv: SCRIPT_VER,
     gid: gistId(), // 위젯에서 바로 처리할 때 명령을 남길 곳 (토큰은 위젯 쪽 보관함에만)
-    settings: { settings: { main: { goalDaily: main.goalDaily, goalWeekly: main.goalWeekly, weekStart: main.weekStart, widgetFont: main.widgetFont, widgetScale: main.widgetScale, widgetWeight: main.widgetWeight, widgetClear: main.widgetClear, widgetTheme: main.widgetTheme, widgetPad: main.widgetPad, widgetRule: main.widgetRule, dashTiles: main.dashTiles, customWidgets: main.customWidgets } }, quotes: keep('quotes') },
+    settings: { settings: { main: { goalDaily: main.goalDaily, goalWeekly: main.goalWeekly, weekStart: main.weekStart, widgetFont: main.widgetFont, widgetScale: main.widgetScale, widgetWeight: main.widgetWeight, widgetClear: main.widgetClear, widgetTheme: main.widgetTheme, widgetPad: main.widgetPad, widgetRule: main.widgetRule, widgetPattern: main.widgetPattern, dashTiles: main.dashTiles, customWidgets: main.customWidgets } }, quotes: keep('quotes') },
   })
 }
 const ATT_MAX = 7 * 1024 * 1024 // gist 한 파일로 올릴 수 있는 첨부 크기 (base64 로 늘어나는 걸 고려)

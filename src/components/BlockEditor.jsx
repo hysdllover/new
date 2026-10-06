@@ -14,7 +14,7 @@ import { startDrag } from '../lib/drag.js'
 import { applyMark, activeMarks, markRuns, plainText } from '../lib/marks.js'
 
 const TYPES = [['text', '텍스트'], ['h1', '제목 1'], ['h2', '제목 2'], ['bullet', '글머리'], ['todo', '체크박스 (할 일)'], ['callout', '강조 상자'], ['quote', '인용'], ['divider', '구분선']]
-const TONES = [['key', '핵심'], ['warn', '주의'], ['ex', '예시']]
+const TONES = [['key', '핵심'], ['warn', '주의'], ['ex', '예시'], ['rose', '메모'], ['olive', '정리'], ['sand', '참고']]
 const SOLID = ['divider', 'embed', 'sync', 'file', 'table', 'page', 'cols'] // 글자를 직접 쓰지 않는 블록
 const INLINE_RE = /(\*\*[^*\n]+\*\*|==[^=\n]+==|__[^_\n]+__|\[\[[^\]]+\]\]|@(?:오늘|내일|모레|\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2})(?:\s+\d{1,2}:\d{2})?|https?:\/\/[^\s]+)/g
 

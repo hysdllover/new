@@ -215,6 +215,7 @@ export default function DaySummary({ initial = today(), initialMode = 'day' }) {
           <div className="tiny muted">보여 줄 항목을 켜고 순서를 정해요 (공유·인쇄도 같아요)</div>
           {secs.map((k, i) => <div key={k} className="row small" style={{ gap: 6 }}><span className="grow">{i + 1}. {allOf(mode).find(([x]) => x === k)[1]}</span><button className="icon-btn" aria-label="위로" onClick={() => move(i, -1)}>‹</button><button className="icon-btn" aria-label="아래로" onClick={() => move(i, 1)}>›</button><button className="chip on" onClick={() => setSecs(secs.filter((x) => x !== k))}>끄기</button></div>)}
           <div className="row wrap" style={{ gap: 6 }}>{allOf(mode).filter(([k]) => !secs.includes(k)).map(([k, l]) => <button key={k} className="chip" onClick={() => setSecs([...secs, k])}>+ {l}</button>)}</div>
+          <div className="row wrap" style={{ gap: 6, alignItems: 'center' }}><span className="tiny muted">이미지 비율</span>{[['tall', '세로형'], ['square', '정사각형']].map(([k, l]) => <button key={k} className={'chip' + ((st.reportSize || 'tall') === k ? ' on' : '')} onClick={() => setSettings({ reportSize: k })}>{l}</button>)}</div>
           <div className="row wrap" style={{ gap: 6, alignItems: 'center' }}><span className="tiny muted">이미지 색</span>{REPORT_THEMES.map(([k, l]) => <button key={k} className={'chip' + (theme === k ? ' on' : '')} onClick={() => setSettings({ reportTheme: k })}>{l}</button>)}</div>
         </div>
       )}
@@ -223,7 +224,7 @@ export default function DaySummary({ initial = today(), initialMode = 'day' }) {
       <div className="rp-actions">
         <button className={'btn ghost sm' + (edit ? ' on-acc' : '')} onClick={() => setEdit(!edit)}><Icon name="layers" size={14} />구성</button>
         <button className="btn ghost sm" onClick={share}><Icon name="share" size={14} />텍스트</button>
-        <button className="btn ghost sm" onClick={async () => { const blob = await drawReport(d, secs, lines, title, { theme, head: { day: 'DAILY', week: 'WEEKLY', month: 'MONTHLY' }[mode] + ' REPORT', dateTxt: mode === 'day' ? undefined : label(d) }); const r = await shareBlob(blob, `리포트-${mode === 'day' ? date : d.from}.png`); if (r === 'saved') toast('이미지를 저장했어요') }}><Icon name="image" size={14} />이미지</button>
+        <button className="btn ghost sm" onClick={async () => { const blob = await drawReport(d, secs, lines, title, { theme, head: { day: 'DAILY', week: 'WEEKLY', month: 'MONTHLY' }[mode] + ' REPORT', dateTxt: mode === 'day' ? undefined : label(d), square: st.reportSize === 'square', barScale: { thin: 0.6, thick: 1.6 }[st.theme?.chartBar] || 1 }); const r = await shareBlob(blob, `리포트-${mode === 'day' ? date : d.from}.png`); if (r === 'saved') toast('이미지를 저장했어요') }}><Icon name="image" size={14} />이미지</button>
         <button className="btn ghost sm" onClick={() => printA4(d, secs)}><Icon name="print" size={14} />A4</button>
       </div>
     </div>

@@ -82,6 +82,10 @@ export function applyTheme(t0) {
   Object.assign(D, { bullet: t.bulletStyle || 'dot', link: t.linkStyle || 'under', hlc: t.hlCorner || 'square', shadow: t.shadowDepth || 'normal', tabsel: t.tabSel || 'color', thc: t.thColor || 'gray' })
   for (const k of ['bullet', 'link', 'hlc', 'shadow', 'tabsel', 'thc']) root.dataset[k] = D[k]
   root.toggleAttribute('data-margin', !!t.noteMargin)
+  Object.assign(root.dataset, { tone: t.textTone || 'ink', btn: t.btnStyle || 'line', seg: t.segStyle || 'pill', nalign: t.noteAlign || 'left', nimg: t.noteImg || 'round', calnum: t.calNum || 'body', caltoday: t.calToday || 'circle', bar: t.chartBar || 'normal' })
+  root.toggleAttribute('data-titleline', !!t.titleLine)
+  root.toggleAttribute('data-pastdim', !!t.calPastDim)
+  root.style.setProperty('--font-note', (t.noteFont && familyOf(t.noteFont)) || 'inherit')
   root.dataset.mdens = t.monthDensity || 'normal'
   root.toggleAttribute('data-wkend', t.weekendTint !== false)
   root.toggleAttribute('data-tlhalf', !!t.tlHalf)
