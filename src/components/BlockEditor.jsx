@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, Fragment } from 'react'
-import { useColl, put, patch } from '../store/store.js'
+import { useColl, put, patch, remove, restore, find } from '../store/store.js'
 import { toggleTask, addReview, addTask } from '../store/actions.js'
 import { Icon, Check, openMenu, openSheet, openDetail, toast } from './ui.jsx'
 import { FileThumb, previewFile } from './Attach.jsx'
@@ -43,7 +43,17 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
   const skip = useRef(null) // 구조 변경(Enter/Backspace) 직후 들어오는 blur 무시
   const skipBlur = (id) => { skip.current = id; setTimeout(() => { if (skip.current === id) skip.current = null }, 80) }
   const list = blocks.length ? blocks : [newBlock()]
-  const set = (next) => onChange(next)
+  // 체크 줄을 텍스트 등으로 바꾸거나 지우면 연결된 할 일도 지움 (되돌리기 가능)
+  const todoIds = (bs, out = new Set()) => { for (const b of bs || []) { if (b.type === 'todo' && b.taskId) out.add(b.taskId); if (b.type === 'cols') for (const c of b.cols || []) todoIds(c, out); if (b.type === 'toggle') todoIds(b.children, out) } return out }
+  const set = (next) => {
+    const before = todoIds(blocks), after = todoIds(next), gone = [...before].filter((id) => !after.has(id) && find('tasks', id))
+    if (gone.length) {
+      next = next.map((b) => (b.type !== 'todo' && gone.includes(b.taskId) ? { ...b, taskId: undefined } : b))
+      gone.forEach((id) => remove('tasks', id))
+      toast(gone.length === 1 ? '연결된 할 일도 지웠어요' : `연결된 할 일 ${gone.length}개도 지웠어요`, { label: '되돌리기', fn: () => gone.forEach((id) => restore('tasks', id)) })
+    }
+    onChange(next)
+  }
   const upd = (id, p) => set(list.map((b) => (b.id === id ? { ...b, ...p } : b)))
   const commit = (b) => { const nb = commitBlock(b, note); if (JSON.stringify(nb) !== JSON.stringify(b)) upd(b.id, nb) }
   const insertAfter = (id, nb) => { const i = list.findIndex((b) => b.id === id); const a = [...list]; a.splice(i + 1, 0, nb); set(a); setEdit({ id: nb.id, pos: 0 }) }

@@ -461,6 +461,7 @@ export async function syncNow({ flush = false } = {}) {
       const sent = Object.keys(patchFiles).filter((k) => k.endsWith('.json') && !k.startsWith('backup-')).length
       if (got || sent || clash) addLog({ at: now, got, sent, clash })
       setStatus({ state: 'ok', last: now })
+      if (!settings().noteTaskClean1) import('../lib/notes.js').then((m) => m.cleanNoteTasksOnce()).catch(() => {})
     } catch (e) {
       if (e.until) pause(e.until)
       else {

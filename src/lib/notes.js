@@ -1,4 +1,4 @@
-import { list, put, patch, find } from '../store/store.js'
+import { list, put, patch, find, remove, settings, setSettings, batch } from '../store/store.js'
 import { addTask, updateTask } from '../store/actions.js'
 import { parseMention, fmtTime } from '../engine/date.js'
 import { uid } from '../store/store.js'
@@ -132,4 +132,31 @@ export function noteFromShare({ text = '', url = '', title = '' }) {
   for (const line of body.split('\n')) if (line.trim() && !(line.trim() === name && !title)) blocks.push(newBlock('text', line.trim()))
   blocks.push(newBlock('h2', '메모'), newBlock('text'))
   return put('notes', { title: name, type: 'page', icon: '🔖', clip: { url: urlIn, at: Date.now() }, blocks })
+}
+
+// 노트가 가리키는 할 일 id (체크 줄 · @날짜 메모) — 두 단 · 토글 · 동기화 블록 안까지
+export function noteTaskRefs(note, out = new Set()) {
+  const walk = (bs) => { for (const b of bs || []) {
+    if (b.taskId && b.type === 'todo') out.add(b.taskId)
+    if (b.ref?.type === 'task' && b.ref.id) out.add(b.ref.id)
+    if (b.type === 'sync') walk(find('syncBlocks', b.syncId)?.blocks)
+    if (b.type === 'cols') for (const c of b.cols || []) walk(c)
+    if (b.type === 'toggle') walk(b.children)
+  } }
+  walk(note?.blocks)
+  return out
+}
+// 노트로 만든 할 일 중 지금 어느 노트에도 할 일로 없는 것 지우기 (한 번 정리)
+export function cleanNoteTasks() {
+  const refs = new Set()
+  for (const n of list('notes')) noteTaskRefs(n, refs)
+  const gone = list('tasks').filter((t) => t.noteId && !refs.has(t.id))
+  if (gone.length) batch(() => gone.forEach((t) => remove('tasks', t.id)))
+  return gone
+}
+export async function cleanNoteTasksOnce() {
+  if (settings().noteTaskClean1) return
+  const gone = cleanNoteTasks()
+  setSettings({ noteTaskClean1: true })
+  if (gone.length) { const { toast } = await import('../components/ui.jsx'); const { restore } = await import('../store/store.js'); toast(`노트에 없는 할 일 ${gone.length}개를 정리했어요`, { label: '되돌리기', fn: () => gone.forEach((t) => restore('tasks', t.id)) }) }
 }
