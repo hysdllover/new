@@ -176,6 +176,8 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
     b.text && { label: '복습 등록', icon: 'brain', onClick: () => addReview({ title: b.text.slice(0, 60), subjectId: note?.subjectId, sourceType: 'note', sourceId: note?.id }) },
     b.text && b.type !== 'todo' && { label: '할 일로 만들기', icon: 'tasks', onClick: () => { const t = addTask({ title: plainText(b.text), noteId: note?.id, subjectId: note?.subjectId }); upd(b.id, { type: 'todo', taskId: t.id }) } },
     !nested && b.type !== 'sync' && { label: '동기화 블록으로', icon: 'sync', onClick: () => { const s = put('syncBlocks', { blocks: [{ ...b, id: newBlock().id }] }); upd(b.id, { type: 'sync', syncId: s.id, text: '' }) } },
+    b.type === 'divider' && { label: b.text ? '구분선 제목 바꾸기' : '구분선에 제목 넣기', icon: 'tag', onClick: () => { const v = prompt('구분선 제목 (비우면 선만)', b.text || ''); if (v != null) upd(b.id, { text: v.trim() }) } },
+    b.type === 'cols' && { label: `두 단 비율 (${b.ratio || '1:1'} → ${{ '1:1': '2:1', '2:1': '1:2', '1:2': '1:1' }[b.ratio || '1:1']})`, icon: 'layers', onClick: () => upd(b.id, { ratio: { '1:1': '2:1', '2:1': '1:2', '1:2': '1:1' }[b.ratio || '1:1'] }) },
     { label: '복제', icon: 'plus', onClick: () => { const i = list.findIndex((x) => x.id === b.id), a = [...list]; a.splice(i + 1, 0, clone(b)); set(a) } },
     note && { label: '이 줄 링크 복사', icon: 'link', onClick: () => copyBlockLink(note.id, b.id) },
     { label: '여러 줄 선택', icon: 'check', onClick: () => setSel(new Set([b.id])) },
@@ -197,11 +199,11 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
             {b.type === 'bullet' && <span className="blk-dot">•</span>}
             {b.type === 'todo' && <span className="blk-chk"><Check on={!!task?.done} onClick={() => { if (task) toggleTask(task.id); else { const nb = commitBlock(b, note); upd(b.id, nb); if (nb.taskId) toggleTask(nb.taskId) } }} /></span>}
             <div className="blk-c">
-              {b.type === 'divider' ? <hr /> :
+              {b.type === 'divider' ? (b.text ? <div className="hr-t"><span>{b.text}</span></div> : <hr />) :
                 b.type === 'file' ? <FileBlock b={b} /> :
                 b.type === 'table' ? <TableBlock b={b} readOnly={readOnly} onChange={(rows) => upd(b.id, { rows })} onMeta={(p) => upd(b.id, p)} /> :
                 b.type === 'page' ? <SubPage b={b} /> :
-                b.type === 'cols' ? <div className="cols2">{[0, 1].map((k) => <div key={k} className="col-pane"><BlockEditor nested readOnly={readOnly} blocks={(b.cols || [[], []])[k] || []} note={note} onChange={(bs) => upd(b.id, { cols: [0, 1].map((j) => (j === k ? bs : (b.cols || [[], []])[j] || [])) })} /></div>)}</div> :
+                b.type === 'cols' ? <div className="cols2" style={{ '--cols': { '2:1': '2fr 1fr', '1:2': '1fr 2fr' }[b.ratio] || '1fr 1fr' }}>{[0, 1].map((k) => <div key={k} className="col-pane"><BlockEditor nested readOnly={readOnly} blocks={(b.cols || [[], []])[k] || []} note={note} onChange={(bs) => upd(b.id, { cols: [0, 1].map((j) => (j === k ? bs : (b.cols || [[], []])[j] || [])) })} /></div>)}</div> :
                 b.type === 'toggle' ? <ToggleBlock b={b} note={note} readOnly={readOnly} editing={editing} edit={edit} onTitle={(t) => onText(b, t)} onKeyDown={(e) => onKey(e, b)} onBlur={(t) => { commit({ ...b, text: t }); setEdit((x) => (x?.id === b.id ? null : x)) }} onEdit={() => setEdit({ id: b.id, pos: (b.text || '').length })} onChildren={(bs) => upd(b.id, { children: bs })} /> :
                 b.type === 'embed' ? <Embed b={b} note={note} onChange={(p) => upd(b.id, p)} /> :
                 b.type === 'sync' ? <SyncBlock b={b} note={note} /> :
@@ -469,7 +471,9 @@ function MarkBar({ on, hasSel, onPress, onApply }) {
 
 // 토글: 제목 줄을 누르면 아래 내용이 펼쳐지고 접힘 (질문 → 답 정리)
 function ToggleBlock({ b, note, readOnly, editing, edit, onTitle, onKeyDown, onBlur, onEdit, onChildren }) {
-  const [open, setOpen] = useState(!!b.open)
+  // 접힘·펼침은 이 기기에 기억
+  const [open, setOpen0] = useState(() => { try { const v = localStorage.getItem('tgl:' + b.id); return v == null ? !!b.open : v === '1' } catch { return !!b.open } })
+  const setOpen = (v) => { setOpen0(v); try { localStorage.setItem('tgl:' + b.id, v ? '1' : '0') } catch {} }
   return (
     <div className="tgl">
       <div className="row" style={{ gap: 4, alignItems: 'flex-start', flexWrap: 'nowrap' }}>

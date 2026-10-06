@@ -103,11 +103,12 @@ export default function Home() {
       </div>
       <div className="wpages" ref={scroller} onScroll={onScroll}>
         {pages.map((p, pi) => (
-          <div key={p.id} className="wpage">
+          <div key={p.id} className={'wpage' + (p.bg ? ' wpbg wpbg-' + p.bg : '')}>
             {editing && (
               <div className="row" style={{ gap: 6, marginBottom: 8 }}>
                 <input className="input" value={p.name} onChange={(e) => setPage(pi, (x) => ({ ...x, name: e.target.value }))} style={{ maxWidth: 200 }} />
                 <button className="btn sm" onClick={() => addWidget(pi)}><Icon name="plus" size={14} />위젯</button>
+                <div className="seg" title="페이지 배경">{[['', '무지'], ['paper', '종이'], ['grid', '모눈'], ['dot', '점']].map(([k, l]) => <button key={k} className={(p.bg || '') === k ? 'on' : ''} onClick={() => setPage(pi, (x) => ({ ...x, bg: k || null }))}>{l}</button>)}</div>
                 <button className="btn sm" onClick={() => confirmSheet('벤토 배치', '이 페이지 위젯 크기를 벤토 격자로 맞춰요 (작은 위젯은 큰 칸 하나 + 작은 칸 둘씩 묶고, 넓은 위젯은 한 줄). 순서는 그대로예요.', () => setW(pi, bento(p.widgets)), '맞추기')}>벤토 배치</button>
                 {pages.length > 1 && <button className="btn sm danger" onClick={() => confirmSheet('페이지 삭제', `'${p.name}' 페이지를 삭제할까요?`, () => { savePages(pages.filter((_, i) => i !== pi)); setCur(0) }, '삭제')}>페이지 삭제</button>}
               </div>

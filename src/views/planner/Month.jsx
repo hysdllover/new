@@ -26,6 +26,8 @@ export default function Month({ date, setDate }) {
   const cells = Array.from({ length: 42 }, (_, i) => addDays(start, i))
   const month = parseYmd(ms).getMonth()
   const studyBy = useMemo(() => { const m = {}; for (const s of sessions) m[s.date] = (m[s.date] || 0) + s.dur; return m }, [sessions])
+  // 날짜별 과목 비율 (공부 선을 과목 색으로 나눠 그림)
+  const subBy = useMemo(() => { const m = {}; for (const s of sessions) { const d = (m[s.date] ||= {}); d[s.subjectId || '-'] = (d[s.subjectId || '-'] || 0) + (s.dur || 0) } return m }, [sessions])
   const activeMeds = meds.filter((m) => m.active)
   const medTotal = activeMeds.reduce((a, m) => a + (m.times?.length || 0), 0)
   const wdOrder = Array.from({ length: 7 }, (_, i) => (i + st.weekStart) % 7)
@@ -70,7 +72,7 @@ export default function Month({ date, setDate }) {
             const medDone = layers.meds && medTotal ? medLogs.filter((l) => l.date === d && l.taken).length : 0
             return (
               <Fragment key={d}>
-              <button className={'mcell' + (inM ? '' : ' out') + (d === today() ? ' is-today' : '') + (d === sel ? ' sel' : '')}
+              <button className={'mcell' + (inM ? '' : ' out') + (d === today() ? ' is-today' : '') + (d === sel ? ' sel' : '') + (wd === 0 || wd === 6 ? ' wkend' : '')}
                 onClick={() => { if (d === sel) setPeek(!peek); else { setDate(d); setPeek(true) } }}
                 style={heat ? { background: `color-mix(in srgb, var(--c2) ${Math.round(heat * 32)}%, var(--surface))` } : null}>
                 <div className="mnum"><span className={wd === 0 || hol ? 'sun' : wd === 6 ? 'sat' : ''}>{parseYmd(d).getDate()}</span>
@@ -82,7 +84,7 @@ export default function Month({ date, setDate }) {
                   {evs.length > 3 && <div className="tiny muted">+{evs.length - 3}</div>}
                   {due.length > 0 && <div className="mtask tiny">☐ {due.filter((t) => !t.done).length}/{due.length}</div>}
                 </div>
-                {layers.study && mins > 0 && <i className="mstudy" style={{ width: Math.min(100, (mins / (st.goalDaily || 240)) * 100) + '%' }} />}
+                {layers.study && mins > 0 && <span className="mstudy" style={{ width: Math.min(100, (mins / (st.goalDaily || 240)) * 100) + '%' }}>{Object.entries(subBy[d] || {}).sort((a, b) => b[1] - a[1]).map(([sid, m]) => <i key={sid} style={{ flex: m, background: subjects.find((x) => x.id === sid)?.color || 'var(--c2)' }} />)}</span>}
                 {ci % 7 === 0 && ddW && d <= ddW.date && <span className="mwk">{Math.ceil(diffDays(ddW.date, d) / 7)}주</span>}
                 {ddW && d === ddW.date && <span className="mdd" />}
                 <div className="mfoot">

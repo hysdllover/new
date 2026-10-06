@@ -113,6 +113,7 @@ export default function Timeline({ date, showActual = true, dropTarget = true, h
         {Array.from({ length: (endH - startH) / 60 + 1 }, (_, i) => (
           <div key={i} className="tl-hour" style={{ top: i * 60 * PX }}><span>{String((startH / 60 + i) % 24).padStart(2, '0')}</span></div>
         ))}
+        {Array.from({ length: (endH - startH) / 60 }, (_, i) => <div key={'h' + i} className="tl-half" style={{ top: (i * 60 + 30) * PX }} />)}
         <div className="tl-body" data-drop={dropTarget ? 'timeline:' + date : undefined} data-start={startH} onClick={onBgClick}>
           {items.map((it) => {
             const w = 100 / it.n

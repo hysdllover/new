@@ -79,6 +79,19 @@ export function applyTheme(t0) {
   for (const [k, v] of Object.entries(D)) root.dataset[k] = v
   root.toggleAttribute('data-icofill', t.iconFill === 'fill')
   root.toggleAttribute('data-fold', t.card === 'note' && t.fold !== false)
+  Object.assign(D, { bullet: t.bulletStyle || 'dot', link: t.linkStyle || 'under', hlc: t.hlCorner || 'square', shadow: t.shadowDepth || 'normal', tabsel: t.tabSel || 'color', thc: t.thColor || 'gray' })
+  for (const k of ['bullet', 'link', 'hlc', 'shadow', 'tabsel', 'thc']) root.dataset[k] = D[k]
+  root.toggleAttribute('data-margin', !!t.noteMargin)
+  root.dataset.mdens = t.monthDensity || 'normal'
+  root.toggleAttribute('data-wkend', t.weekendTint !== false)
+  root.toggleAttribute('data-tlhalf', !!t.tlHalf)
+  root.style.setProperty('--home-a', String((t.homeAlpha ?? 1) * 100) + '%')
+  const HS = { s: [1.25, 1.06], m: [1.45, 1.18], l: [1.7, 1.32] }
+  root.style.setProperty('--h1-size', HS[t.h1Size || 'm'][0] + 'em'); root.style.setProperty('--h2-size', HS[t.h2Size || 'm'][1] + 'em')
+  root.style.setProperty('--note-lh', { tight: 1.45, normal: 1.6, loose: 1.85 }[t.noteLH || 'normal'])
+  root.style.setProperty('--tint-a', ({ light: 5, normal: 8, strong: 14 }[t.tint || 'normal']) + '%')
+  const R = t.radius ?? 10
+  root.style.setProperty('--r-card', (t.rCard ?? R) + 'px'); root.style.setProperty('--r-btn', (t.rBtn ?? Math.max(0, R - 2)) + 'px'); root.style.setProperty('--r-input', (t.rInput ?? Math.max(0, R - 2)) + 'px')
   root.style.setProperty('--grain', t.grain ?? 1)
   root.style.setProperty('--grid-size', (t.gridSize || 18) + 'px')
   root.style.setProperty('--grid-a', (t.gridAlpha ?? 5.5) + '%')

@@ -389,7 +389,7 @@ function WeekBoard() {
   const Card = ({ t }) => {
     const sb = subjects.find((x) => x.id === t.subjectId)
     return (
-      <div className={'wkb-item' + (t.done ? ' done' : '')} {...longPress(() => ({ label: t.title, onDrop: drop(t) }))} onClick={() => openDetail('task', t.id)}>
+      <div className={'wkb-item' + (t.done ? ' done' : '')} style={sb?.color ? { '--sbc': sb.color } : null} {...longPress(() => ({ label: t.title, onDrop: drop(t) }))} onClick={() => openDetail('task', t.id)}>
         <Check on={t.done} onClick={() => toggleTask(t.id)} color={sb?.color} />
         {t.seriesId && <i className="wkb-sd" style={{ background: st.seriesColors?.[t.seriesId] || sb?.color || 'var(--muted)' }} />}
         <span className="wkb-t">{t.title}</span>

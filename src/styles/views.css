@@ -185,10 +185,10 @@
 .blk:hover .blk-h, .blk:focus-within .blk-h { opacity: 1; }
 @media (hover: none) { .blk-h { opacity: .45; } }
 .blk-c { flex: 1; min-width: 0; }
-.blk-v { min-height: 28px; padding: 3px 2px; white-space: pre-wrap; word-break: break-word; cursor: text; line-height: 1.6; }
+.blk-v { min-height: 28px; padding: 3px 2px; white-space: pre-wrap; word-break: break-word; cursor: text; line-height: var(--note-lh, 1.6); }
 .blk-v.done { color: var(--muted); text-decoration: line-through; }
 .blk-edit { position: relative; background: color-mix(in srgb, var(--accent) 5%, transparent); border-radius: 5px; }
-.blk-ta, .blk-mirror { width: 100%; border: 0; margin: 0; padding: 3px 4px; font: inherit; line-height: 1.6; letter-spacing: inherit; font-size: max(16px, 1em); white-space: pre-wrap; word-break: normal; overflow-wrap: break-word; tab-size: 4; box-sizing: border-box; }
+.blk-ta, .blk-mirror { width: 100%; border: 0; margin: 0; padding: 3px 4px; font: inherit; line-height: var(--note-lh, 1.6); letter-spacing: inherit; font-size: max(16px, 1em); white-space: pre-wrap; word-break: normal; overflow-wrap: break-word; tab-size: 4; box-sizing: border-box; }
 .blk-ta { outline: none; resize: none; background: transparent; position: relative; color: transparent; -webkit-text-fill-color: transparent; caret-color: var(--text); overflow: hidden; display: block; }
 .blk-ta::selection { background: color-mix(in srgb, var(--accent) 22%, transparent); }
 .blk-mirror { position: absolute; inset: 0; pointer-events: none; color: var(--text); overflow: hidden; }
@@ -197,8 +197,8 @@
 .blk-mirror .mk-hl { padding: 0; }
 .blk-mirror .mm-u { text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 60%, transparent); text-underline-offset: 3px; }
 @media (min-width: 768px) { .blk-ta, .blk-mirror { font-size: inherit; } }
-.blk-h1 .blk-v, .blk-h1 .blk-ta, .blk-h1 .blk-mirror { font-size: 1.45em; font-weight: var(--fw-b); margin-top: 10px; }
-.blk-h2 .blk-v, .blk-h2 .blk-ta, .blk-h2 .blk-mirror { font-size: 1.18em; font-weight: var(--fw-b); margin-top: 6px; }
+.blk-h1 .blk-v, .blk-h1 .blk-ta, .blk-h1 .blk-mirror { font-size: var(--h1-size, 1.45em); font-weight: var(--fw-b); margin-top: 10px; }
+.blk-h2 .blk-v, .blk-h2 .blk-ta, .blk-h2 .blk-mirror { font-size: var(--h2-size, 1.18em); font-weight: var(--fw-b); margin-top: 6px; }
 .blk-quote .blk-c { border-left: 3px solid var(--c3); padding-left: 10px; color: var(--muted); }
 .blk-dot { width: 14px; text-align: center; line-height: 34px; color: var(--muted); flex-shrink: 0; }
 .blk-chk { padding-top: 5px; flex-shrink: 0; }
@@ -625,7 +625,7 @@ button.greet { display: block; width: 100%; text-align: left; }
 .note-prog-t { flex: 1; height: 2px; background: var(--line); border-radius: 1px; overflow: hidden; }
 .note-prog-t i { display: block; height: 2px; background: var(--accent); }
 .note-page.reading { font-size: 1.07em; }
-.note-page.reading .blk-v { line-height: 1.8; cursor: default; }
+.note-page.reading .blk-v { line-height: calc(var(--note-lh, 1.6) + .2); cursor: default; }
 .note-page.reading .note-title { pointer-events: none; }
 /* 글자 꾸미기 · 두 단 · 토글 · 표지 · 여러 줄 선택 */
 .mk-b { font-weight: 600; }
@@ -642,7 +642,7 @@ html[data-hl="full"] { --hl-top: 8%; }
 .markbar .mb-x { font-size: .78em; }
 .mb-sep { width: 1px; height: 18px; background: var(--line); margin: 0 3px; flex-shrink: 0; }
 .mb-tip { font-size: .7em; color: var(--muted); padding: 0 8px; white-space: nowrap; }
-.cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.cols2 { display: grid; grid-template-columns: var(--cols, 1fr 1fr); gap: 14px; }
 .cols2 .col-pane { min-width: 0; border-left: 1px solid var(--line); padding-left: 8px; }
 .cols2 .col-pane:first-child { border-left: 0; padding-left: 0; }
 @media (max-width: 430px) { .cols2 { grid-template-columns: 1fr; gap: 6px; } .cols2 .col-pane { border-left: 0; padding-left: 0; } }
@@ -815,7 +815,59 @@ html[data-div="wave"] .blk hr { border: 0; height: 8px; background: url("data:im
 .subj-cum { height: 4px; margin-top: 3px; border-radius: 2px; background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), color-mix(in srgb, var(--line) 90%, transparent) calc(10% - 1px) 10%), color-mix(in srgb, var(--line) 45%, transparent); overflow: hidden; }
 .subj-cum i { display: block; height: 100%; background: color-mix(in srgb, var(--sc, var(--accent)) 55%, transparent); border-radius: 2px; }
 /* 월 달력: 공부 시간 가는 선 · D-day까지 남은 주 */
-.mstudy { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--c2); border-radius: 0 1px 1px 0; opacity: .8; }
+.mstudy { position: absolute; left: 0; bottom: 0; height: 2px; display: flex; gap: 1px; border-radius: 0 1px 1px 0; overflow: hidden; opacity: .85; }
+.mstudy i { display: block; height: 100%; min-width: 2px; }
 .mwk { position: absolute; right: 3px; top: 3px; font-size: .58em; color: color-mix(in srgb, var(--muted) 80%, transparent); }
 .mdd { position: absolute; right: 4px; bottom: 6px; width: 6px; height: 6px; border-radius: 50%; box-shadow: 0 0 0 1.5px var(--c4); }
 .wkb-sd { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; margin-left: -2px; }
+
+/* 글머리 모양 · 링크 모양 · 형광펜 모서리 · 표 머리줄 · 공책 세로줄 */
+.blk-dot { position: relative; color: transparent; }
+.blk-dot::before { content: ''; position: absolute; left: 50%; top: calc(3px + var(--note-lh, 1.6) * .5em); width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 50%; background: var(--muted); }
+html[data-bullet="dash"] .blk-dot::before { width: 8px; height: 1.5px; margin: -.75px 0 0 -4px; border-radius: 1px; }
+html[data-bullet="square"] .blk-dot::before { border-radius: 1px; }
+html[data-link="color"] .wikilink { border-bottom: 0; }
+html[data-link="arrow"] .wikilink { border-bottom: 0; }
+html[data-link="arrow"] .wikilink:not(.blk-link)::after { content: ' ↗'; font-size: .8em; opacity: .7; }
+html[data-hlc="round"] .mk-hl { border-radius: 4px; -webkit-box-decoration-break: clone; box-decoration-break: clone; padding: 0 2px; }
+html[data-hlc="brush"] .mk-hl { border-radius: 2px 9px 3px 11px / 7px 2px 9px 3px; -webkit-box-decoration-break: clone; box-decoration-break: clone; padding: 0 3px; }
+html[data-thc="none"] .tblk-c.th { background: transparent; }
+html[data-thc="tint"] .tblk-c.th { background: color-mix(in srgb, var(--accent) 9%, var(--surface)); color: color-mix(in srgb, var(--accent) 80%, var(--text)); }
+html[data-margin] .note-page > .blocks { background-image: linear-gradient(90deg, transparent 23px, color-mix(in srgb, #c9a0a8 55%, transparent) 23px, color-mix(in srgb, #c9a0a8 55%, transparent) 24px, transparent 24px); }
+.blk-mirror .mk-hl, html .blk-mirror .mk-hl { padding: 0; border-radius: 0; }
+/* 디자인 미리보기 */
+.dz-prev { padding: 10px 12px; border: 1px dashed var(--line); border-radius: var(--r-card, var(--radius)); background: var(--surface); }
+.dz-prev .blk { display: flex; gap: 4px; }
+.dz-prev .blk-v { cursor: default; min-height: 0; }
+/* 월 달력 칸 높이 · 주말 · 타임라인 30분 · 홈 카드 투명도 */
+html[data-mdens="compact"] .mcell { min-height: 54px; }
+html[data-mdens="roomy"] .mcell { min-height: 96px; }
+@media (min-width: 768px) { html[data-mdens="compact"] .mcell { min-height: 78px; } html[data-mdens="roomy"] .mcell { min-height: 136px; } }
+html[data-wkend] .mcell.wkend:not([style*="background"]) { background: color-mix(in srgb, var(--text) 2.5%, transparent); }
+.tl-half { position: absolute; left: 0; right: 0; height: 0; border-top: 1px dashed color-mix(in srgb, var(--line) 55%, transparent); pointer-events: none; }
+html:not([data-tlhalf]) .tl-half { display: none; }
+.widgets .card { background-color: color-mix(in srgb, var(--surface) var(--home-a, 100%), transparent); }
+/* 구분선 제목 */
+.hr-t { display: flex; align-items: center; gap: 10px; margin: 12px 0; font-size: .8em; color: var(--muted); letter-spacing: .06em; }
+.hr-t::before, .hr-t::after { content: ''; flex: 1; border-top: 1px solid var(--line); }
+html[data-div="dot"] .hr-t::before, html[data-div="dot"] .hr-t::after { border-top-style: dashed; }
+/* 노트 페이지 너비 · 목록 카드 크기 · 배경 미리보기 */
+.note-page.nw-narrow { max-width: 680px; margin: 0 auto; }
+.note-page.nw-wide { max-width: none; }
+@media (min-width: 1100px) { .content-inner:has(.note-page.nw-wide) { max-width: 1400px; } }
+.note-grid.nc-s { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.note-grid.nc-s .note-prev { -webkit-line-clamp: 2; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+.note-grid.nc-l { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.note-card.nc-bg { padding: calc(var(--gap) + 2px); border-radius: var(--r-card, var(--radius)); }
+.note-card.nc-bg.note-bg-line { background-image: linear-gradient(color-mix(in srgb, var(--accent) 9%, transparent) 1px, transparent 1px); background-size: 100% 22px; }
+.note-card.nc-bg.note-bg-grid { background-image: linear-gradient(color-mix(in srgb, var(--accent) 7%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--accent) 7%, transparent) 1px, transparent 1px); background-size: 14px 14px; }
+.note-card.nc-bg.note-bg-dot { background-image: radial-gradient(color-mix(in srgb, var(--text) 16%, transparent) 1px, transparent 1.4px); background-size: 13px 13px; }
+.series-in { display: flex; flex-direction: column; gap: 5px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; }
+/* 주간 배치: 칸 높이 맞춤 · 과목 색 띠 */
+.wkb { grid-auto-rows: 1fr; }
+.wkb-item { box-shadow: inset 2px 0 0 var(--sbc, transparent); padding-left: 6px; }
+/* 홈 페이지 배경 */
+.wpbg { border-radius: var(--r-card, var(--radius)); padding: 8px; }
+.wpbg-paper { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.06' numOctaves='4' seed='5'/%3E%3CfeDiffuseLighting lighting-color='%23fff' surfaceScale='1'%3E%3CfeDistantLight azimuth='225' elevation='70'/%3E%3C/feDiffuseLighting%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)' opacity='.45'/%3E%3C/svg%3E"), color-mix(in srgb, var(--surface) 70%, var(--bg)); }
+.wpbg-grid { background-image: linear-gradient(color-mix(in srgb, var(--accent) 6%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--accent) 6%, transparent) 1px, transparent 1px); background-size: 18px 18px; }
+.wpbg-dot { background-image: radial-gradient(color-mix(in srgb, var(--text) 14%, transparent) 1px, transparent 1.4px); background-size: 16px 16px; }
