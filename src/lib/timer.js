@@ -85,6 +85,21 @@ export function stop() {
   if (lec) toast(total >= 1 ? `${total}분 기록했어요` : '인강 듣기를 마쳤어요', { label: '＋1강', fn: () => { const n = markLecture(lec); if (n) toast(`${n}강 완료`) } })
   else if (total >= 1) askWrap(was, total, last)
 }
+// 위젯(Scriptable)에서 보낸 명령을 그 시각 기준으로 반영 (앱이 열릴 때 동기화가 처리 · 화면 없이 조용히)
+export function widgetTimer(act, at, sid) {
+  if (act === 'start') {
+    if (t) widgetTimer('stop', at)
+    set({ mode: 'stopwatch', subjectId: sid || null, taskId: null, segStart: at, runStart: at, acc: 0 })
+  } else if (!t) return
+  else if (act === 'pause' && !t.paused) {
+    addSession({ id: 'tm-' + t.segStart, subjectId: t.subjectId, taskId: t.taskId, lectureId: t.lectureId, start: t.segStart, end: at, kind: t.mode })
+    set({ ...t, paused: true, acc: (t.acc || 0) + (at - t.segStart), pausedAt: at })
+  } else if (act === 'resume' && t.paused) set({ ...t, paused: false, segStart: at })
+  else if (act === 'stop') {
+    if (!t.paused) addSession({ id: 'tm-' + t.segStart, subjectId: t.subjectId, taskId: t.taskId, lectureId: t.lectureId, start: t.segStart, end: at, kind: t.mode })
+    set(null); keepAwake(false)
+  }
+}
 export const setTimerTask = (taskId, subjectId) => t && set({ ...t, taskId, subjectId: subjectId ?? t.subjectId })
 
 // 타이머 끝 확인 (1초마다)

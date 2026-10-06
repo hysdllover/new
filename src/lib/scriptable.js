@@ -4,7 +4,7 @@ import { pickQuote } from './quote.js'
 export const WIDGET_KINDS = [['', '기본'], ['공부', '공부'], ['할일', '할 일'], ['디데이', 'D-day'], ['달력', '공부 달력'], ['캘린더', '캘린더'], ['다짐', '다짐'], ['시간표', '시간표'], ['주간', '주간 공부'], ['과목', '과목별'], ['지금', '지금·다음'], ['진도', '진도'], ['목표', '이번 주 목표'], ['오늘', '오늘 한눈에'], ['대시보드', '대시보드'], ['내일', '내일 준비'], ['마감', '마감 임박'], ['일주일', '7일 일정'], ['디데이목록', 'D-day 목록'], ['바로가기', '바로 시작'], ['진행', '공부 진행'], ['남은분', '남은 시간'], ['타이머', '타이머·공부 시간'], ['노트', '노트'], ['구성1', '내 위젯 1'], ['구성2', '내 위젯 2'], ['구성3', '내 위젯 3']]
 
 // 스크립트 버전 — 위젯 모양이 바뀔 때 올림. 앱이 위젯 데이터에 같이 올려서, 예전 스크립트면 위젯에 '스크립트 업데이트' 표시
-export const SCRIPT_VER = 61
+export const SCRIPT_VER = 62
 
 // 전체 스크립트 (예전 방식 · 테스트용): 머리 + 본체
 export function buildScript({ widgetRaw, appUrl }) {
@@ -95,9 +95,11 @@ function setParam(raw) {
 }
 setParam(args.widgetParameter)
 const pickQuote = ${pickQuote.toString()}
-const link = (path) => (/^https?:/.test(path || '') ? path : APP + (path ? '?go=' + path : ''))
+// 위젯에서 바로 처리(토큰을 Scriptable 보관함에 저장했을 때): 타이머 화면 대신 이 스크립트를 실행해 시작·정지·기록
+let RUN = null
+const link = (path) => (/^https?:/.test(path || '') ? path : RUN && path === 'study.timer' ? RUN + '?act=timer' : APP + (path ? '?go=' + path : ''))
 // 위젯에서 할 일 누르기: 확인 없이 바로 완료 (앱이 잠깐 열렸다가 완료 · 되돌리기 가능)
-const doneUrl = (id) => APP + '?done=' + encodeURIComponent(id) + '&quick=1'
+const doneUrl = (id) => (RUN ? RUN + '?act=done&id=' + encodeURIComponent(id) : APP + '?done=' + encodeURIComponent(id) + '&quick=1')
 
 const pad = (n) => String(n).padStart(2, '0')
 const d0 = new Date()
@@ -198,6 +200,64 @@ let inkDark = false
 function cap(parent, s) { return t(parent, s.split('').join(' '), label(8), SOFT) }
 
 const data = await load()
+const QP = (typeof args !== 'undefined' && args && args.queryParameters) || {}
+try { RUN = Keychain.contains('study-gh') && data && data.gid ? 'scriptable:///run/' + encodeURIComponent(Script.name()) : null } catch (e) { RUN = null }
+// 위젯을 눌러 실행된 경우: 할 일 완료 · 타이머 시작/일시정지/정지 · 공부 기록 → 동기화 저장소에 명령을 남기고(앱이 열리면 반영) 위젯 데이터도 바로 고침
+if (QP.act && !config.runsInWidget) { await widgetAct(QP); Script.complete(); return }
+async function widgetAct(Q) {
+  const say = async (title, msg) => { const a = new Alert(); a.title = title; if (msg) a.message = msg; a.addAction('확인'); await a.present() }
+  const tok = Keychain.contains('study-gh') ? Keychain.get('study-gh') : '', gid = data && data.gid
+  if (!tok || !gid) return say('설정이 필요해요', 'Scriptable 에서 이 스크립트를 실행 › 메뉴 › 위젯에서 바로 처리 켜기')
+  const at = Date.now(), dt = new Date(at), td = dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0')
+  const subs = Object.values((data.study && data.study.subjects) || {}).filter((x) => !x.deleted)
+  const subOf = (id) => subs.find((x) => x.id === id)
+  const sheet = async (title, items, msg) => { const a = new Alert(); a.title = title; if (msg) a.message = msg; items.forEach((x) => a.addAction(x)); a.addCancelAction('취소'); return a.presentSheet() }
+  const pickSub = async (title) => { const i = await sheet(title, [...subs.map((x) => x.name), '과목 없이']); return i < 0 ? undefined : subs[i] ? subs[i].id : null }
+  const addSess = (sid, start, end) => { const m = Math.round((end - start) / 60000); if (m < 1) return; data.study.sessions = data.study.sessions || {}; data.study.sessions['wg-' + end] = { id: 'wg-' + end, subjectId: sid, date: td, start, dur: m } }
+  const T = data.timer && !(data.timer.end && data.timer.end < at) ? data.timer : null
+  let cmd = null, msg = ''
+  const logFlow = async () => {
+    const sid = await pickSub('어떤 과목을 공부했나요?'); if (sid === undefined) return null
+    const D = [15, 30, 45, 60, 90, 120], i = await sheet('얼마나?', [...D.map((m) => (m >= 60 ? Math.floor(m / 60) + '시간' + (m % 60 ? ' ' + (m % 60) + '분' : '') : m + '분')), '직접 입력'])
+    if (i < 0) return null
+    let dur = D[i]
+    if (i === D.length) { const a = new Alert(); a.title = '몇 분?'; a.addTextField('분', '30'); a.addAction('기록'); a.addCancelAction('취소'); if (await a.present() < 0) return null; dur = parseInt(a.textFieldValue(0), 10) }
+    if (!(dur > 0)) return null
+    addSess(sid, at - dur * 60000, at)
+    msg = '기록 · ' + ((subOf(sid) || {}).name || '공부') + ' ' + dur + '분'
+    return { act: 'log', sid, dur }
+  }
+  if (Q.act === 'done') {
+    const x = data.tasks && data.tasks.tasks && data.tasks.tasks[Q.id]
+    if (!x) return say('할 일을 찾지 못했어요', '앱에서 동기화한 뒤 다시 해 보세요')
+    if (x.done) return say('이미 완료한 할 일이에요')
+    x.done = true; x.doneAt = at; cmd = { act: 'done', id: Q.id }; msg = '완료 · ' + x.title
+  } else if (Q.act === 'log' || (Q.act === 'timer' && !T)) {
+    let i = Q.act === 'log' ? 1 : await sheet('공부', ['타이머 시작', '공부 기록 추가'])
+    if (i < 0) return
+    if (i === 1) cmd = await logFlow()
+    else { const sid = await pickSub('어떤 과목?'); if (sid === undefined) return; cmd = { act: 'start', sid } }
+  } else if (Q.act === 'start') cmd = { act: 'start', sid: Q.sid || null }
+  else if (Q.act === 'timer') {
+    const i = await sheet((T.name || '공부') + (T.paused ? ' · 일시정지' : ' · 공부 중'), [T.paused ? '계속' : '일시정지', '정지하고 기록'])
+    if (i < 0) return
+    if (i === 0 && !T.paused) { cmd = { act: 'pause' }; addSess(T.sid || null, T.start + (T.acc || 0), at); T.acc = at - T.start; T.paused = true; T.start = null; msg = '일시정지' }
+    else if (i === 0) { cmd = { act: 'resume' }; T.start = at - (T.acc || 0); T.paused = false; msg = '다시 시작' }
+    else { cmd = { act: 'stop' }; if (!T.paused) addSess(T.sid || null, T.start + (T.acc || 0), at); const m = Math.round((T.paused ? T.acc : at - T.start) / 60000); data.timer = null; msg = '정지 · ' + m + '분 공부' }
+  }
+  if (!cmd) return
+  if (cmd.act === 'start') { const sb = subOf(cmd.sid); data.timer = { mode: 'stopwatch', name: sb ? sb.name : '공부', color: sb ? sb.color : null, sid: cmd.sid, paused: false, acc: 0, start: at, end: null, target: null }; msg = '시작 · ' + data.timer.name }
+  cmd.at = at
+  const patchGist = async (id, files) => { const r = new Request('https://api.github.com/gists/' + id); r.method = 'PATCH'; r.headers = { Authorization: 'Bearer ' + tok, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }; r.body = JSON.stringify({ files }); await r.loadString(); const sc = r.response && r.response.statusCode; if (sc && sc >= 300) throw new Error(sc === 401 ? '토큰이 만료됐거나 틀려요' : 'GitHub 오류 ' + sc) }
+  try {
+    await patchGist(gid, { ['cmd-' + at + '.json']: { content: JSON.stringify(cmd) } })
+    const wid = (String(SRC).match(/gist\\.githubusercontent\\.com\\/[^/]+\\/(\\w+)\\//) || [])[1]
+    data.at = at
+    try { CFM.writeString(cachePath, JSON.stringify(data)) } catch (e) {}
+    if (wid) { const d2 = Object.assign({}, data); delete d2.at; await patchGist(wid, { 'widget.json': { content: JSON.stringify(d2) } }).catch(() => {}) }
+  } catch (e) { return say('보내지 못했어요', String(e.message || e)) }
+  const n = new Notification(); n.title = msg; n.body = '위젯은 곧 바뀌고, 앱을 열면 기록에도 반영돼요'; n.schedule()
+}
 // 투명 배경 파일
 const FM = FileManager.local()
 const bgPath = (f, p) => FM.joinPath(FM.documentsDirectory(), 'study-bg-' + f + '-' + (p || 'default') + '.jpg')
@@ -457,7 +517,7 @@ if (!data) {
   for (const x of recent) { const s = subjects.find((y) => y.id === x.subjectId); if (s && !QS.includes(s)) QS.push(s); if (QS.length >= 8) break }
   for (const s of subjects) if (QS.length < 8 && !QS.includes(s)) QS.push(s)
   if (ARG) { const fx = subjects.find((y) => String(y.name).replace(/\\s/g, '').toLowerCase() === ARG); if (fx) { QS.splice(QS.indexOf(fx), QS.includes(fx) ? 1 : 0); QS.unshift(fx) } }
-  const startUrl = (s) => APP + '?timer=' + encodeURIComponent(s ? s.id : '')
+  const startUrl = (s) => (RUN ? RUN + '?act=start&sid=' + encodeURIComponent(s ? s.id : '') : APP + '?timer=' + encodeURIComponent(s ? s.id : ''))
   const newUrl = (k) => APP + '?new=' + k
 
   if (lock && KIND === 'class') {
@@ -1520,10 +1580,15 @@ async function transparentSetup() {
 if (config.runsInWidget) Script.setWidget(w)
 else {
   const m = new Alert(); m.title = '스터디 위젯'
-  ;['미리보기 · 소', '미리보기 · 중', '미리보기 · 대', '투명 배경 설정', '투명 배경 모두 지우기', '글자색 · 자동', '글자색 · 밝게', '글자색 · 어둡게', '잠금 화면 미리보기 · 원형', '잠금 화면 미리보기 · 직사각형', '잠금 화면 미리보기 · 한 줄'].forEach((x) => m.addAction(x)); m.addCancelAction('닫기')
+  ;['미리보기 · 소', '미리보기 · 중', '미리보기 · 대', '투명 배경 설정', '투명 배경 모두 지우기', '글자색 · 자동', '글자색 · 밝게', '글자색 · 어둡게', '잠금 화면 미리보기 · 원형', '잠금 화면 미리보기 · 직사각형', '잠금 화면 미리보기 · 한 줄', Keychain.contains('study-gh') ? '위젯에서 바로 처리 끄기' : '위젯에서 바로 처리 켜기'].forEach((x) => m.addAction(x)); m.addCancelAction('닫기')
   const i = await m.present()
   // 미리보기: 위젯과 같은 Parameter 를 골라 그 크기로 그림 (기존엔 대형을 잘라 보여 줌)
-  if (i <= 2 || i >= 8) {
+  if (i === 11) {
+    if (Keychain.contains('study-gh')) { Keychain.remove('study-gh'); const a = new Alert(); a.title = '껐어요'; a.message = '위젯을 누르면 다시 앱(사파리)으로 열려요.'; a.addAction('확인'); await a.present() }
+    else { const a = new Alert(); a.title = '위젯에서 바로 처리'; a.message = '할 일 완료 · 타이머 시작·정지 · 공부 기록을 앱을 열지 않고 처리해요.\\nGitHub 토큰(Gists 읽기·쓰기)을 넣어 주세요. 이 아이폰의 Scriptable 보관함에만 저장되고 스크립트에는 들어가지 않아요.'; a.addSecureTextField('ghp_… / github_pat_…', ''); a.addAction('저장'); a.addCancelAction('취소'); if (await a.present() === 0 && a.textFieldValue(0).trim()) Keychain.set('study-gh', a.textFieldValue(0).trim()) }
+    Script.complete(); return
+  }
+  if (i <= 2 || (i >= 8 && i <= 10)) {
     const last = Keychain.contains('study-preview-param') ? Keychain.get('study-preview-param') : ''
     const a = new Alert(); a.title = 'Parameter'; a.message = '위젯 편집의 Parameter 와 같게 (예: 오늘, 대시보드, 캘린더). 비우면 기본.'; a.addTextField('Parameter', last); a.addAction('보기')
     await a.present()
@@ -1535,7 +1600,7 @@ else {
   else if (i === 3) await transparentSetup()
   else if (i === 4) { for (const f of FM.listContents(FM.documentsDirectory())) if (f.startsWith('study-bg-')) FM.remove(FM.joinPath(FM.documentsDirectory(), f)) }
   else if (i >= 5 && i <= 7) Keychain.set('study-ink', ['auto', 'light', 'dark'][i - 5])
-  else if (i >= 8) {
+  else if (i >= 8 && i <= 10) {
     // 잠금 화면 위젯을 앱 안에서 그려 보기 (오류가 있으면 여기서 보임)
     const f = ['accessoryCircular', 'accessoryRectangular', 'accessoryInline'][i - 8]
     const lw = build(f)
