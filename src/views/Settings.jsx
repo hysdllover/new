@@ -561,6 +561,7 @@ function HomeWidgetCard() {
         {sync.state === 'off' && <span className="small muted">동기화를 먼저 연결하세요</span>}
       </div>
       <div className="tiny muted" style={{ marginTop: 6 }}>스크립트에는 토큰이 들어가지 않아요(위젯 전용 비공개 주소만). 자동 업데이트 방식이라 한 번만 붙여 넣으면 앱이 바뀔 때 위젯도 같이 바뀌어요(예전 긴 스크립트를 쓰고 있다면 이번에 한 번만 새로 복사해 바꿔 주세요). 갱신 주기는 iOS가 정해요(보통 15분~1시간). 날짜 옆에 시각이 보이면 그때 받은 데이터예요.</div>
+      <div className="tiny muted" style={{ marginTop: 6, lineHeight: 1.6 }}><b>위젯에서 바로 처리</b>: Scriptable 에서 이 스크립트를 한 번 실행 › 메뉴 › <b>위젯에서 바로 처리 켜기</b> › GitHub 토큰(Gists 읽기·쓰기) 입력. 그러면 위젯의 할 일을 누르면 바로 완료, 타이머·바로 시작 버튼은 시작·일시정지·정지, 공부 기록 추가를 사파리 없이 처리해요(앱을 열면 기록에도 반영). 토큰은 그 아이폰의 Scriptable 보관함에만 저장돼요.</div>
     </Card>
   )
 }

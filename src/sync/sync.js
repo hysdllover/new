@@ -6,7 +6,7 @@ import { COLLECTIONS, GIST_FILES } from '../store/schema.js'
 import { mergeColl, stableFile } from './merge.js'
 import { blobToDataUrl, setRemoteRaw, MAX_FILE, addFile } from '../lib/files.js'
 import { eventsOn, classesOn } from '../engine/scheduler.js'
-import { weekGoals, goalProgress, addTask } from '../store/actions.js'
+import { weekGoals, goalProgress, addTask, toggleTask, addSession } from '../store/actions.js'
 import { today, addDays } from '../engine/date.js'
 import { buildIcs } from '../lib/ics.js'
 import { SCRIPT_VER } from '../lib/scriptable.js'
@@ -184,7 +184,7 @@ function timerPayload() {
   if (!t) return null
   const sub = getState().subjects?.[t.subjectId]
   const acc = t.acc || 0
-  return { mode: t.mode, name: sub?.name || '공부', color: sub?.color || null, paused: !!t.paused, acc, start: t.paused ? null : t.segStart - acc, end: t.mode === 'countdown' && !t.paused ? t.segStart + (t.target - acc) : null, target: t.target || null }
+  return { mode: t.mode, sid: t.subjectId || null, name: sub?.name || '공부', color: sub?.color || null, paused: !!t.paused, acc, start: t.paused ? null : t.segStart - acc, end: t.mode === 'countdown' && !t.paused ? t.segStart + (t.target - acc) : null, target: t.target || null }
 }
 // 앞으로 8일 수업 — 앱을 며칠 안 열어도 위젯이 그날 시간표를 보여 줌
 function classesPayload() {
@@ -237,6 +237,7 @@ function widgetPayload() {
     notes: excluded().has('notes') ? [] : notesForWidget(getState()),
     extra: extraPayload(),
     sv: SCRIPT_VER,
+    gid: gistId(), // 위젯에서 바로 처리할 때 명령을 남길 곳 (토큰은 위젯 쪽 보관함에만)
     settings: { settings: { main: { goalDaily: main.goalDaily, weekStart: main.weekStart, widgetFont: main.widgetFont, widgetScale: main.widgetScale, widgetWeight: main.widgetWeight, widgetClear: main.widgetClear, widgetTheme: main.widgetTheme, dashTiles: main.dashTiles, customWidgets: main.customWidgets } }, quotes: keep('quotes') },
   })
 }
@@ -339,6 +340,26 @@ function pause(until) {
   clearTimeout(resumeTimer); resumeTimer = setTimeout(() => syncNow(), pausedUntil - Date.now() + 1000)
   setStatus({ state: 'error', error: pauseMsg() })
 }
+// 위젯 명령(cmd-*.json): 할 일 완료 · 타이머 시작/일시정지/계속/정지 · 공부 기록 — 보낸 시각 순서대로 반영 후 gist 에서 지움
+async function takeCmds(cmds) {
+  if (!cmds.length) return []
+  const list2 = [], done = []
+  for (const [name, f] of cmds) { try { list2.push({ name, c: JSON.parse(f.truncated ? await (await fetch(f.raw_url)).text() : f.content) }) } catch { done.push(name) } }
+  list2.sort((a, b) => (a.c.at || 0) - (b.c.at || 0))
+  const { widgetTimer } = await import('../lib/timer.js')
+  const { find: findRec } = await import('../store/store.js')
+  for (const { name, c } of list2) {
+    try {
+      const at = +c.at || Date.now()
+      if (c.act === 'done') { const tk = findRec('tasks', c.id); if (tk && !tk.done) { toggleTask(c.id); patch('tasks', c.id, { doneAt: at }) } }
+      else if (['start', 'pause', 'resume', 'stop'].includes(c.act)) widgetTimer(c.act, at, c.sid)
+      else if (c.act === 'log' && c.dur > 0) addSession({ id: 'wg-' + at, subjectId: c.sid || null, start: at - c.dur * 60000, end: at, kind: 'manual' })
+    } catch (e) { addLog({ at: Date.now(), err: '위젯 명령 실패 · ' + String(e.message || e).slice(0, 60) }) }
+    done.push(name)
+  }
+  return done
+}
+
 async function takeInbox(inbox) {
   const done = []
   for (const [name, f] of inbox) {
@@ -374,9 +395,10 @@ export async function syncNow({ flush = false } = {}) {
       await ensureGist()
       const gist = await gh(`/gists/${gistId()}`)
       if (gist.owner?.login) ls.set('gh_login', gist.owner.login)
-      const remoteText = {}, inbox = []
+      const remoteText = {}, inbox = [], cmds = []
       for (const [name, f] of Object.entries(gist.files || {})) {
         if (name.startsWith('inbox-')) { inbox.push([name, f]); continue }
+        if (name.startsWith('cmd-')) { cmds.push([name, f]); continue }
         if (name.startsWith('att-')) { setRemoteRaw(name.slice(4).replace(/\.txt$/, ''), f.raw_url); continue }
         if (name.startsWith('font-') || name.startsWith('backup-')) continue
         remoteText[name] = f.truncated ? await (await fetch(f.raw_url)).text() : f.content
@@ -395,7 +417,7 @@ export async function syncNow({ flush = false } = {}) {
         }
       }
       // 1-1) 사진 받기함: 단축어가 gist 에 올린 사진(inbox-*.txt, base64) → 받은 편지함 할 일로 · 처리한 건 gist 에서 지움
-      const inboxDone = await takeInbox(inbox)
+      const inboxDone = [...await takeInbox(inbox), ...await takeCmds(cmds)]
       // 2) 로컬 → 원격: 바뀐 파일만
       const files = buildFiles(getState())
       const patchFiles = {}
