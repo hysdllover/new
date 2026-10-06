@@ -4,9 +4,9 @@ import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval'
 import { getState, replaceColl, onChange, patch, settings, list } from '../store/store.js'
 import { COLLECTIONS, GIST_FILES } from '../store/schema.js'
 import { mergeColl, stableFile } from './merge.js'
-import { blobToDataUrl, setRemoteRaw, MAX_FILE } from '../lib/files.js'
+import { blobToDataUrl, setRemoteRaw, MAX_FILE, addFile } from '../lib/files.js'
 import { eventsOn, classesOn } from '../engine/scheduler.js'
-import { weekGoals, goalProgress } from '../store/actions.js'
+import { weekGoals, goalProgress, addTask } from '../store/actions.js'
 import { today, addDays } from '../engine/date.js'
 import { buildIcs } from '../lib/ics.js'
 import { SCRIPT_VER } from '../lib/scriptable.js'
@@ -339,6 +339,27 @@ function pause(until) {
   clearTimeout(resumeTimer); resumeTimer = setTimeout(() => syncNow(), pausedUntil - Date.now() + 1000)
   setStatus({ state: 'error', error: pauseMsg() })
 }
+async function takeInbox(inbox) {
+  const done = []
+  for (const [name, f] of inbox) {
+    try {
+      let txt = f.truncated ? await (await fetch(f.raw_url)).text() : f.content
+      txt = String(txt || '').replace(/^data:[^,]*,/, '').replace(/\s+/g, '')
+      if (!txt) { done.push(name); continue }
+      const bin = atob(txt), u8 = new Uint8Array(bin.length)
+      for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i)
+      const type = u8[0] === 0x89 && u8[1] === 0x50 ? 'image/png' : 'image/jpeg'
+      const label = decodeURIComponent(name.replace(/^inbox-/, '').replace(/\.[a-z]+$/i, '')).trim()
+      const title = !label || /^[\d\s:.\-_T]+$/.test(label) ? '사진' : label
+      const rec = await addFile(new File([u8], `photo-${Date.now()}.${type === 'image/png' ? 'png' : 'jpg'}`, { type }))
+      addTask({ title, inbox: true, files: [rec.id] })
+      done.push(name)
+    } catch (e) { addLog({ at: Date.now(), err: '사진 받기 실패 · ' + String(e.message || e).slice(0, 60) }) }
+  }
+  if (done.length) import('../components/ui.jsx').then((m) => m.toast(`사진 ${done.length}장이 받은 편지함에 들어왔어요`)).catch(() => {})
+  return done
+}
+
 export async function syncNow({ flush = false } = {}) {
   if (!token()) return
   if (!navigator.onLine) { setStatus({ state: 'pending' }); return }
@@ -353,8 +374,9 @@ export async function syncNow({ flush = false } = {}) {
       await ensureGist()
       const gist = await gh(`/gists/${gistId()}`)
       if (gist.owner?.login) ls.set('gh_login', gist.owner.login)
-      const remoteText = {}
+      const remoteText = {}, inbox = []
       for (const [name, f] of Object.entries(gist.files || {})) {
+        if (name.startsWith('inbox-')) { inbox.push([name, f]); continue }
         if (name.startsWith('att-')) { setRemoteRaw(name.slice(4).replace(/\.txt$/, ''), f.raw_url); continue }
         if (name.startsWith('font-') || name.startsWith('backup-')) continue
         remoteText[name] = f.truncated ? await (await fetch(f.raw_url)).text() : f.content
@@ -372,9 +394,12 @@ export async function syncNow({ flush = false } = {}) {
           got += received; clash += conflicts
         }
       }
+      // 1-1) 사진 받기함: 단축어가 gist 에 올린 사진(inbox-*.txt, base64) → 받은 편지함 할 일로 · 처리한 건 gist 에서 지움
+      const inboxDone = await takeInbox(inbox)
       // 2) 로컬 → 원격: 바뀐 파일만
       const files = buildFiles(getState())
       const patchFiles = {}
+      for (const n of inboxDone) patchFiles[n] = null
       for (const [name, content] of Object.entries(files)) if (remoteText[name] !== content) patchFiles[name] = { content }
       // 첨부 파일 업로드 / 삭제
       const uploaded = []
