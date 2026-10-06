@@ -6,7 +6,8 @@ export function noteLines(n, st, max = 24) {
   const out = []
   for (const b of blocks) {
     if (out.length >= max) break
-    if (!b || ['divider', 'embed', 'file'].includes(b.type)) continue
+    if (!b || ['divider', 'embed', 'file', 'page'].includes(b.type)) continue
+    if (b.type === 'table') { for (const r of b.rows || []) { const x = r.filter(Boolean).join(' | '); if (x) out.push({ k: 't', x: x.slice(0, 120) }); if (out.length >= max) break } continue }
     const k = b.type === 'todo' ? 'todo' : b.type === 'bullet' ? 'b' : /^h\d?$/.test(b.type || '') ? 'h' : 't'
     for (const ln of String(b.text || '').split('\n')) {
       const x = clean(ln)

@@ -33,7 +33,11 @@ function Pages({ params }) {
   const [type, setType] = useState('all')
   const [q, setQ] = useState('')
   const st = useSettings(), manual = st.notesSort === 'manual', [arrange, setArrange] = useState(false)
-  const list = notes.filter((n) => n.type !== 'daily' && (type === 'template' ? n.isTemplate : type === 'all' || (n.type || 'page') === type))
+  // 상위 페이지 안에 링크된 하위 페이지는 목록에서 숨김 (검색하면 보임)
+  const childIds = new Set(notes.flatMap((n) => (n.blocks || []).filter((b) => b.type === 'page').map((b) => b.pageId)))
+  const tasksAll = useColl('tasks')
+  const prog = (n) => { const td = (n.blocks || []).filter((b) => b.type === 'todo' && (b.text || '').trim()); if (!td.length) return null; const d = td.filter((b) => tasksAll.find((t) => t.id === b.taskId)?.done).length; return [d, td.length] }
+  const list = notes.filter((n) => (q || !childIds.has(n.id)) && n.type !== 'daily' && (type === 'template' ? n.isTemplate : type === 'all' || (n.type || 'page') === type))
     .filter((n) => !q || (n.title || '').includes(q) || noteText(n).includes(q))
     .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (manual ? (a.order ?? -a.updatedAt) - (b.order ?? -b.updatedAt) : b.updatedAt - a.updatedAt))
   // 내 순서로 옮기기: 처음 옮길 때 지금 보이는 순서대로 번호를 매기고 바꿈
@@ -60,6 +64,7 @@ function Pages({ params }) {
                 {arrange && <span className="note-move row no-print" onClick={(e) => e.stopPropagation()}><span className="icon-btn" role="button" aria-label="앞으로" onClick={() => shift(i, -1)}>‹</span><span className="icon-btn" role="button" aria-label="뒤로" onClick={() => shift(i, 1)}>›</span></span>}
                 <div className="row"><span>{n.icon || (n.type === 'memo' ? '🗒️' : n.type === 'event' ? '📅' : '📄')}</span><b className="ellipsis grow">{noteTitle(n)}</b>{n.pinned && <Icon name="star" size={12} fill="currentColor" />}</div>
                 <div className="note-prev">{noteText(n).replace(/\[\[|\]\]/g, '').slice(0, 120)}</div>
+                {(() => { const p = prog(n); return p && <div className="note-prog"><span className="note-prog-t"><i style={{ width: (p[0] / p[1]) * 100 + '%' }} /></span><span className="tiny muted">{p[0]}/{p[1]}</span></div> })()}
                 <div className="row small muted" style={{ gap: 6 }}><SubjectTag id={n.subjectId} subjects={subjects} /><span className="tiny">{new Date(n.updatedAt).toLocaleDateString('ko-KR')}</span></div>
               </button>
             ))}
