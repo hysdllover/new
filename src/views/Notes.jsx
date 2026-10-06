@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useColl, put, patch } from '../store/store.js'
+import { useColl, put, patch, useSettings, setSettings } from '../store/store.js'
 import { Card, Icon, Empty, Seg, openDetail, openSheet, toast } from '../components/ui.jsx'
 import TemplatePicker from '../components/TemplatePicker.jsx'
 import BlockEditor from '../components/BlockEditor.jsx'
@@ -30,9 +30,12 @@ function Pages({ params }) {
   const [mode, setMode] = useState(params.mode || 'list')
   const [type, setType] = useState('all')
   const [q, setQ] = useState('')
+  const st = useSettings(), manual = st.notesSort === 'manual', [arrange, setArrange] = useState(false)
   const list = notes.filter((n) => n.type !== 'daily' && (type === 'template' ? n.isTemplate : type === 'all' || (n.type || 'page') === type))
     .filter((n) => !q || (n.title || '').includes(q) || noteText(n).includes(q))
-    .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || b.updatedAt - a.updatedAt)
+    .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (manual ? (a.order ?? -a.updatedAt) - (b.order ?? -b.updatedAt) : b.updatedAt - a.updatedAt))
+  // 내 순서로 옮기기: 처음 옮길 때 지금 보이는 순서대로 번호를 매기고 바꿈
+  const shift = (i, d) => { const j = i + d; if (j < 0 || j >= list.length || !!list[i].pinned !== !!list[j].pinned) return; const a = [...list];[a[i], a[j]] = [a[j], a[i]]; a.forEach((n, k) => { if (n.order !== k * 10) patch('notes', n.id, { order: k * 10 }) }) }
   const create = () => openSheet((c) => <TemplatePicker close={c} />, { title: '새 페이지 · 템플릿' })
   return (
     <div className="col">
@@ -45,11 +48,14 @@ function Pages({ params }) {
         <>
           <div className="row wrap" style={{ gap: 6 }}>
             <input className="input grow" style={{ minWidth: 140 }} placeholder="노트 검색" value={q} onChange={(e) => setQ(e.target.value)} />
+            <button className={'chip' + (manual ? ' on' : '')} onClick={() => { setSettings({ notesSort: manual ? 'recent' : 'manual' }); if (manual) setArrange(false) }}>{manual ? '내 순서' : '최근 수정순'}</button>
+            {manual && <button className={'chip' + (arrange ? ' on' : '')} onClick={() => setArrange(!arrange)}>{arrange ? '순서 편집 끝' : '순서 편집'}</button>}
             {[['all', '전체'], ['page', '페이지'], ['memo', '메모'], ['event', '일정 노트'], ['template', '템플릿']].map(([k, l]) => <button key={k} className={'chip' + (type === k ? ' on' : '')} onClick={() => setType(k)}>{l}</button>)}
           </div>
           <div className="note-grid">
-            {list.map((n) => (
-              <button key={n.id} className="card note-card" onClick={() => openNote(n.id)}>
+            {list.map((n, i) => (
+              <button key={n.id} className="card note-card" style={{ position: 'relative' }} onClick={() => !arrange && openNote(n.id)}>
+                {arrange && <span className="note-move row no-print" onClick={(e) => e.stopPropagation()}><span className="icon-btn" role="button" aria-label="앞으로" onClick={() => shift(i, -1)}>‹</span><span className="icon-btn" role="button" aria-label="뒤로" onClick={() => shift(i, 1)}>›</span></span>}
                 <div className="row"><span>{n.icon || (n.type === 'memo' ? '🗒️' : n.type === 'event' ? '📅' : '📄')}</span><b className="ellipsis grow">{noteTitle(n)}</b>{n.pinned && <Icon name="star" size={12} fill="currentColor" />}</div>
                 <div className="note-prev">{noteText(n).replace(/\[\[|\]\]/g, '').slice(0, 120)}</div>
                 <div className="row small muted" style={{ gap: 6 }}><SubjectTag id={n.subjectId} subjects={subjects} /><span className="tiny">{new Date(n.updatedAt).toLocaleDateString('ko-KR')}</span></div>
