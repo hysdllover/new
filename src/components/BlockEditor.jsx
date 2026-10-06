@@ -9,6 +9,7 @@ import { parseMention, today, monthStart, weekStart, addDays, parseYmd, fmtClock
 import { openNote, go, setParams } from '../nav.js'
 import { useTimerState, useTick, elapsed, startStopwatch, pause, resume, stop } from '../lib/timer.js'
 import { applyFilter } from '../views/tasks/filter.js'
+import { startDrag } from '../lib/drag.js'
 
 const TYPES = [['text', '텍스트'], ['h1', '제목 1'], ['h2', '제목 2'], ['bullet', '글머리'], ['todo', '체크박스 (할 일)'], ['quote', '인용'], ['divider', '구분선']]
 const INLINE_RE = /(\[\[[^\]]+\]\]|@(?:오늘|내일|모레|\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2})(?:\s+\d{1,2}:\d{2})?|https?:\/\/[^\s]+)/g
@@ -41,6 +42,25 @@ export default function BlockEditor({ blocks = [], onChange, note, nested }) {
   const commit = (b) => { const nb = commitBlock(b, note); if (JSON.stringify(nb) !== JSON.stringify(b)) upd(b.id, nb) }
   const insertAfter = (id, nb) => { const i = list.findIndex((b) => b.id === id); const a = [...list]; a.splice(i + 1, 0, nb); set(a); setEdit({ id: nb.id, pos: 0 }) }
   const removeBlock = (id) => { const i = list.findIndex((b) => b.id === id); const a = list.filter((b) => b.id !== id); set(a.length ? a : [newBlock()]); const prev = list[i - 1]; if (prev) setEdit({ id: prev.id, pos: (prev.text || '').length }) }
+  // 손잡이(⋮⋮)를 끌어 순서 바꾸기 — 살짝 끌면 바로 드래그, 그냥 누르면 메뉴
+  const dragged = useRef(false)
+  const gripDown = (e, b) => {
+    const x0 = e.clientX, y0 = e.clientY, el = e.currentTarget.closest('.blk')
+    const off = () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', off); window.removeEventListener('pointercancel', off) }
+    const mv = (ev) => {
+      if (Math.hypot(ev.clientX - x0, ev.clientY - y0) < 6) return
+      off(); dragged.current = true
+      startDrag(ev, { label: (b.text || '블록').slice(0, 30), source: el, onDrop: (zone, pt) => {
+        const id = zone.dataset.drop?.startsWith('blk:') ? zone.dataset.drop.slice(4) : null
+        if (!id || id === b.id) return
+        const a = list.filter((x) => x.id !== b.id), j = a.findIndex((x) => x.id === id)
+        if (j < 0) return
+        const r = zone.getBoundingClientRect(), before = pt.y < r.top + r.height / 2
+        a.splice(before ? j : j + 1, 0, b); set(a)
+      } })
+    }
+    window.addEventListener('pointermove', mv); window.addEventListener('pointerup', off); window.addEventListener('pointercancel', off)
+  }
   const move = (id, d) => { const i = list.findIndex((b) => b.id === id), j = i + d; if (j < 0 || j >= list.length) return; const a = [...list];[a[i], a[j]] = [a[j], a[i]]; set(a) }
 
   const onText = (b, text) => {
@@ -99,8 +119,8 @@ export default function BlockEditor({ blocks = [], onChange, note, nested }) {
         const editing = edit?.id === b.id
         const task = b.taskId && tasks.find((t) => t.id === b.taskId)
         return (
-          <div key={b.id} className={'blk blk-' + b.type}>
-            <button className="blk-h" onClick={(e) => blockMenu(e, b)} aria-label="블록 메뉴"><Icon name="grip" size={14} /></button>
+          <div key={b.id} className={'blk blk-' + b.type} data-drop={'blk:' + b.id}>
+            <button className="blk-h" onPointerDown={(e) => gripDown(e, b)} onClick={(e) => { if (dragged.current) { dragged.current = false; return } blockMenu(e, b) }} aria-label="블록 메뉴 · 끌어서 순서 바꾸기"><Icon name="grip" size={14} /></button>
             {b.type === 'bullet' && <span className="blk-dot">•</span>}
             {b.type === 'todo' && <span className="blk-chk"><Check on={!!task?.done} onClick={() => { if (task) toggleTask(task.id); else { const nb = commitBlock(b, note); upd(b.id, nb); if (nb.taskId) toggleTask(nb.taskId) } }} /></span>}
             <div className="blk-c">
