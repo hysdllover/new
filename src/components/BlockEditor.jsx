@@ -10,6 +10,7 @@ import { openNote, go, setParams } from '../nav.js'
 import { useTimerState, useTick, elapsed, startStopwatch, pause, resume, stop } from '../lib/timer.js'
 import { applyFilter } from '../views/tasks/filter.js'
 import { startDrag } from '../lib/drag.js'
+import { applyMark, activeMarks, markRuns } from '../lib/marks.js'
 
 const TYPES = [['text', '텍스트'], ['h1', '제목 1'], ['h2', '제목 2'], ['bullet', '글머리'], ['todo', '체크박스 (할 일)'], ['callout', '강조 상자'], ['quote', '인용'], ['divider', '구분선']]
 const TONES = [['key', '핵심'], ['warn', '주의'], ['ex', '예시']]
@@ -22,9 +23,9 @@ export function Inline({ text }) {
   return parts.map((p, i) => {
     if (i % 2 === 0) return <Fragment key={i}>{p}</Fragment>
     // 글자 꾸미기: **굵게** · ==형광펜== · __밑줄__
-    if (p.startsWith('**')) return <b key={i} className="mk-b">{p.slice(2, -2)}</b>
-    if (p.startsWith('==')) { const m = /^([rgby]):/.exec(p.slice(2)); return <mark key={i} className={'mk-hl' + (m ? ' hl-' + m[1] : '')}>{p.slice(m ? 4 : 2, -2)}</mark> }
-    if (p.startsWith('__')) return <u key={i} className="mk-u">{p.slice(2, -2)}</u>
+    if (p.startsWith('**')) return <b key={i} className="mk-b"><Inline text={p.slice(2, -2)} /></b>
+    if (p.startsWith('==')) { const m = /^([rgby]):/.exec(p.slice(2)); return <mark key={i} className={'mk-hl' + (m ? ' hl-' + m[1] : '')}><Inline text={p.slice(m ? 4 : 2, -2)} /></mark> }
+    if (p.startsWith('__')) return <u key={i} className="mk-u"><Inline text={p.slice(2, -2)} /></u>
     if (p.startsWith('[[')) {
       const t = p.slice(2, -2)
       return <button key={i} className="wikilink" onClick={(e) => { e.stopPropagation(); openNote(openOrCreateByTitle(t).id) }}>{t}</button>
@@ -180,8 +181,7 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
                 b.type === 'sync' ? <SyncBlock b={b} note={note} /> :
                 editing && !readOnly ? (
                   <><EditArea b={b} pos={edit.pos} onChange={(t) => onText(b, t)} onKeyDown={(e) => onKey(e, b)}
-                    onBlur={(t) => { if (skip.current !== b.id) commit({ ...b, text: t }); setEdit((x) => (x?.id === b.id ? null : x)) }} />
-                  <MarkBar onApply={(t) => onText(b, t)} /></>
+                    onBlur={(t) => { if (skip.current !== b.id) commit({ ...b, text: t }); setEdit((x) => (x?.id === b.id ? null : x)) }} /></>
                 ) : (
                   <div className={'blk-v' + (task?.done ? ' done' : '')} onClick={() => !readOnly && setEdit({ id: b.id, pos: (b.text || '').length })}>{b.type === 'callout' && <span className="co-tag">{(TONES.find(([t]) => t === (b.tone || 'key')) || TONES[0])[1]}</span>}
                     {b.text ? <Inline text={b.text} /> : <span className="muted">{list.length === 1 && nested ? '입력…' : list.length === 1 ? '입력하세요… (# 제목, - 목록, [] 체크, [[링크]], @내일 15:00)' : ' '}</span>}
@@ -226,8 +226,9 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
 }
 
 function EditArea({ b, pos, onChange, onKeyDown, onBlur }) {
-  const ref = useRef(null)
+  const ref = useRef(null), hold = useRef(false)
   const [v, setV] = useState(b.text || '')
+  const [sel, setSel] = useState([0, 0])
   useEffect(() => { setV(b.text || '') }, [b.text])
   useEffect(() => {
     const el = ref.current
@@ -237,9 +238,26 @@ function EditArea({ b, pos, onChange, onKeyDown, onBlur }) {
     try { el.setSelectionRange(p, p) } catch {}
   }, []) // eslint-disable-line
   useEffect(() => { const el = ref.current; if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }, [v])
-  return <textarea ref={ref} rows={1} className="blk-ta" value={v} enterKeyHint="enter"
-    onChange={(e) => { setV(e.target.value); onChange(e.target.value) }}
-    onKeyDown={onKeyDown} onBlur={() => onBlur(ref.current?.value ?? v)} />
+  const syncSel = () => { const el = ref.current; if (el) setSel([el.selectionStart, el.selectionEnd]) }
+  // 꾸미기 버튼: 누르는 동안 칸이 닫히지 않게 잡아 두고, 적용 뒤 다시 커서를 돌려놓음
+  const press = () => { hold.current = true; setTimeout(() => { hold.current = false }, 700) }
+  const apply = (kind) => {
+    const el = ref.current; if (!el) return
+    const r = applyMark(el.value, el.selectionStart, el.selectionEnd, kind)
+    if (r) { setV(r.text); onChange(r.text) }
+    requestAnimationFrame(() => { try { el.focus({ preventScroll: true }); if (r) el.setSelectionRange(r.a, r.z) } catch {} hold.current = false; syncSel() })
+  }
+  return (
+    <>
+      <div className="blk-edit">
+        <div className="blk-mirror" aria-hidden="true">{markRuns(v).map((r, i) => <span key={i} className={r.mk ? 'mm-k' : [r.b && 'mm-b', r.u && 'mm-u', r.h && 'mk-hl' + (r.h !== 'd' ? ' hl-' + r.h : '')].filter(Boolean).join(' ') || undefined}>{r.x}</span>)}{'\u200b'}</div>
+        <textarea ref={ref} rows={1} className="blk-ta" value={v} enterKeyHint="enter"
+          onChange={(e) => { setV(e.target.value); onChange(e.target.value); syncSel() }} onSelect={syncSel} onKeyUp={syncSel}
+          onKeyDown={onKeyDown} onBlur={() => { if (!hold.current) onBlur(ref.current?.value ?? v) }} />
+      </div>
+      <MarkBar on={activeMarks(v, sel[0], sel[1])} hasSel={sel[0] !== sel[1]} onPress={press} onApply={apply} />
+    </>
+  )
 }
 
 function FileBlock({ b }) {
@@ -394,25 +412,19 @@ function SubPage({ b }) {
   return <button className="subpage" onClick={() => openNote(c.id)}><Icon name="file" size={15} /><span className="ellipsis grow">{c.title || '제목 없는 페이지'}</span>{todos > 0 && <span className="tiny muted">체크 {todos}</span>}<Icon name="next" size={13} /></button>
 }
 
-// 글자 꾸미기: 고른 글자를 **굵게** · ==형광펜== · __밑줄__ 로 감싸기 (편집 중인 칸 아래 작은 막대)
-const HL = [['r', '로즈'], ['g', '올리브'], ['b', '블루'], ['y', '모래']]
-function MarkBar({ onApply }) {
-  const wrap = (m, pre = '') => (e) => {
-    e.preventDefault()
-    const el = e.currentTarget.closest('.blk-c')?.querySelector('textarea'); if (!el) return
-    const a = el.selectionStart, z = el.selectionEnd, v = el.value
-    const mid = v.slice(a, z) || '글자'
-    const next = v.slice(0, a) + m + pre + mid + m + v.slice(z)
-    onApply(next)
-    const at = a + m.length + pre.length
-    requestAnimationFrame(() => { try { el.focus(); el.setSelectionRange(at, at + mid.length) } catch {} })
-  }
+// 글자 꾸미기 막대: 고른 글자(없으면 그 자리 단어)에 굵게 · 밑줄 · 형광펜 켜고 끄기 · 색 바꾸기 · 지우기
+const HL = [['', '보라'], ['r', '로즈'], ['g', '올리브'], ['b', '블루'], ['y', '모래']]
+function MarkBar({ on, hasSel, onPress, onApply }) {
+  const bp = (kind) => ({ onPointerDown: onPress, onMouseDown: (e) => e.preventDefault(), onClick: (e) => { e.preventDefault(); onApply(kind) } })
   return (
     <div className="markbar no-print">
-      <button onPointerDown={wrap('**')} aria-label="굵게"><b>B</b></button>
-      <button onPointerDown={wrap('==')} aria-label="형광펜"><span className="mk-hl">형광</span></button>
-      {HL.map(([k, l]) => <button key={k} className="mb-hl" onPointerDown={wrap('==', k + ':')} aria-label={'형광펜 ' + l}><i className={'hl-dot hl-' + k} /></button>)}
-      <button onPointerDown={wrap('__')} aria-label="밑줄"><u>밑줄</u></button>
+      <button className={'mb' + (on.b ? ' on' : '')} {...bp('b')} aria-label="굵게"><b>B</b></button>
+      <button className={'mb' + (on.u ? ' on' : '')} {...bp('u')} aria-label="밑줄"><u>U</u></button>
+      <span className="mb-sep" />
+      {HL.map(([k, l]) => <button key={k || 'd'} className={'mb mb-hl' + (on.h === k ? ' on' : '')} {...bp(k ? 'h:' + k : 'h')} aria-label={'형광펜 ' + l}><i className={'hl-dot' + (k ? ' hl-' + k : '')} /></button>)}
+      <span className="mb-sep" />
+      <button className="mb mb-x" {...bp('c')} aria-label="꾸밈 지우기">지우기</button>
+      {!hasSel && <span className="mb-tip">글자를 고르거나, 단어에 커서를 두고 누르세요</span>}
     </div>
   )
 }
