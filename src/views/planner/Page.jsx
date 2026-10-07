@@ -32,7 +32,7 @@ export default function Page({ date }) {
       <div className="row no-print" style={{ gap: 6 }}>
         <button className={'btn sm' + (deco ? ' on-acc' : '')} onClick={() => setDeco(!deco)}>{deco ? '꾸미기 끝' : '스티커'}</button>
         <span className="grow" />
-        <button className="btn sm" onClick={() => window.print()}>A4 인쇄</button>
+        <button className="btn sm" onClick={() => window.print()}>인쇄 (A4)</button>
       </div>
       {deco && <StickerTray onPick={(k, c) => addSticker(date, k, c)} />}
       <div className="npage">

@@ -24,7 +24,7 @@ export default function Timetable() {
   return (
     <div className="col">
       <Card title="시간표" className="tt-card" action={<div className="row no-print" style={{ gap: 4 }}>
-        <button className="btn sm" onClick={() => window.print()}>인쇄</button>
+        <button className="btn sm" onClick={() => window.print()}>인쇄 (A4)</button>
         <button className="btn sm" onClick={() => openSheet(() => <TTSettings />, { title: '시간표 설정' })}><Icon name="settings" size={14} /> 설정</button>
       </div>}>
         {tt.on === false && <div className="small muted" style={{ marginBottom: 8 }}>시간표가 꺼져 있어요. 설정에서 켤 수 있어요.</div>}

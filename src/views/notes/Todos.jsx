@@ -47,7 +47,7 @@ export default function Todos() {
           </div>
         </div>
       ))}
-      {!groups.length && <Empty>{all ? '노트에 체크 줄이 없어요' : '남은 할 일이 없어요'}</Empty>}
+      {!groups.length && <Empty hint={all ? '노트에 [ ] 로 체크 줄을 쓰면 할 일과 연결돼 여기 모여요' : null}>{all ? '노트에 체크 줄이 없어요' : '남은 할 일이 없어요'}</Empty>}
     </div>
   )
 }

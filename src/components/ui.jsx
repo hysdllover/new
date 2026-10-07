@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { haptic } from '../lib/haptic.js'
 import ErrorBoundary from './ErrorBoundary.jsx'
 
@@ -17,6 +17,7 @@ const P = {
   back: 'M15 5l-7 7 7 7',
   next: 'M9 5l7 7-7 7',
   up: 'M5 15l7-7 7 7',
+  grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
   sidebar: 'M4 5h16v14H4zM9 5v14',
   expand: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5',
   shrink: 'M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5',
@@ -83,9 +84,33 @@ export function toast(text, action) {
   setUi({ toasts: [...ui.toasts, { id, text, action }] })
   setTimeout(() => setUi({ toasts: ui.toasts.filter((t) => t.id !== id) }), action ? 5000 : 2400)
 }
+// 메뉴는 누른 자리(버튼) 기준으로 열고, 그려진 뒤 실제 크기를 재서 화면 안에 맞춤 (아래가 모자라면 위로)
 export const openMenu = (e, items) => {
-  const r = e.currentTarget.getBoundingClientRect()
-  setUi({ menu: { x: Math.min(r.left, window.innerWidth - 190), y: Math.min(r.bottom + 4, window.innerHeight - items.length * 40 - 16), items } })
+  const t = e?.currentTarget?.getBoundingClientRect ? e.currentTarget.getBoundingClientRect() : { left: e?.clientX ?? 0, right: e?.clientX ?? 0, top: e?.clientY ?? 0, bottom: e?.clientY ?? 0 }
+  setUi({ menu: { a: { l: t.left, r: t.right, t: t.top, b: t.bottom }, items } })
+}
+function Menu({ m }) {
+  const ref = useRef(null)
+  const [pos, setPos] = useState({ left: m.a.l, top: m.a.b + 4, visibility: 'hidden' })
+  useLayoutEffect(() => {
+    const el = ref.current; if (!el) return
+    const cs = getComputedStyle(document.documentElement), inset = (k) => parseFloat(cs.getPropertyValue(k)) || 0
+    const W = innerWidth, H = innerHeight, w = el.offsetWidth, h = el.offsetHeight, g = 8
+    const minX = g + inset('--sal'), maxX = W - g - inset('--sar') - w, minY = g + inset('--sat'), maxY = H - g - inset('--sab') - h
+    let left = m.a.l + w > W - g ? m.a.r - w : m.a.l // 오른쪽이 모자라면 버튼 오른쪽 끝에 맞춤
+    let top = m.a.b + 4
+    if (top > maxY && m.a.t - 4 - h >= minY) top = m.a.t - 4 - h // 아래가 모자라면 위로
+    setPos({ left: Math.max(minX, Math.min(left, maxX)), top: Math.max(minY, Math.min(top, maxY)), maxHeight: H - minY - g - inset('--sab') })
+  }, [m])
+  return (
+    <div ref={ref} className="menu" style={pos}>
+      {m.items.filter(Boolean).map((it, i) => (
+        <button key={i} className={it.danger ? 'btn-danger' : ''} style={it.danger ? { color: 'var(--danger)' } : null} onClick={() => { closeMenu(); it.onClick() }}>
+          {it.icon && <Icon name={it.icon} size={16} />}{it.label}
+        </button>
+      ))}
+    </div>
+  )
 }
 export const closeMenu = () => setUi({ menu: null })
 
@@ -108,13 +133,7 @@ export function UiLayer() {
       {u.menu && (
         <>
           <div style={{ position: 'fixed', inset: 0, zIndex: 79 }} onClick={closeMenu} />
-          <div className="menu" style={{ left: u.menu.x, top: u.menu.y }}>
-            {u.menu.items.filter(Boolean).map((it, i) => (
-              <button key={i} className={it.danger ? 'btn-danger' : ''} style={it.danger ? { color: 'var(--danger)' } : null} onClick={() => { closeMenu(); it.onClick() }}>
-                {it.icon && <Icon name={it.icon} size={16} />}{it.label}
-              </button>
-            ))}
-          </div>
+          <Menu m={u.menu} />
         </>
       )}
       <div className="toasts">
@@ -173,7 +192,15 @@ export function Field({ label, children }) {
   return <div className="field">{label && <label>{label}</label>}{children}</div>
 }
 
-export function Empty({ children }) { return <div className="empty">{children}</div> }
+export function Empty({ children, hint, action }) {
+  return (
+    <div className={'empty' + (hint || action ? ' empty-guide' : '')}>
+      <div>{children}</div>
+      {hint && <div className="tiny muted empty-hint">{hint}</div>}
+      {action && <button className="btn sm" onClick={action.fn}>{action.label}</button>}
+    </div>
+  )
+}
 
 export function Card({ title, action, children, className = '', style, onClick }) {
   return (

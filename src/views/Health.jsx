@@ -71,7 +71,7 @@ function Meds() {
   const key = (m, t) => `${m.id}_${d}_${t}`
   const taken = (m, t) => logs.find((l) => l.id === key(m, t))?.taken
   return (
-    <Card title="약 · 영양제" action={<span className="small muted">{slots.filter(({ m, t }) => taken(m, t)).length}/{slots.length}</span>}>
+    <Card title="약·영양제" action={<span className="small muted">{slots.filter(({ m, t }) => taken(m, t)).length}/{slots.length}</span>}>
       <div className="list">
         {slots.map(({ m, t }) => (
           <div key={m.id + t} className="item" style={{ alignItems: 'center' }}>

@@ -12,6 +12,7 @@ import { setParams, openNote } from '../../nav.js'
 import { fmtDate } from '../../engine/date.js'
 import Mindmap from './Mindmap.jsx'
 import Versions from './Versions.jsx'
+import ExportSheet from '../../components/ExportSheet.jsx'
 
 // 페이지 표지: 옅은 색 띠 · 종이 결
 const COVERS = [['', '없음'], ['paper', '종이'], ['navy', '네이비'], ['olive', '올리브'], ['violet', '바이올렛'], ['rose', '로즈']]
@@ -41,23 +42,26 @@ export default function NotePage({ id, split }) {
   const parent = n.parentId ? notes.find((x) => x.id === n.parentId) : null
   const up = (p) => patch('notes', id, p)
   const menu = (e) => openMenu(e, [
-    { label: '마크다운 가져오기', icon: 'upload', onClick: () => import('../../components/MdImport.jsx').then((m) => openSheet((c) => <m.default close={c} noteId={id} />, { title: '마크다운 가져오기' })) },
-    { label: '마크다운 내보내기', icon: 'download', onClick: () => download(`${noteTitle(n)}.md`, toMarkdown(n), 'text/markdown') },
-    { label: 'HTML 내보내기', icon: 'download', onClick: () => { const hasSub = (n.blocks || []).some((b) => b.type === 'page'); import('../../lib/noteHtml.js').then((m) => m.exportNoteHtml(n, { withSubs: hasSub })).then((r) => r !== 'cancel' && toast(hasSub ? 'HTML로 내보냈어요 · 하위 페이지 포함' : 'HTML로 내보냈어요')).catch((e) => toast('내보내지 못했어요 · ' + e.message)) } },
-    { label: 'PDF (A4 인쇄)', icon: 'print', onClick: () => window.print() },
+    { label: '가져오기…', icon: 'upload', onClick: () => import('../../components/MdImport.jsx').then((m) => openSheet((c) => <m.default close={c} noteId={id} />, { title: '가져오기' })) },
+    { label: '내보내기·인쇄…', icon: 'download', onClick: () => openSheet((c) => <ExportSheet close={c} opts={[
+      { icon: 'file', label: '마크다운 (.md)', desc: '노션·옵시디언에서 열기', run: () => download(`${noteTitle(n)}.md`, toMarkdown(n), 'text/markdown') },
+      { icon: 'download', label: 'HTML 파일', desc: '혼자 열리는 한 파일 · 하위 페이지 포함', run: () => { const hasSub = (n.blocks || []).some((b) => b.type === 'page'); import('../../lib/noteHtml.js').then((m) => m.exportNoteHtml(n, { withSubs: hasSub })).then((r) => r !== 'cancel' && toast('HTML로 내보냈어요')).catch((e) => toast('내보내지 못했어요 · ' + e.message)) } },
+      { icon: 'image', label: '이미지', desc: '한 장 PNG로 공유', run: async () => { const { drawNote } = await import('../../lib/reportImage.js'); const { shareBlob } = await import('../../lib/shareCard.js'); const blob = await drawNote(n, { theme: settings?.reportTheme || 'app' }); const r = await shareBlob(blob, `${noteTitle(n)}.png`); if (r === 'saved') toast('이미지를 저장했어요') } },
+      { icon: 'print', label: '인쇄 (A4)', desc: 'PDF로 저장도 여기서', run: () => window.print() },
+    ]} />, { title: '내보내기·인쇄' }) },
     { label: '노트 전체 복습 등록', icon: 'brain', onClick: () => addReview({ title: noteTitle(n), subjectId: n.subjectId, sourceType: 'note', sourceId: n.id }) },
     { label: '표지', icon: 'layers', onClick: () => openSheet((close) => <div className="row wrap" style={{ gap: 8 }}>{COVERS.map(([k, l]) => <button key={k} className={'chip' + ((n.cover || '') === k ? ' on' : '')} onClick={() => { up({ cover: k || null }); close() }}>{k && <i className={'cover-dot cv-' + k} />}{l}</button>)}</div>, { title: '페이지 표지' }) },
     { label: '이전 버전', icon: 'clock', onClick: () => openSheet((c) => <Versions id={id} close={c} />, { title: '이전 버전' }) },
     { label: '색 라벨', icon: 'tag', onClick: () => openSheet((close) => <LabelSheet n={n} up={up} close={close} />, { title: '색 라벨' }) },
     { label: '페이지 너비', icon: 'layers', onClick: () => openSheet((close) => <div className="row wrap" style={{ gap: 8 }}>{[['narrow', '좁게 (읽기)'], ['', '보통'], ['wide', '넓게 (표·두 단)']].map(([k, l]) => <button key={k} className={'chip' + ((n.width || '') === k ? ' on' : '')} onClick={() => { up({ width: k || null }); close() }}>{l}</button>)}</div>, { title: '페이지 너비' }) },
     { label: '배경', icon: 'layers', onClick: () => openSheet((close) => <div className="row wrap" style={{ gap: 8 }}>{[['', '무지'], ['line', '줄'], ['grid', '모눈'], ['dot', '점']].map(([k, l]) => <button key={k} className={'chip' + ((n.bg || '') === k ? ' on' : '')} onClick={() => { up({ bg: k || null }); close() }}><i className={'bg-sw note-bg-' + (k || 'plain')} />{l}</button>)}</div>, { title: '노트 배경' }) },
-    { label: '이미지로 공유', icon: 'image', onClick: async () => { const { drawNote } = await import('../../lib/reportImage.js'); const { shareBlob } = await import('../../lib/shareCard.js'); const blob = await drawNote(n, { theme: settings?.reportTheme || 'app' }); const r = await shareBlob(blob, `${noteTitle(n)}.png`); if (r === 'saved') toast('이미지를 저장했어요') } },
     { label: n.pinned ? '고정 해제' : '상단 고정', icon: 'star', onClick: () => up({ pinned: !n.pinned }) },
     { label: n.isTemplate ? '템플릿에서 빼기' : '템플릿으로 저장', icon: 'layers', onClick: () => { up({ isTemplate: !n.isTemplate }); toast(n.isTemplate ? '템플릿에서 뺐어요' : '새 페이지에서 이 양식을 고를 수 있어요') } },
     { label: '템플릿 붙이기', icon: 'plus', onClick: () => openSheet((c) => <TemplatePicker close={c} onPick={(tpl) => { up({ blocks: [...(n.blocks || []).filter((b) => b.type !== 'text' || b.text), ...blocksOf(tpl)] }); toast('양식을 아래에 붙였어요') }} />, { title: '템플릿 붙이기' }) },
     { label: '삭제', icon: 'trash', danger: true, onClick: () => { remove('notes', id); setParams('notes', { noteId: null }); toast('노트 삭제됨', { label: '되돌리기', fn: () => { restore('notes', id); openNote(id) } }) } },
   ])
   return (
+    <div className="note-wrap"><div className="note-grid">
     <div className={'note-page' + (n.width ? ' nw-' + n.width : '') + (reading ? ' reading' : '') + (n.bg ? ' note-bg note-bg-' + n.bg : '')}>
       <div className="row no-print" style={{ marginBottom: 6 }}>
         {split && !full
@@ -91,6 +95,24 @@ export default function NotePage({ id, split }) {
         </div>
       )}
     </div>
+    <NoteAside n={n} bl={bl} />
+    </div></div>
+  )
+}
+
+// 넓은 화면(아이패드 프로 13 등)에서 노트 오른쪽: 목차 · 백링크 · 체크 진행 — 페이지 폭이 충분할 때만 보임 (컨테이너 쿼리)
+function NoteAside({ n, bl }) {
+  const heads = (n.blocks || []).filter((b) => (b.type === 'h1' || b.type === 'h2') && (b.text || '').trim())
+  const todos = (n.blocks || []).filter((b) => b.type === 'todo' && (b.text || '').trim())
+  const tasks = useColl('tasks'), done = todos.filter((b) => tasks.find((t) => t.id === b.taskId)?.done).length
+  if (!heads.length && !bl.length && !todos.length) return null
+  const go = (id) => { const el = document.querySelector(`[data-bid="${CSS.escape(id)}"]`); if (el) { el.scrollIntoView({ block: 'start', behavior: 'smooth' }); el.classList.add('blk-flash'); setTimeout(() => el.classList.remove('blk-flash'), 1400) } }
+  return (
+    <aside className="note-aside no-print">
+      {heads.length > 0 && <div className="na-sec"><div className="na-h">목차</div>{heads.map((b) => <button key={b.id} className={'na-toc' + (b.type === 'h2' ? ' sub' : '')} onClick={() => go(b.id)}>{b.text.replace(/\*\*|==(?:[rgby]:)?|__/g, '')}</button>)}</div>}
+      {todos.length > 0 && <div className="na-sec"><div className="na-h">체크 {done}/{todos.length}</div><div className="na-prog"><i style={{ width: (done / todos.length) * 100 + '%' }} /></div></div>}
+      {bl.length > 0 && <div className="na-sec"><div className="na-h">백링크 {bl.length}</div>{bl.map((b) => <button key={b.id} className="na-toc" onClick={() => openNote(b.id)}>{b.icon || '📄'} {noteTitle(b)}</button>)}</div>}
+    </aside>
   )
 }
 

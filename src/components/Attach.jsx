@@ -1,7 +1,20 @@
 import { useEffect, useState } from 'react'
 import { useColl } from '../store/store.js'
-import { addFile, blobUrl, getBlob, pickFiles, fmtSize } from '../lib/files.js'
+import { addFile, blobUrl, getBlob, pickFiles, fmtSize, hasLocalBlob } from '../lib/files.js'
+import { useSyncStatus } from '../sync/sync.js'
 import { Icon, openSheet, toast } from './ui.jsx'
+
+// 첨부 동기화 상태: 이 기기에만 있음(올리기 전) · 받기 전(다른 기기에 있음, 눌러 받기) · 받음
+export function FileSync({ file }) {
+  const sync = useSyncStatus()
+  const [local, setLocal] = useState(null), [busy, setBusy] = useState(false)
+  useEffect(() => { let on = true; hasLocalBlob(file.id).then((v) => on && setLocal(v)); return () => { on = false } }, [file.id, busy])
+  if (local == null || sync.state === 'off') return null
+  if (local && !file.gist) return <span className="file-sync tiny muted" title="다음 동기화 때 올라가요">이 기기에만</span>
+  if (!local && file.gist) return <button className="file-sync tiny" onClick={async (e) => { e.stopPropagation(); setBusy(true); try { const b = await getBlob(file.id); if (!b) toast('아직 받을 수 없어요 · 동기화 뒤 다시 눌러 주세요') } catch { toast('받지 못했어요') } setBusy(false) }}>{busy ? '받는 중…' : '받기'}</button>
+  if (!local && !file.gist) return <span className="file-sync tiny muted" title="만든 기기에서 동기화하면 받을 수 있어요">다른 기기에 있음</span>
+  return null
+}
 
 // 링크 미리보기: 서버 없이 도메인·파비콘·제목
 export function LinkPreview({ url, title, onRemove }) {

@@ -14,6 +14,9 @@ import { installErrorLog, persistStorage, updateBadge } from './lib/diag.js'
 import { pendingChanges } from './lib/whatsnew.js'
 import { subscribe } from './store/store.js'
 installErrorLog()
+// 창 크기 단계 (iPad 창 크기 조절·Stage Manager 에 맞춰 바뀜): compact < 600 ≤ medium < 900 ≤ wide < 1300 ≤ xwide
+const winTier = () => { const w = innerWidth; document.documentElement.dataset.win = w < 600 ? 'compact' : w < 900 ? 'medium' : w < 1300 ? 'wide' : 'xwide' }
+winTier(); addEventListener('resize', winTier)
 applyAppIcon()
 import { TABS, EXTRA, go } from './nav.js'
 import { addTask } from './store/actions.js'

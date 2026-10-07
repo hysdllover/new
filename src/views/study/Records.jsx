@@ -221,7 +221,7 @@ function Grades() {
             ))}
           </div>
         </>
-      ) : <Empty>성적 기록이 없어요</Empty>}
+      ) : <Empty hint="시험·모의고사 점수를 적어 두면 과목별 추이를 그려 줘요">성적 기록이 없어요</Empty>}
     </Card>
   )
 }

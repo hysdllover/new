@@ -18,5 +18,5 @@
 - 위젯 스크립트에 토큰 넣지 않기 (토큰은 Scriptable 보관함 `study-gh` 에만), 너무 잦은 자동 동기화 금지
 
 ## 개발
-- React 19 + Vite PWA, 데이터는 idb-keyval + GitHub Gist 동기화, 위젯은 Scriptable (`src/lib/scriptable.js`, 템플릿 문자열 안 백슬래시는 두 번)
-- `npm test` (node --test), `npm run build`. 새 위젯 형태를 추가하면 설정 미리보기(`V[...]`)도 함께 — `tests/widgetkinds.test.js` 가 검사
+- React 19 + Vite PWA, 데이터는 idb-keyval + GitHub Gist 동기화, 위젯은 Scriptable (`src/lib/scriptable.js` 로더 + 본체 `src/lib/widget/core-*.js` 네 조각, 템플릿 문자열 안 백슬래시는 두 번·백틱 금지)
+- `npm test` (node --test), `npm run build`. 새 위젯 형태를 추가하면 설정 미리보기(`src/views/settings/WidgetSettings.jsx` 의 `V[...]`)도 함께 — `tests/widgetkinds.test.js` 가 검사
