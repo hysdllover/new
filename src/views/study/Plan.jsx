@@ -19,7 +19,7 @@ export default function Plan() {
       <div className="col">
         <Card title="자동 학습 계획" action={<button className="btn sm primary" onClick={() => openSheet((c) => <PlanForm close={c} />, { title: '학습 계획 만들기', full: true })}><Icon name="plus" size={14} />계획</button>}>
           <div className="small muted" style={{ marginBottom: 8 }}>시험일·범위·쉬는 요일을 넣으면 날짜별 분량을 할 일로 만들어요. 진도를 입력하거나 계획 할 일을 완료하면 남은 분량을 자동으로 다시 나눕니다.</div>
-          {!plans.length && <Empty>계획이 없어요</Empty>}
+          {!plans.length && <Empty hint="시험 범위와 날짜를 넣으면 하루 분량으로 나눠 할 일로 만들어요">계획이 없어요</Empty>}
         </Card>
         {plans.map((p) => {
           const tb = textbooks.find((x) => x.id === p.textbookId)

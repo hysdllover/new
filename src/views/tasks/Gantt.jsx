@@ -44,7 +44,7 @@ export default function Gantt() {
     el.addEventListener('pointermove', mv); el.addEventListener('pointerup', up)
   }
 
-  if (!tasks.length) return <Empty>날짜가 있는 할 일이 없어요</Empty>
+  if (!tasks.length) return <Empty hint="할 일에 시작일과 마감일을 넣으면 기간이 막대로 보여요">날짜가 있는 할 일이 없어요</Empty>
   const W = days * DW
   return (
     <div className="card gantt" style={{ padding: 0 }}>

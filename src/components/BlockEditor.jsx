@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, Fragment } from 'react'
 import { useColl, put, patch, remove, restore, find } from '../store/store.js'
 import { toggleTask, addReview, addTask } from '../store/actions.js'
 import { Icon, Check, openMenu, openSheet, openDetail, toast } from './ui.jsx'
-import { FileThumb, previewFile } from './Attach.jsx'
+import { FileThumb, previewFile, FileSync } from './Attach.jsx'
 import { addFile, pickFiles, fmtSize } from '../lib/files.js'
 import { newBlock, commitBlock, refLabel, openOrCreateByTitle, linkTodos } from '../lib/notes.js'
 import { mdToBlocks, mdToNote, looksMd } from '../lib/md.js'
@@ -314,7 +314,7 @@ function FileBlock({ b }) {
   return (
     <div className="row file-blk" onClick={() => previewFile(f)}>
       <FileThumb file={f} size={f.type?.startsWith('image') ? 120 : 48} />
-      <div className="grow"><div className="ellipsis">{f.name}</div><div className="tiny muted">{fmtSize(f.size)}</div></div>
+      <div className="grow"><div className="ellipsis">{f.name}</div><div className="tiny muted row" style={{ gap: 6 }}>{fmtSize(f.size)}<FileSync file={f} /></div></div>
     </div>
   )
 }

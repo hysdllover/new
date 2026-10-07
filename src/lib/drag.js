@@ -9,21 +9,25 @@ export function startDrag(e, { label, onMove, onDrop, source }) {
   ghost.textContent = label || ''
   document.body.appendChild(ghost)
   source?.classList.add('dragging')
-  let zone = null
-  const place = (x, y) => { ghost.style.left = x + 12 + 'px'; ghost.style.top = y - 18 + 'px' }
+  let zone = null, raf = 0, px = x0, py = y0
+  // 120Hz(ProMotion): 이동은 transform 으로만 · 한 프레임에 한 번만 계산 (pointermove 가 몰려도)
+  const place = (x, y) => { ghost.style.transform = `translate3d(${x + 12}px, ${y - 18}px, 0)` }
   place(x0, y0)
+  const frame = () => {
+    raf = 0
+    place(px, py)
+    const el = document.elementFromPoint(px, py)?.closest('[data-drop]') // 고스트는 pointer-events: none
+    if (el !== zone) { zone?.classList.remove('drop-on'); el?.classList.add('drop-on'); zone = el }
+    onMove?.(zone, { x: px, y: py })
+    if (autoScroll(py)) raf = requestAnimationFrame(frame) // 가장자리에 있으면 계속 부드럽게 스크롤
+  }
   const move = (ev) => {
     ev.preventDefault()
-    const x = ev.clientX, y = ev.clientY
-    place(x, y)
-    ghost.style.display = 'none'
-    const el = document.elementFromPoint(x, y)?.closest('[data-drop]')
-    ghost.style.display = ''
-    if (el !== zone) { zone?.classList.remove('drop-on'); el?.classList.add('drop-on'); zone = el }
-    onMove?.(zone, { x, y })
-    autoScroll(y)
+    px = ev.clientX; py = ev.clientY
+    if (!raf) raf = requestAnimationFrame(frame)
   }
   const end = (ev) => {
+    cancelAnimationFrame(raf)
     window.removeEventListener('pointermove', move)
     window.removeEventListener('pointerup', end)
     window.removeEventListener('pointercancel', cancel)
@@ -39,12 +43,15 @@ export function startDrag(e, { label, onMove, onDrop, source }) {
   try { navigator.vibrate?.(10) } catch {}
 }
 
+// 가장자리에 가까울수록 빠르게 (한 프레임 최대 14px) · 스크롤했으면 true
 function autoScroll(y) {
   const c = document.getElementById('content')
-  if (!c) return
-  const r = c.getBoundingClientRect()
-  if (y < r.top + 50) c.scrollTop -= 12
-  else if (y > r.bottom - 60) c.scrollTop += 12
+  if (!c) return false
+  const r = c.getBoundingClientRect(), top = r.top + 60, bot = r.bottom - 70
+  const v = y < top ? -Math.min(14, (top - y) / 4 + 2) : y > bot ? Math.min(14, (y - bot) / 4 + 2) : 0
+  if (!v) return false
+  const before = c.scrollTop; c.scrollTop += v
+  return c.scrollTop !== before
 }
 
 // 길게 누르면 드래그 시작 (짧은 터치·스크롤은 그대로 통과). 마우스는 5px 이동 시 시작.

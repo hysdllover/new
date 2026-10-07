@@ -34,7 +34,7 @@ export default function Review() {
               <button className="btn sm primary" onClick={() => completeReview(r.id, true)}>기억남</button>
             </div>
           ))}
-          {!due.length && <Empty>오늘 복습이 없어요</Empty>}
+          {!due.length && <Empty hint="노트·할 일 메뉴에서 '복습 등록'을 하면 정해진 날에 여기 떠요">오늘 복습이 없어요</Empty>}
         </div>
         <div style={{ marginTop: 10 }}><AddInput placeholder="오늘 배운 것 복습 등록" onAdd={(title) => addReview({ title })} /></div>
       </Card>

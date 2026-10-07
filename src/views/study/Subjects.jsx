@@ -30,7 +30,7 @@ export default function Subjects({ params }) {
           <div className="subj-cum" title={`누적 ${fmtDur(all)}`}><i style={{ width: (all / mxAll) * 100 + '%' }} /></div>
         </button>
       ))}
-      {!subjects.length && <Empty>설정에서 과목을 추가하세요</Empty>}
+      {!subjects.length && <Empty hint="과목을 만들면 공부 기록·할 일·노트를 과목별로 묶어 봐요" action={{ label: '과목 추가', fn: () => { try { localStorage.setItem('set_sec', 'study') } catch {} go('settings') } }}>과목이 없어요</Empty>}
     </div>
   )
 }

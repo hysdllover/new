@@ -92,7 +92,7 @@ function Top3() {
   const day = dayRec(today())
   const top = (day.top3 || []).map((id) => tasks.find((t) => t.id === id)).filter(Boolean)
   return (
-    <Card title="오늘의 Top 3" action={<button className="tiny muted" onClick={goto('planner', 'today')}>편집 →</button>}>
+    <Card title="오늘의 세 가지" action={<button className="tiny muted" onClick={goto('planner', 'today')}>편집 →</button>}>
       <div className="list">
         {top.map((t, i) => (
           <div key={t.id} className={'item' + (t.done ? ' done' : '')} style={{ padding: '6px 0', minHeight: 36 }}>

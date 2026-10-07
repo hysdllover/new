@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useColl, patch } from '../../store/store.js'
 import { Icon, Empty, Card, openSheet, toast, Field, confirmSheet } from '../../components/ui.jsx'
 import { SubjectSelect, SubjectTag } from '../../components/common.jsx'
-import { FileThumb, FilePreview } from '../../components/Attach.jsx'
+import { FileThumb, FilePreview, FileSync } from '../../components/Attach.jsx'
 import { addFile, pickFiles, deleteFile, fmtSize } from '../../lib/files.js'
 import { openNote } from '../../nav.js'
 import { openDetail } from '../../components/ui.jsx'
@@ -47,12 +47,12 @@ export default function Library() {
             <Card key={f.id} className="lib-card" onClick={() => openSheet(() => <FileDetail id={f.id} />, { title: f.name, full: true })}>
               <FileThumb file={f} size={'100%'} onClick={() => {}} />
               <div className="ellipsis small" style={{ marginTop: 6 }}>{f.name}</div>
-              <div className="row wrap tiny muted" style={{ gap: 4 }}><SubjectTag id={f.subjectId} subjects={subjects} />{f.unit && <span>{f.unit}</span>}{(usedT + usedN) > 0 && <span>🔗{usedT + usedN}</span>}</div>
+              <div className="row wrap tiny muted" style={{ gap: 4 }}><SubjectTag id={f.subjectId} subjects={subjects} />{f.unit && <span>{f.unit}</span>}{(usedT + usedN) > 0 && <span>🔗{usedT + usedN}</span>}<FileSync file={f} /></div>
             </Card>
           )
         })}
       </div>
-      {!list.length && <Empty>자료가 없어요</Empty>}
+      {!list.length && <Empty hint="노트·할 일에 넣은 사진·PDF가 여기 모여요. 과목·단원으로 묶어 찾을 수 있어요">자료가 없어요</Empty>}
     </div>
   )
 }

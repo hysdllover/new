@@ -56,7 +56,7 @@ export default function Graph() {
   const pos = Object.fromEntries(nodes.map((p) => [p.id, p]))
   const deg = {}
   edges.forEach(([a, b]) => { deg[a] = (deg[a] || 0) + 1; deg[b] = (deg[b] || 0) + 1 })
-  if (!notes.length) return <Empty>연결된 노트가 없어요</Empty>
+  if (!notes.length) return <Empty hint="노트에 [[다른 노트 제목]]을 쓰면 서로 이어져서 관계가 그림으로 보여요">연결된 노트가 없어요</Empty>
   return (
     <Card>
       <Toggle label="과목 · 프로젝트 허브 표시" checked={hubs} onChange={setHubs} />

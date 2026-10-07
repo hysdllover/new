@@ -4,7 +4,7 @@ import { projectProgress, taskProgress, addTask } from '../../store/actions.js'
 import { Card, Prog, Empty, Icon, AddInput, openDetail } from '../../components/ui.jsx'
 import TaskItem from '../../components/TaskItem.jsx'
 import { FileThumb } from '../../components/Attach.jsx'
-import { setParams, openNote } from '../../nav.js'
+import { setParams, openNote, go } from '../../nav.js'
 import { fmtDur, fmtShort, today, dday, weekStart, addDays, nowMin, fmtTime } from '../../engine/date.js'
 import { noteTitle, newBlock } from '../../lib/notes.js'
 import { put } from '../../store/store.js'
@@ -30,7 +30,7 @@ export default function Hub({ hubId }) {
               </button>
             )
           })}
-          {!projects.length && <Empty>프로젝트가 없어요</Empty>}
+          {!projects.length && <Empty hint="과목·프로젝트마다 할 일·노트·공부 시간을 한곳에 모아 봐요" action={{ label: '프로젝트 만들기', fn: () => { try { localStorage.setItem('set_sec', 'study') } catch {} go('settings') } }}>프로젝트가 없어요</Empty>}
         </div>
         <h4>과목</h4>
         <div className="note-grid">
@@ -102,7 +102,7 @@ function HubPage({ hubId }) {
             </Card>
           )}
           {!isP && (textbooks.some((t) => t.subjectId === id) || lectures.some((l) => l.subjectId === id) || ddays.length > 0) && (
-            <Card title="교재 · 복습">
+            <Card title="교재·복습">
               {textbooks.filter((t) => t.subjectId === id).map((t) => <div key={t.id} style={{ marginBottom: 8 }}><div className="row between small"><span>{t.title}</span><span>{t.current}/{t.total}{t.unit}</span></div><Prog value={t.current / t.total} color={rec.color} /></div>)}
               {lectures.filter((l) => l.subjectId === id).map((l) => { const n = Object.keys(l.done || {}).filter((k) => +k <= l.total).length; return <div key={l.id} style={{ marginBottom: 8 }}><div className="row between small"><span>▶ {l.title}</span><span>{n}/{l.total}강</span></div><Prog value={n / (l.total || 1)} color={rec.color} /></div> })}
               <div className="small muted">복습 대기 {reviews.filter((r) => r.subjectId === id && !r.done && r.next <= today()).length}개 · 가까운 D-day {ddays[0] ? `${ddays[0].title} ${dday(ddays[0].date)}` : '-'}</div>
