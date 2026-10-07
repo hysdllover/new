@@ -1,7 +1,7 @@
 import { Fragment, useState } from 'react'
 import { plainText } from '../lib/marks.js'
 import { useColl, put, patch, useSettings, setSettings } from '../store/store.js'
-import { Card, Icon, Empty, Seg, openDetail, openSheet, toast, useMedia, NoteIcon } from '../components/ui.jsx'
+import { Card, Icon, Empty, Seg, openDetail, openSheet, toast, useMedia, NoteIcon, Field } from '../components/ui.jsx'
 import TemplatePicker from '../components/TemplatePicker.jsx'
 import BlockEditor from '../components/BlockEditor.jsx'
 import NotePage, { NOTE_LABELS, labelColor, labelName } from './notes/NotePage.jsx'
@@ -65,6 +65,7 @@ function Pages({ params, compact }) {
         <Seg value={mode} onChange={(v) => { setMode(v); setParams('notes', { mode: v }) }} options={[['list', '목록'], ['db', 'DB 뷰']]} />
         <span className="grow" />
         <button className="btn" onClick={() => import('../components/MdImport.jsx').then((m) => openSheet((c) => <m.default close={c} />, { title: '가져오기' }))}><Icon name="upload" size={15} />가져오기</button>
+        <button className="btn" onClick={() => openSheet((c) => <NotesExport close={c} />, { title: '내보내기' })}><Icon name="download" size={15} />내보내기</button>
         <button className="btn primary" onClick={create}><Icon name="plus" size={16} />새 페이지</button>
       </div>
       {mode === 'db' ? <DBView source="notes" /> : (
@@ -153,3 +154,31 @@ function Daily({ date }) {
 }
 
 const dailyNoteSeed = (date) => ({ id: 'daily-' + date, title: date, type: 'daily', date })
+
+// 노트 묶음 내보내기: 전체 · 과목 · 라벨 → HTML 한 파일(목차) 또는 zip(마크다운 + 그림)
+function NotesExport({ close }) {
+  const notes = useColl('notes'), subjects = useColl('subjects'), st = useSettings()
+  const [scope, setScope] = useState('all'), [busy, setBusy] = useState('')
+  const roots = notes.filter((n) => n.type !== 'daily' && !n.isTemplate && !n.parentId)
+  const pick = scope === 'all' ? roots : scope.startsWith('s:') ? roots.filter((n) => n.subjectId === scope.slice(2)) : roots.filter((n) => n.label === scope.slice(2))
+  const name = scope === 'all' ? '노트 전체' : scope.startsWith('s:') ? subjects.find((s) => s.id === scope.slice(2))?.name || '과목' : labelName(scope.slice(2), st)
+  // zip 은 하위 페이지까지 (마크다운은 [[링크]] 로 이어짐)
+  const withSubs = (rs) => { const out = new Map(); const add = (n) => { if (!n || out.has(n.id)) return; out.set(n.id, n); for (const b of n.blocks || []) if (b.type === 'page') add(notes.find((x) => x.id === b.pageId)) }; rs.forEach(add); return [...out.values()] }
+  const html = async () => { setBusy('HTML 만드는 중…'); try { const m = await import('../lib/noteHtml.js'); const r = await m.exportNotesHtml(pick, name); close(); if (r !== 'cancel') toast(`노트 ${pick.length}개를 HTML 한 파일로 내보냈어요`) } catch (e) { toast('내보내지 못했어요 · ' + e.message); setBusy('') } }
+  const zip = async () => { setBusy('zip 만드는 중…'); try { const [{ notesZip }, { shareOrDownload }] = await Promise.all([import('../lib/exportZip.js'), import('../lib/files.js')]); const list0 = withSubs(scope === 'all' ? notes.filter((n) => !n.isTemplate) : pick); const u8 = await notesZip(list0, { onProgress: (i, n) => setBusy(`그림 모으는 중 ${i}/${n}`) }); const r = await shareOrDownload(new Blob([u8], { type: 'application/zip' }), `${name}.zip`); close(); if (r !== 'cancel') toast(`노트 ${list0.length}개를 zip 으로 내보냈어요`) } catch (e) { toast('내보내지 못했어요 · ' + e.message); setBusy('') } }
+  return (
+    <div className="form">
+      <Field label="무엇을">
+        <select className="input" value={scope} onChange={(e) => setScope(e.target.value)}>
+          <option value="all">노트 전체 ({roots.length})</option>
+          {subjects.map((s) => { const k = roots.filter((n) => n.subjectId === s.id).length; return k ? <option key={s.id} value={'s:' + s.id}>과목 · {s.name} ({k})</option> : null })}
+          {NOTE_LABELS.map(([k]) => { const c = roots.filter((n) => n.label === k).length; return c ? <option key={k} value={'l:' + k}>라벨 · {labelName(k, st)} ({c})</option> : null })}
+        </select>
+      </Field>
+      <button className="exp-row" disabled={!pick.length || !!busy} onClick={html}><Icon name="file" size={17} /><span className="grow"><span className="small">HTML 한 파일</span><span className="tiny muted">맨 앞 목차 · 하위 페이지 포함 · A4 인쇄</span></span><Icon name="next" size={13} /></button>
+      <button className="exp-row" disabled={!!busy} onClick={zip}><Icon name="download" size={17} /><span className="grow"><span className="small">zip (마크다운 + 그림)</span><span className="tiny muted">과목 폴더별 .md · 노션·옵시디언에서 열기 · 다시 가져오기도 돼요</span></span><Icon name="next" size={13} /></button>
+      {busy && <div className="small muted">{busy}</div>}
+    </div>
+  )
+}
+
