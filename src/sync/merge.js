@@ -30,3 +30,9 @@ export function stableFile(colls) {
   }
   return JSON.stringify(obj)
 }
+
+// 노트 조각 파일: id 로 0~7 중 하나 (기기마다 항상 같은 조각)
+export const NOTE_SHARDS = 8
+export function shardOf(id) { let h = 0; for (const ch of String(id)) h = (h * 31 + ch.charCodeAt(0)) | 0; return Math.abs(h) % NOTE_SHARDS }
+// 항목이 들어 있는 동기화 파일 (tasks.json 등 · notes-0.json 등)
+export const isDataFile = (n) => /^(tasks|events|notes|study|health|settings)(-\d+)?\.json$/.test(n)

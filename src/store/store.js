@@ -1,6 +1,6 @@
 import { mergeColl } from '../sync/merge.js'
 import { useMemo, useSyncExternalStore } from 'react'
-import { get, set } from 'idb-keyval'
+import { get, getMany, setMany } from 'idb-keyval'
 import { COLL_NAMES, DEFAULT_SETTINGS, DEFAULT_SUBJECTS, DEFAULT_QUOTES, emptyState } from './schema.js'
 
 const SCHEMA_VERSION = 1
@@ -10,6 +10,7 @@ const changeHooks = new Set()
 let batching = 0
 let pendingNotify = false
 let saveTimer = null
+const dirty = new Set() // 저장할 컬렉션 (바뀐 것만 IndexedDB 의 `c:<컬렉션>` 에)
 
 export const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
 
@@ -32,8 +33,12 @@ function notify() {
   scheduleSave()
 }
 function scheduleSave() {
+  if (!dirty.size) return
   clearTimeout(saveTimer)
-  saveTimer = setTimeout(() => set('state', { v: SCHEMA_VERSION, state }).catch(() => {}), 400)
+  saveTimer = setTimeout(() => {
+    const cs = [...dirty]; dirty.clear()
+    setMany(cs.map((c) => ['c:' + c, state[c]])).catch(() => cs.forEach((c) => dirty.add(c)))
+  }, 400)
 }
 
 export function batch(fn) {
@@ -46,6 +51,7 @@ export function batch(fn) {
 
 function write(coll, rec, prev, silent) {
   state = { ...state, [coll]: { ...state[coll], [rec.id]: rec } }
+  dirty.add(coll)
   if (!silent) changeHooks.forEach((h) => { try { h(coll, rec, prev) } catch (e) { console.error(e) } })
   notify()
   return rec
@@ -79,10 +85,12 @@ export function restore(coll, id) {
 // 동기화 병합 결과 반영 (타임스탬프 유지, 훅 미발생)
 export function replaceColl(coll, recs) {
   state = { ...state, [coll]: recs }
+  dirty.add(coll)
   notify()
 }
 export function replaceAll(next) {
   state = { ...emptyState(), ...next }
+  COLL_NAMES.forEach((c) => dirty.add(c))
   notify()
 }
 
@@ -110,6 +118,7 @@ export const setSettings = (partial) => put('settings', { ...settings(), ...(typ
 // 휴지통 정리: 30일 지난 삭제 항목은 내용 비우고 표식만, 90일 지나면 완전 제거
 export const TRASH_DAYS = 30
 function purge() {
+  // 첨부 항목은 보관함 주소(raw)를 남겨 나중에 보관함에서도 지움
   const now = Date.now(), D = 86400000
   let changed = false
   const next = { ...state }
@@ -119,17 +128,28 @@ function purge() {
       if (!r.deleted) continue
       const age = now - (r.deletedAt || r.updatedAt)
       if (age > 90 * D) { coll = coll || { ...state[c] }; delete coll[r.id] }
-      else if (age > TRASH_DAYS * D && !r.purged) { coll = coll || { ...state[c] }; coll[r.id] = { id: r.id, deleted: true, purged: true, deletedAt: r.deletedAt, updatedAt: r.updatedAt, deviceId: r.deviceId } }
+      else if (age > TRASH_DAYS * D && !r.purged) { coll = coll || { ...state[c] }; coll[r.id] = { id: r.id, deleted: true, purged: true, deletedAt: r.deletedAt, updatedAt: r.updatedAt, deviceId: r.deviceId, ...(r.raw ? { raw: r.raw, rm: r.rm } : null) } }
     }
-    if (coll) { next[c] = coll; changed = true }
+    if (coll) { next[c] = coll; changed = true; dirty.add(c) }
   }
   if (changed) { state = next; notify() }
 }
 
 export async function loadState() {
   try {
-    const saved = await get('state')
-    if (saved?.state) state = { ...emptyState(), ...saved.state }
+    const vals = await getMany(COLL_NAMES.map((c) => 'c:' + c))
+    if (vals.some(Boolean)) {
+      const next = emptyState()
+      COLL_NAMES.forEach((c, i) => { if (vals[i]) next[c] = vals[i] })
+      state = next
+    } else {
+      // 예전 저장(전체를 'state' 한 덩어리로) → 컬렉션별로 옮김 · 예전 키는 그대로 둠(되돌아갈 때 대비)
+      const saved = await get('state')
+      if (saved?.state) {
+        state = { ...emptyState(), ...saved.state }
+        await setMany(COLL_NAMES.map((c) => ['c:' + c, state[c]]))
+      }
+    }
   } catch (e) { console.error(e) }
   if (!state.settings.main) {
     batch(() => {

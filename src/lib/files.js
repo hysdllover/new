@@ -1,9 +1,9 @@
 import { get, set, del } from 'idb-keyval'
-import { put, remove } from '../store/store.js'
+import { put, remove, getState } from '../store/store.js'
 import { today } from '../engine/date.js'
 
 export const MAX_FILE = 10 * 1024 * 1024
-const remoteRaw = new Map() // 동기화된 첨부의 raw_url (sync.js 가 채움)
+const remoteRaw = new Map() // 예전 방식(데이터 gist)으로 올린 첨부의 raw_url (sync.js 가 채움) · 새 첨부는 항목의 raw
 export const setRemoteRaw = (id, url) => remoteRaw.set(id, url)
 
 // 이미지는 긴 변 1600px JPEG 로 압축
@@ -32,7 +32,7 @@ const guessType = (n) => /\.pdf$/i.test(n) ? 'application/pdf' : /\.html?$/i.tes
 export async function getBlob(id) {
   let b = await get('blob:' + id)
   if (b) return b
-  const raw = remoteRaw.get(id)
+  const raw = getState().files?.[id]?.raw || remoteRaw.get(id)
   if (!raw) return null
   const text = await (await fetch(raw)).text()
   b = await (await fetch(text)).blob()

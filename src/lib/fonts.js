@@ -1,11 +1,11 @@
 // 내 폰트 — 사용자가 불러온 폰트 파일을 이 기기(IndexedDB)에 저장하고 FontFace 로 앱에 적용
-// 1MB 이하 폰트는 동기화(gist `font-<id>.txt`), 그보다 큰 폰트는 기기마다 한 번씩 추가
+// 5MB 이하 폰트는 동기화(보관용 gist `font-<id>.txt`), 그보다 큰 폰트는 기기마다 한 번씩 추가
 import { useSyncExternalStore } from 'react'
 import { get, set, del } from 'idb-keyval'
 import { uid } from '../store/store.js'
 
 const MAX_FONT = 40 * 1024 * 1024
-export const SYNC_FONT_MAX = 1024 * 1024
+export const SYNC_FONT_MAX = 5 * 1024 * 1024
 const OK_EXT = /\.(ttf|otf|ttc|woff2?)$/i
 let fonts = []
 const subs = new Set()
