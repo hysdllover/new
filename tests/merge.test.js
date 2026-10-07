@@ -59,3 +59,25 @@ test('노트 조각: 같은 id 는 항상 같은 조각 · 동기화 파일 이�
   for (const n of ['tasks.json', 'notes.json', 'notes-3.json', 'settings.json']) assert.ok(isDataFile(n), n)
   for (const n of ['push.json', 'att-x.txt', 'backup-2026-01-01.json', 'widget-gist.txt', 'meta.json']) assert.ok(!isDataFile(n), n)
 })
+
+test('노트 블록 3방향 합치기', async () => {
+  const { merge3Blocks, mergeNote } = await import('../src/sync/merge.js')
+  const t = (id, text) => ({ id, type: 'text', text })
+  const base = [t('a', '1'), t('b', '2'), t('c', '3')]
+  // 서로 다른 줄을 고침 → 둘 다
+  assert.deepEqual(merge3Blocks(base, [t('a', '1!'), t('b', '2'), t('c', '3')], [t('a', '1'), t('b', '2'), t('c', '3?')]).map((b) => b.text), ['1!', '2', '3?'])
+  // 같은 줄을 둘 다 고침 → 다른 기기 것 + 이 기기 것 나란히
+  const r = merge3Blocks(base, [t('a', 'mine'), t('b', '2'), t('c', '3')], [t('a', 'theirs'), t('b', '2'), t('c', '3')])
+  assert.deepEqual(r.map((b) => b.text), ['theirs', 'mine', '2', '3']); assert.equal(r[1].id, 'a-m')
+  // 이 기기에서 새 줄 · 다른 기기에서 새 줄 → 둘 다, 이 기기 줄은 앞 줄 뒤에
+  assert.deepEqual(merge3Blocks(base, [t('a', '1'), t('n', 'new'), t('b', '2'), t('c', '3')], [t('a', '1'), t('b', '2'), t('c', '3'), t('x', 'x')]).map((b) => b.id), ['a', 'n', 'b', 'c', 'x'])
+  // 한쪽에서 지움 (다른 쪽은 그대로) → 지움 · 한쪽이 지우고 다른 쪽이 고침 → 남김
+  assert.deepEqual(merge3Blocks(base, [t('a', '1'), t('c', '3')], base).map((b) => b.id), ['a', 'c'])
+  assert.deepEqual(merge3Blocks(base, base, [t('a', '1'), t('c', '3')]).map((b) => b.id), ['a', 'c'])
+  assert.deepEqual(merge3Blocks(base, [t('a', '1'), t('c', '3')], [t('a', '1'), t('b', '2!'), t('c', '3')]).map((b) => b.text), ['1', '2!', '3'])
+  assert.deepEqual(merge3Blocks(base, [t('a', '1'), t('b', '2!'), t('c', '3')], [t('a', '1'), t('c', '3')]).map((b) => b.text), ['1', '2!', '3'])
+  // 제목: 이 기기에서 고쳤으면 이 기기 것
+  const n = mergeNote({ title: 'T', blocks: base }, { id: 'n', title: 'T2', blocks: base, updatedAt: 1 }, { id: 'n', title: 'T', blocks: [...base, t('d', '4')], updatedAt: 2 })
+  assert.equal(n.title, 'T2'); assert.equal(n.blocks.length, 4)
+  assert.equal(mergeNote(null, { blocks: [] }, { blocks: [] }), null)
+})

@@ -4,7 +4,7 @@ import { seriesSummary } from '../lib/series.js'
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval'
 import { getState, replaceColl, onChange, patch, settings, list, put, find, remove, deviceId } from '../store/store.js'
 import { COLLECTIONS, GIST_FILES } from '../store/schema.js'
-import { mergeColl, stableFile, shardOf, NOTE_SHARDS, isDataFile } from './merge.js'
+import { mergeColl, stableFile, shardOf, NOTE_SHARDS, isDataFile, mergeNote } from './merge.js'
 import { blobToDataUrl, setRemoteRaw, addFile } from '../lib/files.js'
 import { eventsOn, classesOn } from '../engine/scheduler.js'
 import { weekGoals, goalProgress, addTask, toggleTask, addSession } from '../store/actions.js'
@@ -543,6 +543,7 @@ export async function syncNow({ flush = false } = {}) {
     setStatus({ state: 'syncing', error: null, auth: false })
     try {
       await ensureGist()
+      const base = (await cacheGet()).id === gistId() ? gcache.gist : null // 지난 동기화 때 원격 내용 (노트 합치기 기준)
       const gist = await getGist()
       if (gist.login) ls.set('gh_login', gist.login)
       const remoteText = {}, inbox = [], cmds = []
@@ -556,13 +557,22 @@ export async function syncNow({ flush = false } = {}) {
       remoteStoreId = remoteText['store-gist.txt']?.trim() || null
       // 1) 원격 → 로컬 병합
       const ex = excluded(), since = +ls.get('gist_last') || 0
-      let got = 0, clash = 0
+      let got = 0, clash = 0, baseNotes = null
+      // 두 기기에서 같은 노트를 고쳤으면 블록 단위로 합침 → 합친 결과를 지금 시각으로 올림
+      const resolveNote = (l, r) => {
+        if (!base) return null
+        if (!baseNotes) { baseNotes = {}; for (const [n, f] of Object.entries(base.files || {})) if (/^notes(-\d+)?\.json$/.test(n)) { try { Object.assign(baseNotes, JSON.parse(f.content || '{}').notes || {}) } catch {} } }
+        const m = mergeNote(baseNotes[l.id], l, r)
+        if (!m) return null
+        if (m.title === r.title && JSON.stringify(m.blocks) === JSON.stringify(r.blocks)) return r
+        return { ...m, updatedAt: Math.max(Date.now(), (l.updatedAt || 0) + 1, (r.updatedAt || 0) + 1), deviceId }
+      }
       for (const name of Object.keys(remoteText).filter(isDataFile)) {
         let data = {}
         try { data = JSON.parse(remoteText[name] || '{}') } catch {}
         for (const [c, recs] of Object.entries(data)) {
           if (!(c in COLLECTIONS) || ex.has(c)) continue
-          const { merged, localChanged, received, conflicts } = mergeColl(getState()[c], recs, since)
+          const { merged, localChanged, received, conflicts } = mergeColl(getState()[c], recs, since, c === 'notes' ? resolveNote : null)
           if (localChanged) replaceColl(c, merged)
           got += received; clash += conflicts
         }
@@ -613,6 +623,8 @@ export async function syncNow({ flush = false } = {}) {
       if (got || sent || clash) addLog({ at: now, got, sent, clash })
       setStatus({ state: 'ok', last: now })
       markDevice(now)
+      // 하루 한 번: 어디에서도 쓰지 않는 첨부 정리 (동기화를 마친 뒤에만 — 다른 기기 내용까지 받은 상태로 판단)
+      if (now - (+ls.get('sweep_at') || 0) > 86400000) { ls.set('sweep_at', String(now)); import('../lib/cleanup.js').then((m) => m.sweepFiles()).catch(() => {}) }
       if (!settings().noteTaskClean1) import('../lib/notes.js').then((m) => m.cleanNoteTasksOnce()).catch(() => {})
     } catch (e) {
       if (e.until) pause(e.until)

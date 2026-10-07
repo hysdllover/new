@@ -1,13 +1,14 @@
 import { get, set, del } from 'idb-keyval'
-import { put, remove, getState } from '../store/store.js'
+import { put, remove, getState, settings } from '../store/store.js'
 import { today } from '../engine/date.js'
 
 export const MAX_FILE = 10 * 1024 * 1024
 const remoteRaw = new Map() // 예전 방식(데이터 gist)으로 올린 첨부의 raw_url (sync.js 가 채움) · 새 첨부는 항목의 raw
 export const setRemoteRaw = (id, url) => remoteRaw.set(id, url)
 
-// 이미지는 긴 변 1600px JPEG 로 압축
+// 이미지는 긴 변 1600px JPEG 로 압축 (설정 › 동기화 ‘사진 원본 그대로’ 를 켜면 그대로)
 async function compressImage(file) {
+  if (settings().photoOriginal) return file
   if (!file.type.startsWith('image/') || file.type === 'image/gif' || file.type === 'image/svg+xml') return file
   try {
     const bmp = await createImageBitmap(file)
@@ -23,7 +24,9 @@ async function compressImage(file) {
 export async function addFile(file, meta = {}) {
   const f = await compressImage(file)
   if (f.size > MAX_FILE) throw new Error('10MB 이하 파일만 첨부할 수 있어요')
-  const rec = put('files', { name: f.name, type: f.type || guessType(f.name), size: f.size, date: today(), tags: [], ...meta })
+  // att: 블록·할 일 등에 붙인 첨부 (안 쓰게 되면 정리 대상) · 자료실에 직접 넣은 파일은 lib: true
+  const { lib, ...rest } = meta
+  const rec = put('files', { name: f.name, type: f.type || guessType(f.name), size: f.size, date: today(), tags: [], ...(lib ? null : { att: true }), ...rest })
   await set('blob:' + rec.id, f)
   return rec
 }
