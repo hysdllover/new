@@ -172,7 +172,7 @@ const LABEL = { navy: '#55658a', olive: '#7a8660', rose: '#c9a0a8', violet: '#a9
 export const noteToHtml = (note, { withSubs = true } = {}) => notesToHtml([note], { withSubs, title: note.title })
 
 // 여러 노트를 한 파일로 (과목·라벨 묶음): 맨 앞에 전체 목차, 하위 페이지는 각 노트 뒤에 (한 번씩만)
-export async function notesToHtml(roots, { withSubs = true, title = '노트' } = {}) {
+export async function notesToHtml(roots, { withSubs = true, title = '노트', onProgress, signal } = {}) {
   const tasks = list('tasks'), subjects = list('subjects')
   const inside = new Set()
   const collect = (n) => { inside.add(n.id); if (withSubs) for (const b of n.blocks || []) if (b.type === 'page') { const c = find('notes', b.pageId); if (c && !c.deleted && !inside.has(c.id)) collect(c) } }
@@ -181,7 +181,9 @@ export async function notesToHtml(roots, { withSubs = true, title = '노트' } =
   for (const id of inside) { const n = find('notes', id); if (n?.title) ids[n.title.trim()] = id }
   const pages = [], seen = new Set(), bundle = roots.length > 1
   const render = async (n, depth) => {
+    if (signal?.aborted) throw Object.assign(new Error('취소'), { name: 'AbortError' })
     seen.add(n.id)
+    onProgress?.(seen.size, inside.size)
     const ctx = { tasks, ids, subs: [] }
     const body = await blocksHtml(n.blocks, ctx)
     const sub = subjects.find((s) => s.id === n.subjectId), lc = n.label && (LABEL[n.label] || LABEL.gray)
@@ -205,7 +207,7 @@ ${art}
 
 // 저장: 아이폰·아이패드는 공유 시트(파일에 저장), 그 밖은 내려받기
 export async function exportNoteHtml(note, opts) { return saveHtml(await noteToHtml(note, opts), note.title) }
-export async function exportNotesHtml(roots, title) { return saveHtml(await notesToHtml(roots, { title }), title) }
+export async function exportNotesHtml(roots, title, opts = {}) { return saveHtml(await notesToHtml(roots, { title, ...opts }), title) }
 async function saveHtml(html, title) {
   const name = `${(title || '노트').replace(/[\\/:*?"<>|]/g, ' ').trim() || '노트'}.html`
   const file = new File([html], name, { type: 'text/html' })

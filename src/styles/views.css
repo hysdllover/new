@@ -998,6 +998,11 @@ button.file-sync { color: var(--accent); }
 .exp-row { display: flex; align-items: center; gap: 12px; padding: 11px 6px; border-radius: 8px; text-align: left; min-height: 52px; }
 .exp-row .grow { display: flex; flex-direction: column; gap: 1px; }
 .exp-row:active { background: var(--surface-2); }
+.exp-busy { display: flex; flex-direction: column; gap: 6px; }
+.exp-line { height: 2px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.exp-line i { display: block; height: 100%; background: var(--accent); transition: width .2s; }
+.exp-line i.run { animation: exp-run 1.2s ease-in-out infinite; }
+@keyframes exp-run { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
 
 /* 글자 색 · 첨자 · D-day 칩 · 블록 바탕색 · 그림 크기 */
 .tc-r { color: #a9707b; } .tc-g { color: #6b7650; } .tc-b { color: #4e6085; } .tc-v { color: #7e6fab; } .tc-m { color: #868d97; }

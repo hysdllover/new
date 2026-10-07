@@ -1,9 +1,33 @@
 // 가져오기 계획(importPlan.js) → 노트·첨부로 만들기
-import { put, patch, find, uid } from '../store/store.js'
-import { addFile } from './files.js'
+import { put, patch, find, uid, onChange, remove, batch } from '../store/store.js'
+import { addFile, deleteFile } from './files.js'
 import { linkTodos } from './notes.js'
 export { planFromZip, planFromFileList, planFromHtml, planFromDocx, planFromPdf, htmlToBlocks } from './importPlan.js'
 import { mdToNote } from './md.js'
+
+/* ── 되돌리기: fn 이 만든 항목은 휴지통으로, 고친 항목은 전 내용으로 ── */
+export async function withUndo(fn) {
+  const made = new Map(), before = new Map()
+  const off = onChange((c, rec, prev) => {
+    const k = c + ':' + rec.id
+    if (made.has(k) || before.has(k)) return
+    if (!prev || prev.deleted) made.set(k, [c, rec.id]); else before.set(k, [c, prev])
+  })
+  let result
+  try { result = await fn() } finally { off() }
+  const undo = () => batch(() => {
+    for (const [c, id] of made.values()) c === 'files' ? deleteFile(id) : remove(c, id)
+    for (const [c, prev] of before.values()) { const { updatedAt, deviceId, ...rest } = prev; put(c, rest) }
+  })
+  return { result, undo, made: made.size }
+}
+
+// 같은 제목 노트가 이미 있는 맨 위 페이지(와 그 하위 페이지)를 뺀 계획
+export function dropDuplicates(plan, titles) {
+  const drop = new Set(plan.pages.filter((p) => !p.parent && titles.has(String(p.title || '').trim())).map((p) => p.key))
+  for (let more = true; more;) { more = false; for (const p of plan.pages) if (p.parent && drop.has(p.parent) && !drop.has(p.key)) { drop.add(p.key); more = true } }
+  return { ...plan, pages: plan.pages.filter((p) => !drop.has(p.key)) }
+}
 
 /* ── 계획 → 노트 만들기 ── */
 // parentId: 맨 위 페이지들을 넣을 상위 노트 · 하위 관계는 그대로 (부모 노트 안에 하위 페이지 블록)

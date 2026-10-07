@@ -5,7 +5,9 @@ import { getBlob } from './files.js'
 
 const safe = (s) => String(s || '제목 없음').replace(/[\\/:*?"<>|#^[\]]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80) || '제목 없음'
 
-export async function notesZip(notes, { onProgress } = {}) {
+// onProgress(지금, 전체) · signal.aborted 면 멈춤
+const stop = (signal) => { if (signal?.aborted) throw Object.assign(new Error('취소'), { name: 'AbortError' }) }
+export async function notesZip(notes, { onProgress, signal } = {}) {
   const { zipSync, strToU8 } = await import('fflate')
   const subjects = list('subjects'), files = {}, used = new Set(), att = new Map()
   const pathOf = new Map()
@@ -16,6 +18,7 @@ export async function notesZip(notes, { onProgress } = {}) {
     used.add(p); pathOf.set(n.id, p)
   }
   for (const n of notes) {
+    stop(signal)
     const md = toMarkdown(n, {
       fileRef: (b) => {
         const f = find('files', b.fileId); if (!f) return ''
@@ -30,9 +33,11 @@ export async function notesZip(notes, { onProgress } = {}) {
   }
   let i = 0
   for (const [, { name, f }] of att) {
+    stop(signal)
     onProgress?.(++i, att.size)
     try { const b = await getBlob(f.id); if (b) files['attachments/' + name] = new Uint8Array(await b.arrayBuffer()) } catch {}
   }
+  stop(signal)
   return zipSync(files, { level: 6 })
 }
 

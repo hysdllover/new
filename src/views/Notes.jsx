@@ -158,14 +158,21 @@ const dailyNoteSeed = (date) => ({ id: 'daily-' + date, title: date, type: 'dail
 // 노트 묶음 내보내기: 전체 · 과목 · 라벨 → HTML 한 파일(목차) 또는 zip(마크다운 + 그림)
 function NotesExport({ close }) {
   const notes = useColl('notes'), subjects = useColl('subjects'), st = useSettings()
-  const [scope, setScope] = useState('all'), [busy, setBusy] = useState('')
+  const [scope, setScope] = useState('all'), [busy, setBusy] = useState(''), [prog, setProg] = useState(null), [ac, setAc] = useState(null)
   const roots = notes.filter((n) => n.type !== 'daily' && !n.isTemplate && !n.parentId)
   const pick = scope === 'all' ? roots : scope.startsWith('s:') ? roots.filter((n) => n.subjectId === scope.slice(2)) : roots.filter((n) => n.label === scope.slice(2))
   const name = scope === 'all' ? '노트 전체' : scope.startsWith('s:') ? subjects.find((s) => s.id === scope.slice(2))?.name || '과목' : labelName(scope.slice(2), st)
   // zip 은 하위 페이지까지 (마크다운은 [[링크]] 로 이어짐)
   const withSubs = (rs) => { const out = new Map(); const add = (n) => { if (!n || out.has(n.id)) return; out.set(n.id, n); for (const b of n.blocks || []) if (b.type === 'page') add(notes.find((x) => x.id === b.pageId)) }; rs.forEach(add); return [...out.values()] }
-  const html = async () => { setBusy('HTML 만드는 중…'); try { const m = await import('../lib/noteHtml.js'); const r = await m.exportNotesHtml(pick, name); close(); if (r !== 'cancel') toast(`노트 ${pick.length}개를 HTML 한 파일로 내보냈어요`) } catch (e) { toast('내보내지 못했어요 · ' + e.message); setBusy('') } }
-  const zip = async () => { setBusy('zip 만드는 중…'); try { const [{ notesZip }, { shareOrDownload }] = await Promise.all([import('../lib/exportZip.js'), import('../lib/files.js')]); const list0 = withSubs(scope === 'all' ? notes.filter((n) => !n.isTemplate) : pick); const u8 = await notesZip(list0, { onProgress: (i, n) => setBusy(`그림 모으는 중 ${i}/${n}`) }); const r = await shareOrDownload(new Blob([u8], { type: 'application/zip' }), `${name}.zip`); close(); if (r !== 'cancel') toast(`노트 ${list0.length}개를 zip 으로 내보냈어요`) } catch (e) { toast('내보내지 못했어요 · ' + e.message); setBusy('') } }
+  // 진행 표시 · 취소: 만드는 동안 선으로 진행을 보여 주고, 취소하면 그 자리에서 멈춤
+  const run = async (label, fn) => {
+    const c = new AbortController(); setAc(c); setBusy(label); setProg(null)
+    try { await fn(c.signal, (i, n) => setProg(n ? i / n : null)) }
+    catch (e) { if (e.name === 'AbortError') toast('내보내기를 취소했어요'); else toast('내보내지 못했어요 · ' + e.message) }
+    setBusy(''); setProg(null); setAc(null)
+  }
+  const html = () => run('HTML 만드는 중', async (signal, onProgress) => { const m = await import('../lib/noteHtml.js'); const r = await m.exportNotesHtml(pick, name, { signal, onProgress }); close(); if (r !== 'cancel') toast(`노트 ${pick.length}개를 HTML 한 파일로 내보냈어요`) })
+  const zip = () => run('zip 만드는 중', async (signal, onProgress) => { const [{ notesZip }, { shareOrDownload }] = await Promise.all([import('../lib/exportZip.js'), import('../lib/files.js')]); const list0 = withSubs(scope === 'all' ? notes.filter((n) => !n.isTemplate) : pick); const u8 = await notesZip(list0, { signal, onProgress: (i, n) => { setBusy('그림 모으는 중'); onProgress(i, n) } }); const r = await shareOrDownload(new Blob([u8], { type: 'application/zip' }), `${name}.zip`); close(); if (r !== 'cancel') toast(`노트 ${list0.length}개를 zip 으로 내보냈어요`) })
   return (
     <div className="form">
       <Field label="무엇을">
@@ -177,7 +184,10 @@ function NotesExport({ close }) {
       </Field>
       <button className="exp-row" disabled={!pick.length || !!busy} onClick={html}><Icon name="file" size={17} /><span className="grow"><span className="small">HTML 한 파일</span><span className="tiny muted">맨 앞 목차 · 하위 페이지 포함 · A4 인쇄</span></span><Icon name="next" size={13} /></button>
       <button className="exp-row" disabled={!!busy} onClick={zip}><Icon name="download" size={17} /><span className="grow"><span className="small">zip (마크다운 + 그림)</span><span className="tiny muted">과목 폴더별 .md · 노션·옵시디언에서 열기 · 다시 가져오기도 돼요</span></span><Icon name="next" size={13} /></button>
-      {busy && <div className="small muted">{busy}</div>}
+      {busy && <div className="exp-busy">
+        <div className="row between"><span className="small muted">{busy}{prog != null ? ` · ${Math.round(prog * 100)}%` : '…'}</span><button className="btn sm" onClick={() => ac?.abort()}>취소</button></div>
+        <div className="exp-line"><i style={{ width: prog != null ? `${Math.round(prog * 100)}%` : '30%' }} className={prog == null ? 'run' : ''} /></div>
+      </div>}
     </div>
   )
 }
