@@ -95,7 +95,8 @@ export function commitBlock(block, note) {
 
 export const refLabel = (ref) => ref ? `${ref.type === 'event' ? '일정' : '할 일'} ${ref.date.slice(5).replace('-', '/')}${ref.time != null ? ' ' + fmtTime(ref.time) : ''}` : ''
 
-export function toMarkdown(note) {
+// opts.fileRef(b) · opts.pageRef(note): zip 내보내기에서 그림 경로·하위 페이지 링크를 바꿀 때
+export function toMarkdown(note, { fileRef, pageRef } = {}) {
   const tasks = list('tasks')
   const lines = [`# ${noteTitle(note)}`, '']
   // 토글은 <details> 로 감싸서 (끝 표시 _tend)
@@ -120,7 +121,7 @@ export function toMarkdown(note) {
       case 'code': lines.push('```' + (b.lang || ''), b.text || '', '```'); break
       case 'quote': lines.push(t.split('\n').map((x) => `> ${x}`).join('\n')); break
       case 'divider': lines.push(b.text ? `--- ${b.text} ---` : '---'); break
-      case 'file': lines.push(`[첨부: ${find('files', b.fileId)?.name || '파일'}]`); break
+      case 'file': lines.push(fileRef ? fileRef(b) : `[첨부: ${find('files', b.fileId)?.name || '파일'}]`); break
       case 'embed': lines.push(`<!-- ${b.embed?.kind} -->`); break
       case 'callout': lines.push(`> [!${({ key: 'note', warn: 'warning', ex: 'example', rose: 'quote', olive: 'summary', sand: 'question' })[b.tone || 'key'] || 'note'}]`, ...t.split('\n').map((x) => `> ${x}`)); break
       case 'table': lines.push(...tableMd(b)); break
@@ -128,7 +129,7 @@ export function toMarkdown(note) {
       case 'board': for (const c of b.cols || []) { lines.push(`**${c.name}**`, ...(c.cards || []).map((x) => `- ${x.text}`), '') } break
       case 'toggle': lines.push(`<details><summary>${t}</summary>`); break
       case '_tend': lines.push('</details>'); break
-      case 'page': lines.push(`[하위 페이지: ${noteTitle(find('notes', b.pageId))}]`); break
+      case 'page': lines.push(pageRef ? pageRef(find('notes', b.pageId)) : `[하위 페이지: ${noteTitle(find('notes', b.pageId))}]`); break
       default: lines.push(t)
     }
     if (!['bullet', 'todo'].includes(b.type)) lines.push('')

@@ -156,6 +156,8 @@ sup,sub{font-size:.72em;line-height:0}
 .bgc{border-radius:6px;padding:2px 10px;margin:2px 0}.bgc-rose{background:#c9a0a829}.bgc-olive{background:#7a866024}.bgc-navy{background:#55658a1f}.bgc-violet{background:#a99bc429}.bgc-sand{background:#b5a47a26}.bgc-gray{background:#9aa3ad24}
 figure.c{text-align:center}.lk{margin:.5em 0;padding:8px 12px;border:1px solid var(--line);border-radius:8px}.lk a{border:0}
 .board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(150px,1fr);gap:10px;margin:.7em 0;overflow-x:auto}.bcol{background:var(--tint);border-radius:8px;padding:8px}.bh{font-size:.85em;color:var(--soft);margin-bottom:6px}.bc{background:#fff;border:1px solid var(--line);border-radius:6px;padding:6px 8px;margin-bottom:6px;font-size:.92em}
+.cover{padding:24px 0 8px;border-bottom:1px solid var(--line);margin-bottom:36px}.cover h1{font-size:1.9em}.toc.all{display:flex;flex-direction:column;gap:4px;margin:16px 0 8px}.toc.all a{border:0}.toc.all a.d{padding-left:16px;font-size:.92em}.toc.all::before{content:"목차";color:var(--soft);font-size:.85em;margin-bottom:4px}
+@media print{.cover{break-after:page;border:0}}
 footer{margin-top:40px;color:#9aa3ad;font-size:.72em;text-align:right}
 @media (max-width:600px){body{font-size:15px}main{padding:28px 16px 48px}.cols{grid-template-columns:1fr;gap:4px}}
 @page{size:A4;margin:16mm 15mm}
@@ -167,38 +169,45 @@ footer{margin-top:40px;color:#9aa3ad;font-size:.72em;text-align:right}
 const LABEL = { navy: '#55658a', olive: '#7a8660', rose: '#c9a0a8', violet: '#a99bc4', sand: '#b5a47a', gray: '#9aa3ad' }
 
 // withSubs: 하위 페이지까지 이어 붙임 (한 번씩만) · [[링크]]는 이 파일 안 페이지면 그 자리로 이동
-export async function noteToHtml(note, { withSubs = true } = {}) {
+export const noteToHtml = (note, { withSubs = true } = {}) => notesToHtml([note], { withSubs, title: note.title })
+
+// 여러 노트를 한 파일로 (과목·라벨 묶음): 맨 앞에 전체 목차, 하위 페이지는 각 노트 뒤에 (한 번씩만)
+export async function notesToHtml(roots, { withSubs = true, title = '노트' } = {}) {
   const tasks = list('tasks'), subjects = list('subjects')
   const inside = new Set()
   const collect = (n) => { inside.add(n.id); if (withSubs) for (const b of n.blocks || []) if (b.type === 'page') { const c = find('notes', b.pageId); if (c && !c.deleted && !inside.has(c.id)) collect(c) } }
-  collect(note)
+  roots.forEach(collect)
   const ids = {}
   for (const id of inside) { const n = find('notes', id); if (n?.title) ids[n.title.trim()] = id }
-  const pages = [], seen = new Set()
-  const render = async (n) => {
+  const pages = [], seen = new Set(), bundle = roots.length > 1
+  const render = async (n, depth) => {
     seen.add(n.id)
     const ctx = { tasks, ids, subs: [] }
     const body = await blocksHtml(n.blocks, ctx)
     const sub = subjects.find((s) => s.id === n.subjectId), lc = n.label && (LABEL[n.label] || LABEL.gray)
     const meta = [lc && `<span><i class="lab" style="background:${lc}"></i></span>`, sub && `<span>${esc(sub.name)}</span>`, `<span>${new Date(n.updatedAt || Date.now()).toLocaleDateString('ko-KR')}</span>`].filter(Boolean).join('')
-    pages.push({ n, head: `<header><h1${pages.length ? ' class="h-sub"' : ''}>${esc(n.icon && !n.icon.startsWith('i:') ? n.icon + ' ' : '')}${esc(n.title || '제목 없음')}</h1><div class="meta">${meta}</div></header>`, body })
-    if (withSubs) for (const c of ctx.subs) if (!seen.has(c.id)) await render(c)
+    pages.push({ n, depth, head: `<header><h1${depth || (!bundle && pages.length) ? ' class="h-sub"' : ''}>${esc(n.icon && !n.icon.startsWith('i:') ? n.icon + ' ' : '')}${esc(n.title || '제목 없음')}</h1><div class="meta">${meta}</div></header>`, body })
+    if (withSubs) for (const c of ctx.subs) if (!seen.has(c.id)) await render(c, depth + 1)
   }
-  await render(note)
-  const toc = pages.length > 1 ? `<nav class="toc">${pages.slice(1).map((p) => `<a href="#p-${p.n.id}">${esc(p.n.title || '제목 없음')}</a>`).join('')}</nav>` : ''
-  const art = pages.map((p, i) => `<article class="page" id="p-${p.n.id}">${p.head}${i ? '' : toc}${p.body}</article>`).join('\n')
+  for (const r of roots) if (!seen.has(r.id)) await render(r, 0)
+  const tocItems = bundle ? pages : pages.slice(1)
+  const toc = tocItems.length ? `<nav class="toc${bundle ? ' all' : ''}">${tocItems.map((p) => `<a href="#p-${p.n.id}"${p.depth ? ' class="d"' : ''}>${esc(p.n.title || '제목 없음')}</a>`).join('')}</nav>` : ''
+  const art = pages.map((p, i) => `<article class="page" id="p-${p.n.id}">${p.head}${i || bundle ? '' : toc}${p.body}</article>`).join('\n')
+  const cover = bundle ? `<section class="cover"><h1>${esc(title)}</h1><div class="meta"><span>노트 ${pages.length}개</span><span>${new Date().toLocaleDateString('ko-KR')}</span></div>${toc}</section>` : ''
   return `<!doctype html>
-<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(note.title || '노트')}</title><style>${CSS}</style></head>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title || '노트')}</title><style>${CSS}</style></head>
 <body><main>
+${cover}
 ${art}
 <footer>${new Date().toLocaleDateString('ko-KR')} 내보냄</footer>
 </main></body></html>`
 }
 
 // 저장: 아이폰·아이패드는 공유 시트(파일에 저장), 그 밖은 내려받기
-export async function exportNoteHtml(note, opts) {
-  const html = await noteToHtml(note, opts)
-  const name = `${(note.title || '노트').replace(/[\\/:*?"<>|]/g, ' ').trim() || '노트'}.html`
+export async function exportNoteHtml(note, opts) { return saveHtml(await noteToHtml(note, opts), note.title) }
+export async function exportNotesHtml(roots, title) { return saveHtml(await notesToHtml(roots, { title }), title) }
+async function saveHtml(html, title) {
+  const name = `${(title || '노트').replace(/[\\/:*?"<>|]/g, ' ').trim() || '노트'}.html`
   const file = new File([html], name, { type: 'text/html' })
   const touch = navigator.maxTouchPoints > 0 && /iP(hone|ad)|Macintosh/.test(navigator.userAgent)
   if (touch && navigator.canShare?.({ files: [file] })) {

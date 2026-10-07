@@ -68,3 +68,12 @@ export function download(name, text, type = 'text/plain') {
 }
 
 export const fmtSize = (n) => n > 1048576 ? (n / 1048576).toFixed(1) + 'MB' : Math.max(1, Math.round(n / 1024)) + 'KB'
+
+// 파일 저장: 아이폰·아이패드는 공유 시트(파일에 저장), 그 밖은 내려받기
+export async function shareOrDownload(blob, name) {
+  name = String(name).replace(/[\\/:*?"<>|]/g, ' ')
+  const file = new File([blob], name, { type: blob.type })
+  if (navigator.maxTouchPoints > 0 && navigator.canShare?.({ files: [file] })) { try { await navigator.share({ files: [file] }); return 'shared' } catch (e) { if (e.name === 'AbortError') return 'cancel' } }
+  const u = URL.createObjectURL(file), a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 3000)
+  return 'saved'
+}
