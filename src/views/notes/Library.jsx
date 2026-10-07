@@ -22,7 +22,7 @@ export default function Library() {
   const upload = async () => {
     const fs = await pickFiles()
     let n = 0
-    for (const f of fs) { try { await addFile(f, { subjectId: sub }); n++ } catch (e) { toast(e.message) } }
+    for (const f of fs) { try { await addFile(f, { subjectId: sub, lib: true }); n++ } catch (e) { toast(e.message) } }
     if (n) toast(`${n}개 업로드`)
   }
   const units = [...new Set(list.map((f) => f.unit).filter(Boolean))]

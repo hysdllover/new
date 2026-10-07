@@ -434,6 +434,8 @@ function SyncCard() {
       )}
       <div className="divider" />
       <Toggle label="약·컨디션도 이 기기에만 저장" checked={st.syncExclude?.meds} onChange={(v) => setSettings({ syncExclude: { ...st.syncExclude, meds: v, medLogs: v, conditions: v } })} />
+      <Toggle label="사진 원본 그대로 저장" checked={!!st.photoOriginal} onChange={(v) => setSettings({ photoOriginal: v })} />
+      <div className="tiny muted">끄면(기본) 긴 변 1600px 로 줄여 기기 공간과 동기화량을 아껴요.</div>
     </Card>
   )
 }

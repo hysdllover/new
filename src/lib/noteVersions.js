@@ -14,6 +14,8 @@ async function snap(n) {
 }
 
 export function startNoteVersions() {
+  // 하루 한 번: 지운 노트의 버전 기록 정리
+  setTimeout(() => { try { if (Date.now() - (+localStorage.getItem('nv_clean') || 0) < 86400000) return; localStorage.setItem('nv_clean', String(Date.now())) } catch {} import('./cleanup.js').then((m) => m.cleanVersions()).catch(() => {}) }, 8000)
   onChange((coll, rec, prev) => {
     if (coll !== 'notes' || !prev || rec.deleted || prev.deleted) return
     if (prev.blocks === rec.blocks && prev.title === rec.title) return
