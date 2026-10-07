@@ -1,8 +1,20 @@
 // 앱 셸 캐시: 문서는 네트워크 우선, 정적 자산은 캐시 우선
 const CACHE = 'study-v4'
+// 빌드할 때 이번 배포의 assets/ 파일 목록이 들어감 → 새 버전이 켜지면 지난 빌드 파일을 캐시에서 지움
+const ASSETS = /*ASSETS*/null
+async function prune() {
+  if (!ASSETS) return
+  const keep = new Set(ASSETS), c = await caches.open(CACHE)
+  for (const req of await c.keys()) {
+    const u = new URL(req.url)
+    if (u.origin !== location.origin) continue
+    const i = u.pathname.indexOf('/assets/')
+    if (i >= 0 && !keep.has(u.pathname.slice(i + 1))) await c.delete(req)
+  }
+}
 self.addEventListener('install', (e) => { self.skipWaiting() })
 self.addEventListener('activate', (e) => {
-  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()))
+  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(prune).catch(() => {}).then(() => self.clients.claim()))
 })
 self.addEventListener('fetch', (e) => {
   const req = e.request

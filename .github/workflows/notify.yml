@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: notify
@@ -26,3 +27,4 @@ jobs:
       - run: node scripts/notify.mjs
         env:
           GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
