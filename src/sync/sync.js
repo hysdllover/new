@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { notesForWidget } from '../lib/notePreview.js'
+import { notesForWidget, tablesForWidget, boardsForWidget, photoPicks } from '../lib/notePreview.js'
 import { seriesSummary } from '../lib/series.js'
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval'
 import { getState, replaceColl, onChange, patch, settings, list, put, find, deviceId } from '../store/store.js'
@@ -244,6 +244,9 @@ function widgetPayload() {
     prog: progPayload(),
     goals: goalsPayload(),
     notes: excluded().has('notes') ? [] : notesForWidget(getState()),
+    tables: excluded().has('notes') ? [] : tablesForWidget(getState()),
+    boards: excluded().has('notes') ? [] : boardsForWidget(getState()),
+    phk: excluded().has('notes') ? '' : photoPicks(getState()).map((x) => x.fileId).join(','), // 사진이 바뀌면 photo.json 도 다시 올림
     extra: extraPayload(),
     series: seriesSummary(list('tasks'), list('subjects'), settings().seriesColors || {}).slice(0, 6).map((x) => ({ t: x.t, d: x.d, n: x.n, x: x.next?.title || '', c: x.color })),
     sv: SCRIPT_VER,
@@ -275,6 +278,21 @@ function calendarIcs() {
 }
 export const calendarUrl = () => widgetRawUrl()?.replace(/widget\.json$/, 'calendar.ics') || null
 
+// 사진 위젯용 photo.json: 노트 사진을 640px JPEG 로 줄여서 (사진이 바뀔 때만 다시 만듦)
+async function photoJson() {
+  const picks = excluded().has('notes') ? [] : photoPicks(getState()), list0 = []
+  for (const p of picks) {
+    try {
+      const blob = await idbGet('blob:' + p.fileId); if (!blob) continue
+      const bmp = await createImageBitmap(blob), k = Math.min(1, 640 / Math.max(bmp.width, bmp.height))
+      const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k)
+      c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height)
+      const u = c.toDataURL('image/jpeg', 0.72); list0.push({ t: p.t, d: u.slice(u.indexOf(',') + 1) })
+    } catch {}
+  }
+  return JSON.stringify({ list: list0 })
+}
+
 async function syncWidget(remoteId, patchFiles, force) {
   const content = widgetPayload(), ics = calendarIcs()
   let id = remoteId || widgetGistId()
@@ -292,7 +310,11 @@ async function syncWidget(remoteId, patchFiles, force) {
     try {
       const files = { 'widget.json': { content } }
       if (ls.get('ics_last') !== ics || ls.get('widget_gist') !== id) files['calendar.ics'] = { content: ics }
+      const phk = JSON.parse(content).phk || ''
+      const phNew = ls.get('photo_key') !== phk || ls.get('widget_gist') !== id
+      if (phNew) files['photo.json'] = { content: await photoJson() }
       await gh(`/gists/${id}`, { method: 'PATCH', body: JSON.stringify({ files }) })
+      if (phNew) ls.set('photo_key', phk)
       ls.set('widget_last', content); ls.set('ics_last', ics); ls.set('widget_at', String(Date.now())); widgetDirty = false
     } catch (e) {
       if (/찾을 수 없/.test(e.message)) { ls.set('widget_gist', null); ls.set('widget_last', null); ls.set('ics_last', null); return syncWidget(null, patchFiles, force) }

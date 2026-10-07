@@ -125,6 +125,7 @@ export function toMarkdown(note) {
       case 'callout': lines.push(`> [!${({ key: 'note', warn: 'warning', ex: 'example', rose: 'quote', olive: 'summary', sand: 'question' })[b.tone || 'key'] || 'note'}]`, ...t.split('\n').map((x) => `> ${x}`)); break
       case 'table': lines.push(...tableMd(b)); break
       case 'link': lines.push(`[${b.title || b.url}](${b.url})`); break
+      case 'board': for (const c of b.cols || []) { lines.push(`**${c.name}**`, ...(c.cards || []).map((x) => `- ${x.text}`), '') } break
       case 'toggle': lines.push(`<details><summary>${t}</summary>`); break
       case '_tend': lines.push('</details>'); break
       case 'page': lines.push(`[하위 페이지: ${noteTitle(find('notes', b.pageId))}]`); break

@@ -30,7 +30,7 @@ const thin = (s) => F(s, 'Thin')
 const label = (s) => F(s, 'Regular')
 
 // Parameter → 유형 (앱에서 미리보기할 땐 고른 Parameter 로 다시 정함)
-const KINDS = { '공부': 'study', '할일': 'todo', '디데이': 'dday', 'd-day': 'dday', '달력': 'month', '캘린더': 'cal', '일정': 'cal', calendar: 'cal', '다짐': 'quote', '시간표': 'class', '수업': 'class', class: 'class', '주간': 'week', week: 'week', '과목': 'subj', subj: 'subj', '지금': 'now', '다음': 'now', now: 'now', '진도': 'prog', prog: 'prog', '목표': 'goals', goals: 'goals', '오늘': 'today', today: 'today', '대시보드': 'dash', dash: 'dash', '내일': 'tmrw', tomorrow: 'tmrw', '마감': 'due', due: 'due', '일주일': 'week7', '7일': 'week7', week7: 'week7', '디데이목록': 'ddl', ddl: 'ddl', '바로가기': 'quick', '시작': 'quick', quick: 'quick', '구성': 'custom', '내위젯': 'custom', custom: 'custom', '타이머': 'timer', '스톱워치': 'timer', timer: 'timer', '진행': 'pct', '공부진행': 'pct', pct: 'pct', '남은분': 'mins', '분': 'mins', mins: 'mins', '노트': 'note', '메모': 'note', note: 'note', '습관': 'habit', habit: 'habit', '시리즈': 'series', series: 'series', '배치': 'board', '주간배치': 'board', board: 'board', '주차': 'weeks', weeks: 'weeks', study: 'study', todo: 'todo', dday: 'dday', month: 'month', quote: 'quote' }
+const KINDS = { '공부': 'study', '할일': 'todo', '디데이': 'dday', 'd-day': 'dday', '달력': 'month', '캘린더': 'cal', '일정': 'cal', calendar: 'cal', '다짐': 'quote', '시간표': 'class', '수업': 'class', class: 'class', '주간': 'week', week: 'week', '과목': 'subj', subj: 'subj', '지금': 'now', '다음': 'now', now: 'now', '진도': 'prog', prog: 'prog', '목표': 'goals', goals: 'goals', '오늘': 'today', today: 'today', '대시보드': 'dash', dash: 'dash', '내일': 'tmrw', tomorrow: 'tmrw', '마감': 'due', due: 'due', '일주일': 'week7', '7일': 'week7', week7: 'week7', '디데이목록': 'ddl', ddl: 'ddl', '바로가기': 'quick', '시작': 'quick', quick: 'quick', '구성': 'custom', '내위젯': 'custom', custom: 'custom', '타이머': 'timer', '스톱워치': 'timer', timer: 'timer', '진행': 'pct', '공부진행': 'pct', pct: 'pct', '남은분': 'mins', '분': 'mins', mins: 'mins', '노트': 'note', '메모': 'note', note: 'note', '습관': 'habit', habit: 'habit', '시리즈': 'series', series: 'series', '배치': 'board', '주간배치': 'board', board: 'board', '주차': 'weeks', weeks: 'weeks', '표': 'tbl', table: 'tbl', '보드': 'boardn', '사진': 'photo', photo: 'photo', study: 'study', todo: 'todo', dday: 'dday', month: 'month', quote: 'quote' }
 let RAWP, PARAM, DDI, KIND, BASEKIND, ARG
 function setParam(raw) {
   RAWP = String(raw || '').replace(/\\s/g, '').toLowerCase()
@@ -160,6 +160,18 @@ let inkDark = false
 function cap(parent, s) { return t(parent, s.split('').join(' '), label(8), SOFT) }
 
 const data = await load()
+const nzT = (s) => String(s || '').replace(/\\s/g, '').toLowerCase()
+async function loadPhotos() {
+  const pp = CFM.joinPath(CFM.documentsDirectory(), 'study-photo-cache.json')
+  try {
+    if (!SRC) throw new Error('no source')
+    const j = await new Request(SRC.replace(/widget\\.json.*$/, 'photo.json') + '?t=' + Date.now()).loadJSON()
+    const l = (j && Array.isArray(j.list)) ? j.list : []
+    try { CFM.writeString(pp, JSON.stringify(l)) } catch (e) {}
+    return l
+  } catch (e) { try { return JSON.parse(CFM.readString(pp)) } catch (e2) { return [] } }
+}
+const PHOTOS = KIND === 'photo' ? await loadPhotos() : []
 const QP = (typeof args !== 'undefined' && args && args.queryParameters) || {}
 try { RUN = Keychain.contains('study-gh') && data && data.gid ? 'scriptable:///run/' + encodeURIComponent(Script.name()) : null } catch (e) { RUN = null }
 // 위젯을 눌러 실행된 경우: 할 일 완료 · 타이머 시작/일시정지/정지 · 공부 기록 → 동기화 저장소에 명령을 남기고(앱이 열리면 반영) 위젯 데이터도 바로 고침

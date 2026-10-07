@@ -4,7 +4,7 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 import { useSettings, setSettings, useColl, put, remove, patch, exportJSON, importJSON, uid, getState, deviceId as myDevice } from '../../store/store.js'
 import { seriesSummary } from '../../lib/series.js'
 import { diagText, recentErrors, clearErrors, persistStorage, updateBadge } from '../../lib/diag.js'
-import { notesForWidget } from '../../lib/notePreview.js'
+import { notesForWidget, tablesForWidget, boardsForWidget, photoPicks } from '../../lib/notePreview.js'
 import { PRESETS, FONTS, effTheme, setDeviceTheme } from '../../theme/theme.js'
 import { PALETTE, SOFT_PALETTE } from '../../store/schema.js'
 import { Card, Seg, Toggle, Field, Icon, toast, confirmSheet, openSheet, useMedia } from '../../components/ui.jsx'
@@ -17,7 +17,7 @@ import { pickQuote } from '../../lib/quote.js'
 import { pickColor, harmonize } from '../../lib/colors.js'
 import { eventsOn, classesOn } from '../../engine/scheduler.js'
 import { sortTasks } from '../tasks/filter.js'
-import { download } from '../../lib/files.js'
+import { download, blobUrl } from '../../lib/files.js'
 import { useMyFonts, addFont, removeFont, fontFamily, loadAllFonts, SYNC_FONT_MAX } from '../../lib/fonts.js'
 import { requestPermission } from '../../lib/notify.js'
 import { fmtTime, fmtClock, today, WD, weekStart } from '../../engine/date.js'
@@ -130,6 +130,10 @@ export function WidgetPreview() {
     : <div key={t.id} className="dw-todo"><span className={t.priority >= 3 ? 'dw-gold' : 'dw-soft'}>{t.priority >= 3 ? '•' : '–'}</span><span className="ellipsis" style={t.priority >= 3 ? { fontWeight: 500 } : null}>{t.title}</span></div>)}
     {!items.length && <div className="dw-soft">All clear.</div>}{items.length > n && <div className="dw-soft" style={{ fontSize: 11 }}>+ {items.length - n} more</div>}</> }
   const [kind, setKind] = useState('')
+  // 노트 사진 위젯 미리보기: 최근 노트의 첫 그림
+  const phW = photoPicks(getState())[0]
+  const [phUrl, setPhUrl] = useState(null)
+  useEffect(() => { let u = null, on = true; if (phW && kind === '사진') blobUrl(phW.fileId).then((x) => { u = x; if (on) setPhUrl(x) }).catch(() => {}); return () => { on = false; if (u) URL.revokeObjectURL(u) } }, [phW?.fileId, kind])
   const ddList = ddays.filter((x) => x.date >= d).sort((a, b) => a.date.localeCompare(b.date))
   const subMins = subjects.map((s) => ({ s, m: today0.filter((x) => x.subjectId === s.id).reduce((a, x) => a + x.dur, 0) })).filter((x) => x.m).sort((a, b) => b.m - a.m)
   const subBars = (n) => <>{subMins.slice(0, n).map((x) => <div key={x.s.id} className="dw-sub"><div className="row between"><span>{x.s.name}</span><span className="dw-soft">{hm(x.m)}</span></div><div className="dw-line"><i style={{ width: (x.m / subMins[0].m) * 100 + '%' }} /></div></div>)}{!subMins.length && <div className="dw-soft">No study yet.</div>}</>
@@ -505,6 +509,19 @@ export function WidgetPreview() {
   const sq = (z) => <div className="row" style={{ gap: 3, flexWrap: 'wrap' }}>{wkInfo.weeks.map((x) => <i key={x.k} style={{ width: z, height: z, borderRadius: 2, boxSizing: 'border-box', background: x.fut ? 'transparent' : x.m ? `color-mix(in srgb, var(--gold) ${Math.round(25 + 75 * x.r)}%, transparent)` : 'var(--rule)', border: x.fut ? '1px solid var(--rule)' : x.now ? '1px solid var(--ink)' : 0, outline: x.end ? '1px solid var(--gold)' : 0 }} />)}</div>
   const wkBody = (z, big) => wkInfo ? <><div className="dw-big"><span style={{ fontSize: big }}>{wkInfo.lw}</span><span className="dw-soft">주</span><span style={{ fontSize: big * 0.72, marginLeft: 4 }}>{wkInfo.ld}</span><span className="dw-soft">일</span></div><div style={{ height: 8 }} />{sq(z)}</> : <span className="dw-soft" style={{ fontSize: 12 }}>D-day를 추가해 주세요</span>
   V['주차'] = [M(<>{hdr('WEEKS', wkDd?.title || '')}{wkBody(10, 30)}</>), M(<>{hdr('WEEKS', wkDd?.title || '')}{wkBody(11, 36)}</>), M(<>{hdr('WEEKS', wkDd?.title || '')}{wkBody(16, 36)}</>)]
+  // 노트 표 · 노트 보드 · 노트 사진 (위젯 스크립트와 같은 데이터)
+  const tbW = tablesForWidget(getState())[0], bdW = boardsForWidget(getState())[0]
+  const none = (s) => <span className="dw-soft" style={{ fontSize: 12 }}>{s}</span>
+  const tblV = (nr, nc, fs) => !tbW ? none('노트에 표를 만들어 주세요') : <div className="col" style={{ gap: 0 }}>{tbW.r.slice(0, nr).map((r, i, a) => <div key={i} className="row" style={{ flexWrap: 'nowrap', gap: 6, padding: '3px 0', borderBottom: i < a.length - 1 ? 'var(--dw-rw, .6px) solid var(--rule)' : 0, fontSize: i === 0 && tbW.h ? fs - 2 : fs, color: i === 0 && tbW.h ? 'var(--soft)' : undefined }}>{Array.from({ length: Math.min(nc, r.length) }, (_, j) => <span key={j} className="ellipsis" style={{ flex: 1, minWidth: 0 }}>{r[j]}</span>)}</div>)}</div>
+  V['표'] = [M(<>{hdr('TABLE', tbW?.t || '')}{tblV(4, 2, 11)}</>), M(<>{hdr('TABLE', tbW?.t || '')}{tblV(4, 4, 11)}</>), M(<>{hdr('TABLE', tbW?.t || '')}{tblV(10, 4, 12)}</>)]
+  const bdV = (nc, nr) => !bdW ? none('노트에 보드를 만들어 주세요') : <div className="row" style={{ gap: 10, flexWrap: 'nowrap', alignItems: 'flex-start' }}>{bdW.c.slice(0, nc).map((c, i) => <div key={i} className="col" style={{ flex: 1, minWidth: 0, gap: 4 }}><div className="row between dw-soft" style={{ fontSize: 9, flexWrap: 'nowrap' }}><span className="ellipsis">{c.n}</span><span>{c.k}</span></div>{c.x.slice(0, nr).map((x, k) => <div key={k} className="ellipsis" style={{ fontSize: 11, lineHeight: 1.35 }}>{x}</div>)}{c.k > nr && <span className="dw-soft" style={{ fontSize: 8 }}>+{c.k - nr}</span>}</div>)}</div>
+  V['보드'] = [
+    M(<>{hdr('BOARD', bdW?.t || '')}{!bdW ? none('노트에 보드를 만들어 주세요') : bdW.c.slice(0, 3).map((c, i) => <div key={i} className="row between" style={{ fontSize: 12, marginBottom: 5, flexWrap: 'nowrap' }}><span className="ellipsis">{c.n}</span><span style={{ fontSize: 20, fontWeight: 200 }}>{c.k}</span></div>)}</>),
+    M(<>{hdr('BOARD', bdW?.t || '')}{bdV(3, 3)}</>),
+    M(<>{hdr('BOARD', bdW?.t || '')}{bdV(4, 8)}</>),
+  ]
+  const phV = !phW ? M(none('노트에 사진을 넣어 주세요')) : <div style={{ position: 'absolute', inset: 0, borderRadius: 'inherit', background: phUrl ? `url(${phUrl}) center / cover` : 'var(--rule)', display: 'flex', alignItems: 'flex-end', padding: 12 }}><span style={{ fontSize: 10, color: '#fff', background: 'rgba(27,29,34,.42)', borderRadius: 7, padding: '3px 8px' }}>{phW.t}</span></div>
+  V['사진'] = [phV, phV, phV]
   const L = kind === '타이머' ? Lfor('공부') : kind === '진행' ? { ...Lfor('공부'), c: [[pct + '%', B], [`공부 ${hm(mins)}`, S], [bar(mins / goal, 34)]] }
     : kind === '남은분' ? { ...Lfor('지금'), c: nC ? [[nCur ? '끝까지' : '시작까지', S], [`${Math.max(0, (nCur ? nC.e : nC.s) - nmP)}분`, { fontSize: 15 }], [nC.t, S]] : [['—', B]] }
     : Lfor(kind)

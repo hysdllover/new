@@ -1023,3 +1023,24 @@ button.file-sync { color: var(--accent); }
 .ic-pick.on { background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); }
 .note-icon { display: grid; place-items: center; color: var(--muted); }
 .nc-ic { display: inline-flex; color: var(--muted); }
+
+/* 노트 보드 블록 */
+.board-blk { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(150px, 1fr); gap: 10px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+.board-blk::-webkit-scrollbar { display: none; }
+.bb-col { background: color-mix(in srgb, var(--text) 3.5%, transparent); border-radius: var(--r-card, 10px); padding: 8px; display: flex; flex-direction: column; gap: 6px; min-height: 90px; }
+.bb-col.drop-on { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 45%, transparent); }
+.bb-h { display: flex; align-items: center; gap: 6px; font-size: .82em; color: var(--muted); padding: 0 2px; }
+.bb-h .ellipsis { flex: 1; }
+.bb-card { display: flex; align-items: flex-start; gap: 7px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 7px 8px; font-size: .92em; line-height: 1.45; touch-action: manipulation; }
+.bb-card.done .grow { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
+.bb-card.drop-on { box-shadow: 0 -2px 0 var(--accent); }
+.bb-card.holding { opacity: .7; }
+textarea.bb-edit { width: 100%; font: inherit; color: inherit; resize: none; outline: none; border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+.bb-more { min-width: 24px; min-height: 24px; margin: -3px -4px -3px 0; color: var(--muted); }
+.bb-add { text-align: left; padding: 4px 4px; }
+
+.dw-in { position: relative; }
+
+.wgoal-more { margin-top: 4px; padding: 2px 0; }
+.wgoal-tasks { display: flex; flex-direction: column; gap: 6px; margin: 6px 0 2px 28px; }
+.wgoal-task.done .ellipsis { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }

@@ -233,6 +233,7 @@ export async function drawNote(note, { theme = 'app' } = {}) {
     const t = b.text || ''
     if (b.type === 'divider') { add(40, (y0) => { g.fillStyle = T.rule; g.fillRect(P, y0 + 14, IW, 1.2) }); continue }
     if (b.type === 'file' || b.type === 'embed' || b.type === 'cols' || b.type === 'sync') continue
+    if (b.type === 'board') { for (const c of b.cols || []) { para(`${c.name} · ${(c.cards || []).length}`, { size: 20, color: T.soft, gap: 4 }); for (const x of (c.cards || []).slice(0, 8)) para('· ' + x.text, { size: 22, color: T.ink, gap: 3 }) } add(10, () => {}); continue }
     if (b.type === 'link') { para('↗ ' + (b.title || b.url), { size: 22, color: T.soft, gap: 6 }); continue }
     if (b.type === 'table') { for (const [i, r] of (b.rows || []).entries()) { const x = r.filter(Boolean).join('  |  '); if (x) para(x, { size: 22, color: i ? T.ink : T.soft, gap: 4 }) } add(14, () => {}); continue }
     if (b.type === 'page') { const pg = find('notes', b.pageId); para('↳ ' + (pg ? noteTitle(pg) : '하위 페이지'), { size: 24, color: T.soft }); continue }
