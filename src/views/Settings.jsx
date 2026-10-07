@@ -346,7 +346,7 @@ function PhotoInboxGuide() {
   )
 }
 
-// 자동 백업 목록 (gist 에 매주 저장, 최근 4개)
+// 자동 백업 목록 (보관용 gist 에 매주 저장, 최근 4개)
 function AutoBackups() {
   const sync = useSyncStatus()
   const [list, setList] = useState(null), [busy, setBusy] = useState(false)
@@ -732,7 +732,7 @@ function MyFonts({ th, setTheme, fonts }) {
       ))}
       <div className="row"><button className="btn sm" disabled={busy} onClick={pick}><Icon name="plus" size={14} />{busy ? '불러오는 중…' : '내 폰트 추가'}</button></div>
       <div className="tiny muted" style={{ lineHeight: 1.6 }}>
-        다운로드한 폰트 파일(.ttf · .otf · .woff)을 파일 앱에서 선택하세요. 1MB 이하 폰트는 아이폰·아이패드에 자동으로 동기화되고, 그보다 큰 폰트는 기기마다 한 번씩 추가해 주세요.
+        다운로드한 폰트 파일(.ttf · .otf · .woff)을 파일 앱에서 선택하세요. 5MB 이하 폰트는 아이폰·아이패드에 자동으로 동기화되고, 그보다 큰 폰트는 기기마다 한 번씩 추가해 주세요.
         {missing && <><br /><b>지금 고른 내 폰트가 이 기기에 없어 기본 폰트로 보여요. 같은 폰트를 추가해 주세요.</b></>}
       </div>
     </div>

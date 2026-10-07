@@ -49,3 +49,13 @@ test('mergeColl counts received and conflicts since last sync', () => {
   assert.equal(r.conflicts, 1)
   assert.equal(r.merged.a.v, 2)
 })
+
+test('노트 조각: 같은 id 는 항상 같은 조각 · 동기화 파일 이름', async () => {
+  const { shardOf, NOTE_SHARDS, isDataFile } = await import('../src/sync/merge.js')
+  const ids = Array.from({ length: 400 }, (_, i) => 'n' + i.toString(36) + 'x')
+  const cnt = Array(NOTE_SHARDS).fill(0)
+  for (const id of ids) { const k = shardOf(id); assert.ok(k >= 0 && k < NOTE_SHARDS); assert.equal(shardOf(id), k); cnt[k]++ }
+  assert.ok(Math.min(...cnt) > 20) // 고르게 나뉨
+  for (const n of ['tasks.json', 'notes.json', 'notes-3.json', 'settings.json']) assert.ok(isDataFile(n), n)
+  for (const n of ['push.json', 'att-x.txt', 'backup-2026-01-01.json', 'widget-gist.txt', 'meta.json']) assert.ok(!isDataFile(n), n)
+})

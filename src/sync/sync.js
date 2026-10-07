@@ -2,9 +2,9 @@ import { useSyncExternalStore } from 'react'
 import { notesForWidget, tablesForWidget, boardsForWidget, photoPicks } from '../lib/notePreview.js'
 import { seriesSummary } from '../lib/series.js'
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval'
-import { getState, replaceColl, onChange, patch, settings, list, put, find, deviceId } from '../store/store.js'
+import { getState, replaceColl, onChange, patch, settings, list, put, find, remove, deviceId } from '../store/store.js'
 import { COLLECTIONS, GIST_FILES } from '../store/schema.js'
-import { mergeColl, stableFile } from './merge.js'
+import { mergeColl, stableFile, shardOf, NOTE_SHARDS, isDataFile } from './merge.js'
 import { blobToDataUrl, setRemoteRaw, addFile } from '../lib/files.js'
 import { eventsOn, classesOn } from '../engine/scheduler.js'
 import { weekGoals, goalProgress, addTask, toggleTask, addSession } from '../store/actions.js'
@@ -32,14 +32,16 @@ export const useSyncStatus = () => useSyncExternalStore((f) => { L.add(f); retur
 const token = () => ls.get('gist_token')
 const gistId = () => ls.get('gist_id')
 
-async function gh(path, opt = {}) {
+async function ghRes(path, opt = {}) {
   const res = await fetch(API + path, {
     ...opt,
-    headers: { Authorization: `Bearer ${token()}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', ...(opt.body ? { 'Content-Type': 'application/json' } : null) },
+    cache: 'no-store',
+    headers: { Authorization: `Bearer ${token()}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', ...(opt.body ? { 'Content-Type': 'application/json' } : null), ...opt.headers },
   })
   const exp = res.headers.get('github-authentication-token-expiration') // 브라우저에 공개된 경우에만 읽힘
   if (exp) ls.set('token_exp', exp)
   if (!res.ok) {
+    if (res.status === 304) return res
     if (res.status === 403 || res.status === 429) {
       const body = await res.json().catch(() => ({}))
       const h = (k) => res.headers.get(k)
@@ -52,8 +54,12 @@ async function gh(path, opt = {}) {
       throw new Error('토큰 권한이 부족해요 (gist 권한 확인)')
     }
     if (res.status === 401) throw Object.assign(new Error('GitHub 에서 토큰이 만료·취소됐어요 (GitHub 메일에 이유가 있어요) · 새 토큰을 넣어 주세요'), { auth: true })
-    throw new Error(res.status === 404 ? 'Gist 를 찾을 수 없어요 (gist 권한 확인)' : `GitHub 오류 ${res.status}`)
+    throw Object.assign(new Error(res.status === 404 ? 'Gist 를 찾을 수 없어요 (gist 권한 확인)' : `GitHub 오류 ${res.status}`), { status: res.status })
   }
+  return res
+}
+async function gh(path, opt = {}) {
+  const res = await ghRes(path, opt)
   return res.status === 204 ? null : res.json()
 }
 
@@ -62,13 +68,19 @@ const excluded = () => {
   return new Set(Object.keys(ex).filter((k) => ex[k]))
 }
 
+// 노트는 notes-0~7.json 으로 나눠 올림 (한 노트를 고치면 그 조각만 다시 올라감) · notes.json 에는 첨부·동기화 블록
 function buildFiles(state) {
   const ex = excluded()
   const files = {}
   for (const f of GIST_FILES) {
     const colls = {}
-    for (const [c, file] of Object.entries(COLLECTIONS)) if (file === f && !ex.has(c)) colls[c] = state[c]
+    for (const [c, file] of Object.entries(COLLECTIONS)) if (file === f && !ex.has(c) && c !== 'notes') colls[c] = state[c]
     files[f + '.json'] = stableFile(colls)
+  }
+  if (!ex.has('notes')) {
+    const parts = Array.from({ length: NOTE_SHARDS }, () => ({}))
+    for (const [id, r] of Object.entries(state.notes || {})) parts[shardOf(id)][id] = r
+    parts.forEach((p, k) => { files[`notes-${k}.json`] = stableFile({ notes: p }) })
   }
   return files
 }
@@ -131,34 +143,112 @@ export function readConnectLink() {
 }
 
 export function disconnect() {
-  ls.set('gist_token', null); ls.set('gist_id', null); ls.set('gist_last', null); ls.set('widget_gist', null); ls.set('widget_last', null); ls.set('widget_at', null); ls.set('token_exp', null)
+  ls.set('gist_token', null); ls.set('gist_id', null); ls.set('gist_last', null); ls.set('widget_gist', null); ls.set('widget_last', null); ls.set('widget_at', null); ls.set('token_exp', null); ls.set('store_gist', null); dropGistCache()
   idbDel('gist_backup').catch(() => {})
   setStatus({ state: 'off', last: null, error: null })
 }
 
-// 내 폰트 동기화 (1MB 이하): 원격에만 있으면 받고, 로컬에만 있으면 올리고, 지운 건 양쪽에서 지움
-async function syncFonts(gist, patchFiles) {
-  const remote = Object.fromEntries(Object.entries(gist.files || {}).filter(([n]) => n.startsWith('font-')).map(([n, f]) => [n.slice(5).replace(/\.txt$/, ''), f]))
+// ── 보관용 gist: 첨부·폰트·백업 ──
+// 동기화 때마다 받는 데이터 gist 와 나눠서, 큰 파일을 매번 내려받지 않게 함
+// 올린 파일의 주소(raw)는 항목에 적어 두고(첨부: files.raw · 폰트·백업: live 항목) 다른 기기는 그 주소로 바로 받음
+const STORE_DESC = 'study-dashboard-store'
+const storeId = () => ls.get('store_gist')
+async function ensureStore(remoteId) {
+  if (storeId()) return storeId()
+  if (remoteId) { ls.set('store_gist', remoteId); return remoteId }
+  let found = null
+  for (let page = 1; page <= 5 && !found; page++) {
+    const gists = await gh(`/gists?per_page=100&page=${page}`)
+    found = gists.find((g) => g.description === STORE_DESC)
+    if (gists.length < 100) break
+  }
+  if (!found) {
+    const res = await ghRes('/gists', { method: 'POST', body: JSON.stringify({ description: STORE_DESC, public: false, files: { 'README.md': { content: '스터디 대시보드 보관함 (첨부·폰트·백업) · 지우지 마세요' } } }) })
+    found = await res.json()
+  }
+  ls.set('store_gist', found.id)
+  return found.id
+}
+const rawOf = (gid, name) => `https://gist.githubusercontent.com/${ls.get('gh_login')}/${gid}/raw/${name}`
+const gidOfRaw = (raw) => (/gist\.githubusercontent\.com\/[^/]+\/(\w+)\//.exec(raw || '') || [])[1]
+const nameOfRaw = (raw) => decodeURIComponent(String(raw || '').split('/').pop())
+// 보관용 gist 에 쓰기 — 응답 본문(보관함 전체)은 받지 않고 끊음
+async function storePatch(gid, files) {
+  const ac = new AbortController()
+  const res = await ghRes(`/gists/${gid}`, { method: 'PATCH', body: JSON.stringify({ files }), signal: ac.signal })
+  ac.abort()
+  return res
+}
+async function storePut(name, content) {
+  const gid = await ensureStore(remoteStoreId)
+  try { await storePatch(gid, { [name]: { content } }) } catch (e) {
+    if (e.status !== 404) throw e
+    ls.set('store_gist', null); remoteStoreId = null // 보관함이 지워짐 → 새로 만듦
+    return storePut(name, content)
+  }
+  return rawOf(gid, name)
+}
+// 보관함에서 지우기 (이미 없으면 그냥 넘어감)
+async function storeDel(raw) {
+  const gid = gidOfRaw(raw), name = nameOfRaw(raw)
+  if (!gid || !name) return
+  try { await storePatch(gid, { [name]: null }) } catch (e) { if (e.status !== 422 && e.status !== 404) throw e }
+}
+let remoteStoreId = null
+
+// 내 폰트 동기화 (5MB 이하): live 의 폰트 항목으로 주고받음 · 지운 폰트는 항목을 지워 다른 기기에도 반영
+async function syncFonts() {
+  const recs = Object.fromEntries(Object.values(getState().live || {}).filter((r) => r.kind === 'font').map((r) => [r.id.slice(5), r]))
   const dels = await pendingDeletes()
-  for (const id of dels) if (remote[id]) patchFiles[`font-${id}.txt`] = null
-  const local = listFonts()
-  for (const f of local) if (f.synced && !remote[f.id]) await removeFont(f.id, { remote: true })
-  for (const [id, f] of Object.entries(remote)) {
-    if (dels.includes(id) || local.some((x) => x.id === id)) continue
+  for (const id of dels) { const r = recs[id]; if (r && !r.deleted) { remove('live', r.id); if (r.raw) await storeDel(r.raw) } }
+  for (const f of listFonts()) if (f.synced && recs[f.id]?.deleted) await removeFont(f.id, { remote: true })
+  for (const [id, r] of Object.entries(recs)) {
+    if (r.deleted || !r.raw || dels.includes(id) || listFonts().some((x) => x.id === id)) continue
     try {
-      const meta = JSON.parse(f.truncated || !f.content ? await (await fetch(f.raw_url)).text() : f.content)
+      const meta = JSON.parse(await (await fetch(r.raw)).text())
       await importFont(id, meta, await (await fetch(meta.data)).blob())
     } catch {}
   }
-  const up = []
   for (const f of listFonts()) {
-    if (f.synced || remote[f.id] || f.size > SYNC_FONT_MAX) continue
+    if (f.size > SYNC_FONT_MAX || (f.synced && recs[f.id] && !recs[f.id].deleted)) continue
     const blob = await getFontBlob(f.id)
     if (!blob) continue
-    patchFiles[`font-${f.id}.txt`] = { content: JSON.stringify({ name: f.name, ps: f.ps, data: await blobToDataUrl(blob) }) }
-    up.push(f.id)
+    const raw = await storePut(`font-${f.id}.txt`, JSON.stringify({ name: f.name, ps: f.ps, data: await blobToDataUrl(blob) }))
+    put('live', { id: 'font-' + f.id, kind: 'font', name: f.name, ps: f.ps || '', raw })
+    await markSynced(f.id)
   }
-  return up
+  await clearDeletes()
+}
+
+// 예전 데이터 gist 에 있던 첨부·폰트·백업을 보관함으로 옮김 (동기화 때마다 조금씩)
+async function migrateLegacy(files, patchFiles) {
+  const text = async (f) => (f.content != null && !f.truncated ? f.content : (await fetch(f.raw_url)).text())
+  const ex = excluded()
+  let n = 0
+  for (const [name, f] of Object.entries(files)) {
+    if (n >= 3) break
+    let m
+    if ((m = /^att-(.+)\.txt$/.exec(name))) {
+      if (ex.has('files')) continue
+      const rec = getState().files?.[m[1]]
+      if (!rec) continue // 항목을 아직 못 받음 — 다음에
+      if (rec.deleted) { patchFiles[name] = null; continue }
+      if (!rec.raw) { const raw = await storePut(name, await text(f)); patch('files', rec.id, { gist: true, raw }) }
+      patchFiles[name] = null; n++
+    } else if ((m = /^font-(.+)\.txt$/.exec(name))) {
+      const id = m[1], r = find('live', 'font-' + id)
+      if (!r && !getState().live?.['font-' + id]) {
+        const t = await text(f)
+        let meta = {}; try { meta = JSON.parse(t) } catch {}
+        const raw = await storePut(name, t)
+        put('live', { id: 'font-' + id, kind: 'font', name: meta.name || '', ps: meta.ps || '', raw })
+      }
+      patchFiles[name] = null; n++
+    } else if ((m = BACKUP_RE.exec(name))) {
+      if (!getState().live?.['bk-' + m[1]]) { const raw = await storePut(name, await text(f)); put('live', { id: 'bk-' + m[1], kind: 'backup', date: m[1], size: f.size, raw }) }
+      patchFiles[name] = null; n++
+    }
+  }
 }
 
 // 위젯 전용 작은 gist — 홈 화면 위젯(Scriptable)이 빠르게 받을 수 있게 필요한 데이터만
@@ -325,36 +415,35 @@ async function syncWidget(remoteId, patchFiles, force) {
   if (remoteId !== id) patchFiles['widget-gist.txt'] = { content: id }
 }
 
-// 자동 백업: 7일마다 gist 에 `backup-날짜.json` 저장, 최근 4개만 보관 (이 기기에만 두는 항목은 제외)
+// 자동 백업: 7일마다 보관함에 `backup-날짜.json` 저장, 최근 4개만 보관 (이 기기에만 두는 항목은 제외)
 const BACKUP_RE = /^backup-(\d{4}-\d{2}-\d{2})\.json$/
 const ymdNow = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') }
 function backupContent() {
   const ex = excluded(), st = getState()
   return JSON.stringify({ app: 'study-dashboard', exportedAt: new Date().toISOString(), state: Object.fromEntries(Object.entries(st).filter(([c]) => !ex.has(c))) })
 }
-function autoBackup(gist, patchFiles, force = false) {
-  const names = Object.keys(gist.files || {}).filter((n) => BACKUP_RE.test(n)).sort()
-  const last = names.length ? names[names.length - 1].match(BACKUP_RE)[1] : null
+const backupRecs = () => list('live').filter((r) => r.kind === 'backup').sort((a, b) => a.date.localeCompare(b.date))
+async function autoBackup(force = false, legacy = {}) {
+  for (const r of backupRecs().slice(0, -4)) { remove('live', r.id); await storeDel(r.raw) }
+  if (!force && Object.keys(legacy).some((n) => BACKUP_RE.test(n))) return // 예전 백업을 다 옮긴 뒤에
+  const recs = backupRecs(), last = recs[recs.length - 1]?.date
   const due = force || !last || (Date.now() - new Date(last + 'T00:00').getTime()) / 86400000 >= 7
   if (!due) return
-  const name = `backup-${ymdNow()}.json`
-  patchFiles[name] = { content: backupContent() }
-  const keep = [...new Set([...names, name])].sort().slice(-4)
-  for (const n of names) if (!keep.includes(n)) patchFiles[n] = null
+  const date = ymdNow(), content = backupContent()
+  const raw = await storePut(`backup-${date}.json`, content)
+  put('live', { id: 'bk-' + date, kind: 'backup', date, size: content.length, raw })
+  for (const r of backupRecs().slice(0, -4)) { remove('live', r.id); await storeDel(r.raw) }
 }
 export async function listBackups() {
-  const g = await gh(`/gists/${gistId()}`)
-  return Object.entries(g.files || {}).filter(([n]) => BACKUP_RE.test(n)).map(([n, f]) => ({ name: n, date: n.match(BACKUP_RE)[1], size: f.size, raw: f.raw_url })).sort((a, b) => b.date.localeCompare(a.date))
+  return backupRecs().reverse().map((r) => ({ name: r.id, date: r.date, size: r.size || 0, raw: r.raw }))
 }
 export async function backupNow() {
-  const g = await gh(`/gists/${gistId()}`)
-  const patchFiles = {}
-  autoBackup(g, patchFiles, true)
-  await gh(`/gists/${gistId()}`, { method: 'PATCH', body: JSON.stringify({ files: patchFiles }) })
+  await autoBackup(true)
+  syncNow()
 }
 // 되돌리기: 백업 속 항목을 지금 시각으로 덮어써 모든 기기에 반영 (백업 이후 새로 만든 항목은 남음)
 export async function restoreBackup(b) {
-  const data = JSON.parse(await (await fetch(b.raw)).text())
+  const data = JSON.parse(await (await fetch(b.raw, { cache: 'no-store' })).text())
   if (!data.state) throw new Error('백업 형식이 올바르지 않아요')
   const now = Date.now(), dev = localStorage.getItem('deviceId')
   for (const [c, recs] of Object.entries(data.state)) {
@@ -364,6 +453,31 @@ export async function restoreBackup(b) {
   }
   syncNow()
 }
+
+// ── 데이터 gist 받기: 바뀌지 않았으면(304) 지난번 받은 내용을 그대로 씀 ──
+// 큰 파일(예전 첨부·폰트·백업)은 내용 없이 주소만 기억
+const BIG = /^(att|font|backup)-/
+let gcache = null
+async function cacheGet() { if (!gcache) gcache = (await idbGet('gist_cache').catch(() => null)) || {}; return gcache }
+function cacheSet(id, etag, gist) { gcache = { id, etag, gist }; idbSet('gist_cache', gcache).catch(() => {}) }
+async function slim(gist, known = {}) {
+  const files = {}
+  for (const [n, f] of Object.entries(gist.files || {})) {
+    const meta = { raw_url: f.raw_url, size: f.size }
+    if (BIG.test(n)) { files[n] = f.truncated ? { ...meta, truncated: true } : { ...meta, content: f.content }; continue }
+    files[n] = { ...meta, content: typeof known[n] === 'string' ? known[n] : f.truncated || f.content == null ? await (await fetch(f.raw_url)).text() : f.content }
+  }
+  return { login: gist.owner?.login || null, files }
+}
+async function getGist() {
+  const c = await cacheGet(), id = gistId()
+  const res = await ghRes(`/gists/${id}`, { headers: c.id === id && c.etag && c.gist ? { 'If-None-Match': c.etag } : {} })
+  if (res.status === 304) return c.gist
+  const g = await slim(await res.json())
+  cacheSet(id, res.headers.get('etag'), g)
+  return g
+}
+export const dropGistCache = () => { gcache = {}; idbDel('gist_cache').catch(() => {}) }
 
 let againFlush = false
 let running = null, again = false, pausedUntil = 0, resumeTimer = null, lastPush = 0, lastRun = 0
@@ -429,22 +543,23 @@ export async function syncNow({ flush = false } = {}) {
     setStatus({ state: 'syncing', error: null, auth: false })
     try {
       await ensureGist()
-      const gist = await gh(`/gists/${gistId()}`)
-      if (gist.owner?.login) ls.set('gh_login', gist.owner.login)
+      const gist = await getGist()
+      if (gist.login) ls.set('gh_login', gist.login)
       const remoteText = {}, inbox = [], cmds = []
       for (const [name, f] of Object.entries(gist.files || {})) {
         if (name.startsWith('inbox-')) { inbox.push([name, f]); continue }
         if (name.startsWith('cmd-')) { cmds.push([name, f]); continue }
         if (name.startsWith('att-')) { setRemoteRaw(name.slice(4).replace(/\.txt$/, ''), f.raw_url); continue }
-        if (name.startsWith('font-') || name.startsWith('backup-')) continue
-        remoteText[name] = f.truncated ? await (await fetch(f.raw_url)).text() : f.content
+        if (BIG.test(name)) continue
+        remoteText[name] = f.content
       }
+      remoteStoreId = remoteText['store-gist.txt']?.trim() || null
       // 1) 원격 → 로컬 병합
       const ex = excluded(), since = +ls.get('gist_last') || 0
       let got = 0, clash = 0
-      for (const f of GIST_FILES) {
+      for (const name of Object.keys(remoteText).filter(isDataFile)) {
         let data = {}
-        try { data = JSON.parse(remoteText[f + '.json'] || '{}') } catch {}
+        try { data = JSON.parse(remoteText[name] || '{}') } catch {}
         for (const [c, recs] of Object.entries(data)) {
           if (!(c in COLLECTIONS) || ex.has(c)) continue
           const { merged, localChanged, received, conflicts } = mergeColl(getState()[c], recs, since)
@@ -455,44 +570,46 @@ export async function syncNow({ flush = false } = {}) {
       // 1-1) 사진 받기함: 단축어가 gist 에 올린 사진(inbox-*.txt, base64) → 받은 편지함 할 일로 · 처리한 건 gist 에서 지움
       const inboxDone = [...await takeInbox(inbox), ...await takeCmds(cmds)]
       // 2) 로컬 → 원격: 바뀐 파일만
-      const files = buildFiles(getState())
       const patchFiles = {}
       for (const n of inboxDone) patchFiles[n] = null
-      for (const [name, content] of Object.entries(files)) if (remoteText[name] !== content) patchFiles[name] = { content }
-      // 첨부 파일 업로드 / 삭제
-      // 첨부는 본 데이터와 따로 한 개씩 올림 (큰 파일 하나가 실패해도 동기화 전체가 막히지 않게) — 아래 3) 에서
-      const attQueue = []
-      for (const m of list('files')) {
-        if (m.gist || gist.files?.[`att-${m.id}.txt`]) { if (!m.gist && gist.files?.[`att-${m.id}.txt`]) patch('files', m.id, { gist: true }); continue }
-        attQueue.push(m)
-      }
-      for (const r of Object.values(getState().files)) if (r.deleted && gist.files?.[`att-${r.id}.txt`]) patchFiles[`att-${r.id}.txt`] = null
-      const fontsUp = await syncFonts(gist, patchFiles)
-      autoBackup(gist, patchFiles)
-      try { await syncWidget(remoteText['widget-gist.txt']?.trim(), patchFiles, flush) } catch (e) { if (e.until) throw e }
-      if (Object.keys(patchFiles).length) {
-        const res = await gh(`/gists/${gistId()}`, { method: 'PATCH', body: JSON.stringify({ files: patchFiles }) })
-        lastPush = Date.now()
-        for (const [name, f] of Object.entries(res.files || {})) if (name.startsWith('att-')) setRemoteRaw(name.slice(4).replace(/\.txt$/, ''), f.raw_url)
-        for (const id of fontsUp) await markSynced(id)
-      }
-      // 3) 첨부 파일 올리기: 한 번에 최대 4개 · 하나씩 · 실패하면 이유를 기록하고 다음 동기화 때 다시
+      // 예전 gist 의 첨부·폰트·백업 옮기기 · 폰트 · 백업 (보관함)
+      // 보관함 일이 실패해도 데이터 동기화는 계속 (기록만 남기고 다음에 다시)
+      try {
+        await migrateLegacy(gist.files || {}, patchFiles)
+        await syncFonts()
+        await autoBackup(false, gist.files || {})
+        // 지운 지 30일 지난 첨부는 보관함에서도 지움 (그 전엔 휴지통에서 되살릴 수 있게)
+        for (const r of Object.values(getState().files)) {
+          if (r.deleted && r.raw && !r.rm && Date.now() - (r.deletedAt || r.updatedAt || 0) > 30 * 86400000) { await storeDel(r.raw); patch('files', r.id, { rm: true }) }
+        }
+      } catch (e) { if (e.until) throw e; addLog({ at: Date.now(), err: '보관함 · ' + String(e.message || e).slice(0, 60) }) }
+      const attQueue = list('files').filter((m) => !m.gist && !gist.files?.[`att-${m.id}.txt`])
+      // 첨부 올리기 (보관함): 한 번에 최대 4개 · 하나씩 · 실패하면 이유를 기록하고 다음 동기화 때 다시
       let attFail = 0
       for (const m of attQueue.slice(0, 4)) {
         try {
           const blob = await idbGet('blob:' + m.id)
           if (!blob) continue // 다른 기기에서 만든 첨부 (그 기기가 올림)
           if (blob.size > ATT_MAX) { if (!m.tooBig) { patch('files', m.id, { tooBig: true }); addLog({ at: Date.now(), err: `‘${m.name}’ 은 ${Math.round(blob.size / 1048576)}MB 라 이 기기에만 있어요 (동기화는 ${ATT_MAX / 1048576}MB 까지)` }) } continue }
-          const res = await gh(`/gists/${gistId()}`, { method: 'PATCH', body: JSON.stringify({ files: { [`att-${m.id}.txt`]: { content: await blobToDataUrl(blob) } } }) })
-          const f = res.files?.[`att-${m.id}.txt`]; if (f) setRemoteRaw(m.id, f.raw_url)
-          patch('files', m.id, { gist: true })
+          const raw = await storePut(`att-${m.id}.txt`, await blobToDataUrl(blob))
+          patch('files', m.id, { gist: true, raw })
         } catch (e) { if (e.until) throw e; attFail++; addLog({ at: Date.now(), err: `첨부 ‘${m.name}’ 올리기 실패 · ${String(e.message || e).slice(0, 50)}` }) }
       }
       if (attQueue.length > 4 && !attFail) again = true // 남은 첨부는 이어서
-      await clearDeletes()
+      const sid = storeId() || remoteStoreId
+      if (sid && !remoteStoreId) patchFiles['store-gist.txt'] = { content: sid }
+      // 위에서 바뀐 항목(폰트·백업·첨부 주소)까지 함께 올림
+      for (const [name, content] of Object.entries(buildFiles(getState()))) if (remoteText[name] !== content) patchFiles[name] = { content }
+      try { await syncWidget(remoteText['widget-gist.txt']?.trim(), patchFiles, flush) } catch (e) { if (e.until) throw e }
+      if (Object.keys(patchFiles).length) {
+        const res = await ghRes(`/gists/${gistId()}`, { method: 'PATCH', body: JSON.stringify({ files: patchFiles }) })
+        lastPush = Date.now()
+        const known = Object.fromEntries(Object.entries(patchFiles).filter(([, v]) => v?.content != null).map(([k, v]) => [k, v.content]))
+        cacheSet(gistId(), res.headers.get('etag'), await slim(await res.json(), known))
+      }
       const now = Date.now()
       ls.set('gist_last', String(now))
-      const sent = Object.keys(patchFiles).filter((k) => k.endsWith('.json') && !k.startsWith('backup-')).length
+      const sent = Object.keys(patchFiles).filter((k) => isDataFile(k) && patchFiles[k]).length
       if (got || sent || clash) addLog({ at: now, got, sent, clash })
       setStatus({ state: 'ok', last: now })
       markDevice(now)
