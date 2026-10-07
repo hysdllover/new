@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import { Icon, UiLayer, useUi, closeDetail, openSheet, openMenu, useMedia } from './components/ui.jsx'
 import { TABS, EXTRA, SEGMENTS, useNav, go, segOf, tabOpt, DEFAULT_TABBAR } from './nav.js'
 import { useColl, useSettings, setSettings } from './store/store.js'
@@ -13,15 +13,14 @@ import TaskEditor from './components/TaskEditor.jsx'
 import EventEditor from './components/EventEditor.jsx'
 import BlockEditor from './components/BlockItemEditor.jsx'
 import Home from './views/Home.jsx'
-import Planner from './views/Planner.jsx'
-import Tasks from './views/Tasks.jsx'
-import Study from './views/Study.jsx'
-import Notes from './views/Notes.jsx'
 import Health from './views/Health.jsx'
-import Settings from './views/Settings.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 
-const VIEWS = { home: Home, planner: Planner, tasks: Tasks, study: Study, notes: Notes, health: Health, settings: Settings }
+// 홈·건강(홈 위젯이 씀) 말고는 처음 열 때 받음 · 앱이 뜬 뒤 쉬는 시간에 미리 받아 둠(오프라인 대비)
+const LOAD = { planner: () => import('./views/Planner.jsx'), tasks: () => import('./views/Tasks.jsx'), study: () => import('./views/Study.jsx'), notes: () => import('./views/Notes.jsx'), settings: () => import('./views/Settings.jsx') }
+const VIEWS = { home: Home, health: Health, ...Object.fromEntries(Object.entries(LOAD).map(([k, f]) => [k, lazy(f)])) }
+const prefetch = () => Object.values(LOAD).forEach((f) => f().catch(() => {}))
+if (typeof window !== 'undefined') (window.requestIdleCallback || ((f) => setTimeout(f, 2500)))(prefetch, { timeout: 4000 })
 // 아이패드 가로 2단: 오른쪽에 함께 띄울 화면 (설정 › 디자인)
 export const SPLIT = { planner: ['planner', 'today', '오늘 일정'], timer: ['study', 'timer', '타이머'], tasks: ['tasks', 'day', '오늘 할 일'], notes: ['notes', 'daily', '데일리 노트'] }
 const TITLES = { home: null, planner: '캘린더', tasks: '할 일', study: '공부 기록', notes: '노트', health: '건강', settings: '설정' }
@@ -142,14 +141,14 @@ export default function App() {
         <StatusLine sync={sync} />
         <ResumeBanner />
         <main className="content" id="content">
-          <div className="content-inner">{sync.state === 'off' && !isStandalone() && /iP(hone|ad)|Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 0 && <SafariNote />}<ErrorBoundary where={'view:' + tab + '.' + seg} reset={tab + seg} big><View seg={seg} params={nav.params[tab] || {}} /></ErrorBoundary></div>
+          <div className="content-inner">{sync.state === 'off' && !isStandalone() && /iP(hone|ad)|Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 0 && <SafariNote />}<ErrorBoundary where={'view:' + tab + '.' + seg} reset={tab + seg} big><Suspense fallback={null}><View seg={seg} params={nav.params[tab] || {}} /></Suspense></ErrorBoundary></div>
         </main>
       </div>
 
       {detail && wide && <aside className="detail open">{detail}</aside>}
       {!detail && wide && pane && <aside className="split-pane no-print">
         <div className="row between" style={{ marginBottom: 8 }}><span className="small muted">{SPLIT[st.splitPane][2]}</span><button className="icon-btn" aria-label="2단 닫기" onClick={() => setSettings({ splitPane: null })}><Icon name="close" size={14} /></button></div>
-        <pane.V seg={pane.seg} params={{}} />
+        <Suspense fallback={null}><pane.V seg={pane.seg} params={{}} /></Suspense>
       </aside>}
       {detail && !wide && (
         <>

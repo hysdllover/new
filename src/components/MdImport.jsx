@@ -1,6 +1,6 @@
 // 가져오기: 마크다운·텍스트·CSV · 노션/옵시디언 zip · HTML · Word(.docx) · PDF → 미리 보고 → 새 페이지 / 지금 페이지 아래에 붙이기
 import { useMemo, useState } from 'react'
-import { put, patch, find, batch } from '../store/store.js'
+import { put, patch, find, batch, list } from '../store/store.js'
 import { mdToBlocks, mdToNote, mdSummary, cleanName } from '../lib/md.js'
 import { linkTodos } from '../lib/notes.js'
 import { pickFiles } from '../lib/files.js'
@@ -56,6 +56,9 @@ export default function MdImport({ close, noteId }) {
   const [loose, setLoose] = useState([]) // 그림과 함께 고른 .md (옵시디언처럼 ![[그림]] 연결)
   const [plan, setPlan] = useState(null), [busy, setBusy] = useState(''), [pdfImg, setPdfImg] = useState(false)
   const target = noteId && find('notes', noteId)
+  // 중복 확인: 같은 제목 노트가 이미 있으면 건너뛰기(기본)
+  const titles = useMemo(() => new Set(list('notes').filter((n) => !n.isTemplate).map((n) => String(n.title || '').trim()).filter(Boolean)), [])
+  const [skipDup, setSkipDup] = useState(true)
   const parsed = useMemo(() => (files.length ? files.map((f) => ({ ...mdToNote(f.text, f.name), name: f.name })) : text.trim() ? [{ ...mdToNote(text, ''), name: '' }] : []), [files, text])
   const build = async (rs, tf, img = pdfImg, lf = loose) => {
     if (!rs.length && !lf.length) { setPlan(null); return }
@@ -88,33 +91,41 @@ export default function MdImport({ close, noteId }) {
       await build(rs, tf, pdfImg, lf)
     } catch (e) { toast('파일을 읽지 못했어요 · ' + e.message) }
   }
+  const dupOf = (t) => titles.has(String(t || '').trim())
+  const dupN = target ? 0 : plan ? plan.pages.filter((p) => !p.parent && dupOf(p.title)).length : parsed.filter((p) => dupOf(p.title)).length
+  // 가져온 뒤 알림의 ‘되돌리기’ 로 한 번에 취소 (만든 페이지·할 일·첨부는 휴지통으로, 붙인 페이지는 전 내용으로)
   const run = async () => {
-    if (plan) {
-      setBusy('가져오는 중…')
-      const m = await import('../lib/importers.js')
-      try {
-        if (target) { const r = await m.commitIntoNote(plan, noteId); close(); toast(r.sub ? `${r.blocks}줄을 붙이고 하위 페이지 ${r.sub}개를 만들었어요` : `${r.blocks}줄을 붙였어요`); return }
-        const made = await m.commitPlan(plan, { subjectId: null })
-        close()
-        const tops = made.filter((n) => !n.parentId)
-        toast(made.length === 1 ? `‘${made[0].title}’ 페이지로 가져왔어요` : `${made.length}개 페이지로 가져왔어요`)
-        if (tops.length === 1) openNote(tops[0].id)
-      } catch (e) { toast('가져오지 못했어요 · ' + e.message); setBusy('') }
-      return
-    }
-    if (!parsed.length) return
-    if (target) {
-      const n = find('notes', noteId); if (!n) return
-      const add = linkTodos(files.length ? files.flatMap((f) => (/\.(csv|tsv)$/i.test(f.name) ? mdToNote(f.text, f.name).blocks : mdToBlocks(f.text))) : mdToBlocks(text), n)
-      if (!add.length) return toast('가져올 내용이 없어요')
-      const cur = (n.blocks || []).filter((b, i, a) => !(i === a.length - 1 && b.type === 'text' && !b.text))
-      patch('notes', n.id, { blocks: [...cur, ...add] })
-      close(); return toast(`${add.length}줄을 붙였어요`)
-    }
-    const made = batch(() => (files.length ? files.map((f) => importMarkdown(f.text, f.name)) : [importMarkdown(text, '')]))
-    close()
-    toast(made.length === 1 ? `‘${made[0].title}’ 페이지로 가져왔어요` : `${made.length}개 페이지로 가져왔어요`)
-    if (made.length === 1) openNote(made[0].id)
+    const m = await import('../lib/importers.js')
+    let msg = '', open = null
+    setBusy('가져오는 중…')
+    try {
+      const { undo } = await m.withUndo(async () => {
+        if (plan) {
+          if (target) { const r = await m.commitIntoNote(plan, noteId); msg = r.sub ? `${r.blocks}줄을 붙이고 하위 페이지 ${r.sub}개를 만들었어요` : `${r.blocks}줄을 붙였어요`; return }
+          const made = await m.commitPlan(skipDup ? m.dropDuplicates(plan, titles) : plan, { subjectId: null })
+          const tops = made.filter((n) => !n.parentId)
+          msg = !made.length ? '모두 이미 있는 노트라 건너뛰었어요' : made.length === 1 ? `‘${made[0].title}’ 페이지로 가져왔어요` : `${made.length}개 페이지로 가져왔어요`
+          if (tops.length === 1) open = tops[0].id
+          return
+        }
+        if (target) {
+          const n = find('notes', noteId); if (!n) return
+          const add = linkTodos(files.length ? files.flatMap((f) => (/\.(csv|tsv)$/i.test(f.name) ? mdToNote(f.text, f.name).blocks : mdToBlocks(f.text))) : mdToBlocks(text), n)
+          if (!add.length) { msg = '가져올 내용이 없어요'; return }
+          const cur = (n.blocks || []).filter((b, i, a) => !(i === a.length - 1 && b.type === 'text' && !b.text))
+          patch('notes', n.id, { blocks: [...cur, ...add] })
+          msg = `${add.length}줄을 붙였어요`; return
+        }
+        const src = files.length ? files.map((f) => [f.text, f.name]) : [[text, '']]
+        const keep = skipDup ? src.filter(([t, nm]) => !dupOf(mdToNote(t, nm).title)) : src
+        const made = batch(() => keep.map(([t, nm]) => importMarkdown(t, nm)))
+        msg = !made.length ? '모두 이미 있는 노트라 건너뛰었어요' : made.length === 1 ? `‘${made[0].title}’ 페이지로 가져왔어요` : `${made.length}개 페이지로 가져왔어요`
+        if (made.length === 1) open = made[0].id
+      })
+      close()
+      toast(msg, msg.endsWith('건너뛰었어요') || msg === '가져올 내용이 없어요' ? undefined : { label: '되돌리기', fn: () => { undo(); toast('가져오기를 되돌렸어요') } })
+      if (open) openNote(open)
+    } catch (e) { toast('가져오지 못했어요 · ' + e.message); setBusy('') }
   }
   const reset = () => { setFiles([]); setRich([]); setLoose([]); setPlan(null) }
   const hasPdf = rich.some((f) => /\.pdf$/i.test(f.name))
@@ -130,6 +141,10 @@ export default function MdImport({ close, noteId }) {
       {hasPdf && <Toggle checked={pdfImg} onChange={(v) => { setPdfImg(v); build(rich, files, v) }} label="PDF 쪽을 그림으로도 넣기 (글자와 함께)" />}
       {!files.length && !rich.length && <textarea className="input" style={{ minHeight: 140, fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 13 }} placeholder={'또는 여기에 붙여 넣기\n\n# 제목\n- 목록\n  - 들여쓴 목록\n- [ ] 할 일\n> [!tip] 강조 상자'} value={text} onChange={(e) => setText(e.target.value)} />}
       {busy && <div className="small muted">{busy}</div>}
+      {dupN > 0 && <div className="mdi-card">
+        <div className="small">같은 제목 노트가 이미 {dupN}개 있어요</div>
+        <Toggle checked={skipDup} onChange={setSkipDup} label="같은 제목은 건너뛰기" />
+      </div>}
       {plan ? <>
         <div className="mdi-card"><div className="small">{plan.summary}</div></div>
         {plan.pages.slice(0, 6).map((p) => (
