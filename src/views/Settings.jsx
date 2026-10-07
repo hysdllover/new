@@ -2,6 +2,7 @@ import { useTimerState, useTick, elapsed, remaining } from '../lib/timer.js'
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { useSettings, setSettings, useColl, put, remove, patch, exportJSON, importJSON, uid, getState, deviceId as myDevice } from '../store/store.js'
 import { seriesSummary } from '../lib/series.js'
+import { diagText, recentErrors, clearErrors, persistStorage, updateBadge } from '../lib/diag.js'
 import { notesForWidget } from '../lib/notePreview.js'
 import { PRESETS, FONTS, effTheme, setDeviceTheme } from '../theme/theme.js'
 import { PALETTE, SOFT_PALETTE } from '../store/schema.js'
@@ -164,10 +165,32 @@ export default function Settings() {
         <AutoBackups />
         <div className="tiny muted" style={{ marginTop: 8 }}>교체: 지금 데이터를 백업 파일로 바꿔요 · 합치기: 지금 데이터는 두고 항목마다 최신 수정만 반영해요. 첨부 파일 원본은 Gist 동기화로 옮겨지고, JSON 백업에는 목록만 포함돼요.</div>
       </Card>
+      <DiagCard />
       <Card title="홈 화면에 설치">
         <div className="small">Safari 에서 공유 버튼 → <b>홈 화면에 추가</b>. 전체 화면·오프라인으로 동작합니다. iPhone 과 iPad 모두 같은 방법으로 설치한 뒤 위 동기화에 같은 토큰을 입력하세요.</div>
       </Card>
     </div>
+  )
+}
+
+// 문제 신고 · 진단: 기기·버전·저장 공간·최근 오류를 한 번에 복사 (토큰·내용 없음)
+function DiagCard() {
+  const sync = useSyncStatus(), st = useSettings()
+  const [errN, setErrN] = useState(() => recentErrors().length), [pers, setPers] = useState(null)
+  useEffect(() => { navigator.storage?.persisted?.().then(setPers).catch(() => {}) }, [])
+  const copy = async () => { const t = await diagText({ sync }); try { await navigator.clipboard.writeText(t); toast('진단 정보를 복사했어요') } catch { openSheet(() => <textarea className="input" readOnly value={t} style={{ minHeight: 280, fontSize: 11, fontFamily: 'ui-monospace, Menlo, monospace' }} onFocus={(e) => e.target.select()} />, { title: '진단 정보' }) } }
+  return (
+    <Card title="문제 신고 · 진단">
+      <div className="form">
+        <div className="row wrap" style={{ gap: 6 }}>
+          <button className="btn" onClick={copy}><Icon name="download" size={15} />진단 정보 복사</button>
+          {errN > 0 && <button className="btn" onClick={() => { clearErrors(); setErrN(0); toast('오류 기록을 지웠어요') }}>오류 기록 지우기 ({errN})</button>}
+          {pers === false && <button className="btn" onClick={async () => { const r = await persistStorage(); setPers(!!r); toast(r ? '저장 공간을 보존해요' : 'iOS 가 아직 허용하지 않았어요 · 홈 화면 앱에서 다시 눌러 주세요') }}>저장 공간 보존 요청</button>}
+        </div>
+        <div className="tiny muted">기기·버전·화면·저장 공간·동기화 상태·최근 오류를 글로 복사해요. 토큰이나 노트 내용은 들어가지 않아요. 저장 공간: {pers == null ? '확인 중' : pers ? '보존됨 (공간이 부족해도 지워지지 않아요)' : '보존 요청 전'}</div>
+        <Toggle checked={st.appBadge !== false} onChange={(v) => { setSettings({ appBadge: v }); setTimeout(updateBadge, 50) }} label="앱 아이콘에 남은 할 일 수 (알림 허용 필요)" />
+      </div>
+    </Card>
   )
 }
 

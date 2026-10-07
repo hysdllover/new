@@ -10,6 +10,10 @@ import { applyTheme } from './theme/theme.js'
 import { initFonts } from './lib/fonts.js'
 import { applyAppIcon } from './lib/appIcon.js'
 import { startNoteVersions } from './lib/noteVersions.js'
+import { installErrorLog, persistStorage, updateBadge } from './lib/diag.js'
+import { pendingChanges } from './lib/whatsnew.js'
+import { subscribe } from './store/store.js'
+installErrorLog()
 applyAppIcon()
 import { TABS, EXTRA, go } from './nav.js'
 import { addTask } from './store/actions.js'
@@ -27,6 +31,11 @@ function Root() {
 
 const linkIn = readConnectLink() // 렌더 전에 주소에서 토큰 지움
 Promise.all([loadState(), initFonts(), restoreSync()]).then(async () => {
+  persistStorage()
+  // 앱 아이콘 배지: 할 일이 바뀔 때마다 (잠깐 모아서)
+  let bt = 0; updateBadge(); subscribe(() => { clearTimeout(bt); bt = setTimeout(updateBadge, 800) })
+  // 업데이트 뒤 처음 열면 새로워진 점 한 줄
+  setTimeout(() => { const ch = pendingChanges(); if (ch?.length) toast('새로워진 점 · ' + ch[0].items[0], { label: '보기', fn: () => import('./components/ui.jsx').then((m) => m.openSheet(() => <div className="col" style={{ gap: 10 }}>{ch.map((c) => <div key={c.v}><div className="tiny muted">{c.v}</div>{c.items.map((x, i) => <div key={i} className="small">· {x}</div>)}</div>)}</div>, { title: '새로워진 점' })) }) }, 1500)
   if (linkIn) connect(linkIn.t, linkIn.g).then((id) => toast(id ? '이 브라우저도 동기화 연결됨' : '토큰 저장됨 · 연결은 자동으로 다시 시도해요')).catch((e) => toast(e.message))
   if (location.search.includes('demo')) (await import('./dev/seed.js')).seed()
   // 홈 화면 위젯에서 연 링크: ?go=탭.세그먼트

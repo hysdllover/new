@@ -19,6 +19,7 @@ import Study from './views/Study.jsx'
 import Notes from './views/Notes.jsx'
 import Health from './views/Health.jsx'
 import Settings from './views/Settings.jsx'
+import ErrorBoundary from './components/ErrorBoundary.jsx'
 
 const VIEWS = { home: Home, planner: Planner, tasks: Tasks, study: Study, notes: Notes, health: Health, settings: Settings }
 // 아이패드 가로 2단: 오른쪽에 함께 띄울 화면 (설정 › 디자인)
@@ -141,7 +142,7 @@ export default function App() {
         <StatusLine sync={sync} />
         <ResumeBanner />
         <main className="content" id="content">
-          <div className="content-inner">{sync.state === 'off' && !isStandalone() && /iP(hone|ad)|Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 0 && <SafariNote />}<View seg={seg} params={nav.params[tab] || {}} /></div>
+          <div className="content-inner">{sync.state === 'off' && !isStandalone() && /iP(hone|ad)|Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 0 && <SafariNote />}<ErrorBoundary where={'view:' + tab + '.' + seg} reset={tab + seg} big><View seg={seg} params={nav.params[tab] || {}} /></ErrorBoundary></div>
         </main>
       </div>
 

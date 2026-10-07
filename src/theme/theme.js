@@ -20,15 +20,17 @@ export const PRESETS = {
   bluegray: { name: '블루그레이', accent: '#5d6670', c2: '#9aa3ad', c3: '#c0c6cc', c4: '#7b848e' },
 }
 
+// 글꼴은 앱 안에 포함 (인터넷 없이도 같은 모양) — 고를 때 한 번만 불러옴
 export const FONTS = {
   system: { name: '시스템', family: '-apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Segoe UI", sans-serif' },
-  pretendard: { name: 'Pretendard', family: '"Pretendard", -apple-system, sans-serif', href: 'https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/pretendard.min.css' },
-  notosans: { name: 'Noto Sans KR', family: '"Noto Sans KR", -apple-system, sans-serif', href: 'https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600&display=swap' },
-  notoserif: { name: 'Noto Serif KR', family: '"Noto Serif KR", serif', href: 'https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;600&display=swap' },
-  gaegu: { name: '개구 (손글씨)', family: '"Gaegu", -apple-system, sans-serif', href: 'https://fonts.googleapis.com/css2?family=Gaegu:wght@300;400;700&display=swap' },
-  nanumpen: { name: '나눔손글씨 펜', family: '"Nanum Pen Script", -apple-system, sans-serif', href: 'https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap' },
-  gowun: { name: 'Gowun Dodum', family: '"Gowun Dodum", -apple-system, sans-serif', href: 'https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap' },
+  pretendard: { name: 'Pretendard', family: '"Pretendard Variable", "Pretendard", -apple-system, sans-serif', load: () => import('pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css') },
+  notosans: { name: 'Noto Sans KR', family: '"Noto Sans KR Variable", "Noto Sans KR", -apple-system, sans-serif', load: () => import('@fontsource-variable/noto-sans-kr') },
+  notoserif: { name: 'Noto Serif KR', family: '"Noto Serif KR Variable", "Noto Serif KR", serif', load: () => import('@fontsource-variable/noto-serif-kr') },
+  gaegu: { name: '개구 (손글씨)', family: '"Gaegu", -apple-system, sans-serif', load: () => Promise.all([import('@fontsource/gaegu/300.css'), import('@fontsource/gaegu/400.css'), import('@fontsource/gaegu/700.css')]) },
+  nanumpen: { name: '나눔손글씨 펜', family: '"Nanum Pen Script", -apple-system, sans-serif', load: () => import('@fontsource/nanum-pen-script/400.css') },
+  gowun: { name: 'Gowun Dodum', family: '"Gowun Dodum", -apple-system, sans-serif', load: () => import('@fontsource/gowun-dodum/400.css') },
 }
+const fontLoaded = new Set()
 
 const DENSITY = { compact: 0.75, normal: 1, relaxed: 1.3 }
 
@@ -41,7 +43,7 @@ const familyOf = (key) => {
   const mine = key?.startsWith('my:') ? key.slice(3) : null
   if (mine) { loadFont(mine); return `"${fontFamily(mine)}", ${FONTS.system.family}` }
   const f = FONTS[key]
-  if (f?.href && !document.querySelector(`link[data-font="${key}"]`)) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = f.href; l.dataset.font = key; document.head.appendChild(l) }
+  if (f?.load && !fontLoaded.has(key)) { fontLoaded.add(key); f.load().catch(() => fontLoaded.delete(key)) }
   return f ? f.family : null
 }
 
@@ -50,14 +52,7 @@ export function applyTheme(t0) {
   const root = document.documentElement
   const p = PRESETS[t.preset] || PRESETS.default
   const accent = t.accent || p.accent
-  const mine = t.font?.startsWith('my:') ? t.font.slice(3) : null
-  if (mine) loadFont(mine)
-  const font = mine ? { family: `"${fontFamily(mine)}", ${FONTS.system.family}` } : FONTS[t.font] || FONTS.system
-  if (font.href && !document.querySelector(`link[data-font="${t.font}"]`)) {
-    const l = document.createElement('link')
-    l.rel = 'stylesheet'; l.href = font.href; l.dataset.font = t.font
-    document.head.appendChild(l)
-  }
+  const font = { family: familyOf(t.font) || FONTS.system.family }
   const vars = {
     '--accent': accent, '--c2': t.c2 || p.c2, '--c3': t.c3 || p.c3, '--c4': t.c4 || p.c4,
     '--font': font.family, '--fs': t.fontSize + 'px', '--fw': t.fontWeight,

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { haptic } from '../lib/haptic.js'
+import ErrorBoundary from './ErrorBoundary.jsx'
 
 /* ── 아이콘 (얇은 선) ── */
 const P = {
@@ -100,7 +101,7 @@ export function UiLayer() {
             {s.title != null && (
               <div className="sheet-h"><h2>{s.title}</h2><button className="icon-btn" onClick={() => closeSheet(s.key)} aria-label="닫기"><Icon name="close" /></button></div>
             )}
-            <div className="sheet-b">{s.render(() => closeSheet(s.key))}</div>
+            <div className="sheet-b"><ErrorBoundary where="sheet">{s.render(() => closeSheet(s.key))}</ErrorBoundary></div>
           </div>
         </div>
       ))}
@@ -178,7 +179,7 @@ export function Card({ title, action, children, className = '', style, onClick }
   return (
     <div className={'card ' + className} style={style} onClick={onClick}>
       {(title || action) && <div className="card-h"><h3>{title}</h3>{action}</div>}
-      {children}
+      <ErrorBoundary where={'card:' + (typeof title === 'string' ? title : '')}>{children}</ErrorBoundary>
     </div>
   )
 }
