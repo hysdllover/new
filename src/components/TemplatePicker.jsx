@@ -2,7 +2,7 @@
 import { useColl } from '../store/store.js'
 import { BUILTIN, myTemplates, createFromTemplate, saveAsTemplate } from '../lib/noteTemplates.js'
 import { openNote } from '../nav.js'
-import { Icon } from './ui.jsx'
+import { Icon, NoteIcon } from './ui.jsx'
 import { noteTitle } from '../lib/notes.js'
 
 export default function TemplatePicker({ close, extra, onPick }) {
@@ -23,7 +23,7 @@ export default function TemplatePicker({ close, extra, onPick }) {
         <div className="tpl-grid">
           {mine.map((n) => (
             <div key={n.id} className="tpl" role="button" tabIndex={0} onClick={() => pick(n)}>
-              <span className="tpl-i">{n.icon || '📄'}</span><b className="ellipsis">{noteTitle(n)}</b>
+              <span className="tpl-i"><NoteIcon icon={n.icon} size={14} /></span><b className="ellipsis">{noteTitle(n)}</b>
               <button className="icon-btn tpl-x" aria-label="템플릿에서 빼기" onClick={(e) => { e.stopPropagation(); saveAsTemplate(n, false) }}><Icon name="close" size={12} /></button>
             </div>
           ))}

@@ -24,6 +24,7 @@ export function inlineMd(s) {
     .replace(/<(https?:\/\/[^>\s]+)>/g, '$1')
     .replace(/<u>([\s\S]+?)<\/u>/gi, '\u0001$1\u0001').replace(/<mark>([\s\S]+?)<\/mark>/gi, '==$1==')
     .replace(/<(b|strong)>([\s\S]+?)<\/\1>/gi, '**$2**')
+    .replace(/<sup>([^\s<]{1,24})<\/sup>/gi, '^$1^').replace(/<sub>([^\s<]{1,24})<\/sub>/gi, '~$1~')
     .replace(/<br\s*\/?>/gi, '\n').replace(/<\/?[a-z][^>]*>/gi, '')
     .replace(/(^|[^_\w])__([^_\n]+?)__(?![_\w])/g, '$1**$2**') // 마크다운의 __굵게__ → 굵게 (앱 밑줄은 <u>)
     .replace(/(^|[^*])\*(?!\s)([^*\n]+?)\*(?!\*)/g, '$1$2') // *기울임* → 글자만

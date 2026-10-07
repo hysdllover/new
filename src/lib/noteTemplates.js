@@ -48,7 +48,7 @@ export function blocksOf(tpl) {
 export function createFromTemplate(tpl, extra = {}) {
   const custom = typeof tpl.blocks !== 'function'
   return put('notes', {
-    title: '', type: 'page', icon: tpl.id === 'blank' ? undefined : tpl.icon || '📄',
+    title: '', type: 'page', icon: tpl.id === 'blank' ? undefined : tpl.icon || undefined,
     subjectId: custom ? tpl.subjectId || null : null,
     ...extra, blocks: blocksOf(tpl),
   })

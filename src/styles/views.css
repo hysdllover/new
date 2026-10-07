@@ -998,3 +998,28 @@ button.file-sync { color: var(--accent); }
 .exp-row { display: flex; align-items: center; gap: 12px; padding: 11px 6px; border-radius: 8px; text-align: left; min-height: 52px; }
 .exp-row .grow { display: flex; flex-direction: column; gap: 1px; }
 .exp-row:active { background: var(--surface-2); }
+
+/* 글자 색 · 첨자 · D-day 칩 · 블록 바탕색 · 그림 크기 */
+.tc-r { color: #a9707b; } .tc-g { color: #6b7650; } .tc-b { color: #4e6085; } .tc-v { color: #7e6fab; } .tc-m { color: #868d97; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tc-r { color: #d6a3ad; } :root:not([data-theme="light"]) .tc-g { color: #aab78c; } :root:not([data-theme="light"]) .tc-b { color: #9fb2d6; } :root:not([data-theme="light"]) .tc-v { color: #b9acdc; } :root:not([data-theme="light"]) .tc-m { color: #9aa1ab; } }
+.tc-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: currentColor; }
+.mb-tc i.tc-r { background: #a9707b; } .mb-tc i.tc-g { background: #6b7650; } .mb-tc i.tc-b { background: #4e6085; } .mb-tc i.tc-v { background: #7e6fab; } .mb-tc i.tc-m { background: #868d97; }
+.blk-v sup, .blk-v sub { font-size: .72em; line-height: 0; }
+.mm-sub { color: var(--accent); }
+.mb-more { flex-wrap: wrap; }
+.mb-wide { width: auto; padding: 0 8px; }
+.dd-chip { display: inline-flex; align-items: baseline; gap: 5px; padding: 0 7px; border-radius: 6px; background: color-mix(in srgb, var(--accent) 9%, transparent); font-size: .9em; white-space: nowrap; }
+.dd-chip b { font-weight: var(--fw-b); color: var(--accent); } .dd-chip .dd-d { color: var(--muted); font-size: .85em; }
+.blk.bgc > .blk-c { border-radius: 6px; padding: 2px 8px; margin: 1px 0; }
+.bgc-rose > .blk-c { background: color-mix(in srgb, #c9a0a8 16%, transparent); } .bgc-olive > .blk-c { background: color-mix(in srgb, #7a8660 14%, transparent); }
+.bgc-navy > .blk-c { background: color-mix(in srgb, #55658a 12%, transparent); } .bgc-violet > .blk-c { background: color-mix(in srgb, #a99bc4 16%, transparent); }
+.bgc-sand > .blk-c { background: color-mix(in srgb, #b5a47a 15%, transparent); } .bgc-gray > .blk-c { background: color-mix(in srgb, #9aa3ad 14%, transparent); }
+.file-img { display: flex; } .file-img.center, .file-blk.center { justify-content: center; }
+.file-img > div { max-width: 100%; }
+
+/* 페이지 아이콘: 얇은 선 아이콘 */
+.ic-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 6px; }
+.ic-pick { height: 44px; border-radius: 10px; display: grid; place-items: center; font-size: 20px; color: var(--text); }
+.ic-pick.on { background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); }
+.note-icon { display: grid; place-items: center; color: var(--muted); }
+.nc-ic { display: inline-flex; color: var(--muted); }

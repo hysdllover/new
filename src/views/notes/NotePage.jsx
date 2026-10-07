@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useRec, useColl, patch, remove, restore, useSettings, setSettings } from '../../store/store.js'
 import { addReview } from '../../store/actions.js'
 import BlockEditor from '../../components/BlockEditor.jsx'
-import { Icon, openMenu, toast, Seg, AutoText, openDetail, openSheet } from '../../components/ui.jsx'
+import { Icon, openMenu, toast, Seg, AutoText, openDetail, openSheet, NoteIcon, NOTE_ICONS } from '../../components/ui.jsx'
 import TemplatePicker from '../../components/TemplatePicker.jsx'
 import { blocksOf } from '../../lib/noteTemplates.js'
 import { SubjectSelect, ProjectSelect } from '../../components/common.jsx'
@@ -76,7 +76,11 @@ export default function NotePage({ id, split }) {
       </div>
       {n.cover && <div className={'note-cover cv-' + n.cover} style={n.cover === 'paper' ? { backgroundImage: `url(${import.meta.env.BASE_URL}paper.jpg)` } : null} />}
       <div className="note-head">
-        <button className="note-icon" onClick={(e) => openMenu(e, ICONS.map((i) => ({ label: i, onClick: () => up({ icon: i }) })))}>{n.icon || '📄'}</button>
+        <button className="note-icon" onClick={() => openSheet((close) => <div className="col" style={{ gap: 12 }}>
+          <div className="ic-grid">{NOTE_ICONS.map((k) => <button key={k} className={'ic-pick' + ((n.icon || 'i:file') === 'i:' + k ? ' on' : '')} onClick={() => { up({ icon: k === 'file' ? null : 'i:' + k }); close() }} aria-label={k}><Icon name={k} size={20} /></button>)}</div>
+          <div className="tiny muted">이모지</div>
+          <div className="ic-grid">{ICONS.map((i) => <button key={i} className={'ic-pick' + (n.icon === i ? ' on' : '')} onClick={() => { up({ icon: i }); close() }}>{i}</button>)}</div>
+        </div>, { title: '페이지 아이콘' })} aria-label="페이지 아이콘"><NoteIcon icon={n.icon} size={26} /></button>
         {n.label && <span className="note-label-dot" style={{ background: labelColor(n.label) }} />}
         {settings?.theme?.stamp !== false && n.createdAt && <span className="note-stamp" title="만든 날">{(() => { const d = new Date(n.createdAt); return `${d.getFullYear()}. ${d.getMonth() + 1}. ${d.getDate()}` })()}</span>}
         <AutoText className="note-title" value={n.title || ''} placeholder="제목 없음" readOnly={reading} onChange={(v) => up({ title: v })} />
@@ -91,7 +95,7 @@ export default function NotePage({ id, split }) {
       {bl.length > 0 && (
         <div className="backlinks no-print">
           <h4>백링크 {bl.length}</h4>
-          {bl.map((b) => <button key={b.id} className="chip" onClick={() => openNote(b.id)}>{b.icon || '📄'} {noteTitle(b)}</button>)}
+          {bl.map((b) => <button key={b.id} className="chip" onClick={() => openNote(b.id)}><NoteIcon icon={b.icon} size={13} /> {noteTitle(b)}</button>)}
         </div>
       )}
     </div>
@@ -111,7 +115,7 @@ function NoteAside({ n, bl }) {
     <aside className="note-aside no-print">
       {heads.length > 0 && <div className="na-sec"><div className="na-h">목차</div>{heads.map((b) => <button key={b.id} className={'na-toc' + (b.type === 'h2' ? ' sub' : '')} onClick={() => go(b.id)}>{b.text.replace(/\*\*|==(?:[rgby]:)?|__/g, '')}</button>)}</div>}
       {todos.length > 0 && <div className="na-sec"><div className="na-h">체크 {done}/{todos.length}</div><div className="na-prog"><i style={{ width: (done / todos.length) * 100 + '%' }} /></div></div>}
-      {bl.length > 0 && <div className="na-sec"><div className="na-h">백링크 {bl.length}</div>{bl.map((b) => <button key={b.id} className="na-toc" onClick={() => openNote(b.id)}>{b.icon || '📄'} {noteTitle(b)}</button>)}</div>}
+      {bl.length > 0 && <div className="na-sec"><div className="na-h">백링크 {bl.length}</div>{bl.map((b) => <button key={b.id} className="na-toc" onClick={() => openNote(b.id)}><NoteIcon icon={b.icon} size={13} /> {noteTitle(b)}</button>)}</div>}
     </aside>
   )
 }

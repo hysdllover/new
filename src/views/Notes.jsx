@@ -1,7 +1,7 @@
 import { Fragment, useState } from 'react'
 import { plainText } from '../lib/marks.js'
 import { useColl, put, patch, useSettings, setSettings } from '../store/store.js'
-import { Card, Icon, Empty, Seg, openDetail, openSheet, toast, useMedia } from '../components/ui.jsx'
+import { Card, Icon, Empty, Seg, openDetail, openSheet, toast, useMedia, NoteIcon } from '../components/ui.jsx'
 import TemplatePicker from '../components/TemplatePicker.jsx'
 import BlockEditor from '../components/BlockEditor.jsx'
 import NotePage, { NOTE_LABELS, labelColor, labelName } from './notes/NotePage.jsx'
@@ -84,7 +84,7 @@ function Pages({ params, compact }) {
             {glist.map((n) => { const i = list.indexOf(n); return (
               <button key={n.id} className={'card note-card' + (compact && params.noteId === n.id ? ' on' : '') + (n.label ? ' has-label' : '') + (n.bg ? ' nc-bg note-bg-' + n.bg : '')} style={{ position: 'relative', ...(n.label ? { '--nl': labelColor(n.label) } : null) }} onClick={() => !arrange && openNote(n.id)}>
                 {arrange && <span className="note-move row no-print" onClick={(e) => e.stopPropagation()}><span className="icon-btn" role="button" aria-label="앞으로" onClick={() => shift(i, -1)}>‹</span><span className="icon-btn" role="button" aria-label="뒤로" onClick={() => shift(i, 1)}>›</span></span>}
-                <div className="row"><span>{n.icon || (n.type === 'memo' ? '🗒️' : n.type === 'event' ? '📅' : '📄')}</span><b className="ellipsis grow">{noteTitle(n)}</b>{n.pinned && <Icon name="star" size={12} fill="currentColor" />}</div>
+                <div className="row"><span className="nc-ic"><NoteIcon icon={n.icon || (n.type === 'memo' ? 'i:notes' : n.type === 'event' ? 'i:calendar' : null)} size={15} /></span><b className="ellipsis grow">{noteTitle(n)}</b>{n.pinned && <Icon name="star" size={12} fill="currentColor" />}</div>
                 <div className="note-prev">{plainText(noteText(n)).replace(/\[\[|\]\]/g, '').replace(/https?:\/\/\S*[?&]open=\S+/g, '↗ 링크').slice(0, 120)}</div>
                 {(() => { const p = prog(n); return p && <div className="note-prog"><span className="note-prog-t"><i style={{ width: (p[0] / p[1]) * 100 + '%' }} /></span><span className="tiny muted">{p[0]}/{p[1]}</span></div> })()}
                 <div className="row small muted" style={{ gap: 6 }}><SubjectTag id={n.subjectId} subjects={subjects} /><span className="tiny">{new Date(n.updatedAt).toLocaleDateString('ko-KR')}</span></div>
