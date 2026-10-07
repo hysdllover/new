@@ -43,6 +43,7 @@ export default function NotePage({ id, split }) {
   const menu = (e) => openMenu(e, [
     { label: '마크다운 가져오기', icon: 'upload', onClick: () => import('../../components/MdImport.jsx').then((m) => openSheet((c) => <m.default close={c} noteId={id} />, { title: '마크다운 가져오기' })) },
     { label: '마크다운 내보내기', icon: 'download', onClick: () => download(`${noteTitle(n)}.md`, toMarkdown(n), 'text/markdown') },
+    { label: 'HTML 내보내기', icon: 'download', onClick: () => { const hasSub = (n.blocks || []).some((b) => b.type === 'page'); import('../../lib/noteHtml.js').then((m) => m.exportNoteHtml(n, { withSubs: hasSub })).then((r) => r !== 'cancel' && toast(hasSub ? 'HTML로 내보냈어요 · 하위 페이지 포함' : 'HTML로 내보냈어요')).catch((e) => toast('내보내지 못했어요 · ' + e.message)) } },
     { label: 'PDF (A4 인쇄)', icon: 'print', onClick: () => window.print() },
     { label: '노트 전체 복습 등록', icon: 'brain', onClick: () => addReview({ title: noteTitle(n), subjectId: n.subjectId, sourceType: 'note', sourceId: n.id }) },
     { label: '표지', icon: 'layers', onClick: () => openSheet((close) => <div className="row wrap" style={{ gap: 8 }}>{COVERS.map(([k, l]) => <button key={k} className={'chip' + ((n.cover || '') === k ? ' on' : '')} onClick={() => { up({ cover: k || null }); close() }}>{k && <i className={'cover-dot cv-' + k} />}{l}</button>)}</div>, { title: '페이지 표지' }) },
