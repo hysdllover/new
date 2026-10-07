@@ -3,6 +3,7 @@ import { useColl, put, patch, remove, restore, find } from '../store/store.js'
 import { toggleTask, addReview, addTask } from '../store/actions.js'
 import { Icon, Check, openMenu, openSheet, openDetail, toast } from './ui.jsx'
 import { FileThumb, previewFile, FileSync, LinkPreview } from './Attach.jsx'
+import BoardBlock, { newBoard } from './BoardBlock.jsx'
 import { addFile, pickFiles, fmtSize } from '../lib/files.js'
 import { newBlock, commitBlock, refLabel, openOrCreateByTitle, linkTodos } from '../lib/notes.js'
 import { mdToBlocks, mdToNote, looksMd } from '../lib/md.js'
@@ -21,7 +22,7 @@ const TONES = [['key', '핵심'], ['warn', '주의'], ['ex', '예시'], ['rose',
 const BGC = [['', '없음'], ['rose', '로즈'], ['olive', '올리브'], ['navy', '네이비'], ['violet', '바이올렛'], ['sand', '모래'], ['gray', '회색']]
 // 구분선 모양 ('' = 설정 › 디자인의 기본 모양)
 const DIVS = [['', '기본'], ['thin', '얇은 실선'], ['bold', '굵은 선'], ['dash', '점선'], ['double', '두 줄'], ['short', '가운데 짧게'], ['dots', '점 세 개'], ['space', '여백만']]
-const SOLID = ['divider', 'embed', 'sync', 'file', 'table', 'page', 'cols', 'link'] // 글자를 직접 쓰지 않는 블록
+const SOLID = ['divider', 'embed', 'sync', 'file', 'table', 'page', 'cols', 'link', 'board'] // 글자를 직접 쓰지 않는 블록
 const INLINE_RE = /(\*\*[^*\n]+\*\*|==[^=\n]+==|__[^_\n]+__|\{\{[rgbvmD]:[^{}\n]+\}\}|\^[^\s^]{1,24}\^|(?<!~)~[^\s~]{1,24}~(?!~)|\[\[[^\]]+\]\]|@(?:오늘|내일|모레|\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2})(?:\s+\d{1,2}:\d{2})?|https?:\/\/[^\s]+)/g
 
 // 이 앱의 노트·줄 링크 (?open=노트id&b=줄id)
@@ -242,7 +243,8 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
               {b.type === 'divider' ? (b.text ? <div className={'hr-t' + (b.ds ? ' hr-' + b.ds : '')}><span>{b.text}</span></div> : <hr className={b.ds ? 'hr-' + b.ds : undefined} />) :
                 b.type === 'file' ? <FileBlock b={b} /> :
                 b.type === 'link' ? <LinkPreview url={b.url} title={b.title} /> :
-                b.type === 'table' ? <TableBlock b={b} readOnly={readOnly} onMeta={(p) => upd(b.id, p)} /> :
+                b.type === 'board' ? <BoardBlock b={b} note={note} readOnly={readOnly} onMeta={(p) => upd(b.id, p)} /> :
+                b.type === 'table' ? <TableBlock b={b} note={note} readOnly={readOnly} onMeta={(p) => upd(b.id, p)} /> :
                 b.type === 'page' ? <SubPage b={b} /> :
                 b.type === 'cols' ? <div className="cols2" style={{ '--cols': { '2:1': '2fr 1fr', '1:2': '1fr 2fr' }[b.ratio] || '1fr 1fr' }}>{[0, 1].map((k) => <div key={k} className="col-pane"><BlockEditor nested readOnly={readOnly} blocks={(b.cols || [[], []])[k] || []} note={note} onChange={(bs) => upd(b.id, { cols: [0, 1].map((j) => (j === k ? bs : (b.cols || [[], []])[j] || [])) })} /></div>)}</div> :
                 b.type === 'toggle' ? <ToggleBlock b={b} note={note} readOnly={readOnly} editing={editing} edit={edit} onTitle={(t) => onText(b, t)} onKeyDown={(e) => onKey(e, b)} onBlur={(t) => { commit({ ...b, text: t }); setEdit((x) => (x?.id === b.id ? null : x)) }} onEdit={() => setEdit({ id: b.id, pos: (b.text || '').length })} onChildren={(bs) => upd(b.id, { children: bs })} /> :
@@ -281,6 +283,7 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
           <button className="chip" onClick={() => addEnd({ id: newBlock().id, type: 'table', rows: [['', ''], ['', '']] })}>표</button>
           <button className="chip" onClick={() => { let u = (prompt('링크 주소') || '').trim(); if (!u) return; if (!/^https?:\/\//.test(u)) u = 'https://' + u; addEnd({ id: newBlock().id, type: 'link', url: u, title: '' }) }}><Icon name="link" size={14} />링크</button>
           <button className="chip" onClick={() => addEnd({ id: newBlock().id, type: 'cols', cols: [[newBlock()], [newBlock()]] })}>두 단</button>
+          <button className="chip" onClick={() => addEnd(newBoard())}>보드</button>
           <button className="chip" onClick={() => addEnd({ ...newBlock('toggle'), children: [newBlock()], open: true })}>▸ 토글</button>
           <button className="chip" onClick={() => { const c = put('notes', { title: '', type: 'page', parentId: note?.id || null, subjectId: note?.subjectId || null, blocks: [newBlock()] }); addEnd({ id: newBlock().id, type: 'page', pageId: c.id }); setTimeout(() => openNote(c.id), 50) }}>+ 하위 페이지</button>
           <button className="chip" onClick={async () => { const fs = await pickFiles(); const nbs = []; for (const f of fs) { try { const r = await addFile(f, { subjectId: note?.subjectId, noteId: note?.id }); nbs.push({ id: newBlock().id, type: 'file', fileId: r.id }) } catch (e) { toast(e.message) } } if (nbs.length) set([...list, ...nbs]) }}><Icon name="image" size={14} />파일</button>
@@ -478,7 +481,14 @@ function TCell({ value, onChange, ...rest }) {
 // Tab 다음 칸 (마지막 칸이면 줄 추가) · ⌥↑↓ 줄 옮기기 · 시트에서 복사한 칸 붙여넣기
 const COLW = { s: 'minmax(56px, .6fr)', n: 'minmax(70px, 1fr)', w: 'minmax(130px, 2fr)' }
 const AL = { l: 'left', c: 'center', r: 'right' }
-function TableBlock({ b, onMeta, readOnly }) {
+// 파일 저장: 아이폰·아이패드는 공유 시트(파일에 저장), 그 밖은 내려받기
+async function saveBlob(blob, name) {
+  name = name.replace(/[\\/:*?"<>|]/g, ' ')
+  const file = new File([blob], name, { type: blob.type })
+  if (navigator.maxTouchPoints > 0 && navigator.canShare?.({ files: [file] })) { try { await navigator.share({ files: [file] }); return } catch (e) { if (e.name === 'AbortError') return } }
+  const u = URL.createObjectURL(file), a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 2000)
+}
+function TableBlock({ b, note, onMeta, readOnly }) {
   const { rows, cols, align, colW } = TB.norm(b)
   const head = b.head !== false, headCol = !!b.headCol
   const [sel, setSel] = useState(null) // { r, c, m: 'cell' | 'row' | 'col' }
@@ -602,6 +612,8 @@ function TableBlock({ b, onMeta, readOnly }) {
         <B act={headCol} on={() => onMeta({ headCol: !headCol })}>머리칸</B>
         <B act={!!b.stripe} on={() => onMeta({ stripe: !b.stripe })}>줄무늬</B>
         <B on={async () => { try { await navigator.clipboard.writeText(TB.toTSV(b)); toast('표를 복사했어요 · 시트에 붙여 넣을 수 있어요') } catch { toast('복사하지 못했어요') } }}>복사</B>
+        <B on={() => saveBlob(new Blob([TB.toCSV(b)], { type: 'text/csv' }), `${note?.title || '표'}.csv`)}>CSV</B>
+        <B on={async () => saveBlob(new Blob([await TB.toXLSX(b, note?.title || '표')], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `${note?.title || '표'}.xlsx`)}>엑셀</B>
       </div>
     </div>
   )

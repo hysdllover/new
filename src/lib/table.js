@@ -115,3 +115,31 @@ export function tableMd(b) {
   const body = b?.head !== false ? t.rows.slice(1) : t.rows
   return [line(head), sep, ...body.map(line)]
 }
+
+// 표 → CSV (엑셀·넘버스 한글 깨짐 방지 BOM)
+export function toCSV(b) {
+  const q = (s) => (/[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s)
+  return '﻿' + norm(b).rows.map((r) => r.map((x) => q(plain(x))).join(',')).join('\r\n')
+}
+
+// 표 → 엑셀(.xlsx) 한 장: 머리줄 굵게 · 열 너비 · 숫자는 숫자 칸으로 (외부 라이브러리 없이 zip 만)
+export async function toXLSX(b, sheetName = '표') {
+  const { zipSync, strToU8 } = await import('fflate')
+  const t = norm(b), head = b?.head !== false
+  const x = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  const col = (i) => { let s = ''; for (i++; i; i = Math.floor((i - 1) / 26)) s = String.fromCharCode(65 + ((i - 1) % 26)) + s; return s }
+  const W = { s: 10, n: 16, w: 30 }
+  const rows = t.rows.map((r, i) => `<row r="${i + 1}">${r.map((v, j) => {
+    const p = plain(v), ref = col(j) + (i + 1), st = head && i === 0 ? ' s="1"' : ''
+    return /^-?\d+(\.\d+)?$/.test(p) && !(head && i === 0) ? `<c r="${ref}"${st}><v>${p}</v></c>` : `<c r="${ref}" t="inlineStr"${st}><is><t xml:space="preserve">${x(p)}</t></is></c>`
+  }).join('')}</row>`).join('')
+  const files = {
+    '[Content_Types].xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`,
+    '_rels/.rels': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`,
+    'xl/workbook.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${x(String(sheetName).replace(/[\\/?*[\]:]/g, ' ').slice(0, 31) || '표')}" sheetId="1" r:id="rId1"/></sheets></workbook>`,
+    'xl/_rels/workbook.xml.rels': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`,
+    'xl/styles.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Apple SD Gothic Neo"/></font><font><b/><sz val="11"/><name val="Apple SD Gothic Neo"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="2"><xf fontId="0"/><xf fontId="1" applyFont="1"/></cellXfs></styleSheet>`,
+    'xl/worksheets/sheet1.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cols>${t.colW.map((w, j) => `<col min="${j + 1}" max="${j + 1}" width="${W[w] || 16}" customWidth="1"/>`).join('')}</cols><sheetData>${rows}</sheetData></worksheet>`,
+  }
+  return zipSync(Object.fromEntries(Object.entries(files).map(([k, v]) => [k, strToU8(v)])))
+}

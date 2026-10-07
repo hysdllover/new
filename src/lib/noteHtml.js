@@ -78,6 +78,7 @@ async function blocksHtml(blocks, ctx) {
       case 'sync': out.push(await blocksHtml(find('syncBlocks', b.syncId)?.blocks, ctx)); break
       case 'page': { const c = find('notes', b.pageId); if (c && !c.deleted) { ctx.subs.push(c); out.push(`<p class="sub"><a href="#p-${c.id}">↳ ${esc(c.title || '제목 없는 페이지')}</a></p>`) } break }
       case 'file': out.push(await fileHtml(b.fileId, b.size, b.align)); break
+      case 'board': out.push(`<div class="board">${(b.cols || []).map((c) => `<div class="bcol"><div class="bh">${esc(c.name)} <span class="muted">${(c.cards || []).length}</span></div>${(c.cards || []).map((x) => `<div class="bc">${inlineHtml(x.text, ctx.ids)}</div>`).join('')}</div>`).join('')}</div>`); break
       case 'link': { let host = b.url; try { host = new URL(b.url).hostname.replace(/^www\./, '') } catch {} out.push(`<p class="lk"><a href="${esc(b.url)}">${esc(b.title || host)}</a> <span class="muted">${esc(host)}</span></p>`); break }
       case 'embed': out.push(`<p class="muted">(${{ tasks: '할 일 목록', calendar: '미니 캘린더', timer: '타이머' }[b.embed?.kind] || '임베드'} · 앱에서 보기)</p>`); break
       default: if ((b.text || '').trim()) out.push(`<p>${t}</p>`); else out.push('<p class="gap"></p>')
@@ -154,6 +155,7 @@ sup,sub{font-size:.72em;line-height:0}
 .dd{padding:0 6px;border-radius:5px;background:#55658a14;white-space:nowrap}.dd b{color:var(--navy);font-weight:500}
 .bgc{border-radius:6px;padding:2px 10px;margin:2px 0}.bgc-rose{background:#c9a0a829}.bgc-olive{background:#7a866024}.bgc-navy{background:#55658a1f}.bgc-violet{background:#a99bc429}.bgc-sand{background:#b5a47a26}.bgc-gray{background:#9aa3ad24}
 figure.c{text-align:center}.lk{margin:.5em 0;padding:8px 12px;border:1px solid var(--line);border-radius:8px}.lk a{border:0}
+.board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(150px,1fr);gap:10px;margin:.7em 0;overflow-x:auto}.bcol{background:var(--tint);border-radius:8px;padding:8px}.bh{font-size:.85em;color:var(--soft);margin-bottom:6px}.bc{background:#fff;border:1px solid var(--line);border-radius:6px;padding:6px 8px;margin-bottom:6px;font-size:.92em}
 footer{margin-top:40px;color:#9aa3ad;font-size:.72em;text-align:right}
 @media (max-width:600px){body{font-size:15px}main{padding:28px 16px 48px}.cols{grid-template-columns:1fr;gap:4px}}
 @page{size:A4;margin:16mm 15mm}

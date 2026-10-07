@@ -1,8 +1,8 @@
 // 이번 주 목표 3개: 할 일을 연결해 진행률 표시 (직접 체크도 가능)
 import { useState } from 'react'
 import { useColl, uid, patch } from '../store/store.js'
-import { weekId, weekGoals, setWeekGoals, goalProgress } from '../store/actions.js'
-import { fmtShort } from '../engine/date.js'
+import { weekId, weekGoals, setWeekGoals, goalProgress, addTask, toggleTask } from '../store/actions.js'
+import { fmtShort, today } from '../engine/date.js'
 import { Check, Icon, openSheet, AddInput } from './ui.jsx'
 
 export function WeekGoals({ compact }) {
@@ -10,6 +10,7 @@ export function WeekGoals({ compact }) {
   const id = weekId(), goals = weekGoals(id)
   const set = (g) => setWeekGoals(g, id)
   const upd = (gid, p) => set(goals.map((g) => (g.id === gid ? { ...g, ...p } : g)))
+  const [open, setOpen] = useState(null) // 연결된 할 일을 펼친 목표
   return (
     <div className="col" style={{ gap: 8 }}>
       {goals.map((g) => {
@@ -25,6 +26,19 @@ export function WeekGoals({ compact }) {
               {!compact && <button className="icon-btn" aria-label="삭제" onClick={() => set(goals.filter((x) => x.id !== g.id))}><Icon name="close" size={12} /></button>}
             </div>
             <div className="bar-t" style={{ height: 5, marginTop: 5 }}><i style={{ width: p.ratio * 100 + '%' }} /></div>
+            {!compact && <button className="tiny muted wgoal-more" onClick={() => setOpen(open === g.id ? null : g.id)}>{open === g.id ? '접기' : p.linked ? `연결된 할 일 ${p.linked}개 보기` : '할 일 추가'}</button>}
+            {!compact && open === g.id && (
+              <div className="wgoal-tasks">
+                {tasks.filter((t) => t.goalId === g.id && !t.archived).sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0)).map((t) => (
+                  <div key={t.id} className={'row wgoal-task' + (t.done ? ' done' : '')} style={{ gap: 8 }}>
+                    <Check on={!!t.done} onClick={() => toggleTask(t.id)} />
+                    <span className="grow ellipsis small">{t.title}</span>
+                    {t.due && <span className="tiny muted">{fmtShort(t.due)}</span>}
+                  </div>
+                ))}
+                <AddInput placeholder="이 목표에 할 일 추가 (오늘)" onAdd={(title) => addTask({ title, goalId: g.id, due: today() })} />
+              </div>
+            )}
           </div>
         )
       })}

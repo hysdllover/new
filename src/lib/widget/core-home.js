@@ -97,6 +97,55 @@ export default () => `  } else if (KIND === 'study') {
       }
       if (!L.length) t(w, '수업이 없어요', tw(13), SOFT)
     }
+  } else if (KIND === 'tbl') {
+    // ── 노트 표: 공식표·단어표 (Parameter 표:노트제목) ──
+    const TBS = Array.isArray(data.tables) ? data.tables : []
+    const tb = (ARG && TBS.find((x) => nzT(x.t).includes(ARG))) || TBS[0]
+    const h = w.addStack(); h.centerAlignContent(); cap(h, 'TABLE'); h.addSpacer(); t(h, tb ? tb.t : '', label(8), SOFT).minimumScaleFactor = 0.7
+    w.addSpacer(fam === 'small' ? 8 : 10)
+    if (!tb) t(w, '노트에 표를 만들어 주세요', tw(12), SOFT)
+    else {
+      const nr = Math.min(tb.r.length, fam === 'small' || fam === 'medium' ? 4 : 10)
+      const nc = Math.max(1, Math.min(fam === 'small' ? 2 : 4, (tb.r[0] || []).length))
+      const cw = Math.floor(inner / nc)
+      for (let i = 0; i < nr; i++) {
+        const row = tb.r[i] || [], r = w.addStack(); r.centerAlignContent()
+        const hd = i === 0 && tb.h
+        for (let j = 0; j < nc; j++) { const c = r.addStack(); c.size = new Size(cw, 0); const x = t(c, row[j] || '', hd ? label(fam === 'large' ? 10 : 9) : tw(fam === 'large' ? 12 : 11), hd ? SOFT : INK); x.minimumScaleFactor = 0.7; c.addSpacer() }
+        if (i < nr - 1) { w.addSpacer(fam === 'large' ? 5 : 3); rule(w, inner); w.addSpacer(fam === 'large' ? 5 : 3) }
+      }
+    }
+  } else if (KIND === 'boardn') {
+    // ── 노트 보드: 칸마다 카드 (Parameter 보드:노트제목) ──
+    const BDS = Array.isArray(data.boards) ? data.boards : []
+    const bd = (ARG && BDS.find((x) => nzT(x.t).includes(ARG))) || BDS[0]
+    const h = w.addStack(); h.centerAlignContent(); cap(h, 'BOARD'); h.addSpacer(); t(h, bd ? bd.t : '', label(8), SOFT).minimumScaleFactor = 0.7
+    w.addSpacer(fam === 'small' ? 8 : 10)
+    if (!bd) t(w, '노트에 보드를 만들어 주세요', tw(12), SOFT)
+    else if (fam === 'small') {
+      for (const c of bd.c.slice(0, 3)) { const r = w.addStack(); r.centerAlignContent(); t(r, c.n, tw(12), INK).minimumScaleFactor = 0.7; r.addSpacer(); t(r, String(c.k), thin(20), c.k ? INK : SOFT); w.addSpacer(5) }
+    } else {
+      const nc = Math.max(1, Math.min(bd.c.length, fam === 'medium' ? 3 : 4)), nr = fam === 'medium' ? 3 : 8
+      const cw = Math.floor((inner - (nc - 1) * 10) / nc)
+      const row = w.addStack(); row.spacing = 10; row.topAlignContent()
+      for (const c of bd.c.slice(0, nc)) {
+        const col = row.addStack(); col.layoutVertically(); col.size = new Size(cw, 0)
+        const hh = col.addStack(); t(hh, c.n, label(9), SOFT).minimumScaleFactor = 0.7; hh.addSpacer(); t(hh, String(c.k), label(9), SOFT)
+        col.addSpacer(5)
+        for (const x of c.x.slice(0, nr)) { const r = col.addStack(); t(r, x, tw(11), INK, 2).minimumScaleFactor = 0.8; r.addSpacer(); col.addSpacer(4) }
+        if (c.k > nr) t(col, '+' + (c.k - nr), label(8), SOFT)
+      }
+    }
+  } else if (KIND === 'photo') {
+    // ── 노트 사진: 필기·도식 한 장 (Parameter 사진:노트제목) ──
+    const ph = (ARG && PHOTOS.find((x) => nzT(x.t).includes(ARG))) || PHOTOS[0]
+    if (!ph) t(w, '노트에 사진을 넣어 주세요', tw(12), SOFT)
+    else {
+      try { w.backgroundImage = Image.fromData(Data.fromBase64String(ph.d)) } catch (e) {}
+      w.addSpacer()
+      const cp = w.addStack(); cp.setPadding(3, 8, 3, 8); cp.cornerRadius = 7; cp.backgroundColor = new Color('#1b1d22', 0.42)
+      t(cp, ph.t, tw(10), new Color('#ffffff')).minimumScaleFactor = 0.7
+    }
   } else if (KIND === 'series') {
     // ── 시리즈 진행: 이름 · 끝낸 수/전체 · 가는 진행선 · 다음 회차 ──
     const SR = data.series || []

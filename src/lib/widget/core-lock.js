@@ -575,6 +575,14 @@ if (!data) {
         t(w, s0 ? s0.name : '공부', thin(22)).minimumScaleFactor = 0.6
         lbar(w, mins / goal, LK.rw)
       }
+    } else if (KIND === 'tbl' || KIND === 'boardn' || KIND === 'photo') {
+      const TBS = Array.isArray(data.tables) ? data.tables : [], BDS = Array.isArray(data.boards) ? data.boards : []
+      const tb = (ARG && TBS.find((x) => nzT(x.t).includes(ARG))) || TBS[0], bd = (ARG && BDS.find((x) => nzT(x.t).includes(ARG))) || BDS[0]
+      const head = KIND === 'tbl' ? 'TABLE' : KIND === 'boardn' ? 'BOARD' : 'PHOTO'
+      const s = KIND === 'tbl' ? (tb ? tb.t + ' · ' + (tb.r[tb.h ? 1 : 0] || []).slice(0, 2).join(' ') : '표 없음') : KIND === 'boardn' ? (bd ? bd.c.map((c) => c.n + ' ' + c.k).join(' · ') : '보드 없음') : '사진은 홈 화면 위젯에서'
+      if (inl) inline(s)
+      else if (circ) cRows([[head, label(7)], [KIND === 'boardn' && bd ? String(bd.c[0] ? bd.c[0].k : 0) : '·', tw(16)], [KIND === 'boardn' && bd && bd.c[0] ? bd.c[0].n : '', label(7)]])
+      else { rRow(head, KIND === 'tbl' ? (tb ? tb.t : '') : KIND === 'boardn' ? (bd ? bd.t : '') : '', label(8), label(8)); t(w, s, tw(11), INK, 3).minimumScaleFactor = 0.8 }
     }
   } else if (lock) {
     // ── 잠금 화면 ──
