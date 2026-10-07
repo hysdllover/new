@@ -5,7 +5,7 @@ import { eventsOn, classesOn } from '../engine/scheduler.js'
 import { today, nowMin, fmtTime, fmtDur, dday, fmtShort, fmtClock, addDays, weekStart, parseYmd, fmtDate, tsToYmd } from '../engine/date.js'
 import { WeekBars, MonthHeat } from '../components/charts.jsx'
 import { openRecord } from '../views/study/Log.jsx'
-import { Card, Check, Ring, Empty, Icon, AddInput, openDetail, useNow, openSheet } from '../components/ui.jsx'
+import { Card, Check, Ring, Empty, Icon, AddInput, openDetail, useNow, openSheet, NoteIcon } from '../components/ui.jsx'
 import TaskItem from '../components/TaskItem.jsx'
 import { WeekGoals } from '../components/WeekGoals.jsx'
 import { seriesSummary } from '../lib/series.js'
@@ -320,7 +320,7 @@ function Recent() {
   const notes = useColl('notes').filter((n) => n.type !== 'memo').sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 5)
   return (
     <Card title="최근 노트" action={<button className="tiny muted" onClick={goto('notes', 'pages')}>→</button>}>
-      <div className="list">{notes.map((n) => <button key={n.id} className="item" style={{ textAlign: 'left', padding: '7px 0', minHeight: 34 }} onClick={() => openNote(n.id)}><span>{n.icon || '📄'}</span><span className="t ellipsis">{noteTitle(n)}</span><span className="tiny muted">{fmtShort(new Date(n.updatedAt).toISOString().slice(0, 10))}</span></button>)}</div>
+      <div className="list">{notes.map((n) => <button key={n.id} className="item" style={{ textAlign: 'left', padding: '7px 0', minHeight: 34 }} onClick={() => openNote(n.id)}><span><NoteIcon icon={n.icon} size={14} /></span><span className="t ellipsis">{noteTitle(n)}</span><span className="tiny muted">{fmtShort(new Date(n.updatedAt).toISOString().slice(0, 10))}</span></button>)}</div>
     </Card>
   )
 }

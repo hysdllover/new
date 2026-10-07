@@ -35,3 +35,17 @@ test('켜진 꾸밈 · 편집 칸 모양', () => {
   const r = markRuns('a ==b==')
   assert.deepEqual(r.map((x) => [x.x, !!x.mk, x.h || '']), [['a ', false, ''], ['==', true, ''], ['b', false, 'd'], ['==', true, '']])
 })
+
+test('글자 색 · 위/아래 첨자 · D-day', async () => {
+  const { applyMark, markRanges, plainText, activeMarks } = await import('../src/lib/marks.js')
+  let r = applyMark('중요 개념', 0, 2, 'f:r')
+  assert.equal(r.text, '{{r:중요}} 개념')
+  assert.equal(activeMarks(r.text, 5, 5).f, 'r')
+  r = applyMark(r.text, r.a, r.z, 'f:g'); assert.equal(r.text, '{{g:중요}} 개념') // 색 바꾸기
+  r = applyMark(r.text, r.a, r.z, 'f:g'); assert.equal(r.text, '중요 개념') // 같은 색 → 끄기
+  assert.equal(applyMark('x2', 1, 2, 'p').text, 'x^2^')
+  assert.equal(applyMark('H2O', 1, 2, 's').text, 'H~2~O')
+  assert.equal(applyMark('두 단어', 0, 4, 'p'), null) // 첨자는 띄어쓰기 없이
+  assert.equal(markRanges('1~10쪽, 20~30쪽').length, 0) // 띄어 쓴 범위 표시는 첨자가 아님
+  assert.equal(plainText('{{b:파랑}} x^2^ H~2~O {{D:중간고사}}'), '파랑 x2 H2O 중간고사')
+})

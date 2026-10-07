@@ -109,6 +109,8 @@ export function toMarkdown(note) {
   walk(note.blocks)
   for (const b of flat) {
     const t = (b.text || '').replace(/==[rgby]:/g, '==').replace(/(^|[^_\w])__([^_\n]+?)__(?![_\w])/g, '$1<u>$2</u>') // 앱 밑줄 → <u>
+      .replace(/\{\{[rgbvm]:([^{}\n]+)\}\}/g, '$1').replace(/\{\{D:([^{}\n]+)\}\}/g, '$1')
+      .replace(/\^([^\s^]{1,24})\^/g, '<sup>$1</sup>').replace(/(?<!~)~([^\s~]{1,24})~(?!~)/g, '<sub>$1</sub>')
     const pad = '  '.repeat(b.indent || 0)
     switch (b.type) {
       case 'h1': lines.push(`## ${t}`); break
@@ -122,6 +124,7 @@ export function toMarkdown(note) {
       case 'embed': lines.push(`<!-- ${b.embed?.kind} -->`); break
       case 'callout': lines.push(`> [!${({ key: 'note', warn: 'warning', ex: 'example', rose: 'quote', olive: 'summary', sand: 'question' })[b.tone || 'key'] || 'note'}]`, ...t.split('\n').map((x) => `> ${x}`)); break
       case 'table': lines.push(...tableMd(b)); break
+      case 'link': lines.push(`[${b.title || b.url}](${b.url})`); break
       case 'toggle': lines.push(`<details><summary>${t}</summary>`); break
       case '_tend': lines.push('</details>'); break
       case 'page': lines.push(`[하위 페이지: ${noteTitle(find('notes', b.pageId))}]`); break

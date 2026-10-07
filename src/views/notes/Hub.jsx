@@ -1,7 +1,7 @@
 import { useColl, useSettings, settings } from '../../store/store.js'
 import { classesOn } from '../../engine/scheduler.js'
 import { projectProgress, taskProgress, addTask } from '../../store/actions.js'
-import { Card, Prog, Empty, Icon, AddInput, openDetail } from '../../components/ui.jsx'
+import { Card, Prog, Empty, Icon, AddInput, openDetail, NoteIcon } from '../../components/ui.jsx'
 import TaskItem from '../../components/TaskItem.jsx'
 import { FileThumb } from '../../components/Attach.jsx'
 import { setParams, openNote, go } from '../../nav.js'
@@ -93,7 +93,7 @@ function HubPage({ hubId }) {
         </Card>
         <div className="col">
           <Card title="노트" action={<button className="btn sm" onClick={() => openNote(put('notes', { title: '', type: 'page', [key]: id, blocks: [newBlock()] }).id)}><Icon name="plus" size={14} /></button>}>
-            <div className="list">{ns.map((n) => <button key={n.id} className="item" style={{ textAlign: 'left' }} onClick={() => openNote(n.id)}><span>{n.icon || '📄'}</span><span className="t ellipsis">{noteTitle(n)}</span></button>)}</div>
+            <div className="list">{ns.map((n) => <button key={n.id} className="item" style={{ textAlign: 'left' }} onClick={() => openNote(n.id)}><span><NoteIcon icon={n.icon} size={14} /></span><span className="t ellipsis">{noteTitle(n)}</span></button>)}</div>
             {!ns.length && <Empty>관련 노트가 없어요</Empty>}
           </Card>
           {evs.length > 0 && (

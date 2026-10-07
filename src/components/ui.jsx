@@ -17,6 +17,16 @@ const P = {
   back: 'M15 5l-7 7 7 7',
   next: 'M9 5l7 7-7 7',
   up: 'M5 15l7-7 7 7',
+  flask: 'M9 3h6M10 3v6l-5 9a1.5 1.5 0 0 0 1.3 2.2h11.4A1.5 1.5 0 0 0 19 18l-5-9V3M7.5 14h9',
+  globe: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3c2.5 2.5 3.5 5.5 3.5 9s-1 6.5-3.5 9c-2.5-2.5-3.5-5.5-3.5-9s1-6.5 3.5-9z',
+  bulb: 'M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z',
+  music: 'M9 18V5l11-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM20 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z',
+  calc: 'M6 3h12v18H6zM9 7h6M9 12h.01M12 12h.01M15 12h.01M9 16h.01M12 16h.01M15 16h.01',
+  leaf: 'M5 19c0-8 6-14 15-14 0 9-6 15-14 15M5 19l7-7',
+  cap: 'M2 9l10-5 10 5-10 5zM6 11v5c2 2 10 2 12 0v-5M22 9v5',
+  pen: 'M15 4l5 5L9 20H4v-5zM13 6l5 5',
+  quote: 'M6 17c-1.5-1-2-2.5-2-4.5C4 9 6 7 9 6M14 17c-1.5-1-2-2.5-2-4.5 0-3.5 2-5.5 5-6.5',
+  pin: 'M12 21v-6M8 4h8l-1 5 3 3H6l3-3z',
   grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
   sidebar: 'M4 5h16v14H4zM9 5v14',
   expand: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5',
@@ -190,6 +200,13 @@ export function Ring({ value, size = 64, stroke = 6, color = 'var(--accent)', ch
 
 export function Field({ label, children }) {
   return <div className="field">{label && <label>{label}</label>}{children}</div>
+}
+
+// 노트 아이콘: 'i:이름' 은 얇은 선 아이콘, 그 밖은 예전 이모지 (없으면 선 아이콘 문서)
+export const NOTE_ICONS = ['file', 'notes', 'book', 'pen', 'bulb', 'flask', 'calc', 'globe', 'music', 'leaf', 'cap', 'quote', 'pin', 'star', 'flag', 'target', 'brain', 'calendar', 'clock', 'chart', 'tag', 'heart', 'layers', 'folder']
+export function NoteIcon({ icon, size = 16 }) {
+  if (icon && !icon.startsWith('i:')) return <span className="note-emoji">{icon}</span>
+  return <Icon name={icon ? icon.slice(2) : 'file'} size={size} />
 }
 
 export function Empty({ children, hint, action }) {

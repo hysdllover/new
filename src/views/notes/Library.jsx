@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useColl, patch } from '../../store/store.js'
-import { Icon, Empty, Card, openSheet, toast, Field, confirmSheet } from '../../components/ui.jsx'
+import { Icon, Empty, Card, openSheet, toast, Field, confirmSheet, NoteIcon } from '../../components/ui.jsx'
 import { SubjectSelect, SubjectTag } from '../../components/common.jsx'
 import { FileThumb, FilePreview, FileSync } from '../../components/Attach.jsx'
 import { addFile, pickFiles, deleteFile, fmtSize } from '../../lib/files.js'
@@ -74,7 +74,7 @@ function FileDetail({ id }) {
       {(usedT.length > 0 || usedN.length > 0) && (
         <div className="row wrap small" style={{ gap: 6 }}>사용 중:
           {usedT.map((t) => <button key={t.id} className="chip" onClick={() => openDetail('task', t.id)}>☐ {t.title}</button>)}
-          {usedN.map((n) => <button key={n.id} className="chip" onClick={() => openNote(n.id)}>📄 {n.title}</button>)}
+          {usedN.map((n) => <button key={n.id} className="chip" onClick={() => openNote(n.id)}><NoteIcon icon={n.icon} size={13} /> {n.title}</button>)}
         </div>
       )}
       <div className="small muted">{fmtSize(f.size)} · {f.date}{f.gist ? ' · 동기화됨' : ''}</div>

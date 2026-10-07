@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, Fragment } from 'react'
 import { useColl, put, patch, remove, restore, find } from '../store/store.js'
 import { toggleTask, addReview, addTask } from '../store/actions.js'
 import { Icon, Check, openMenu, openSheet, openDetail, toast } from './ui.jsx'
-import { FileThumb, previewFile, FileSync } from './Attach.jsx'
+import { FileThumb, previewFile, FileSync, LinkPreview } from './Attach.jsx'
 import { addFile, pickFiles, fmtSize } from '../lib/files.js'
 import { newBlock, commitBlock, refLabel, openOrCreateByTitle, linkTodos } from '../lib/notes.js'
 import { mdToBlocks, mdToNote, looksMd } from '../lib/md.js'
@@ -17,10 +17,12 @@ import { applyMark, activeMarks, markRuns, plainText } from '../lib/marks.js'
 
 const TYPES = [['text', '텍스트'], ['h1', '제목 1'], ['h2', '제목 2'], ['bullet', '글머리'], ['todo', '체크박스 (할 일)'], ['callout', '강조 상자'], ['quote', '인용'], ['code', '코드'], ['divider', '구분선']]
 const TONES = [['key', '핵심'], ['warn', '주의'], ['ex', '예시'], ['rose', '메모'], ['olive', '정리'], ['sand', '참고']]
+// 블록 바탕색 (옅게)
+const BGC = [['', '없음'], ['rose', '로즈'], ['olive', '올리브'], ['navy', '네이비'], ['violet', '바이올렛'], ['sand', '모래'], ['gray', '회색']]
 // 구분선 모양 ('' = 설정 › 디자인의 기본 모양)
 const DIVS = [['', '기본'], ['thin', '얇은 실선'], ['bold', '굵은 선'], ['dash', '점선'], ['double', '두 줄'], ['short', '가운데 짧게'], ['dots', '점 세 개'], ['space', '여백만']]
-const SOLID = ['divider', 'embed', 'sync', 'file', 'table', 'page', 'cols'] // 글자를 직접 쓰지 않는 블록
-const INLINE_RE = /(\*\*[^*\n]+\*\*|==[^=\n]+==|__[^_\n]+__|\[\[[^\]]+\]\]|@(?:오늘|내일|모레|\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2})(?:\s+\d{1,2}:\d{2})?|https?:\/\/[^\s]+)/g
+const SOLID = ['divider', 'embed', 'sync', 'file', 'table', 'page', 'cols', 'link'] // 글자를 직접 쓰지 않는 블록
+const INLINE_RE = /(\*\*[^*\n]+\*\*|==[^=\n]+==|__[^_\n]+__|\{\{[rgbvmD]:[^{}\n]+\}\}|\^[^\s^]{1,24}\^|(?<!~)~[^\s~]{1,24}~(?!~)|\[\[[^\]]+\]\]|@(?:오늘|내일|모레|\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2})(?:\s+\d{1,2}:\d{2})?|https?:\/\/[^\s]+)/g
 
 // 이 앱의 노트·줄 링크 (?open=노트id&b=줄id)
 const ownLink = (u) => { try { const x = new URL(u); if (x.origin !== location.origin || !x.pathname.startsWith(import.meta.env.BASE_URL)) return null; const id = x.searchParams.get('open'); return id ? { id, b: x.searchParams.get('b') } : null } catch { return null } }
@@ -44,6 +46,10 @@ export function Inline({ text }) {
     if (p.startsWith('**')) return <b key={i} className="mk-b"><Inline text={p.slice(2, -2)} /></b>
     if (p.startsWith('==')) { const m = /^([rgby]):/.exec(p.slice(2)); return <mark key={i} className={'mk-hl' + (m ? ' hl-' + m[1] : '')}><Inline text={p.slice(m ? 4 : 2, -2)} /></mark> }
     if (p.startsWith('__')) return <u key={i} className="mk-u"><Inline text={p.slice(2, -2)} /></u>
+    if (p.startsWith('{{D:')) return <DdayChip key={i} q={p.slice(4, -2)} />
+    if (p.startsWith('{{')) return <span key={i} className={'tc tc-' + p[2]}><Inline text={p.slice(4, -2)} /></span>
+    if (p.startsWith('^')) return <sup key={i}>{p.slice(1, -1)}</sup>
+    if (p.startsWith('~')) return <sub key={i}>{p.slice(1, -1)}</sub>
     if (p.startsWith('[[')) {
       const t = p.slice(2, -2)
       return <button key={i} className="wikilink" onClick={(e) => { e.stopPropagation(); openNote(openOrCreateByTitle(t).id) }}>{t}</button>
@@ -56,6 +62,15 @@ export function Inline({ text }) {
     if (own) { const n = find('notes', own.id); return <button key={i} className="wikilink blk-link" onClick={(e) => { e.stopPropagation(); goBlock(own.id, own.b) }}>↗ {n ? (n.title || '제목 없음') : '삭제된 노트'}{own.b ? ' · 줄' : ''}</button> }
     return <a key={i} href={p} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>{p.replace(/^https?:\/\//, '').slice(0, 40)}</a>
   })
+}
+
+// D-day 칩: {{D:중간고사}} (D-day 이름) 또는 {{D:2026-11-19}} (날짜) → 남은 날이 자동으로 바뀜
+function DdayChip({ q }) {
+  const ddays = useColl('ddays')
+  const dd = /^\d{4}-\d{2}-\d{2}$/.test(q) ? { title: '', date: q } : ddays.find((x) => (x.title || '').trim() === q.trim())
+  if (!dd) return <span className="dd-chip muted">{q}</span>
+  const n = Math.round((new Date(dd.date + 'T00:00') - new Date(today() + 'T00:00')) / 864e5)
+  return <span className="dd-chip" title={dd.date}>{dd.title && <span>{dd.title}</span>}<b>{n === 0 ? 'D-DAY' : n > 0 ? 'D-' + n : 'D+' + -n}</b><span className="dd-d">{+dd.date.slice(5, 7)}/{+dd.date.slice(8)}</span></span>
 }
 
 export default function BlockEditor({ blocks = [], onChange, note, nested, readOnly }) {
@@ -106,6 +121,8 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
       if (fs.length) { e.preventDefault(); return dropIn(fs, '', edit?.id) }
       // 마크다운 여러 줄 → 블록으로 (지금 칸이 비어 있으면 그 자리에)
       const tx = e.clipboardData?.getData('text/plain') || ''
+      const cur0 = edit && list.find((x) => x.id === edit.id)
+      if (/^https?:\/\/\S+$/.test(tx.trim()) && cur0 && !(cur0.text || '').trim() && !ownLink(tx.trim())) { e.preventDefault(); upd(cur0.id, { type: 'link', url: tx.trim(), title: '', text: undefined }); setEdit(null); return }
       if (!looksMd(tx) && !(/\t/.test(tx) && tx.trim().includes('\n'))) return
       e.preventDefault()
       const cur = edit && list.find((x) => x.id === edit.id)
@@ -192,6 +209,10 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
     !nested && b.type !== 'sync' && { label: '동기화 블록으로', icon: 'sync', onClick: () => { const s = put('syncBlocks', { blocks: [{ ...b, id: newBlock().id }] }); upd(b.id, { type: 'sync', syncId: s.id, text: '' }) } },
     b.type === 'divider' && { label: `모양 · ${DIVS.find(([k]) => k === (b.ds || ''))[1]}`, icon: 'layers', onClick: () => openMenu(at, DIVS.map(([k, l]) => ({ label: (k === (b.ds || '') ? '✓ ' : '') + l, onClick: () => upd(b.id, { ds: k || undefined }) }))) },
     b.type === 'divider' && { label: b.text ? '구분선 제목 바꾸기' : '구분선에 제목 넣기', icon: 'tag', onClick: () => { const v = prompt('구분선 제목 (비우면 선만)', b.text || ''); if (v != null) upd(b.id, { text: v.trim() }) } },
+    !['divider', 'embed', 'sync', 'cols'].includes(b.type) && { label: `바탕색 · ${BGC.find(([k]) => k === (b.bgc || ''))[1]}`, icon: 'layers', onClick: () => openMenu(at, BGC.map(([k, l]) => ({ label: (k === (b.bgc || '') ? '✓ ' : '') + l, onClick: () => upd(b.id, { bgc: k || undefined }) }))) },
+    b.type === 'file' && isImg(b.fileId) && { label: `그림 크기 · ${{ s: '작게', m: '중간', l: '전체 폭' }[b.size || 's']}`, icon: 'image', onClick: () => openMenu(at, [['s', '작게'], ['m', '중간'], ['l', '전체 폭']].map(([k, l]) => ({ label: (k === (b.size || 's') ? '✓ ' : '') + l, onClick: () => upd(b.id, { size: k === 's' ? undefined : k }) }))) },
+    b.type === 'file' && isImg(b.fileId) && { label: b.align === 'c' ? '왼쪽 맞춤' : '가운데 맞춤', icon: 'layers', onClick: () => upd(b.id, { align: b.align === 'c' ? undefined : 'c' }) },
+    b.type === 'link' && { label: '링크 제목 바꾸기', icon: 'edit', onClick: () => { const v = prompt('링크 제목', b.title || ''); if (v != null) upd(b.id, { title: v.trim() }) } },
     b.type === 'cols' && { label: `두 단 비율 (${b.ratio || '1:1'} → ${{ '1:1': '2:1', '2:1': '1:2', '1:2': '1:1' }[b.ratio || '1:1']})`, icon: 'layers', onClick: () => upd(b.id, { ratio: { '1:1': '2:1', '2:1': '1:2', '1:2': '1:1' }[b.ratio || '1:1'] }) },
     ['text', 'bullet', 'todo', 'quote'].includes(b.type) && (b.indent || 0) < 3 && { label: '들여쓰기', icon: 'next', onClick: () => upd(b.id, { indent: (b.indent || 0) + 1 }) },
     b.indent > 0 && { label: '내어쓰기', icon: 'back', onClick: () => upd(b.id, { indent: b.indent - 1 || undefined }) },
@@ -213,13 +234,14 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
         const editing = edit?.id === b.id
         const task = b.taskId && tasks.find((t) => t.id === b.taskId)
         return (
-          <div key={b.id} data-bid={b.id} style={b.indent ? { paddingLeft: b.indent * 22 } : undefined} className={'blk blk-' + b.type + (b.type === 'callout' ? ' tone-' + (b.tone || 'key') : '') + (sel?.has(b.id) ? ' sel' : '')} data-drop={readOnly ? undefined : 'blk:' + b.id} onClickCapture={sel ? (e) => { e.stopPropagation(); e.preventDefault(); togSel(b.id) } : undefined}>
+          <div key={b.id} data-bid={b.id} style={b.indent ? { paddingLeft: b.indent * 22 } : undefined} className={'blk blk-' + b.type + (b.type === 'callout' ? ' tone-' + (b.tone || 'key') : '') + (b.bgc ? ' bgc bgc-' + b.bgc : '') + (sel?.has(b.id) ? ' sel' : '')} data-drop={readOnly ? undefined : 'blk:' + b.id} onClickCapture={sel ? (e) => { e.stopPropagation(); e.preventDefault(); togSel(b.id) } : undefined}>
             {!readOnly && <button className="blk-h" onPointerDown={(e) => gripDown(e, b)} onClick={(e) => { if (dragged.current) { dragged.current = false; return } blockMenu(e, b) }} aria-label="블록 메뉴 · 끌어서 순서 바꾸기"><Icon name="grip" size={14} /></button>}
             {b.type === 'bullet' && (b.num ? <span className="blk-num">{b.num}.</span> : <span className="blk-dot">•</span>)}
             {b.type === 'todo' && <span className="blk-chk"><Check on={!!task?.done} onClick={() => { if (task) toggleTask(task.id); else { const nb = commitBlock(b, note); upd(b.id, nb); if (nb.taskId) toggleTask(nb.taskId) } }} /></span>}
             <div className="blk-c">
               {b.type === 'divider' ? (b.text ? <div className={'hr-t' + (b.ds ? ' hr-' + b.ds : '')}><span>{b.text}</span></div> : <hr className={b.ds ? 'hr-' + b.ds : undefined} />) :
                 b.type === 'file' ? <FileBlock b={b} /> :
+                b.type === 'link' ? <LinkPreview url={b.url} title={b.title} /> :
                 b.type === 'table' ? <TableBlock b={b} readOnly={readOnly} onMeta={(p) => upd(b.id, p)} /> :
                 b.type === 'page' ? <SubPage b={b} /> :
                 b.type === 'cols' ? <div className="cols2" style={{ '--cols': { '2:1': '2fr 1fr', '1:2': '1fr 2fr' }[b.ratio] || '1fr 1fr' }}>{[0, 1].map((k) => <div key={k} className="col-pane"><BlockEditor nested readOnly={readOnly} blocks={(b.cols || [[], []])[k] || []} note={note} onChange={(bs) => upd(b.id, { cols: [0, 1].map((j) => (j === k ? bs : (b.cols || [[], []])[j] || [])) })} /></div>)}</div> :
@@ -257,6 +279,7 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
           <button className="chip" onClick={() => addEnd({ ...newBlock('callout'), tone: 'key' })}>강조</button>
           <button className="chip" onClick={() => { const d = newBlock('divider'), t = newBlock(); set([...list.filter((x, i) => !(i === list.length - 1 && x.type === 'text' && !x.text)), d, t]); setEdit({ id: t.id, pos: 0 }) }}>― 구분선</button>
           <button className="chip" onClick={() => addEnd({ id: newBlock().id, type: 'table', rows: [['', ''], ['', '']] })}>표</button>
+          <button className="chip" onClick={() => { let u = (prompt('링크 주소') || '').trim(); if (!u) return; if (!/^https?:\/\//.test(u)) u = 'https://' + u; addEnd({ id: newBlock().id, type: 'link', url: u, title: '' }) }}><Icon name="link" size={14} />링크</button>
           <button className="chip" onClick={() => addEnd({ id: newBlock().id, type: 'cols', cols: [[newBlock()], [newBlock()]] })}>두 단</button>
           <button className="chip" onClick={() => addEnd({ ...newBlock('toggle'), children: [newBlock()], open: true })}>▸ 토글</button>
           <button className="chip" onClick={() => { const c = put('notes', { title: '', type: 'page', parentId: note?.id || null, subjectId: note?.subjectId || null, blocks: [newBlock()] }); addEnd({ id: newBlock().id, type: 'page', pageId: c.id }); setTimeout(() => openNote(c.id), 50) }}>+ 하위 페이지</button>
@@ -289,6 +312,12 @@ function EditArea({ b, pos, onChange, onKeyDown, onBlur }) {
   const syncSel = () => { const el = ref.current; if (el) setSel([el.selectionStart, el.selectionEnd]) }
   // 꾸미기 버튼: 누르는 동안 칸이 닫히지 않게 잡아 두고, 적용 뒤 다시 커서를 돌려놓음
   const press = () => { hold.current = true; setTimeout(() => { hold.current = false }, 700) }
+  const insert = (txt) => {
+    const el = ref.current; if (!el) return
+    const a = el.selectionStart, z = el.selectionEnd, nv = el.value.slice(0, a) + txt + el.value.slice(z)
+    setV(nv); onChange(nv)
+    requestAnimationFrame(() => { try { el.focus({ preventScroll: true }); el.setSelectionRange(a + txt.length, a + txt.length) } catch {} hold.current = false; syncSel() })
+  }
   const apply = (kind) => {
     const el = ref.current; if (!el) return
     const r = applyMark(el.value, el.selectionStart, el.selectionEnd, kind)
@@ -298,21 +327,28 @@ function EditArea({ b, pos, onChange, onKeyDown, onBlur }) {
   return (
     <>
       <div className="blk-edit">
-        <div className="blk-mirror" aria-hidden="true">{markRuns(v).map((r, i) => <span key={i} className={r.mk ? 'mm-k' : [r.b && 'mm-b', r.u && 'mm-u', r.h && 'mk-hl' + (r.h !== 'd' ? ' hl-' + r.h : '')].filter(Boolean).join(' ') || undefined}>{r.x}</span>)}{'\u200b'}</div>
+        <div className="blk-mirror" aria-hidden="true">{markRuns(v).map((r, i) => <span key={i} className={r.mk ? 'mm-k' : [r.b && 'mm-b', r.u && 'mm-u', r.h && 'mk-hl' + (r.h !== 'd' ? ' hl-' + r.h : ''), r.f && 'tc tc-' + r.f, (r.p || r.s) && 'mm-sub'].filter(Boolean).join(' ') || undefined}>{r.x}</span>)}{'\u200b'}</div>
         <textarea ref={ref} rows={1} className="blk-ta" value={v} enterKeyHint="enter"
           onChange={(e) => { setV(e.target.value); onChange(e.target.value); syncSel() }} onSelect={syncSel} onKeyUp={syncSel}
           onKeyDown={onKeyDown} onBlur={() => { if (!hold.current) onBlur(ref.current?.value ?? v) }} />
       </div>
-      <MarkBar on={activeMarks(v, sel[0], sel[1])} hasSel={sel[0] !== sel[1]} onPress={press} onApply={apply} />
+      <MarkBar on={activeMarks(v, sel[0], sel[1])} hasSel={sel[0] !== sel[1]} onPress={press} onApply={apply} onInsert={insert} />
     </>
   )
 }
 
+const isImg = (id) => !!find('files', id)?.type?.startsWith('image')
 function FileBlock({ b }) {
   const f = useColl('files').find((x) => x.id === b.fileId)
   if (!f) return <span className="muted small">삭제된 파일</span>
+  // 그림: 크기(작게·중간·전체 폭) · 가운데 맞춤
+  if (f.type?.startsWith('image') && b.size) return (
+    <div className={'file-img' + (b.align === 'c' ? ' center' : '')} onClick={() => previewFile(f)}>
+      <div style={{ width: b.size === 'l' ? '100%' : '50%' }}><FileThumb file={f} size="100%" onClick={() => previewFile(f)} /></div>
+    </div>
+  )
   return (
-    <div className="row file-blk" onClick={() => previewFile(f)}>
+    <div className={'row file-blk' + (b.align === 'c' ? ' center' : '')} onClick={() => previewFile(f)}>
       <FileThumb file={f} size={f.type?.startsWith('image') ? 120 : 48} />
       <div className="grow"><div className="ellipsis">{f.name}</div><div className="tiny muted row" style={{ gap: 6 }}>{fmtSize(f.size)}<FileSync file={f} /></div></div>
     </div>
@@ -607,18 +643,38 @@ function SubPage({ b }) {
 
 // 글자 꾸미기 막대: 고른 글자(없으면 그 자리 단어)에 굵게 · 밑줄 · 형광펜 켜고 끄기 · 색 바꾸기 · 지우기
 const HL = [['', '보라'], ['r', '로즈'], ['g', '올리브'], ['b', '블루'], ['y', '모래']]
-function MarkBar({ on, hasSel, onPress, onApply }) {
+const TC = [['r', '로즈'], ['g', '올리브'], ['b', '네이비'], ['v', '바이올렛'], ['m', '회색']]
+const SYMS = ['→', '←', '↔', '⇒', '∴', '∵', '※', '★', '☆', '✓', '✗', '①', '②', '③', '④', '⑤', '±', '×', '÷', '≠', '≤', '≥', '≈', '∞', '√', 'π', '°', '…', '「', '」', '『', '』']
+function MarkBar({ on, hasSel, onPress, onApply, onInsert }) {
   const bp = (kind) => ({ onPointerDown: onPress, onMouseDown: (e) => e.preventDefault(), onClick: (e) => { e.preventDefault(); onApply(kind) } })
+  const ip = (txt) => ({ onPointerDown: onPress, onMouseDown: (e) => e.preventDefault(), onClick: (e) => { e.preventDefault(); onInsert(txt) } })
+  const [more, setMore] = useState(null) // 'sym' · 'dd'
+  const ddays = useColl('ddays').filter((x) => x.date >= today()).sort((a, b) => a.date.localeCompare(b.date))
   return (
+    <>
     <div className="markbar no-print">
       <button className={'mb' + (on.b ? ' on' : '')} {...bp('b')} aria-label="굵게"><b>B</b></button>
       <button className={'mb' + (on.u ? ' on' : '')} {...bp('u')} aria-label="밑줄"><u>U</u></button>
       <span className="mb-sep" />
       {HL.map(([k, l]) => <button key={k || 'd'} className={'mb mb-hl' + (on.h === k ? ' on' : '')} {...bp(k ? 'h:' + k : 'h')} aria-label={'형광펜 ' + l}><i className={'hl-dot' + (k ? ' hl-' + k : '')} /></button>)}
       <span className="mb-sep" />
+      {TC.map(([k, l]) => <button key={k} className={'mb mb-tc' + (on.f === k ? ' on' : '')} {...bp('f:' + k)} aria-label={'글자 색 ' + l}><i className={'tc-dot tc-' + k} /></button>)}
+      <span className="mb-sep" />
+      <button className={'mb' + (on.p ? ' on' : '')} {...bp('p')} aria-label="위첨자">x<sup>2</sup></button>
+      <button className={'mb' + (on.s ? ' on' : '')} {...bp('s')} aria-label="아래첨자">x<sub>2</sub></button>
+      <button className={'mb' + (more === 'sym' ? ' on' : '')} onPointerDown={onPress} onMouseDown={(e) => e.preventDefault()} onClick={(e) => { e.preventDefault(); setMore(more === 'sym' ? null : 'sym') }} aria-label="기호">※</button>
+      <button className={'mb' + (more === 'dd' ? ' on' : '')} onPointerDown={onPress} onMouseDown={(e) => e.preventDefault()} onClick={(e) => { e.preventDefault(); setMore(more === 'dd' ? null : 'dd') }} aria-label="D-day 넣기">D-</button>
+      <span className="mb-sep" />
       <button className="mb mb-x" {...bp('c')} aria-label="꾸밈 지우기">지우기</button>
-      {!hasSel && <span className="mb-tip">글자를 고르거나, 단어에 커서를 두고 누르세요</span>}
+      {!hasSel && !more && <span className="mb-tip">글자를 고르거나, 단어에 커서를 두고 누르세요</span>}
     </div>
+    {more === 'sym' && <div className="markbar mb-more no-print">{SYMS.map((x) => <button key={x} className="mb" {...ip(x)}>{x}</button>)}</div>}
+    {more === 'dd' && <div className="markbar mb-more no-print">
+      {ddays.map((x) => <button key={x.id} className="mb mb-wide" {...ip(`{{D:${x.title}}}`)}>{x.title}</button>)}
+      <button className="mb mb-wide" {...ip(`{{D:${today()}}}`)}>날짜로 (오늘 → 고쳐 쓰기)</button>
+      {!ddays.length && <span className="mb-tip">D-day를 만들면 이름으로 넣을 수 있어요</span>}
+    </div>}
+    </>
   )
 }
 

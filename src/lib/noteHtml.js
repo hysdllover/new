@@ -21,17 +21,28 @@ export function inlineHtml(text, pageIds = {}) {
     .replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>')
     .replace(/==(?:([rgby]):)?([^=\n]+)==/g, (m, c, t) => `<mark class="hl${c ? ' hl-' + c : ''}">${t}</mark>`)
     .replace(/__([^_\n]+)__/g, '<u>$1</u>')
+    .replace(/\{\{D:([^{}\n]+)\}\}/g, (m, q) => ddayText(q))
+    .replace(/\{\{([rgbvm]):([^{}\n]+)\}\}/g, '<span class="tc-$1">$2</span>')
+    .replace(/\^([^\s^]{1,24})\^/g, '<sup>$1</sup>').replace(/(?<!~)~([^\s~]{1,24})~(?!~)/g, '<sub>$1</sub>')
     .replace(/\[\[([^\]]+)\]\]/g, (m, t) => { const id = pageIds[t]; return id ? `<a class="wl" href="#p-${id}">${t}</a>` : `<span class="wl">${t}</span>` })
     .replace(/(^|\s)(@(?:오늘|내일|모레|\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2})(?:\s+\d{1,2}:\d{2})?)/g, '$1<span class="mt">$2</span>')
     .replace(/\n/g, '<br>')
   return x.replace(/\u0000(\d+)\u0000/g, (m, i) => keep[+i])
 }
 
-async function fileHtml(fileId) {
+function ddayText(q) {
+  const dd = /^\d{4}-\d{2}-\d{2}$/.test(q) ? { title: '', date: q } : list('ddays').find((x) => (x.title || '').trim() === q.trim())
+  if (!dd) return q
+  const d0 = new Date(); d0.setHours(0, 0, 0, 0)
+  const n = Math.round((new Date(dd.date + 'T00:00') - d0) / 864e5)
+  return `<span class="dd">${dd.title ? dd.title + ' ' : ''}<b>${n === 0 ? 'D-DAY' : n > 0 ? 'D-' + n : 'D+' + -n}</b></span>`
+}
+
+async function fileHtml(fileId, size, align) {
   const f = find('files', fileId)
   if (!f) return '<p class="muted">삭제된 파일</p>'
   if (f.type?.startsWith('image')) {
-    try { const b = await getBlob(fileId); if (b) return `<figure><img src="${await blobToDataUrl(b)}" alt="${esc(f.name)}"><figcaption>${esc(f.name)}</figcaption></figure>` } catch {}
+    try { const b = await getBlob(fileId); if (b) return `<figure${align === 'c' ? ' class="c"' : ''}><img src="${await blobToDataUrl(b)}" alt="${esc(f.name)}" style="width:${size === 'l' ? '100%' : size === 'm' ? '50%' : 'auto;max-width:240px'}"><figcaption>${esc(f.name)}</figcaption></figure>` } catch {}
   }
   return `<p class="file">📎 ${esc(f.name)}</p>`
 }
@@ -50,6 +61,7 @@ function tableHtml(b, ctx) {
 async function blocksHtml(blocks, ctx) {
   const out = []
   for (const b of blocks || []) {
+    const n0 = out.length
     const t = inlineHtml(b.text, ctx.ids), pad = b.indent ? ` style="margin-left:${b.indent * 22}px"` : ''
     switch (b.type) {
       case 'h1': out.push(`<h2>${t}</h2>`); break
@@ -64,11 +76,13 @@ async function blocksHtml(blocks, ctx) {
       case 'toggle': out.push(`<details open><summary>${t || '접는 글'}</summary>${await blocksHtml(b.children, ctx)}</details>`); break
       case 'cols': { const [a, z] = (b.ratio || '1:1').split(':'); out.push(`<div class="cols" style="--a:${a}fr;--b:${z}fr">${(await Promise.all((b.cols || []).map((c) => blocksHtml(c, ctx)))).map((h) => `<div>${h}</div>`).join('')}</div>`); break }
       case 'sync': out.push(await blocksHtml(find('syncBlocks', b.syncId)?.blocks, ctx)); break
-      case 'page': { const c = find('notes', b.pageId); if (c && !c.deleted) { ctx.subs.push(c); out.push(`<p class="sub"><a href="#p-${c.id}">📄 ${esc(c.title || '제목 없는 페이지')}</a></p>`) } break }
-      case 'file': out.push(await fileHtml(b.fileId)); break
+      case 'page': { const c = find('notes', b.pageId); if (c && !c.deleted) { ctx.subs.push(c); out.push(`<p class="sub"><a href="#p-${c.id}">↳ ${esc(c.title || '제목 없는 페이지')}</a></p>`) } break }
+      case 'file': out.push(await fileHtml(b.fileId, b.size, b.align)); break
+      case 'link': { let host = b.url; try { host = new URL(b.url).hostname.replace(/^www\./, '') } catch {} out.push(`<p class="lk"><a href="${esc(b.url)}">${esc(b.title || host)}</a> <span class="muted">${esc(host)}</span></p>`); break }
       case 'embed': out.push(`<p class="muted">(${{ tasks: '할 일 목록', calendar: '미니 캘린더', timer: '타이머' }[b.embed?.kind] || '임베드'} · 앱에서 보기)</p>`); break
       default: if ((b.text || '').trim()) out.push(`<p>${t}</p>`); else out.push('<p class="gap"></p>')
     }
+    if (b.bgc && out.length > n0) out[out.length - 1] = `<div class="bgc bgc-${b.bgc}">${out[out.length - 1]}</div>`
   }
   return out.join('\n')
 }
@@ -135,6 +149,11 @@ h1.h-sub{font-size:1.4em}
 .toc{font-size:.85em;color:var(--soft);margin:-8px 0 20px}
 .toc::before{content:"하위 페이지  ";}
 .toc a{margin-right:10px}
+.tc-r{color:#a9707b}.tc-g{color:#6b7650}.tc-b{color:#4e6085}.tc-v{color:#7e6fab}.tc-m{color:#868d97}
+sup,sub{font-size:.72em;line-height:0}
+.dd{padding:0 6px;border-radius:5px;background:#55658a14;white-space:nowrap}.dd b{color:var(--navy);font-weight:500}
+.bgc{border-radius:6px;padding:2px 10px;margin:2px 0}.bgc-rose{background:#c9a0a829}.bgc-olive{background:#7a866024}.bgc-navy{background:#55658a1f}.bgc-violet{background:#a99bc429}.bgc-sand{background:#b5a47a26}.bgc-gray{background:#9aa3ad24}
+figure.c{text-align:center}.lk{margin:.5em 0;padding:8px 12px;border:1px solid var(--line);border-radius:8px}.lk a{border:0}
 footer{margin-top:40px;color:#9aa3ad;font-size:.72em;text-align:right}
 @media (max-width:600px){body{font-size:15px}main{padding:28px 16px 48px}.cols{grid-template-columns:1fr;gap:4px}}
 @page{size:A4;margin:16mm 15mm}
@@ -160,7 +179,7 @@ export async function noteToHtml(note, { withSubs = true } = {}) {
     const body = await blocksHtml(n.blocks, ctx)
     const sub = subjects.find((s) => s.id === n.subjectId), lc = n.label && (LABEL[n.label] || LABEL.gray)
     const meta = [lc && `<span><i class="lab" style="background:${lc}"></i></span>`, sub && `<span>${esc(sub.name)}</span>`, `<span>${new Date(n.updatedAt || Date.now()).toLocaleDateString('ko-KR')}</span>`].filter(Boolean).join('')
-    pages.push({ n, head: `<header><h1${pages.length ? ' class="h-sub"' : ''}>${esc(n.icon ? n.icon + ' ' : '')}${esc(n.title || '제목 없음')}</h1><div class="meta">${meta}</div></header>`, body })
+    pages.push({ n, head: `<header><h1${pages.length ? ' class="h-sub"' : ''}>${esc(n.icon && !n.icon.startsWith('i:') ? n.icon + ' ' : '')}${esc(n.title || '제목 없음')}</h1><div class="meta">${meta}</div></header>`, body })
     if (withSubs) for (const c of ctx.subs) if (!seen.has(c.id)) await render(c)
   }
   await render(note)
