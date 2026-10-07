@@ -124,11 +124,20 @@ if (lateOnes.length > 1) {
   out.push({ key: `miss:${date}:${now}`, title: '놓친 알림', body: lateOnes.slice(0, 5).map((n) => `· ${n.title}${n.body ? ' — ' + n.body : ''}`).join('\n') + (lateOnes.length > 5 ? '\n그리고 몇 가지 더' : ''), url: './' })
 }
 
+// 선언형 웹 푸시 (iOS 18.4+): 서비스 워커가 깨어나지 않아도 iOS 가 바로 표시 · 앱 아이콘 배지도 함께
+// 예전 방식 필드(title·body·url)도 같이 넣어 서비스 워커 처리와 호환
+const APP_URL = process.env.APP_URL || settings.appUrl || 'https://hysdllover.github.io/new/'
+const badgeN = alive(T?.tasks).filter((t) => !t.done && !t.archived && t.due && t.due <= date).length
+const payload = (n) => JSON.stringify({
+  web_push: 8030,
+  notification: { title: n.title, body: n.body || '', tag: n.key, navigate: new URL(n.url || './', APP_URL).href, silent: false, ...(settings.appBadge !== false ? { app_badge: String(badgeN) } : null) },
+  title: n.title, body: n.body, tag: n.key, url: n.url,
+})
 webpush.setVapidDetails('mailto:study-dashboard@users.noreply.github.com', push.vapid.publicKey, push.vapid.privateKey)
 const dead = new Set()
 for (const n of out) {
   for (const s of push.subs) {
-    try { await webpush.sendNotification({ endpoint: s.endpoint, keys: s.keys }, JSON.stringify({ title: n.title, body: n.body, tag: n.key, url: n.url }), { TTL: 3600 }) }
+    try { await webpush.sendNotification({ endpoint: s.endpoint, keys: s.keys }, payload(n), { TTL: 3600 }) }
     catch (err) { if (err.statusCode === 404 || err.statusCode === 410) dead.add(s.endpoint); else console.error(err.statusCode, err.body) }
   }
   sentFile[n.key] = date

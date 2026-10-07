@@ -1,5 +1,5 @@
 // 앱 셸 캐시: 문서는 네트워크 우선, 정적 자산은 캐시 우선
-const CACHE = 'study-v3'
+const CACHE = 'study-v4'
 self.addEventListener('install', (e) => { self.skipWaiting() })
 self.addEventListener('activate', (e) => {
   e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()))
@@ -23,7 +23,12 @@ self.addEventListener('fetch', (e) => {
 self.addEventListener('push', (e) => {
   let d = {}
   try { d = e.data ? e.data.json() : {} } catch { d = { title: '스터디', body: e.data?.text() } }
-  e.waitUntil(self.registration.showNotification(d.title || '스터디', { body: d.body || '', icon: './icon-192.png', badge: './icon-192.png', tag: d.tag, data: { url: d.url || './' } }))
+  // 선언형 푸시(web_push 8030)를 서비스 워커가 받은 경우도 같은 모양으로
+  const n = d.notification || d
+  const url = n.navigate || d.url || './'
+  const badge = n.app_badge != null ? +n.app_badge : null
+  if (badge != null && self.navigator.setAppBadge) e.waitUntil(badge ? self.navigator.setAppBadge(badge).catch(() => {}) : self.navigator.clearAppBadge().catch(() => {}))
+  e.waitUntil(self.registration.showNotification(n.title || '스터디', { body: n.body || '', icon: './icon-192.png', badge: './icon-192.png', tag: n.tag, data: { url } }))
 })
 self.addEventListener('notificationclick', (e) => {
   e.notification.close()
