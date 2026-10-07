@@ -955,3 +955,11 @@ html[data-bar="thick"] { --bar-w: 14px; --bar-h: 5px; }
 .blocks .hr-t.hr-bold::before, .blocks .hr-t.hr-bold::after { border-top-width: 2px; border-top-color: color-mix(in srgb, var(--text) 55%, transparent); }
 .blocks .hr-t.hr-short { padding: 0 25%; }
 .blocks .hr-t.hr-space::before, .blocks .hr-t.hr-space::after, .blocks .hr-t.hr-dots::before, .blocks .hr-t.hr-dots::after { border-top-color: transparent; }
+
+/* 노트: 왼쪽 목록 접기 · 페이지 전체 화면 */
+.notes-split.folded { grid-template-columns: minmax(0, 1fr); }
+html.page-full .sidebar, html.page-full .topbar, html.page-full .segbar, html.page-full .tabbar, html.page-full .fab { display: none !important; }
+html.page-full .content { padding-top: calc(var(--sat) + 12px); padding-bottom: calc(32px + var(--sab)); }
+html.page-full .content-inner { max-width: 920px; }
+html.page-full .content-inner:has(.nw-wide) { max-width: 1280px; }
+.icon-btn.on-acc { color: var(--accent); }
