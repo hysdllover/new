@@ -1,6 +1,7 @@
 import { useTimerState, useTick, elapsed, remaining } from '../lib/timer.js'
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { useSettings, setSettings, useColl, put, remove, patch, exportJSON, importJSON, uid, getState, deviceId as myDevice } from '../store/store.js'
+import { seriesSummary } from '../lib/series.js'
 import { notesForWidget } from '../lib/notePreview.js'
 import { PRESETS, FONTS, effTheme, setDeviceTheme } from '../theme/theme.js'
 import { PALETTE, SOFT_PALETTE } from '../store/schema.js'
@@ -1072,6 +1073,7 @@ function WidgetPreview() {
       const after = c ? cls.filter((x) => x.start > c.start).slice(0, 3).map((x) => x.title).join(' · ') : ''
       return { c: c ? [[c.period + '교시', S], [c.title, { fontSize: 13 }], [cur ? '~' + fmtTime(c.end) : fmtTime(c.start), S]] : [[cls.length ? '끝' : '—', B]], r: [[<span style={{ ...ROW, fontSize: 8 }}><span>{cur ? `지금 ${cur.period}교시` : next ? `다음 ${next.period}교시` : '시간표'}</span><span>{c ? `${fmtTime(c.start)}–${fmtTime(c.end)}` : ''}</span></span>], [c ? c.title : cls.length ? '오늘 수업 끝' : '오늘 수업 없음', { fontSize: 20, fontWeight: 100 }], [c?.room ? c.room + (after ? ' · ' + after : '') : after, { fontSize: 10 }]], i: c ? (cur ? `${c.period}교시 ${c.title} ~${fmtTime(c.end)}` : `다음 ${c.period}교시 ${c.title} ${fmtTime(c.start)}`) : cls.length ? '오늘 수업 끝' : '오늘 수업 없음' }
     }
+    if (kind === '시리즈') { const x = seriesSummary(tasks, subjects, st.seriesColors || {})[0]; return { c: x ? [[`${x.d}/${x.n}`, { fontSize: 13 }], [x.t, S], [bar(x.d / (x.n || 1), 34)]] : [['—', B]], r: x ? [[<span style={ROW}><span className="ellipsis">{x.t}</span><span style={{ fontSize: 9 }}>{x.d}/{x.n}</span></span>], [bar(x.d / (x.n || 1), 136)], [x.next ? '다음 ' + x.next.title : '', { fontSize: 10 }]] : [['진행 중인 시리즈 없음']], i: x ? `${x.t} ${x.d}/${x.n}` : '진행 중인 시리즈 없음' } }
     return { c: [[hm(mins), { fontSize: 14 }], [pct + '%', S], [bar(mins / goal, 34)]], r: [[<><b>{hm(mins)}</b> / {hm(goal)}<span className="grow" />{ddTxt}</>], [bar(mins / goal, 136)], [todo[0] ? '– ' + todo[0].title : dd?.title || 'All clear.']], i: hm(mins) + (dd ? ` · ${ddTxt} ${dd.title}` : '') }
   }
   V['진행'] = V['공부']; V['남은분'] = V['지금']
@@ -1114,10 +1116,49 @@ function WidgetPreview() {
     <><div className="col" style={{ gap: 0, width: '50%', flexShrink: 0, minWidth: 0 }}><div className="dw-cap">{dateStr}</div><div className="grow" />{tmB(30)}</div><div className="dw-vr" /><div className="col" style={{ gap: 0, flex: 1, minWidth: 0 }}>{hdr('TODAY', '')}{subL(4)}</div></>,
     M(<>{hdr('TODAY', dateStr)}{tmB(46)}<div className="dw-hr" />{hdr('SUBJECTS', '이번 주 ' + hm(sw.week))}{subL(4)}<div className="grow" /><div className="row" style={{ gap: 8, flexWrap: 'nowrap' }}>{qsub.slice(0, 4).map((x) => btn(x.name, x.id, x.color))}</div></>),
   ]
+  // 시리즈 진행 · 이번 주 배치 · D-day까지 주차 (위젯 스크립트와 같은 계산)
+  const srs = seriesSummary(tasks, subjects, st.seriesColors || {})
+  const srRow = (x, big) => <div key={x.id} style={{ marginBottom: big ? 9 : 7 }}><div className="row between" style={{ fontSize: 12, flexWrap: 'nowrap', gap: 6 }}><span className="ellipsis">{x.t}</span><span className={x.d >= x.n ? 'dw-gold' : 'dw-soft'} style={{ fontSize: 11 }}>{x.d}/{x.n}</span></div><div className="dw-line" style={{ marginTop: 3 }}><i style={{ width: (x.d / (x.n || 1)) * 100 + '%', background: x.color || null }} /></div>{big && x.next && <div className="dw-soft" style={{ fontSize: 9, marginTop: 2 }}>다음 {x.next.title}</div>}</div>
+  const srNone = <span className="dw-soft" style={{ fontSize: 12 }}>진행 중인 시리즈가 없어요</span>
+  V['시리즈'] = [
+    M(<>{hdr('SERIES', '')}{srs[0] ? <><div className="ellipsis" style={{ fontSize: 12 }}>{srs[0].t}</div><div className="dw-big"><span style={{ fontSize: 30 }}>{srs[0].d}</span><span className="dw-soft">/ {srs[0].n}</span></div><div className="dw-line"><i style={{ width: (srs[0].d / (srs[0].n || 1)) * 100 + '%', background: srs[0].color || null }} /></div>{srs[0].next && <div className="dw-soft ellipsis" style={{ fontSize: 10, marginTop: 6 }}>다음 {srs[0].next.title}</div>}</> : srNone}</>),
+    M(<>{hdr('SERIES', dateStr)}{srs.length ? srs.slice(0, 3).map((x) => srRow(x)) : srNone}</>),
+    M(<>{hdr('SERIES', dateStr)}{srs.length ? srs.slice(0, 7).map((x) => srRow(x, true)) : srNone}</>),
+  ]
+  const wks = (st.weekStart ?? 1) % 7, bw0 = new Date(d + 'T12:00:00'); bw0.setDate(bw0.getDate() - ((bw0.getDay() - wks + 7) % 7))
+  const bwDays = Array.from({ length: 7 }, (_, i) => { const x = new Date(bw0); x.setDate(x.getDate() + i); return ymdOf(x) })
+  const bwOf = (k) => tasks.filter((t) => t.due === k && !t.archived && !t.deleted)
+  const bwLeft = bwDays.reduce((a, k) => a + bwOf(k).filter((t) => !t.done).length, 0)
+  const dotI = (t, i) => <i key={i} style={{ width: 6, height: 6, borderRadius: 3, flexShrink: 0, background: t.done ? 'var(--gold)' : 'transparent', border: t.done ? 0 : '1px solid var(--soft)', boxSizing: 'border-box' }} />
+  const WDN = ['일', '월', '화', '수', '목', '금', '토']
+  const bwCols = (max, nums) => <div className="row" style={{ flexWrap: 'nowrap', gap: 0, alignItems: 'flex-start' }}>{bwDays.map((k) => { const l = bwOf(k); return <div key={k} className="col" style={{ flex: 1, alignItems: 'center', gap: 4 }}><span className={k === d ? '' : 'dw-soft'} style={{ fontSize: 10, fontWeight: k === d ? 500 : undefined }}>{WDN[new Date(k + 'T12:00:00').getDay()]}</span>{nums && <span className="dw-soft" style={{ fontSize: 9 }}>{+k.slice(8)}</span>}{l.slice(0, max).map(dotI)}{l.length > max && <span className="dw-soft" style={{ fontSize: 7 }}>+{l.length - max}</span>}</div> })}</div>
+  const tdLeft = bwOf(d).filter((t) => !t.done)
+  V['배치'] = [
+    M(<>{hdr('THIS WEEK', '남은 ' + bwLeft)}{bwCols(5, false)}</>),
+    M(<>{hdr('THIS WEEK', '남은 ' + bwLeft)}{bwCols(4, true)}<div className="grow" /><div className="dw-soft ellipsis" style={{ fontSize: 10 }}>{tdLeft.length ? '오늘 · ' + tdLeft[0].title + (tdLeft.length > 1 ? ` 외 ${tdLeft.length - 1}개` : '') : '오늘 남은 할 일 없음'}</div></>),
+    M(<>{hdr('THIS WEEK', '남은 ' + bwLeft)}{bwDays.map((k) => { const l = bwOf(k), nx = l.filter((t) => !t.done).map((t) => t.title).slice(0, 2).join(' · '); return <div key={k} className="row" style={{ gap: 8, flexWrap: 'nowrap', alignItems: 'center', marginBottom: 9, fontSize: 11 }}><span className={k === d ? '' : 'dw-soft'} style={{ width: 34, flexShrink: 0, fontWeight: k === d ? 500 : undefined }}>{WDN[new Date(k + 'T12:00:00').getDay()]} {+k.slice(8)}</span><span className="row" style={{ gap: 2, flexWrap: 'nowrap', flexShrink: 0 }}>{l.slice(0, 8).map(dotI)}</span><span className={'ellipsis' + (nx ? '' : ' dw-soft')} style={{ fontSize: 10 }}>{nx || (l.length ? '다 했어요' : '')}</span></div> })}</>),
+  ]
+  const wkDd = ddays.filter((x) => x.date >= d).sort((a, b) => b.date.localeCompare(a.date))[0]
+  const wkInfo = (() => {
+    if (!wkDd) return null
+    const cur = ymdOf(bw0), e0 = new Date(wkDd.date + 'T12:00:00'); e0.setDate(e0.getDate() - ((e0.getDay() - wks + 7) % 7)); const end = ymdOf(e0)
+    const wGoal = +st.goalWeekly || goal * 7, weeks = []
+    const s0 = new Date(bw0); s0.setDate(s0.getDate() - 56)
+    for (const x = new Date(s0); ymdOf(x) <= end && weeks.length < 80; x.setDate(x.getDate() + 7)) {
+      const k = ymdOf(x), e = new Date(x); e.setDate(e.getDate() + 6); const ke = ymdOf(e)
+      const m = k <= cur ? sessions.filter((y) => y.date >= k && y.date <= ke).reduce((a, y) => a + y.dur, 0) : 0
+      weeks.push({ k, r: Math.min(1, m / wGoal), m, now: k === cur, fut: k > cur, end: k === end })
+    }
+    const first = weeks.findIndex((x) => x.m > 0 || x.now), left = Math.max(0, Math.round((new Date(wkDd.date + 'T12:00:00') - new Date(d + 'T12:00:00')) / 864e5))
+    return { weeks: weeks.slice(Math.max(0, first)), lw: Math.floor(left / 7), ld: left % 7 }
+  })()
+  const sq = (z) => <div className="row" style={{ gap: 3, flexWrap: 'wrap' }}>{wkInfo.weeks.map((x) => <i key={x.k} style={{ width: z, height: z, borderRadius: 2, boxSizing: 'border-box', background: x.fut ? 'transparent' : x.m ? `color-mix(in srgb, var(--gold) ${Math.round(25 + 75 * x.r)}%, transparent)` : 'var(--rule)', border: x.fut ? '1px solid var(--rule)' : x.now ? '1px solid var(--ink)' : 0, outline: x.end ? '1px solid var(--gold)' : 0 }} />)}</div>
+  const wkBody = (z, big) => wkInfo ? <><div className="dw-big"><span style={{ fontSize: big }}>{wkInfo.lw}</span><span className="dw-soft">주</span><span style={{ fontSize: big * 0.72, marginLeft: 4 }}>{wkInfo.ld}</span><span className="dw-soft">일</span></div><div style={{ height: 8 }} />{sq(z)}</> : <span className="dw-soft" style={{ fontSize: 12 }}>D-day를 추가해 주세요</span>
+  V['주차'] = [M(<>{hdr('WEEKS', wkDd?.title || '')}{wkBody(10, 30)}</>), M(<>{hdr('WEEKS', wkDd?.title || '')}{wkBody(11, 36)}</>), M(<>{hdr('WEEKS', wkDd?.title || '')}{wkBody(16, 36)}</>)]
   const L = kind === '타이머' ? Lfor('공부') : kind === '진행' ? { ...Lfor('공부'), c: [[pct + '%', B], [`공부 ${hm(mins)}`, S], [bar(mins / goal, 34)]] }
     : kind === '남은분' ? { ...Lfor('지금'), c: nC ? [[nCur ? '끝까지' : '시작까지', S], [`${Math.max(0, (nCur ? nC.e : nC.s) - nmP)}분`, { fontSize: 15 }], [nC.t, S]] : [['—', B]] }
     : Lfor(kind)
-  const [vs, vm, vl] = V[kind]
+  const [vs, vm, vl] = V[kind] || V[''] // 미리보기가 없는 형태도 화면이 멈추지 않게
   return (
     <>
       <div className="scroll-x" style={{ marginBottom: 6 }}><div className="row" style={{ gap: 6 }}>
