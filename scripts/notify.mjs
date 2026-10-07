@@ -1,4 +1,4 @@
-// GitHub Actions 에서 5~10분마다 실행: 동기화 Gist 를 읽어 알림 시각이 된 항목을 Web Push 로 발송
+// GitHub Actions 에서 5분마다 실행: 동기화 Gist 를 읽어 알림 시각이 된 항목을 Web Push 로 발송
 import webpush from 'web-push'
 import { matches } from '../src/engine/recurrence.js'
 import { reminderTimes, reminderBody, absMinutes, digestDue, digestText, isQuiet, nightMissed } from '../src/engine/reminders.js'
@@ -49,18 +49,31 @@ const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: tz
 const date = `${parts.year}-${parts.month}-${parts.day}`
 const now = +parts.hour * 60 + +parts.minute
 // GitHub 예약 실행은 몇 시간씩 늦어질 수 있음 → 지난 실행 이후 놓친 시간까지 (최대 6시간) 한 번에 확인
+// 지난 실행 시각은 Actions 기록에서 (gist 에는 1시간에 한 번만 남김 · 보낼 게 없을 때 gist 를 매번 고치지 않게)
 const meta = sentFile._meta || {}
-const since = meta.lastRun ? Math.ceil((Date.now() - meta.lastRun) / 60000) + 1 : WINDOW
+async function prevRun() {
+  const repo = process.env.GITHUB_REPOSITORY, tok = process.env.GITHUB_TOKEN
+  if (!repo || !tok) return null
+  try {
+    const r = await fetch(`https://api.github.com/repos/${repo}/actions/workflows/notify.yml/runs?status=success&per_page=1`, { headers: { Authorization: `Bearer ${tok}`, Accept: 'application/vnd.github+json' } })
+    const t = r.ok ? Date.parse((await r.json()).workflow_runs?.[0]?.run_started_at) : NaN
+    return Number.isFinite(t) ? t : null
+  } catch { return null }
+}
+const last = Math.max((await prevRun()) || 0, meta.lastRun || 0)
+const since = last ? Math.ceil((Date.now() - last) / 60000) + 1 : WINDOW
 const win = Math.min(360, Math.max(WINDOW, since))
 const due = (at) => at != null && at <= now && at > now - win
 
 const out = []
 const add = (key, at, title, body, url = './') => { if (due(at) && !sentFile[key]) out.push({ key, title, body, url, late: now - at }) }
-// 실행 기록 저장 (알림이 없어도) — 앱 설정에서 ‘마지막 확인’ 으로 보임
+// 실행 기록 저장 — 보낸 알림이 있거나 1시간이 지났을 때만 (앱 설정 ‘마지막 확인’)
+const before = JSON.stringify(sentFile)
 async function finish(files = {}) {
-  sentFile._meta = { ...meta, lastRun: Date.now(), lastWin: win }
   const cutoff = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10)
   for (const [k, d] of Object.entries(sentFile)) if (!k.startsWith('_') && d < cutoff) delete sentFile[k]
+  if (JSON.stringify(sentFile) === before && !Object.keys(files).length && Date.now() - (meta.lastRun || 0) < 55 * 60000) { console.log('바뀐 것 없음 · gist 그대로'); return }
+  sentFile._meta = { ...meta, lastRun: Date.now(), lastWin: win }
   await gh(`/gists/${id}`, { method: 'PATCH', body: JSON.stringify({ files: { 'push-sent.json': { content: JSON.stringify(sentFile) }, ...files } }) })
 }
 

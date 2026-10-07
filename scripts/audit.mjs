@@ -1,6 +1,6 @@
 // 실기기 크기 기준 화면 점검: 모든 화면을 열어 오류 · 가로 넘침 · '다시 불러오기' 상자를 찾음
 // 사용: npm run dev 로 띄운 뒤 `npm run audit` (Playwright 필요: npm i -D playwright 또는 전역 설치)
-// 옵션: AUDIT_URL=http://localhost:5173  AUDIT_SHOT=1 (스크린샷 audit-shots/ 에 저장)
+// 옵션: AUDIT_URL=http://localhost:5173  AUDIT_SHOT=1 (스크린샷 audit-shots/ 에 저장)  AUDIT_JOBS=4 (동시에 여는 창 수)
 import { mkdirSync } from 'node:fs'
 import { createRequire } from 'node:module'
 
@@ -25,7 +25,9 @@ const SEGS = { home: [''], planner: ['today', 'page', 'days3', 'week', 'month', 
 const b = await chromium.launch()
 let bad = 0
 if (SHOT) mkdirSync('audit-shots', { recursive: true })
-for (const [name, w, h, dpr, ua, mobile] of DEVICES) for (const scheme of ['light', 'dark']) {
+// 기기 × 밝기 조합을 여러 창에서 나눠 동시에 점검
+const jobs = DEVICES.flatMap((d) => ['light', 'dark'].map((scheme) => [...d, scheme]))
+async function run([name, w, h, dpr, ua, mobile, scheme]) {
   const ctx = await b.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: dpr, userAgent: ua, isMobile: mobile, hasTouch: true, colorScheme: scheme })
   const p = await ctx.newPage()
   let errs = []
@@ -45,6 +47,8 @@ for (const [name, w, h, dpr, ua, mobile] of DEVICES) for (const scheme of ['ligh
   }
   await ctx.close()
 }
+const N = Math.max(1, +process.env.AUDIT_JOBS || 4)
+await Promise.all(Array.from({ length: N }, async () => { while (jobs.length) await run(jobs.shift()) }))
 await b.close()
 console.log(bad ? `문제 ${bad}곳` : '모든 화면 정상')
 process.exit(bad ? 1 : 0)

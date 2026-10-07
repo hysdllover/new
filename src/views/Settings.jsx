@@ -553,7 +553,7 @@ function PushCard() {
     <Card title="알림" action={<span className="small">{on ? '● 켜짐' : '꺼짐'}</span>}>
       <div className="form">
         <div className="small muted">
-          할 일 시간 · 일정 알림 · 약 · 아침 요약 · 저녁 공부 목표를 푸시로 보내요. GitHub Actions 가 5~10분마다 확인해 보내므로 몇 분 늦을 수 있어요.
+          할 일 시간 · 일정 알림 · 약 · 아침 요약 · 저녁 공부 목표를 푸시로 보내요. GitHub Actions 가 5분마다 확인해 보내므로 몇 분 늦을 수 있어요.
         </div>
         {!isStandalone() && <div className="small" style={{ color: 'var(--danger)' }}>iPhone·iPad 는 Safari › 공유 › 홈 화면에 추가 후, 설치된 앱에서 켜야 해요 (iOS 16.4+)</div>}
         {!connected && <div className="small" style={{ color: 'var(--danger)' }}>먼저 위의 동기화를 연결하세요</div>}
@@ -563,9 +563,9 @@ function PushCard() {
           {on && <button className="btn" onClick={() => testLocal()}>테스트</button>}
         </div>
         {connected && last !== undefined && (
-          <div className="small" style={{ color: ago == null || ago > 30 ? 'var(--danger)' : 'var(--muted)' }}>
+          <div className="small" style={{ color: ago == null || ago > 90 ? 'var(--danger)' : 'var(--muted)' }}>
             알림 서버 마지막 확인: {ago == null ? '아직 없음' : ago < 1 ? '방금' : ago < 60 ? `${ago}분 전` : `${Math.floor(ago / 60)}시간 ${ago % 60}분 전`}
-            {(ago == null || ago > 30) && ' · GitHub 예약 실행이 늦어지고 있어요. 아래 ‘정확한 시간에 받기’를 설정하세요.'}
+            {ago != null && ago <= 90 && ' · 보낼 알림이 없으면 1시간에 한 번만 남겨요'}{(ago == null || ago > 90) && ' · GitHub 예약 실행이 늦어지고 있어요. 아래 ‘정확한 시간에 받기’를 설정하세요.'}
           </div>
         )}
         <div className="row">

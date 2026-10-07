@@ -37,15 +37,25 @@ const SRC = ${JSON.stringify(widgetRaw || '')}
 const APP = ${JSON.stringify(appUrl)}
 const fm = FileManager.local()
 const path = fm.joinPath(fm.documentsDirectory(), 'study-core.js')
+const vpath = fm.joinPath(fm.documentsDirectory(), 'study-core.ver')
 const lockW = String(config.widgetFamily || '').startsWith('accessory')
-let code = null
-try {
-  const r = new Request(APP + 'widget-core.js?t=' + Date.now())
-  r.timeoutInterval = lockW ? 5 : 10
-  const s = await r.loadString()
-  if (s && s.includes('STUDY_CORE')) code = s
-} catch (e) {}
-if (code) { try { fm.writeString(path, code) } catch (e) {} }
+// 본체는 이 기기에 저장해 두고, 작은 버전 파일만 확인해서 바뀌었을 때만 다시 받음 (20분에 한 번 확인)
+const has = fm.fileExists(path) && fm.fileExists(vpath)
+const fresh = has && Date.now() - fm.modificationDate(vpath).getTime() < 20 * 60000
+if (!fresh) {
+  try {
+    const rv = new Request(APP + 'widget-core.ver?t=' + Date.now())
+    rv.timeoutInterval = lockW ? 4 : 8
+    const ver = (await rv.loadString()).trim()
+    const cur = has ? fm.readString(vpath).trim() : ''
+    if (/^[0-9a-f]{6,40}$/.test(ver) && ver !== cur) {
+      const r = new Request(APP + 'widget-core.js?v=' + ver)
+      r.timeoutInterval = lockW ? 5 : 10
+      const s = await r.loadString()
+      if (s && s.includes('STUDY_CORE')) { fm.writeString(path, s); fm.writeString(vpath, ver) }
+    } else if (has) fm.writeString(vpath, cur)
+  } catch (e) {}
+}
 if (!fm.fileExists(path)) {
   const w = new ListWidget(); const x = w.addText('위젯을 처음 받는 중이에요 · 인터넷 연결 후 다시 열어 주세요'); x.font = Font.systemFont(11); x.lineLimit = 3
   if (config.runsInWidget) Script.setWidget(w); else await w.presentMedium()
