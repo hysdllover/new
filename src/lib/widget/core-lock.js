@@ -77,7 +77,11 @@ if (!data) {
   const subjects = alive(data.study.subjects)
   const allSess = alive(data.study.sessions)
   const sessions = allSess.filter((s) => s.date === today)
-  const mins = sessions.reduce((a, s) => a + (s.dur || 0), 0)
+  // 진행 중 타이머의 지금 구간(기록은 일시정지·정지 때 남음)까지 더한 오늘 공부 시간
+  const T0 = data.timer && !(data.timer.end && data.timer.end < Date.now()) && !(data.timer.start && Date.now() - data.timer.start > 12 * 3600000) ? data.timer : null
+  const SEG = T0 && !T0.paused && T0.start ? Math.max(T0.start + (T0.acc || 0), new Date(today + 'T00:00').getTime()) : null
+  const done0 = sessions.reduce((a, s) => a + (s.dur || 0), 0)
+  const mins = done0 + (SEG ? Math.max(0, Math.floor((Date.now() - SEG) / 60000)) : 0)
   const tasksAll = alive(data.tasks.tasks).filter((x) => !x.archived)
   // 날짜·시간 순, 같으면 사용자가 정한 순서
   const byDate = (a, b) => (a.due || '9999').localeCompare(b.due || '9999') || (a.dueTime ?? 9999) - (b.dueTime ?? 9999) || (a.order ?? 0) - (b.order ?? 0)
@@ -115,14 +119,18 @@ if (!data) {
     x.pm = Math.round(Math.max(0, x.mode === 'countdown' && x.target ? x.target - x.acc : x.acc) / 60000)
     return x
   })()
-  if (TM) w.refreshAfterDate = new Date(Math.min(w.refreshAfterDate.getTime(), Date.now() + 3 * 60000)) // 타이머 중엔 더 자주
+  if (TM) w.refreshAfterDate = new Date(Math.min(w.refreshAfterDate.getTime(), Date.now() + (TM.paused ? 3 : 1) * 60000)) // 타이머 중엔 더 자주 (진행선·%)
   // 위젯이 다시 그려지지 않아도 초 단위로 흐르는 시간
   const timerDate = (parent, size, thinFont) => { const d = parent.addDate(new Date(TM.mode === 'countdown' ? TM.end : TM.start)); d.applyTimerStyle(); d.font = thinFont ? thin(size) : tw(size); d.lineLimit = 1; d.minimumScaleFactor = 0.6; return d }
+  // 오늘 공부 시간 · 목표까지 남은 시간: 타이머가 돌면 위젯을 다시 그리지 않아도 초 단위로 바뀜
+  const liveDate = (parent, at, font, color) => { const d = parent.addDate(new Date(at)); d.applyTimerStyle(); d.font = font; if (color) d.textColor = color; d.lineLimit = 1; d.minimumScaleFactor = 0.5; return d }
+  const studyLive = (parent, font, color) => (SEG ? liveDate(parent, SEG - done0 * 60000, font, color) : t(parent, hm(mins), font, color))
+  const leftLive = (parent, font, color) => (SEG && mins < goal ? liveDate(parent, SEG + (goal - done0) * 60000, font, color) : t(parent, hm(Math.max(0, goal - mins)), font, color))
   const subMins = subjects.map((s) => ({ s, m: sessions.filter((x) => x.subjectId === s.id).reduce((a, x) => a + (x.dur || 0), 0) })).filter((x) => x.m).sort((a, b) => b.m - a.m)
 
   const studyBig = (parent, size, width) => {
     const r = parent.addStack(); r.bottomAlignContent()
-    t(r, hm(mins), thin(size), INK).minimumScaleFactor = 0.5 // 폭이 모자라면 잘리지 않고 작아짐
+    studyLive(r, thin(size), INK).minimumScaleFactor = 0.5 // 폭이 모자라면 잘리지 않고 작아짐
     r.addSpacer(6); t(r, 'of ' + hm(goal), tw(size * 0.32), SOFT).minimumScaleFactor = 0.6
     r.addSpacer(); t(r, pct + '%', tw(size * 0.32), GOLD).minimumScaleFactor = 0.6
     parent.addSpacer(6)
@@ -385,7 +393,7 @@ if (!data) {
       if (inl) inline('공부 ' + hm(mins) + ' / ' + hm(goal) + ' · ' + pct + '%')
       else if (circ) cRows([[hm(mins), tw(14)], [pct + '%', label(8)]], mins / goal)
       else {
-        const r = w.addStack(); r.size = new Size(LK.rw, 0); r.bottomAlignContent(); t(r, hm(mins), thin(22)); r.addSpacer(4); t(r, '/ ' + hm(goal), tw(10)); r.addSpacer(); t(r, pct + '%', tw(11))
+        const r = w.addStack(); r.size = new Size(LK.rw, 0); r.bottomAlignContent(); studyLive(r, thin(22)); r.addSpacer(4); t(r, '/ ' + hm(goal), tw(10)); r.addSpacer(); t(r, pct + '%', tw(11))
         w.addSpacer(3); lbar(w, mins / goal, LK.rw); w.addSpacer(4)
         rRow('이번 주 ' + hm(week), '어제 ' + hm(yday), tw(10), tw(10))
       }
@@ -595,7 +603,7 @@ if (!data) {
       else { row(hm(mins), tw(14)); row(pct + '%', label(8)); cline(z, mins / goal) }
     } else {
       const r = w.addStack(); r.size = new Size(LK.rw, 0); r.bottomAlignContent()
-      t(r, hm(mins), thin(22)); r.addSpacer(4); t(r, '/ ' + hm(goal), tw(10)); r.addSpacer(); if (dd) t(r, ddTxt, tw(12))
+      studyLive(r, thin(22)); r.addSpacer(4); t(r, '/ ' + hm(goal), tw(10)); r.addSpacer(); if (dd) t(r, ddTxt, tw(12))
       w.addSpacer(4)
       lbar(w, mins / goal, LK.rw)
       w.addSpacer(5)
