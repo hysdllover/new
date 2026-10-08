@@ -468,7 +468,7 @@ export default () => `  } else if (KIND === 'study') {
       ring: ['GOAL', (b, f, wd) => {
         b.addSpacer(4); const r = b.addStack(); r.centerAlignContent(); const sz = gH + 14
         const img = r.addImage(ringImg(mins / goal, sz, LGd ? 5 : 4)); img.imageSize = new Size(sz, sz); r.addSpacer(8)
-        const cc = r.addStack(); cc.layoutVertically(); t(cc, hm(mins), thin(LGd ? 26 : 18), INK).minimumScaleFactor = 0.6; t(cc, pct + '% · ' + hm(goal), tw(LGd ? 11 : 9), GOLD).minimumScaleFactor = 0.7; r.addSpacer()
+        const cc = r.addStack(); cc.layoutVertically(); studyLive(cc, thin(LGd ? 26 : 18), INK).minimumScaleFactor = 0.6; t(cc, pct + '% · ' + hm(goal), tw(LGd ? 11 : 9), GOLD).minimumScaleFactor = 0.7; r.addSpacer()
       }, '', null, 'study.records', SOFT],
       // 이번 달 공부 히트맵 (칸 진하기 = 목표 대비)
       heat: [MON[d0.getMonth()] + ' ' + hm(monthTot), (b, f, wd) => {
@@ -506,7 +506,7 @@ export default () => `  } else if (KIND === 'study') {
       note: ['NOTE', (b, f, wd) => { b.addSpacer(2); t(b, nt0 ? nt0.t : '노트가 없어요', F(LGd ? 12.5 : 11, 'Regular'), INK, 1).minimumScaleFactor = 0.75; b.addSpacer(3); nLn(b, LGd ? 5 : fam === 'small' ? 2 : 3, wd) }, '', null, noteUrl(nt0), SOFT],
       notes: ['NOTES', (b, f, wd) => { b.addSpacer(3); for (const x of NOTES().slice(0, LGd ? 4 : 3)) { const r = b.addStack(); r.url = noteUrl(x); r.centerAlignContent(); t(r, x.t, tw(LGd ? 12 : 10), INK).minimumScaleFactor = 0.75; r.addSpacer(4); t(r, noteAgo(x.u), label(6), SOFT); b.addSpacer(2) } if (!NOTES().length) t(b, '노트 없음', tw(10), SOFT) }, '', null, 'notes.pages', SOFT],
       month: ['THIS MONTH', hm(monthTot), mDays + '일 공부', null, 'study.records', GOLD],
-      left: [mins >= goal ? 'GOAL DONE' : 'LEFT', hm(Math.max(0, goal - mins)), mins >= goal ? '오늘 목표 달성' : '목표까지 남음', mins / goal, 'study.timer', GOLD],
+      left: [mins >= goal ? 'GOAL DONE' : 'LEFT', hm(Math.max(0, goal - mins)), mins >= goal ? '오늘 목표 달성' : '목표까지 남음', mins / goal, 'study.timer', GOLD, leftLive],
       tmrw: ['TOMORROW', (b, f, wd) => { b.addSpacer(3); const rows = [...TMR.ev.map((e) => [e.s == null ? '종일' : clk(e.s % 1440), e.t]), ...TMR.tk.map((x) => ['–', x.title])].slice(0, LGd ? 4 : 3); for (const [a2, b2] of rows) { const r = b.addStack(); r.centerAlignContent(); t(r, a2, tw(LGd ? 10 : 8), GOLD); r.addSpacer(5); t(r, b2, tw(LGd ? 12 : 10), INK).minimumScaleFactor = 0.75; r.addSpacer(); b.addSpacer(2) } if (!rows.length) t(b, '내일은 비어 있어요', tw(10), SOFT) }, TMR.cl.length ? '수업 ' + TMR.cl.length : '', null, 'planner.week', SOFT],
       due: ['DUE', (b, f, wd) => { b.addSpacer(3); for (const x of DUE.slice(0, LGd ? 4 : 3)) { const r = b.addStack(); r.centerAlignContent(); if (x.id) r.url = doneUrl(x.id); t(r, dueTxt(x), tw(LGd ? 10 : 8), dueIn(x) <= 0 ? GOLD : SOFT); r.addSpacer(5); t(r, x.title, tw(LGd ? 12 : 10), INK).minimumScaleFactor = 0.75; r.addSpacer(); b.addSpacer(2) } if (!DUE.length) t(b, '2주 안에 마감 없음', tw(10), SOFT) }, '', null, 'tasks', SOFT],
       start: ['START', (b, f, wd) => { b.addSpacer(4); const n = Math.min(QS.length, wd > 200 ? 4 : 2) || 1, g2 = 6, bw = Math.floor((wd - g2 * (n - 1)) / n), r = b.addStack(); r.spacing = g2; for (const sj of (QS.length ? QS : [null]).slice(0, n)) { const x = r.addStack(); x.size = new Size(bw, LGd ? 32 : 26); x.cornerRadius = 8; x.backgroundColor = RULE; x.centerAlignContent(); x.url = startUrl(sj); if (sj && sj.color) { const d = x.addStack(); d.size = new Size(5, 5); d.cornerRadius = 2.5; d.backgroundColor = new Color(sj.color); x.addSpacer(4) } t(x, sj ? sj.name : '공부', tw(LGd ? 12 : 10), INK).minimumScaleFactor = 0.6 } }, '', null, 'study.timer', SOFT],
@@ -525,7 +525,7 @@ export default () => `  } else if (KIND === 'study') {
         L.forEach((x, k) => { if (k) b.addSpacer(LG ? 3 : 2); const imp = x.priority >= 3; t(b, (imp ? '• ' : '– ') + x.title, imp ? F(fs, 'Medium') : tw(fs), INK).minimumScaleFactor = 0.8 })
       }, '', null, 'tasks', SOFT],
       TM ? ['● ' + TM.name, (b, f) => { if (TM.paused) t(b, hm(TM.pm), f, INK); else { const d = timerDate(b, 10); d.font = f; d.textColor = INK } }, (TM.paused ? '일시정지 · ' : '오늘 ') + hm(mins), mins / goal, 'study.timer', GOLD]
-        : ['STUDY', hm(mins), pct + '%', mins / goal, 'study.records', GOLD],
+        : ['STUDY', hm(mins), pct + '%', mins / goal, 'study.records', GOLD, studyLive],
     ]
     TL.todo = tilesA[0]; TL.study = tilesA[1]
     const tiles = keys.map((k) => TL[k])
@@ -538,11 +538,11 @@ export default () => `  } else if (KIND === 'study') {
         else if (k === 'study') {
           a.bottomAlignContent(); a.url = link(TM ? 'study.timer' : 'study.records')
           if (TM) { t(a, '● ' + TM.name + ' ', tw(10), GOLD); if (TM.paused) t(a, hm(TM.pm), thin(20), INK); else { const d = timerDate(a, 20, true); d.textColor = INK } }
-          else { t(a, hm(mins), thin(22), INK).minimumScaleFactor = 0.6; a.addSpacer(5); t(a, 'of ' + hm(goal), tw(9), SOFT) }
+          else { studyLive(a, thin(22), INK).minimumScaleFactor = 0.6; a.addSpacer(5); t(a, 'of ' + hm(goal), tw(9), SOFT) }
           a.addSpacer(); t(a, pct + '%', tw(10), GOLD); P2.addSpacer(5); pbar(P2, mins / goal, wd)
         } else if (k === 'week') { a.bottomAlignContent(); t(a, hm(weekTot), thin(22), INK).minimumScaleFactor = 0.6; a.addSpacer(6); t(a, '이번 주', tw(10), SOFT); a.addSpacer(); t(a, '하루 ' + hm(weekAvg), tw(10), GOLD) }
         else if (typeof TL[k][1] === 'function') { const x = TL[k]; a.centerAlignContent(); t(a, x[0], label(8), SOFT); a.addSpacer(); if (x[2]) t(a, x[2], tw(10), x[5]); x[1](P2, thin(20), wd) }
-        else { const x = TL[k]; a.centerAlignContent(); t(a, x[2], tw(12), INK).minimumScaleFactor = 0.75; a.addSpacer(6); t(a, x[1], tw(11), GOLD); if (x[3] != null) { P2.addSpacer(4); pbar(P2, x[3], wd) } }
+        else { const x = TL[k]; a.centerAlignContent(); t(a, x[2], tw(12), INK).minimumScaleFactor = 0.75; a.addSpacer(6); if (x[6]) x[6](a, tw(11), GOLD); else t(a, x[1], tw(11), GOLD); if (x[3] != null) { P2.addSpacer(4); pbar(P2, x[3], wd) } }
       }
     const col = (P2, ks, wd2) => ks.forEach((k, i) => { if (i) P2.addSpacer(); line(P2, k, wd2) })
     const titleTxt = CW ? (CW.name || '내 위젯 ' + (DDI + 1)) : 'TODAY'
@@ -589,7 +589,7 @@ export default () => `  } else if (KIND === 'study') {
         const wd = wdx
         const b = r.addStack(); b.layoutVertically(); b.size = new Size(wd, 0); if (fam !== 'small') b.url = link(x[4])
         t(b, x[0], label(LG ? 9 : 7), x[0][0] === '●' ? GOLD : SOFT).minimumScaleFactor = 0.7; b.addSpacer(2)
-        if (typeof x[1] === 'function') { if (x[0] === 'TO DO') b.addSpacer(3); x[1](b, thin(big), wd) } else t(b, x[1], thin(big), INK).minimumScaleFactor = 0.5
+        if (typeof x[1] === 'function') { if (x[0] === 'TO DO') b.addSpacer(3); x[1](b, thin(big), wd) } else if (x[6]) x[6](b, thin(big), INK).minimumScaleFactor = 0.5; else t(b, x[1], thin(big), INK).minimumScaleFactor = 0.5
         if (x[2]) t(b, x[2], tw(LG ? 12 : 10), x[5]).minimumScaleFactor = 0.7
         if (x[3] != null) { b.addSpacer(4); pbar(b, x[3], wd) }
       }
@@ -740,7 +740,7 @@ export default () => `  } else if (KIND === 'study') {
       } else {
         cap(h, 'STUDY'); h.addSpacer(); t(h, pct + '%', label(LG ? 9 : 8), GOLD)
         P2.addSpacer(2)
-        const r = P2.addStack(); r.bottomAlignContent(); t(r, hm(mins), thin(big), INK).minimumScaleFactor = 0.5; r.addSpacer(5); t(r, '/ ' + hm(goal), tw(LG ? 12 : 10), SOFT).minimumScaleFactor = 0.7; r.addSpacer()
+        const r = P2.addStack(); r.bottomAlignContent(); studyLive(r, thin(big), INK).minimumScaleFactor = 0.5; r.addSpacer(5); t(r, '/ ' + hm(goal), tw(LG ? 12 : 10), SOFT).minimumScaleFactor = 0.7; r.addSpacer()
       }
       P2.addSpacer(5); pbar(P2, mins / goal, wd)
       P2.addSpacer(5)
