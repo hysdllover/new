@@ -757,19 +757,20 @@ html[data-hl="full"] { --hl-top: 8%; }
 @media (prefers-reduced-motion: reduce) { .mpeek { animation: none; } }
 
 /* 주간 배치판 */
-.wkb { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.wkb { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 @media (min-width: 900px) { .wkb { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-.wkb-col { min-height: 120px; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); display: flex; flex-direction: column; gap: 2px; }
+@media (min-width: 1300px) { .wkb { grid-template-columns: repeat(8, minmax(0, 1fr)); } } /* 아이패드 가로: 한 줄에 일주일 */
+.wkb-col { min-height: 58px; padding: 6px 7px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); display: flex; flex-direction: column; gap: 2px; }
 .wkb-col.loose { background: var(--surface-2); border-style: dashed; }
 .wkb-col.now { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
 .wkb-col.past .wkb-h { color: var(--muted); }
-.wkb-h { display: flex; justify-content: space-between; align-items: baseline; font-size: .82em; padding: 0 2px 6px; margin-bottom: 2px; border-bottom: 1px solid var(--line); }
+.wkb-h { display: flex; justify-content: space-between; align-items: baseline; font-size: .82em; padding: 0 2px 4px; margin-bottom: 1px; border-bottom: 1px solid var(--line); }
 .wkb-h b { font-weight: var(--fw-b); }
-.wkb-item { display: flex; align-items: center; gap: 7px; padding: 5px 2px; border-radius: 6px; font-size: .9em; touch-action: pan-y; -webkit-user-select: none; user-select: none; cursor: grab; }
+.wkb-item { display: flex; align-items: center; gap: 6px; padding: 3px 2px; border-radius: 6px; font-size: .9em; touch-action: pan-y; -webkit-user-select: none; user-select: none; cursor: grab; }
 .wkb-item .check { width: 16px; height: 16px; border-radius: 5px; }
 .wkb-item.done .wkb-t { color: var(--muted); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 60%, transparent); }
 .wkb-t { flex: 1; min-width: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.35; }
-.wkb-empty { font-size: .72em; color: var(--muted); opacity: .7; padding: 10px 2px; text-align: center; }
+.wkb-empty { font-size: .7em; color: var(--muted); opacity: .6; padding: 4px 2px; text-align: center; }
 .series-prev { padding: 8px 10px; border: 1px dashed var(--line); border-radius: 8px; display: flex; flex-direction: column; gap: 3px; }
 /* D-day까지 주차 달력 */
 .wk-big { font-size: 1.7em; font-weight: 200; font-family: var(--font-head, inherit); font-variant-numeric: tabular-nums; }
@@ -885,8 +886,7 @@ html[data-div="dot"] .hr-t::before, html[data-div="dot"] .hr-t::after { border-t
 .note-card.nc-bg.note-bg-grid { background-image: linear-gradient(color-mix(in srgb, var(--accent) 7%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--accent) 7%, transparent) 1px, transparent 1px); background-size: 14px 14px; }
 .note-card.nc-bg.note-bg-dot { background-image: radial-gradient(color-mix(in srgb, var(--text) 16%, transparent) 1px, transparent 1.4px); background-size: 13px 13px; }
 .series-in { display: flex; flex-direction: column; gap: 5px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; }
-/* 주간 배치: 칸 높이 맞춤 · 과목 색 띠 */
-.wkb { grid-auto-rows: 1fr; }
+/* 주간 배치: 과목 색 띠 (칸 높이는 내용만큼 · 같은 줄끼리만 맞춤) */
 .wkb-item { box-shadow: inset 2px 0 0 var(--sbc, transparent); padding-left: 6px; }
 /* 홈 페이지 배경 */
 .wpbg { border-radius: var(--r-card, var(--radius)); padding: 8px; }
