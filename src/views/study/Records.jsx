@@ -259,7 +259,8 @@ function WeeksToDday({ byDay, st }) {
   const goal = st.goalWeekly || 1500, left = diffDays(dd.date, t0), lw = Math.floor(left / 7)
   const past = weeks.filter((w) => w < cur), avg = past.length ? Math.round(past.slice(-4).reduce((a, w) => a + wm(w), 0) / Math.min(4, past.length)) : 0
   return (
-    <Card title={`${dd.title}까지`} action={ddays.length > 1 && <div className="row" style={{ gap: 4 }}>{ddays.map((d) => <button key={d.id} className={'chip' + (d.id === dd.id ? ' on' : '')} onClick={() => { setPick(d.id); try { localStorage.setItem('wk_dday', d.id) } catch {} }}>{d.title}</button>)}</div>}>
+    <Card title={`${dd.title}까지`}>
+      {ddays.length > 1 && <div className="dd-pick">{ddays.map((d) => <button key={d.id} className={'chip' + (d.id === dd.id ? ' on' : '')} onClick={() => { setPick(d.id); try { localStorage.setItem('wk_dday', d.id) } catch {} }}>{d.title}</button>)}</div>}
       <div className="row" style={{ alignItems: 'baseline', gap: 10, marginBottom: 10 }}>
         <span className="wk-big">{lw}<small>주</small> {left % 7}<small>일</small></span>
         <span className="tiny muted">최근 4주 평균 {hmS(avg)} · 주간 목표 {hmS(goal)}</span>

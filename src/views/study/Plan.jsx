@@ -5,7 +5,8 @@ import { Card, Icon, Field, openSheet, toast, Empty, Prog, confirmSheet } from '
 import { SubjectSelect } from '../../components/common.jsx'
 import { Burndown } from '../../components/charts.jsx'
 import { today, addDays, dday, fmtDate, fmtShort, WD } from '../../engine/date.js'
-import { PALETTE } from '../../store/schema.js'
+import { PALETTE, SOFT_PALETTE } from '../../store/schema.js'
+import { ColorPick } from '../../components/common.jsx'
 
 export default function Plan() {
   const plans = useColl('plans')
@@ -50,28 +51,61 @@ export default function Plan() {
   )
 }
 
+// D-day: 줄을 누르면 고치기(이름·날짜·색·별표) · 별표는 홈 맨 위와 리포트에 나옴
+export const openDday = (id) => openSheet((c) => <DdayEditor id={id} close={c} />, { title: id ? 'D-day 고치기' : 'D-day 추가' })
 export function DdayCard() {
   const ddays = useColl('ddays').sort((a, b) => a.date.localeCompare(b.date))
-  const [title, setTitle] = useState('')
-  const [date, setDate] = useState(addDays(today(), 30))
+  const t0 = today()
   return (
-    <Card title="D-day">
+    <Card title="D-day" action={<button className="btn sm ghost" onClick={() => openDday(null)}><Icon name="plus" size={14} />추가</button>}>
       <div className="list">
         {ddays.map((d) => (
-          <div key={d.id} className="item" style={{ alignItems: 'center' }}>
+          <div key={d.id} className={'item dd-row' + (d.date < t0 ? ' past' : '')} onClick={() => openDday(d.id)}>
+            <span className="dd-dot" style={{ background: d.color || 'var(--accent)' }} />
+            <div className="t"><div className="ellipsis">{d.title}</div><div className="meta">{fmtDate(d.date, { year: true })}</div></div>
             <span className="dday-n" style={{ color: d.color || 'var(--accent)' }}>{dday(d.date)}</span>
-            <div className="t"><div>{d.title}</div><div className="meta">{fmtDate(d.date, { year: true })}</div></div>
-            <button className={'icon-btn'} style={d.pinned ? { color: 'var(--accent)' } : null} onClick={() => patch('ddays', d.id, { pinned: !d.pinned })} title="홈에 고정" aria-label="고정"><Icon name="star" size={16} fill={d.pinned ? 'currentColor' : 'none'} /></button>
-            <button className="icon-btn" onClick={() => remove('ddays', d.id)} aria-label="삭제"><Icon name="close" size={14} /></button>
+            <button className="icon-btn" style={d.pinned ? { color: d.color || 'var(--accent)' } : null} onClick={(e) => { e.stopPropagation(); patch('ddays', d.id, { pinned: !d.pinned }) }} title="별표 (홈·리포트)" aria-label="별표"><Icon name="star" size={16} fill={d.pinned ? 'currentColor' : 'none'} /></button>
           </div>
         ))}
+        {!ddays.length && <Empty hint="시험·발표 날짜를 넣으면 남은 날을 세어 줘요" action={{ label: 'D-day 추가', fn: () => openDday(null) }}>D-day 가 없어요</Empty>}
       </div>
-      <form className="row" style={{ marginTop: 8 }} onSubmit={(e) => { e.preventDefault(); if (!title) return; put('ddays', { title, date, color: PALETTE[ddays.length % 4], pinned: !ddays.length }); setTitle('') }}>
-        <input className="input" placeholder="시험·발표 이름" value={title} onChange={(e) => setTitle(e.target.value)} />
-        <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ maxWidth: 160 }} />
-        <button className="btn" type="submit"><Icon name="plus" size={16} /></button>
-      </form>
     </Card>
+  )
+}
+
+function DdayEditor({ id, close }) {
+  const cur = id ? find('ddays', id) : null
+  const n = useColl('ddays').length
+  const [f, setF] = useState(() => cur ? { title: cur.title, date: cur.date, color: cur.color || PALETTE[0], pinned: !!cur.pinned } : { title: '', date: addDays(today(), 30), color: PALETTE[n % 4], pinned: !n })
+  const up = (p) => setF((x) => ({ ...x, ...p }))
+  const save = () => {
+    if (!f.title.trim() || !f.date) return toast('이름과 날짜를 넣어 주세요')
+    if (cur) patch('ddays', id, { ...f, title: f.title.trim() }); else put('ddays', { ...f, title: f.title.trim() })
+    close()
+  }
+  return (
+    <div className="form">
+      <Field label="이름"><input className="input" autoFocus={!cur} placeholder="시험·발표 이름" value={f.title} onChange={(e) => up({ title: e.target.value })} /></Field>
+      <Field label="날짜"><input className="input dd-date" type="date" value={f.date} onChange={(e) => up({ date: e.target.value })} /></Field>
+      <div className="tiny muted" style={{ marginTop: -4 }}>{f.date ? `${fmtDate(f.date, { year: true })} · ${dday(f.date)}` : ''}</div>
+      <Field label="색">
+        <div className="row wrap" style={{ gap: 8, alignItems: 'center' }}>
+          <ColorPick value={f.color} onChange={(c) => up({ color: c })} colors={SOFT_PALETTE} />
+          <label className="dd-custom" style={{ background: SOFT_PALETTE.includes(f.color) ? 'var(--surface-2)' : f.color }} title="직접 고르기">
+            <input type="color" value={f.color} onChange={(e) => up({ color: e.target.value })} aria-label="직접 고르기" />
+            {SOFT_PALETTE.includes(f.color) && <Icon name="plus" size={13} />}
+          </label>
+        </div>
+      </Field>
+      <button type="button" className="row dd-star" onClick={() => up({ pinned: !f.pinned })}>
+        <Icon name="star" size={16} fill={f.pinned ? 'currentColor' : 'none'} style={{ color: f.pinned ? f.color : 'var(--muted)' }} />
+        <span className="small">별표 <span className="tiny muted">· 홈 맨 위 · 리포트에 나와요</span></span>
+      </button>
+      <div className="row" style={{ gap: 6 }}>
+        {cur && <button className="btn danger" onClick={() => confirmSheet('D-day 삭제', `‘${cur.title}’ 을 지울까요?`, () => { remove('ddays', id); close() }, '삭제')}>삭제</button>}
+        <button className="btn primary grow" onClick={save}>{cur ? '저장' : '추가'}</button>
+      </div>
+    </div>
   )
 }
 
