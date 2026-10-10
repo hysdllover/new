@@ -1,6 +1,7 @@
 // 리포트(하루·주간·월간): 구성(켜기·순서)을 직접 정함 — 공유(텍스트)·이미지·A4 인쇄도 같은 구성
 import { useEffect, useState } from 'react'
-import { FONTS } from '../theme/theme.js'
+import { reportFamily, loadReportFont, reportFontOptions, reportScale } from '../lib/reportFont.js'
+import { useMyFonts } from '../lib/fonts.js'
 import { useColl, useSettings, setSettings, find, list } from '../store/store.js'
 import { pickQuote } from '../lib/quote.js'
 import { drawReport, REPORT_THEMES } from '../lib/reportImage.js'
@@ -136,8 +137,8 @@ const label = (d) => (d.kind === 'month' ? `${d.from.slice(0, 4)}년 ${+d.from.s
 
 const asText = (d, secs) => [`${label(d)} ${NAME[d.kind || 'day']}`, ...secs.flatMap((k) => { const l = lines(k, d); return l.length ? ['', `[${title(k, d)}]`, ...l] : [] })].join('\n')
 
-async function printA4(d, secs) {
-  await FONTS.gaegu?.load?.().catch(() => {}); await document.fonts.load('300 20px "Gaegu"').catch(() => {})
+async function printA4(d, secs, fontKey) {
+  await loadReportFont(fontKey); const hand = reportFamily(fontKey), hs = reportScale(fontKey)
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
   const el = document.createElement('div'); el.id = 'print-area'; el.className = 'rpa'
   const cs = getComputedStyle(document.documentElement), acc = cs.getPropertyValue('--accent').trim() || '#4a5a78'
@@ -159,7 +160,7 @@ async function printA4(d, secs) {
   }).join('')
   el.innerHTML = `<style>
   .rpa { position: relative; font-family: var(--font); color: #2b2e35; font-weight: 300; font-size: 9.5pt; --a: ${acc}; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 2mm 0 0; }
-  .rpa-top h1, .rpa-big, .rpa-sec h3 { font-family: "Gaegu", var(--font-head, var(--font)); }
+  .rpa-top h1, .rpa-big, .rpa-sec h3 { font-family: ${hand}; }
   .rpa-sec h3 { font-size: 11pt; letter-spacing: 0; color: #2b2e35; border-bottom: 0; } .rpa-sec h3 span { padding: 0 1mm; background: linear-gradient(transparent 58%, color-mix(in srgb, var(--a) 18%, white) 58% 90%, transparent 90%); }
   .rpa-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 6mm; padding-bottom: 3mm; border-bottom: .3mm solid #d9dbe0; margin-bottom: 5mm; background: white; }
   .rpa-top h1 { font-size: 22pt; font-weight: 200; margin: 1mm 0 0; font-family: var(--font-head, inherit); display: flex; align-items: baseline; gap: 1.5mm; } .rpa-top h1 small { font-size: 10pt; color: #8b9099; } .rpa-top h1 em { font-style: normal; font-size: 8pt; letter-spacing: .2em; color: var(--a); margin-left: 1mm; }
@@ -182,16 +183,16 @@ async function printA4(d, secs) {
   .rpa ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1.2mm; } .rpa ul.two { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2mm 6mm; }
   .rpa li { display: flex; gap: 2mm; align-items: center; } .rpa .mk { width: 2.4mm; height: 2.4mm; border: .25mm solid #9aa0aa; border-radius: .6mm; flex-shrink: 0; } .rpa .mk.on { background: var(--a); border-color: var(--a); } .rpa .mk.dash { width: 1.6mm; height: 0; border-width: .25mm 0 0; border-radius: 0; }
   /* 공책 느낌: 손글씨 날짜·숫자·소제목 · 형광펜 · 가는 선만 */
-  .rpa-top h1, .rpa-big, .rpa-sec h3 { font-family: "Gaegu", var(--font-head, var(--font)); font-weight: 300; }
-  .rpa-top h1 { font-size: 24pt; } .rpa-top { border-bottom: 0; padding-bottom: 0; }
-  .rpa-sec h3 { font-size: 12pt; letter-spacing: 0; color: #2b2e35; font-weight: 400; border-bottom: 0; padding-bottom: 0; margin-bottom: 2mm; }
+  .rpa-top h1, .rpa-big, .rpa-sec h3 { font-family: ${hand}; font-weight: 300; }
+  .rpa-top h1 { font-size: ${24 * hs}pt; } .rpa-top { border-bottom: 0; padding-bottom: 0; }
+  .rpa-sec h3 { font-size: ${12 * hs}pt; letter-spacing: 0; color: #2b2e35; font-weight: 400; border-bottom: 0; padding-bottom: 0; margin-bottom: 2mm; }
   .rpa-sec h3 span { padding: 0 1mm; background: linear-gradient(transparent 58%, color-mix(in srgb, var(--a) 18%, white) 58% 90%, transparent 90%); }
-  .rpa-hero { background: none; border: 0; padding: 0; } .rpa-total { display: flex; align-items: baseline; gap: 3mm; } .rpa-total .rpa-big { font-size: 34pt; line-height: 1; } .rpa-total small { color: #8b9099; font-size: 10pt; } .rpa-total em { margin-left: auto; font-style: normal; font-family: "Gaegu", var(--font); font-size: 15pt; color: var(--a); padding: 1mm 3mm; border: .3mm solid color-mix(in srgb, var(--a) 45%, white); border-radius: 50%; }
+  .rpa-hero { background: none; border: 0; padding: 0; } .rpa-total { display: flex; align-items: baseline; gap: 3mm; } .rpa-total .rpa-big { font-size: ${34 * hs}pt; line-height: 1; } .rpa-total small { color: #8b9099; font-size: 10pt; } .rpa-total em { margin-left: auto; font-style: normal; font-family: ${hand}; font-size: 15pt; color: var(--a); padding: 1mm 3mm; border: .3mm solid color-mix(in srgb, var(--a) 45%, white); border-radius: 50%; }
   .rpa-track { height: 1.6mm; background: linear-gradient(#e3e5e9, #e3e5e9) 0 50% / 100% .2mm no-repeat; } .rpa-track i { opacity: .8; -webkit-mask-image: repeating-linear-gradient(-62deg, #000 0 .45mm, rgba(0,0,0,.35) .45mm .85mm); mask-image: repeating-linear-gradient(-62deg, #000 0 .45mm, rgba(0,0,0,.35) .45mm .85mm); }
   .rpa-lg { border-bottom: .2mm solid #eceef1; } .rpa li { border-bottom: .2mm solid #eceef1; padding-bottom: 1mm; } .rpa li.on { color: #8b9099; }
   .rpa .tk { width: 3mm; height: 3mm; flex-shrink: 0; } .rpa .tk path { fill: none; stroke: var(--a); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
   .rpa-ten { border-top: 0; } .rpa-ten i { border-left: 0; height: 2.6mm; align-self: center; border-radius: .6mm; margin: 0 .2mm; } .rpa-ten .r { align-items: center; }
-  .rpa-dds span { border: 0; background: none; padding: 0; font-size: 9pt; } .rpa-dds b { font-family: "Gaegu", var(--font); font-size: 12pt; font-weight: 400; } .rpa-dds .st { width: 3mm; height: 3mm; align-self: center; } .rpa-dds .st path { fill: none; stroke: var(--dc); stroke-width: 1.3; stroke-linejoin: round; }
+  .rpa-dds span { border: 0; background: none; padding: 0; font-size: 9pt; } .rpa-dds b { font-family: ${hand}; font-size: 12pt; font-weight: 400; } .rpa-dds .st { width: 3mm; height: 3mm; align-self: center; } .rpa-dds .st path { fill: none; stroke: var(--dc); stroke-width: 1.3; stroke-linejoin: round; }
   </style><div class="rpa-top"><div><span class="k">${NAME_EN[d.kind || 'day']}</span>${dt}</div>${secs.includes('dday') ? '' : ddHtml}</div><div class="rpa-grid">${parts}</div>`
   document.body.appendChild(el); document.body.classList.add('print-area')
   const done = () => { el.remove(); document.body.classList.remove('print-area'); window.removeEventListener('afterprint', done) }
@@ -225,10 +226,12 @@ const dayTitle = (d) => { const x = new Date(d + 'T00:00'); return `${x.getMonth
 
 export default function DaySummary({ initial = today(), initialMode = 'day' }) {
   const [date, setDate] = useState(initial), [edit, setEdit] = useState(false), [mode, setMode] = useState(initialMode)
-  useEffect(() => { FONTS.gaegu?.load?.().catch(() => {}) }, []) // 날짜·큰 숫자·제목은 손글씨
   const tasks = useColl('tasks'), sessions = useColl('sessions'), subjects = useColl('subjects'), st = useSettings()
   useColl('days'); useColl('conditions')
   const secs = secsOf(st, mode)
+  const fontKey = st.reportFont || ''
+  useMyFonts()
+  useEffect(() => { loadReportFont(fontKey).catch(() => {}) }, [fontKey]) // 날짜·큰 숫자·소제목 글꼴
   useColl('habits'); useColl('reviews'); useColl('lectures'); useColl('textbooks'); useColl('ddays'); useColl('quotes')
   const opt = { tasks, sessions, subjects, goal: st.goalDaily || 240, weekStart: st.weekStart ?? 1 }
   const from = mode === 'week' ? weekStart(date, opt.weekStart) : monthStart(date)
@@ -263,13 +266,14 @@ export default function DaySummary({ initial = today(), initialMode = 'day' }) {
     return l.length ? <div className={'rp-list' + (l.length >= 6 ? ' two' : '')}>{l.map((x, i) => { const m = /^(✓|–|↺) /.exec(x); return <div key={i} className={'rp-li ellipsis' + (m?.[1] === '✓' ? ' on' : '')}>{m?.[1] === '✓' ? <Tick /> : m ? <span className="rp-mk">{m[1] === '↺' ? '↺' : ''}</span> : <span className="rp-dash" />}{m ? x.slice(2) : x}</div> })}</div> : null
   }
   return (
-    <div className="col rp">
+    <div className="col rp" style={{ '--rp-hand': reportFamily(fontKey), '--rp-hs': reportScale(fontKey) }}>
       <Seg value={mode} onChange={setMode} options={MODES} />
       {edit && (
         <div className="col rp-edit">
           <div className="tiny muted">보여 줄 항목을 켜고 순서를 정해요 (공유·인쇄도 같아요)</div>
           {secs.map((k, i) => <div key={k} className="row small" style={{ gap: 6 }}><span className="grow">{i + 1}. {allOf(mode).find(([x]) => x === k)[1]}</span><button className="icon-btn" aria-label="위로" onClick={() => move(i, -1)}>‹</button><button className="icon-btn" aria-label="아래로" onClick={() => move(i, 1)}>›</button><button className="chip on" onClick={() => setSecs(secs.filter((x) => x !== k))}>끄기</button></div>)}
           <div className="row wrap" style={{ gap: 6 }}>{allOf(mode).filter(([k]) => !secs.includes(k)).map(([k, l]) => <button key={k} className="chip" onClick={() => setSecs([...secs, k])}>+ {l}</button>)}</div>
+          <div className="row" style={{ gap: 8, alignItems: 'center' }}><span className="tiny muted nowrap">글꼴</span><select className="input" value={fontKey} onChange={(e) => setSettings({ reportFont: e.target.value })} style={{ fontFamily: reportFamily(fontKey) }}>{reportFontOptions().map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
           <div className="row wrap" style={{ gap: 6, alignItems: 'center' }}><span className="tiny muted">이미지 비율</span>{[['tall', '세로형'], ['square', '정사각형']].map(([k, l]) => <button key={k} className={'chip' + ((st.reportSize || 'tall') === k ? ' on' : '')} onClick={() => setSettings({ reportSize: k })}>{l}</button>)}</div>
           <div className="row wrap" style={{ gap: 6, alignItems: 'center' }}><span className="tiny muted">이미지 색</span>{REPORT_THEMES.map(([k, l]) => <button key={k} className={'chip' + (theme === k ? ' on' : '')} onClick={() => setSettings({ reportTheme: k })}>{l}</button>)}</div>
         </div>
@@ -294,8 +298,8 @@ export default function DaySummary({ initial = today(), initialMode = 'day' }) {
       <div className="rp-actions">
         <button className={'btn ghost sm' + (edit ? ' on-acc' : '')} onClick={() => setEdit(!edit)}><Icon name="layers" size={14} />구성</button>
         <button className="btn ghost sm" onClick={share}><Icon name="share" size={14} />텍스트</button>
-        <button className="btn ghost sm" onClick={async () => { const blob = await drawReport(d, secs, lines, title, { theme, head: { day: 'DAILY', week: 'WEEKLY', month: 'MONTHLY' }[mode] + ' REPORT', dateTxt: mode === 'day' ? undefined : label(d), square: st.reportSize === 'square', barScale: { thin: 0.6, thick: 1.6 }[st.theme?.chartBar] || 1 }); const r = await shareBlob(blob, `리포트-${mode === 'day' ? date : d.from}.png`); if (r === 'saved') toast('이미지를 저장했어요') }}><Icon name="image" size={14} />이미지</button>
-        <button className="btn ghost sm" onClick={() => printA4(d, secs)}><Icon name="print" size={14} />A4</button>
+        <button className="btn ghost sm" onClick={async () => { const blob = await drawReport(d, secs, lines, title, { theme, head: { day: 'DAILY', week: 'WEEKLY', month: 'MONTHLY' }[mode] + ' REPORT', dateTxt: mode === 'day' ? undefined : label(d), square: st.reportSize === 'square', fontKey: st.reportFont || '', barScale: { thin: 0.6, thick: 1.6 }[st.theme?.chartBar] || 1 }); const r = await shareBlob(blob, `리포트-${mode === 'day' ? date : d.from}.png`); if (r === 'saved') toast('이미지를 저장했어요') }}><Icon name="image" size={14} />이미지</button>
+        <button className="btn ghost sm" onClick={() => printA4(d, secs, st.reportFont || '')}><Icon name="print" size={14} />A4</button>
       </div>
     </div>
   )
