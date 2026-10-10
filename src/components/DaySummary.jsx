@@ -38,6 +38,15 @@ export function daySummary(date, { tasks, sessions, subjects, goal, ...opts }) {
   // 시간대: 6시~24시 한 시간 칸마다 공부한 분
   const hours = Array(18).fill(0)
   for (const s of ss) if (s.start != null) { let a = tsToMin(s.start), b = a + (s.dur || 0); for (let h = 6; h < 24; h++) { const o = Math.max(0, Math.min(b, (h + 1) * 60) - Math.max(a, h * 60)); hours[h - 6] += o } }
+  // 10분 칸 (6시~24시 · 108칸): 채운 비율과 가장 오래 한 과목 색 — 플래너 시간표처럼
+  const slots = Array.from({ length: 108 }, () => ({ f: 0, c: null, o: 0 }))
+  for (const s of ss) if (s.start != null) {
+    const a = tsToMin(s.start), b = a + (s.dur || 0), col = sub(s.subjectId)?.color || null
+    for (let i = Math.max(0, Math.floor((a - 360) / 10)); i < Math.min(108, Math.ceil((b - 360) / 10)); i++) {
+      const o = Math.min(b, 370 + i * 10) - Math.max(a, 360 + i * 10); if (o <= 0) continue
+      const sl = slots[i]; sl.f = Math.min(1, sl.f + o / 10); if (o > sl.o) { sl.o = o; sl.c = col }
+    }
+  }
   const live = tasks.filter((t) => !t.archived)
   const sameDay = (ts) => ts && new Date(ts).toDateString() === new Date(date + 'T00:00').toDateString()
   const done = live.filter((t) => t.done && sameDay(t.doneAt))
@@ -52,10 +61,13 @@ export function daySummary(date, { tasks, sessions, subjects, goal, ...opts }) {
   const habits = list('habits').map((h) => ({ title: h.title, on: !!h.days?.[date] }))
   const revs = list('reviews').flatMap((r) => (r.history || []).filter((x) => x.date === date).map((x) => ({ title: r.title, ok: x.ok })))
   const prog = [...list('lectures').map((x) => ({ t: x.title, n: Object.values(x.done || {}).filter((v) => v === date).length, all: Object.keys(x.done || {}).length, of: x.total, u: '강' })), ...list('textbooks').map((x) => ({ t: x.title, n: 0, all: x.current || 0, of: x.total, u: x.unit || 'p' }))].filter((x) => x.of)
-  const ddays = list('ddays').filter((x) => x.date >= date).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 2).map((x) => ({ t: x.title, n: diffDays(x.date, date) }))
+  const ddays = pinnedDdays(date)
   const quote = pickQuote(list('quotes').sort((a, b) => a.id.localeCompare(b.id)))?.text || ''
-  return { date, mins, goal, subs: Object.values(bySub).sort((a, b) => b.m - a.m), hours, done, left, evs: eventsOn(date), tmr: { tasks: live.filter((t) => !t.done && t.due === tmr), evs: eventsOn(tmr) }, cond, comment, sess, fc, wk, wavg: Math.round(wk / wdays), top3, habits, revs, prog, ddays, quote }
+  return { date, mins, goal, subs: Object.values(bySub).sort((a, b) => b.m - a.m), hours, slots, done, left, evs: eventsOn(date), tmr: { tasks: live.filter((t) => !t.done && t.due === tmr), evs: eventsOn(tmr) }, cond, comment, sess, fc, wk, wavg: Math.round(wk / wdays), top3, habits, revs, prog, ddays, quote }
 }
+
+// 리포트 D-day: 별표한 것만 (지나지 않은 것 · 가까운 순)
+const pinnedDdays = (from) => list('ddays').filter((x) => x.pinned && x.date >= from).sort((a, b) => a.date.localeCompare(b.date)).map((x) => ({ t: x.title, n: diffDays(x.date, from), c: x.color || null }))
 
 // 주간·월간 요약 (from~to)
 export function periodSummary(kind, from, to, { tasks, sessions, subjects, goal, weekStart: wsd = 1 }) {
@@ -77,7 +89,7 @@ export function periodSummary(kind, from, to, { tasks, sessions, subjects, goal,
   const nd = ds.filter((d) => d <= today()).length || 1
   const habits = list('habits').map((h) => ({ title: h.title, n: ds.filter((d) => h.days?.[d]).length, of: nd }))
   const prog = [...list('lectures').map((x) => ({ t: x.title, n: Object.values(x.done || {}).filter((v) => inR(v)).length, all: Object.keys(x.done || {}).length, of: x.total, u: '강' })), ...list('textbooks').map((x) => ({ t: x.title, n: 0, all: x.current || 0, of: x.total, u: x.unit || 'p' }))].filter((x) => x.of)
-  const ddays = list('ddays').filter((x) => x.date >= to).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 2).map((x) => ({ t: x.title, n: diffDays(x.date, today()) }))
+  const ddays = pinnedDdays(today())
   const comments = ds.map((d) => [d, dayRec(d).comment]).filter(([, c]) => c)
   const hmx = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`
   return {
@@ -130,23 +142,31 @@ function printA4(d, secs) {
   const vbars = (vals, labs, goal) => { const mx = Math.max(60, goal || 0, ...vals); return `<div class="rpa-plot">${goal ? `<span class="rpa-goal" style="bottom:${(goal / mx) * 100}%"></span>` : ''}${vals.map((m) => `<div class="rpa-col"><i style="height:${m ? Math.max(3, (m / mx) * 100) : 0}%;opacity:${goal ? (m >= goal ? 1 : 0.55) : 0.45 + 0.55 * (m / mx)}"></i></div>`).join('')}</div><div class="rpa-lab">${labs.map((l) => `<span>${esc(l)}</span>`).join('')}</div>` }
   const sec = (k, html, wide) => `<section class="rpa-sec${wide ? ' wide' : ''}"><h3>${esc(title(k, d))}</h3>${html}</section>`
   const pct = Math.round(Math.min(1, d.mins / (d.goal || 1)) * 100)
+  const ddHtml = d.ddays.length ? `<div class="rpa-dds">${d.ddays.map((x) => `<span style="--dc:${x.c || acc}"><b>${x.n === 0 ? 'D-DAY' : 'D-' + x.n}</b>${esc(x.t)}</span>`).join('')}</div>` : ''
+  const dt = d.kind ? `<h1>${esc(label(d))}</h1>` : (() => { const x = new Date(d.date + 'T00:00'); return `<h1><small>${x.getFullYear()}.</small>${x.getMonth() + 1}.${String(x.getDate()).padStart(2, '0')}<em>${['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][x.getDay()]}</em></h1>` })()
   const parts = secs.map((k) => {
-    if (k === 'study') { const stats = d.stats || [['이번 주', hmS(d.wk)], ['공부 기록', d.sess.length], ['끝낸 일', d.done.length]]; return `<section class="rpa-hero wide"><div class="rpa-big">${hmS(d.mins)}<small> / ${hmS(d.goal)}</small><em>${pct}%</em></div><div class="rpa-track"><i style="width:${pct}%"></i></div><div class="rpa-stats">${stats.map(([l, v]) => `<div><span>${esc(l)}</span><b>${esc(v)}</b></div>`).join('')}</div></section>` }
+    if (k === 'study') { const stats = d.stats || [['이번 주', hmS(d.wk)], ['공부 기록', d.sess.length], ['끝낸 일', d.done.length]]; return `<section class="rpa-hero wide"><div class="rpa-stats top"><div><span>TOTAL</span><b class="rpa-big">${hmS(d.mins)}</b></div><div><span>GOAL</span><b>${hmS(d.goal)}</b></div><div><span>DONE</span><b style="color:var(--a)">${pct}%</b></div></div><div class="rpa-track"><i style="width:${pct}%"></i></div><div class="rpa-stats">${stats.map(([l, v]) => `<div><span>${esc(l)}</span><b>${esc(v)}</b></div>`).join('')}</div></section>` }
     if (k === 'subjects') { if (!d.subs.length) return ''; const tot = d.subs.reduce((a, x) => a + x.m, 0) || 1; return sec(k, `<div class="rpa-stack">${d.subs.map((x) => `<i style="flex:${x.m};background:${x.sub?.color || '#999'}"></i>`).join('')}</div>${d.subs.map((x) => `<div class="rpa-lg"><span class="dot" style="background:${x.sub?.color || '#999'}"></span><span class="n">${esc(x.sub?.name || '과목 없음')}</span><span class="p">${Math.round((x.m / tot) * 100)}%</span><span class="t">${hmS(x.m)}</span>${x.notes.length ? `<div class="note">${esc(x.notes.join(' / '))}</div>` : ''}</div>`).join('')}`) }
     if (k === 'days') return d.days?.some((x) => x.m) ? sec(k, vbars(d.days.map((x) => x.m), d.days.map((x) => (d.kind === 'week' ? x.l : x.l)), d.dayGoal || 0), true) : ''
+    if (k === 'hours' && d.slots) return d.hours.some(Boolean) ? sec(k, `<div class="rpa-ten">${Array.from({ length: 18 }, (_, h) => `<div class="r"><span>${h + 6}</span>${d.slots.slice(h * 6, h * 6 + 6).map((x) => `<i${x.f ? ` style="background:color-mix(in srgb, ${x.c || acc} ${Math.round(28 + 42 * x.f)}%, white)"` : ''}></i>`).join('')}</div>`).join('')}</div>`) : ''
+    if (k === 'dday') return d.ddays.length ? sec(k, ddHtml) : ''
     if (k === 'hours') return d.hours.some(Boolean) ? sec(k, vbars(d.hours, d.hours.map((_, i) => ([0, 6, 12, 17].includes(i) ? i + 6 + '시' : ''))), true) : ''
     if (k === 'cal') { if (!d.cal) return ''; const c = d.cal, lead = (new Date(c.month + 'T00:00').getDay() - c.weekStartDow + 7) % 7, cells = [...Array(lead).fill(null), ...d.days]; while (cells.length % 7) cells.push(null); return sec(k, `<div class="rpa-cal">${Array.from({ length: 7 }, (_, i) => `<span class="wd">${WD[(i + c.weekStartDow) % 7]}</span>`).join('')}${cells.map((x, i) => x ? `<span class="c" style="${x.m ? `background:color-mix(in srgb, ${acc} ${Math.round(14 + 60 * Math.min(1, x.m / (c.goal || 1)))}%, white)` : ''}"><b>${i - lead + 1}</b>${x.m ? hmS(x.m) : ''}</span>` : '<span></span>').join('')}</div>`, true) }
     const l = lines(k, d)
     return l.length ? sec(k, `<ul class="${l.length >= 8 ? 'two' : ''}">${l.map((x) => { const m = /^(✓|–|↺) /.exec(x); return `<li><span class="mk${m && m[1] === '✓' ? ' on' : m ? '' : ' dash'}"></span>${esc(m ? x.slice(2) : x)}</li>` }).join('')}</ul>`, l.length >= 8) : ''
   }).join('')
   el.innerHTML = `<style>
-  .rpa { font-family: var(--font); color: #2b2e35; font-weight: 300; font-size: 9.5pt; --a: ${acc}; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .rpa-top { display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 3mm; border-bottom: .3mm solid #d9dbe0; margin-bottom: 5mm; }
-  .rpa-top h1 { font-size: 20pt; font-weight: 200; margin: 0; } .rpa-top span { font-size: 7pt; letter-spacing: .25em; color: #8b9099; }
+  .rpa { position: relative; font-family: var(--font); color: #2b2e35; font-weight: 300; font-size: 9.5pt; --a: ${acc}; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 2mm 0 0 9mm; background: radial-gradient(#d6d8dc .25mm, transparent .32mm) 0 0 / 5mm 5mm; }
+  .rpa::before { content: ''; position: absolute; left: 4.5mm; top: 0; bottom: 0; border-left: .25mm solid #e2c3c8; }
+  .rpa-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 6mm; padding-bottom: 3mm; border-bottom: .3mm solid #d9dbe0; margin-bottom: 5mm; background: white; }
+  .rpa-top h1 { font-size: 22pt; font-weight: 200; margin: 1mm 0 0; font-family: var(--font-head, inherit); display: flex; align-items: baseline; gap: 1.5mm; } .rpa-top h1 small { font-size: 10pt; color: #8b9099; } .rpa-top h1 em { font-style: normal; font-size: 8pt; letter-spacing: .2em; color: var(--a); margin-left: 1mm; }
+  .rpa-top .k { font-size: 6.5pt; letter-spacing: .3em; color: #8b9099; }
+  .rpa-dds { display: flex; flex-wrap: wrap; gap: 1.5mm; justify-content: flex-end; } .rpa-dds span { display: inline-flex; gap: 1.5mm; align-items: baseline; padding: .6mm 2.4mm; border: .25mm solid color-mix(in srgb, var(--dc) 60%, white); border-radius: 4mm; font-size: 8pt; background: color-mix(in srgb, var(--dc) 7%, white); } .rpa-dds b { color: var(--dc); font-weight: 500; }
+  .rpa-ten { display: grid; grid-template-rows: repeat(9, auto); grid-auto-flow: column; column-gap: 5mm; border-top: .2mm solid #e3e5e9; background: white; } .rpa-ten .r { display: grid; grid-template-columns: 6mm repeat(6, 1fr); height: 4.6mm; border-bottom: .2mm solid #e3e5e9; } .rpa-ten span { font-size: 6.5pt; color: #8b9099; align-self: center; } .rpa-ten i { border-left: .2mm dotted #d9dbe0; } .rpa-ten i:nth-child(5) { border-left-style: solid; }
   .rpa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm 8mm; }
   .rpa-sec, .rpa-hero { break-inside: avoid; } .wide { grid-column: 1 / -1; }
   .rpa-sec h3 { font-size: 7pt; letter-spacing: .18em; font-weight: 400; color: #8b9099; margin: 0 0 2.5mm; padding-bottom: 1.5mm; border-bottom: .2mm solid #e3e5e9; }
-  .rpa-hero { background: color-mix(in srgb, var(--a) 6%, white); border-radius: 3mm; padding: 5mm 6mm; }
+  .rpa-hero { background: white; border: .25mm solid #e3e5e9; border-radius: 2mm; padding: 4mm 5mm; } .rpa-stats.top { grid-template-columns: 1.6fr 1fr 1fr; align-items: end; } .rpa-stats.top .rpa-big { font-size: 26pt; line-height: 1; }
   .rpa-big { font-size: 30pt; font-weight: 200; line-height: 1; display: flex; align-items: baseline; gap: 2mm; } .rpa-big small { font-size: 10pt; color: #8b9099; } .rpa-big em { margin-left: auto; font-style: normal; font-size: 10pt; color: var(--a); }
   .rpa-track { height: 1.2mm; background: #e3e5e9; border-radius: 1mm; margin: 4mm 0; overflow: hidden; } .rpa-track i { display: block; height: 100%; background: var(--a); border-radius: 1mm; }
   .rpa-stats { display: grid; grid-template-columns: repeat(3, 1fr); } .rpa-stats div + div { border-left: .2mm solid #d9dbe0; padding-left: 4mm; }
@@ -158,13 +178,30 @@ function printA4(d, secs) {
   .rpa-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1mm; font-size: 7.5pt; } .rpa-cal .wd { text-align: center; color: #8b9099; font-size: 7pt; } .rpa-cal .c { height: 12mm; border-radius: 1.5mm; box-shadow: inset 0 0 0 .2mm #e3e5e9; padding: 1mm 1.5mm; display: flex; flex-direction: column; justify-content: space-between; } .rpa-cal .c b { font-weight: 300; color: #8b9099; }
   .rpa ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1.2mm; } .rpa ul.two { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2mm 6mm; }
   .rpa li { display: flex; gap: 2mm; align-items: center; } .rpa .mk { width: 2.4mm; height: 2.4mm; border: .25mm solid #9aa0aa; border-radius: .6mm; flex-shrink: 0; } .rpa .mk.on { background: var(--a); border-color: var(--a); } .rpa .mk.dash { width: 1.6mm; height: 0; border-width: .25mm 0 0; border-radius: 0; }
-  </style><div class="rpa-top"><h1>${esc(label(d))}</h1><span>${NAME_EN[d.kind || 'day']}</span></div><div class="rpa-grid">${parts}</div>`
+  </style><div class="rpa-top"><div><span class="k">${NAME_EN[d.kind || 'day']}</span>${dt}</div>${secs.includes('dday') ? '' : ddHtml}</div><div class="rpa-grid">${parts}</div>`
   document.body.appendChild(el); document.body.classList.add('print-area')
   const done = () => { el.remove(); document.body.classList.remove('print-area'); window.removeEventListener('afterprint', done) }
   window.addEventListener('afterprint', done)
   setTimeout(() => { window.print(); setTimeout(done, 1500) }, 50)
 }
 const NAME_EN = { day: 'DAILY REPORT', week: 'WEEKLY REPORT', month: 'MONTHLY REPORT' }
+
+// 10분 플래너 칸: 6시~23시 줄마다 10분 칸 6개 · 공부한 만큼 과목 색으로 칠함
+function TenGrid({ slots }) {
+  return (
+    <div className="rp-ten">
+      {Array.from({ length: 18 }, (_, h) => (
+        <div key={h} className="rp-ten-r">
+          <span className="rp-ten-h">{h + 6}</span>
+          {slots.slice(h * 6, h * 6 + 6).map((s, i) => <i key={i} style={s.f ? { background: `color-mix(in srgb, ${s.c || 'var(--accent)'} ${Math.round(28 + 42 * s.f)}%, transparent)` } : null} />)}
+        </div>
+      ))}
+    </div>
+  )
+}
+// 별표한 D-day: 도장처럼
+const DdayStamps = ({ list: l }) => l.length ? <div className="rp-dds">{l.map((x, i) => <span key={i} className="rp-dd" style={{ '--dc': x.c || 'var(--accent)' }}><b>{x.n === 0 ? 'D-DAY' : 'D-' + x.n}</b>{x.t}</span>)}</div> : null
+const DATE_EN = (d) => { const x = new Date(d + 'T00:00'); return { y: x.getFullYear(), md: `${x.getMonth() + 1}.${String(x.getDate()).padStart(2, '0')}`, wd: ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][x.getDay()] } }
 
 export default function DaySummary({ initial = today(), initialMode = 'day' }) {
   const [date, setDate] = useState(initial), [edit, setEdit] = useState(false), [mode, setMode] = useState(initialMode)
@@ -185,9 +222,11 @@ export default function DaySummary({ initial = today(), initialMode = 'day' }) {
   const hl = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`
   const body = (k) => {
     if (k === 'study') { const p = Math.round(Math.min(1, d.mins / (d.goal || 1)) * 100); return <div className="rp-hero">
-      <div className="row" style={{ alignItems: 'baseline', gap: 8 }}><span className="rp-big">{hmS(d.mins)}</span><span className="small muted">/ {hmS(d.goal)}</span><span className="grow" /><span className="rp-pct">{p}%</span></div>
-      <div className="rp-track"><i style={{ width: p + '%' }} /></div>
-      <div className="rp-stats">{(d.stats || [['이번 주', hmS(d.wk)], ['공부 기록', d.sess.length], ['끝낸 일', d.done.length]]).map(([l, v]) => <div key={l} className="stat-mini"><i>{l}</i><b>{v}</b></div>)}</div>
+      <div className="rp-hc big"><i>TOTAL</i><b className="rp-big">{hmS(d.mins)}</b></div>
+      <div className="rp-hc"><i>GOAL</i><b>{hmS(d.goal)}</b></div>
+      <div className="rp-hc"><i>DONE</i><b className="rp-pct">{p}%</b></div>
+      <div className="rp-hbar"><div className="rp-track"><i style={{ width: p + '%' }} /></div></div>
+      {(d.stats || [['이번 주', hmS(d.wk)], ['공부 기록', d.sess.length], ['끝낸 일', d.done.length]]).map(([l, v]) => <div key={l} className="rp-hc sm"><i>{l}</i><b>{v}</b></div>)}
     </div> }
     if (k === 'subjects') { if (!d.subs.length) return null; const tot = d.subs.reduce((a, x) => a + x.m, 0) || 1; return <div className="col" style={{ gap: 8 }}>
       <div className="rp-stack">{d.subs.map((x, i) => <i key={i} style={{ flex: x.m, background: x.sub?.color || 'var(--muted)' }} />)}</div>
@@ -198,6 +237,8 @@ export default function DaySummary({ initial = today(), initialMode = 'day' }) {
       <div className="wbars-l" style={{ gap: d.days.length > 20 ? 2 : 6 }}>{d.days.map((x) => <span key={x.d} style={{ overflow: 'visible', whiteSpace: 'nowrap' }}>{x.l}</span>)}</div>
     </div> }
     if (k === 'cal') return d.cal ? <MonthHeat values={d.cal.values} goal={d.cal.goal} weekStartDow={d.cal.weekStartDow} fixed={d.cal.month} color="var(--accent)" /> : null
+    if (k === 'hours' && d.slots) return d.hours.some(Boolean) ? <TenGrid slots={d.slots} /> : null
+    if (k === 'dday') return d.ddays.length ? <DdayStamps list={d.ddays} /> : null
     if (k === 'hours') return d.hours.some(Boolean) ? <div className="rp-chart"><div className="rp-plot" style={{ gap: 3, height: 56 }}>{d.hours.map((m, i) => <div key={i} className="rp-col" title={`${i + 6}시 ${m}분`}><i className="wbar-b" style={{ width: '100%', maxWidth: 10, height: Math.max(m ? 3 : 0, (m / mx) * 100) + '%', opacity: 0.45 + 0.55 * (m / mx) }} /></div>)}</div><div className="row between tiny muted" style={{ marginTop: 4 }}><span>6시</span><span>12시</span><span>18시</span><span>24시</span></div></div> : null
     const l = lines(k, d)
     return l.length ? <div className={'rp-list' + (l.length >= 6 ? ' two' : '')}>{l.map((x, i) => { const m = /^(✓|–|↺) /.exec(x); return <div key={i} className="rp-li ellipsis">{m ? <span className={'rp-mk' + (m[1] === '✓' ? ' on' : '')}>{m[1] === '↺' ? '↺' : ''}</span> : <span className="rp-dash" />}{m ? x.slice(2) : x}</div> })}</div> : null
@@ -205,11 +246,6 @@ export default function DaySummary({ initial = today(), initialMode = 'day' }) {
   return (
     <div className="col rp">
       <Seg value={mode} onChange={setMode} options={MODES} />
-      <div className="rp-head">
-        <button className="icon-btn" onClick={() => step(-1)} aria-label="이전"><Icon name="back" size={16} /></button>
-        <div className="col" style={{ alignItems: 'center', gap: 2 }}><span className="rp-kicker">{{ day: 'DAILY', week: 'WEEKLY', month: 'MONTHLY' }[mode]} REPORT</span><span className="rp-date">{label(d)}</span></div>
-        <button className="icon-btn" disabled={nextOff} onClick={() => step(1)} aria-label="다음"><Icon name="next" size={16} /></button>
-      </div>
       {edit && (
         <div className="col rp-edit">
           <div className="tiny muted">보여 줄 항목을 켜고 순서를 정해요 (공유·인쇄도 같아요)</div>
@@ -219,8 +255,21 @@ export default function DaySummary({ initial = today(), initialMode = 'day' }) {
           <div className="row wrap" style={{ gap: 6, alignItems: 'center' }}><span className="tiny muted">이미지 색</span>{REPORT_THEMES.map(([k, l]) => <button key={k} className={'chip' + (theme === k ? ' on' : '')} onClick={() => setSettings({ reportTheme: k })}>{l}</button>)}</div>
         </div>
       )}
-      {secs.map((k) => { const b = body(k); return b && <section key={k} className={'rp-sec rp-' + k}>{k !== 'study' && <div className="rp-cap">{title(k, d)}</div>}{b}</section> })}
-      {secs.every((k) => !body(k)) && <div className="small muted" style={{ padding: '18px 0', textAlign: 'center' }}>기록이 없어요.</div>}
+      {/* 플래너 공책 한 장: 흰 종이 결 · 모눈 점 · 왼쪽 여백선 · 마스킹 테이프 */}
+      <div className="rp-paper">
+        <span className="rp-tape" aria-hidden="true" />
+        <div className="rp-head">
+          <button className="icon-btn" onClick={() => step(-1)} aria-label="이전"><Icon name="back" size={16} /></button>
+          <div className="rp-dt">
+            <span className="rp-kicker">{NAME_EN[mode]}</span>
+            {mode === 'day' ? (() => { const x = DATE_EN(date); return <span className="rp-date"><small>{x.y}.</small>{x.md}<em>{x.wd}</em></span> })() : <span className="rp-date">{label(d)}</span>}
+          </div>
+          <button className="icon-btn" disabled={nextOff} onClick={() => step(1)} aria-label="다음"><Icon name="next" size={16} /></button>
+        </div>
+        {!secs.includes('dday') && <DdayStamps list={d.ddays} />}
+        {secs.map((k) => { const b = body(k); return b && <section key={k} className={'rp-sec rp-' + k}>{k !== 'study' && <div className="rp-cap">{title(k, d)}</div>}{b}</section> })}
+        {secs.every((k) => !body(k)) && <div className="small muted" style={{ padding: '18px 0', textAlign: 'center' }}>기록이 없어요.</div>}
+      </div>
       <div className="rp-actions">
         <button className={'btn ghost sm' + (edit ? ' on-acc' : '')} onClick={() => setEdit(!edit)}><Icon name="layers" size={14} />구성</button>
         <button className="btn ghost sm" onClick={share}><Icon name="share" size={14} />텍스트</button>

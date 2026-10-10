@@ -7,7 +7,7 @@ export const REPORT_THEMES = [['app', '앱 색'], ['light', '밝게'], ['dark', 
 const PAL = {
   light: { bg: '#fbfaf7', ink: '#2c2f36', soft: '#9a968e', acc: '#55658a', rule: '#e6e2da' },
   dark: { bg: '#23272f', ink: '#e7e5e0', soft: '#8c919c', acc: '#b3a6cf', rule: '#383d48' },
-  paper: { bg: '#f1f1f0', ink: '#33353a', soft: '#94958f', acc: '#6e7a52', rule: '#dedfd9', grain: true },
+  paper: { bg: '#f7f7f5', ink: '#33353a', soft: '#94958f', acc: '#6e7a52', rule: '#dedfd9', grain: true },
 }
 function palette(theme) {
   if (PAL[theme]) return PAL[theme]
@@ -96,9 +96,31 @@ export async function drawReport(d, secs, lines, title, { theme = 'app', head = 
     g.font = f(18); g.fillStyle = soft; labels.forEach((l, i) => { if (!l) return; g.fillText(l, P + i * (cw + gap) + (cw - g.measureText(l).width) / 2, y0 + bh + 16) })
   })
 
-  // 머리: REPORT 글자 · 날짜(크고 얇게)
+  // 머리: REPORT 글자 · 날짜(플래너처럼 2026. 10.10 SAT) · 별표 D-day 도장
+  const stamps = (list0, y0, right) => {
+    g.font = f(21); let x = right ? W - P : P
+    const ws = list0.map((s0) => { const a = s0.n === 0 ? 'D-DAY' : 'D-' + s0.n; g.font = f(21, 500); const wa = g.measureText(a).width; g.font = f(21); return { a, wa, w: wa + 10 + g.measureText(s0.t).width + 36, s0 } })
+    if (right) x -= ws.reduce((t, s0) => t + s0.w + 10, -10)
+    for (const it of ws) {
+      const col = it.s0.c || acc
+      g.fillStyle = col; g.globalAlpha = 0.08; rr(x, y0, it.w, 42, 21); g.fill(); g.globalAlpha = 0.6; g.strokeStyle = col; g.lineWidth = 1.5; rr(x + 0.75, y0 + 0.75, it.w - 1.5, 40.5, 20); g.stroke(); g.globalAlpha = 1
+      g.font = f(21, 500); g.fillStyle = col; g.fillText(it.a, x + 18, y0 + 10); g.font = f(21); g.fillStyle = ink; g.fillText(it.s0.t, x + 18 + it.wa + 10, y0 + 10)
+      x += it.w + 10
+    }
+  }
   add(40, (y0) => spaced(head, 17, P, y0, soft))
-  add(84, (y0) => { g.font = f(46, TH); g.fillStyle = ink; g.fillText(dateTxt, P - 2, y0) })
+  if (!d.kind) {
+    const dd0 = new Date(d.date + 'T00:00')
+    add(96, (y0) => {
+      g.font = f(30, TH); g.fillStyle = soft; const yy = dd0.getFullYear() + '. '; g.fillText(yy, P - 2, y0 + 30); let x = P - 2 + g.measureText(yy).width
+      g.font = f(68, TH); g.fillStyle = ink; const md = `${dd0.getMonth() + 1}.${String(dd0.getDate()).padStart(2, '0')}`; g.fillText(md, x, y0); x += g.measureText(md).width + 16
+      spaced(['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][dd0.getDay()], 20, x, y0 + 42, acc)
+      if (!secs.includes('dday') && d.ddays?.length) stamps(d.ddays.slice(0, 2), y0 + 22, true)
+    })
+  } else {
+    add(84, (y0) => { g.font = f(46, TH); g.fillStyle = ink; g.fillText(dateTxt, P - 2, y0) })
+    if (!secs.includes('dday') && d.ddays?.length) add(62, (y0) => stamps(d.ddays.slice(0, 3), y0, false))
+  }
 
   const secTitle = (k) => add(70, (y0) => { g.fillStyle = rule; g.fillRect(P, y0, IW, 1.2); spaced(title(k, d).toUpperCase(), 17, P, y0 + 30, soft) })
 
@@ -106,14 +128,18 @@ export async function drawReport(d, secs, lines, title, { theme = 'app', head = 
     if (k === 'study') {
       // 옅은 바탕 위에 큰 공부 시간 · 진행선 · 요약 숫자 셋 (세로 구분선)
       const stats = d.stats || [['이번 주', hm(d.wk || 0)], ['공부 기록', String(d.sess?.length || 0)], ['끝낸 일', String(d.done.length)]]
+      // 플래너 맨 위 표: TOTAL · GOAL · DONE / 진행선 / 요약 셋
       add(330, (y0) => {
-        g.fillStyle = acc; g.globalAlpha = 0.06; rr(P - 28, y0, IW + 56, 300, 22); g.fill(); g.globalAlpha = 1
-        const X = P + 8, IW2 = IW - 16
-        g.font = f(112, TH); g.fillStyle = ink; g.fillText(hm(d.mins), X - 4, y0 + 28); const w = g.measureText(hm(d.mins)).width
-        g.font = f(26); g.fillStyle = soft; g.fillText(`/ ${hm(d.goal)}`, X + w + 18, y0 + 102); g.fillStyle = acc; const t2 = `${pct}%`; g.fillText(t2, X + IW2 - g.measureText(t2).width, y0 + 102)
-        g.fillStyle = rule; rr(X, y0 + 168, IW2, 5, 3); g.fill(); g.fillStyle = acc; rr(X, y0 + 168, Math.max(6, IW2 * (pct / 100)), 5, 3); g.fill()
-        const cw = IW2 / 3
-        stats.forEach(([l, v], i) => { const x = X + cw * i + (i ? 28 : 0); if (i) { g.fillStyle = rule; g.fillRect(X + cw * i, y0 + 206, 1.5, 64) } spaced(l, 15, x, y0 + 206, soft); g.font = f(40, TH); g.fillStyle = ink; g.fillText(String(v), x, y0 + 234) })
+        g.fillStyle = T.bg; g.globalAlpha = 0.7; rr(P, y0, IW, 300, 14); g.fill(); g.globalAlpha = 1
+        g.strokeStyle = rule; g.lineWidth = 1.5; rr(P + 0.75, y0 + 0.75, IW - 1.5, 298.5, 14); g.stroke()
+        const X = P + 30, c1 = IW * 0.46, c2 = IW * 0.27
+        g.fillStyle = rule; g.fillRect(P + c1, y0, 1.5, 150); g.fillRect(P + c1 + c2, y0, 1.5, 150); g.fillRect(P, y0 + 196, IW, 1.5); g.fillRect(P + IW / 3, y0 + 196, 1.5, 104); g.fillRect(P + IW * 2 / 3, y0 + 196, 1.5, 104)
+        spaced('TOTAL', 15, X, y0 + 26, soft); g.font = f(92, TH); g.fillStyle = ink; g.fillText(hm(d.mins), X - 4, y0 + 50)
+        spaced('GOAL', 15, P + c1 + 26, y0 + 26, soft); g.font = f(44, TH); g.fillStyle = ink; g.fillText(hm(d.goal), P + c1 + 26, y0 + 70)
+        spaced('DONE', 15, P + c1 + c2 + 26, y0 + 26, soft); g.font = f(44, TH); g.fillStyle = acc; g.fillText(`${pct}%`, P + c1 + c2 + 26, y0 + 70)
+        g.fillStyle = rule; rr(X, y0 + 162, IW - 60, 4, 2); g.fill(); g.fillStyle = acc; rr(X, y0 + 162, Math.max(6, (IW - 60) * (pct / 100)), 4, 2); g.fill()
+        const cw = IW / 3
+        stats.forEach(([l, v], i) => { const x = P + cw * i + 30; spaced(l, 15, x, y0 + 220, soft); g.font = f(38, TH); g.fillStyle = ink; g.fillText(String(v), x, y0 + 246) })
       })
       add(26, () => {})
       continue
@@ -133,6 +159,32 @@ export async function drawReport(d, secs, lines, title, { theme = 'app', head = 
         for (const n of x.notes) for (const l of wrap(n, 21, IW - 30)) add(32, (y0) => { g.font = f(21); g.fillStyle = soft; g.fillText(l, P + 30, y0 - 6) })
       })
       add(26, () => {}); continue
+    }
+    if (k === 'dday') {
+      if (!d.ddays?.length) continue
+      secTitle(k); add(4, () => {})
+      add(70, (y0) => stamps(d.ddays.slice(0, 3), y0, false))
+      continue
+    }
+    if (k === 'hours' && d.slots) {
+      // 10분 플래너: 6~14시 · 15~23시 두 줄 묶음, 칸마다 과목 색
+      if (!d.hours.some(Boolean)) continue
+      secTitle(k); add(6, () => {})
+      const rh = 40, colW = (IW - 40) / 2, hw = 40
+      add(rh * 9 + 30, (y0) => {
+        for (let h = 0; h < 18; h++) {
+          const x0 = P + (h >= 9 ? colW + 40 : 0), yy = y0 + (h % 9) * rh, cw = (colW - hw) / 6
+          if (h % 9 === 0) { g.fillStyle = rule; g.fillRect(x0, yy, colW, 1.2) }
+          g.fillStyle = rule; g.fillRect(x0, yy + rh, colW, 1.2)
+          g.font = f(17); g.fillStyle = soft; g.fillText(String(h + 6), x0, yy + 11)
+          for (let i = 0; i < 6; i++) {
+            const s0 = d.slots[h * 6 + i], cx = x0 + hw + i * cw
+            if (s0.f) { g.fillStyle = s0.c || acc; g.globalAlpha = 0.28 + 0.42 * s0.f; g.fillRect(cx + 1, yy + 2, cw - 1, rh - 3); g.globalAlpha = 1 }
+            g.fillStyle = rule; if (i === 3) g.fillRect(cx, yy, 1.2, rh); else { for (let t = 0; t < rh; t += 6) g.fillRect(cx, yy + t, 1, 3) }
+          }
+        }
+      })
+      continue
     }
     if (k === 'hours') {
       if (!d.hours.some(Boolean)) continue
@@ -166,6 +218,15 @@ export async function drawReport(d, secs, lines, title, { theme = 'app', head = 
     }
     add(26, () => {})
   }
+  // 공책 바탕 (맨 먼저 그림): 옅은 모눈 점 · 왼쪽 여백선 · 위 마스킹 테이프 — 어두운 색에선 점만
+  ops.unshift(() => {
+    const H = c.height
+    g.fillStyle = ink; g.globalAlpha = theme === 'dark' ? 0.16 : 0.12
+    for (let yy = 40; yy < H; yy += 36) for (let xx = 40; xx < W; xx += 36) { g.beginPath(); g.arc(xx, yy, 1.6, 0, Math.PI * 2); g.fill() }
+    g.globalAlpha = 1
+    if (theme !== 'dark') { g.fillStyle = '#d9b3ba'; g.globalAlpha = 0.75; g.fillRect(56, 0, 2, H); g.globalAlpha = 1 }
+    g.save(); g.translate(W / 2, 22); g.rotate(-0.04); g.fillStyle = '#a99bc4'; g.globalAlpha = theme === 'dark' ? 0.35 : 0.28; g.fillRect(-92, -22, 184, 48); g.restore(); g.globalAlpha = 1
+  })
   return finish(c, g, T, ops, W, y + P - 26, square)
 }
 
