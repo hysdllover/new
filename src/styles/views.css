@@ -1065,60 +1065,68 @@ textarea.bb-edit { width: 100%; font: inherit; color: inherit; resize: none; out
 input.input[type="date"] { min-width: 0; -webkit-appearance: none; appearance: none; text-align: left; }
 input.input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 
-/* ── 리포트: 플래너 공책 한 장 ── 흰 수채화지 결 · 옅은 모눈 점 · 왼쪽 여백선 · 마스킹 테이프 */
-.rp { gap: 12px; --rp-paper: #fdfdfc; --rp-rule: color-mix(in srgb, var(--text) 9%, transparent); --rp-dot: color-mix(in srgb, var(--text) 13%, transparent); --rp-margin: color-mix(in srgb, var(--c4, #c9a0a8) 60%, transparent); }
-.rp-paper { position: relative; display: flex; flex-direction: column; gap: 16px; padding: 26px 18px 22px 36px; border-radius: 3px 10px 10px 3px;
-  background-color: var(--rp-paper);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.06' numOctaves='4' seed='5'/%3E%3CfeDiffuseLighting lighting-color='%23fff' surfaceScale='1'%3E%3CfeDistantLight azimuth='225' elevation='70'/%3E%3C/feDiffuseLighting%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)' opacity='.45'/%3E%3C/svg%3E"), radial-gradient(var(--rp-dot) .8px, transparent 1.1px);
-  background-size: 240px 240px, 16px 16px; background-position: 0 0, 8px 8px;
-  box-shadow: 0 1px 1px rgba(30, 35, 50, .04), 0 8px 24px -8px rgba(30, 35, 50, .12); }
-.rp-paper::before { content: ''; position: absolute; left: 24px; top: 0; bottom: 0; width: 1px; background: var(--rp-margin); }
-.rp-tape { position: absolute; top: -9px; left: 50%; width: 76px; height: 20px; transform: translateX(-50%) rotate(-2.5deg); background: color-mix(in srgb, var(--c3, #a99bc4) 30%, transparent); border-left: 1px dashed color-mix(in srgb, var(--rp-paper) 70%, transparent); border-right: 1px dashed color-mix(in srgb, var(--rp-paper) 70%, transparent); opacity: .9; }
-.rp-head { display: grid; grid-template-columns: 32px 1fr 32px; align-items: center; padding-bottom: 10px; border-bottom: 1px solid var(--rp-rule); }
-.rp-dt { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-.rp-kicker { font-size: .6em; letter-spacing: .3em; color: var(--muted); }
-.rp-date { font-size: 1.5em; font-weight: 200; font-family: var(--font-head, inherit); letter-spacing: .02em; display: inline-flex; align-items: baseline; gap: 4px; font-variant-numeric: tabular-nums; }
-.rp-date small { font-size: .5em; color: var(--muted); }
-.rp-date em { font-style: normal; font-size: .42em; letter-spacing: .2em; color: var(--accent); margin-left: 4px; }
+/* ── 리포트: 공책 한 장 ── 흰 종이 결 · 손글씨 날짜·제목 · 가는 선 · 낙서(물결·동그라미·별·체크) */
+.rp { gap: 12px; --rp-paper: #fdfdfc; --rp-rule: color-mix(in srgb, var(--text) 8%, transparent); --rp-hand: "Gaegu", var(--font-head, var(--font)); }
+.rp-paper { position: relative; display: flex; flex-direction: column; gap: 20px; padding: 22px 20px 24px; border-radius: 6px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.06' numOctaves='4' seed='5'/%3E%3CfeDiffuseLighting lighting-color='%23fff' surfaceScale='1'%3E%3CfeDistantLight azimuth='225' elevation='70'/%3E%3C/feDiffuseLighting%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)' opacity='.45'/%3E%3C/svg%3E"), var(--rp-paper); background-size: 240px 240px, auto;
+  box-shadow: 0 1px 1px rgba(30, 35, 50, .04), 0 10px 26px -12px rgba(30, 35, 50, .14); }
+.rp-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.rp-dt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rp-kicker { font-size: .58em; letter-spacing: .28em; color: var(--muted); }
+.rp-date { font-family: var(--rp-hand); font-weight: 300; font-size: 1.7em; line-height: 1.15; letter-spacing: -.01em; }
+.rp-wave { width: 132px; max-width: 100%; height: 8px; margin-top: -1px; }
+.rp-wave path, .rp-loop path { fill: none; stroke: color-mix(in srgb, var(--accent) 55%, transparent); stroke-width: 1.3; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.rp-nav { display: flex; gap: 0; margin: -6px -8px 0 0; }
+.rp-nav .icon-btn { color: var(--muted); }
 .rp-sec { display: flex; flex-direction: column; gap: 8px; padding: 0; border: 0; }
-.rp-cap { display: flex; align-items: center; gap: 7px; font-size: .7em; letter-spacing: .06em; color: var(--muted); font-weight: 400; }
-.rp-cap::before { content: ''; width: 10px; height: 2px; border-radius: 1px; background: color-mix(in srgb, var(--accent) 55%, transparent); }
-/* 공부 시간: 플래너 맨 위 TOTAL 칸 */
-.rp-hero { display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 0; padding: 0; border: 1px solid var(--rp-rule); border-radius: 6px; background: color-mix(in srgb, var(--rp-paper) 80%, transparent); overflow: hidden; }
-.rp-hc { display: flex; flex-direction: column; gap: 3px; padding: 9px 11px; min-width: 0; }
-.rp-hc + .rp-hc { border-left: 1px solid var(--rp-rule); }
-.rp-hc i { font-style: normal; font-size: .6em; letter-spacing: .18em; color: var(--muted); }
-.rp-hc b { font-weight: 200; font-size: 1.15em; font-variant-numeric: tabular-nums; font-family: var(--font-head, inherit); }
-.rp-hc .rp-big { font-size: 2.1em; line-height: 1; }
-.rp-hc .rp-pct { font-size: 1.15em; color: var(--accent); }
-.rp-hc.sm { border-top: 1px solid var(--rp-rule); padding: 7px 11px; }
-.rp-hc.sm:nth-child(5) { border-left: 0; }
-.rp-hc.sm i { letter-spacing: .04em; }
-.rp-hc.sm b { font-size: .98em; }
-.rp-hbar { grid-column: 1 / -1; padding: 0 11px 9px; }
-.rp-track { height: 2px; }
-/* 목록: 줄 공책처럼 한 줄씩 */
+/* 소제목: 손글씨 + 형광펜 한 줄 (파스텔 셋을 돌아가며) */
+.rp-cap { font-family: var(--rp-hand); font-size: 1.02em; color: var(--text); letter-spacing: 0; font-weight: 400; }
+.rp-cap span { padding: 0 3px; background: linear-gradient(transparent 58%, var(--hlc) 58%, var(--hlc) 90%, transparent 90%); }
+.rp-cap.hl0 { --hlc: color-mix(in srgb, var(--c3, #a99bc4) 32%, transparent); }
+.rp-cap.hl1 { --hlc: color-mix(in srgb, var(--c4, #c9a0a8) 30%, transparent); }
+.rp-cap.hl2 { --hlc: color-mix(in srgb, var(--c2, #7a8660) 22%, transparent); }
+/* 공부 시간: 상자 없이 큰 손글씨 숫자 · 연필 진행선 · 얇은 세로선으로만 나눈 요약 */
+.rp-hero { display: flex; flex-direction: column; gap: 10px; padding: 0; border: 0; background: none; }
+.rp-total { display: flex; align-items: baseline; gap: 8px; }
+.rp-big { font-family: var(--rp-hand); font-weight: 300; font-size: 3em; line-height: .95; font-variant-numeric: tabular-nums; }
+.rp-of { font-size: .85em; color: var(--muted); }
+.rp-pct { position: relative; padding: 4px 10px; font-family: var(--rp-hand); font-size: 1.15em; color: var(--accent); }
+.rp-loop { position: absolute; inset: -2px -4px; width: calc(100% + 8px); height: calc(100% + 4px); }
+.rp-prog { height: 6px; position: relative; }
+.rp-prog::before { content: ''; position: absolute; left: 0; right: 0; top: 3px; height: 1px; background: var(--rp-rule); }
+.rp-prog i { position: absolute; left: 0; top: 0; height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--accent) 70%, transparent); -webkit-mask-image: repeating-linear-gradient(-62deg, #000 0 1.6px, rgba(0, 0, 0, .35) 1.6px 3px); mask-image: repeating-linear-gradient(-62deg, #000 0 1.6px, rgba(0, 0, 0, .35) 1.6px 3px); }
+.rp-stats { display: flex; }
+.rp-stats span { flex: 1; display: flex; flex-direction: column; gap: 1px; padding: 0 12px; min-width: 0; }
+.rp-stats span:first-child { padding-left: 0; }
+.rp-stats span + span { border-left: 1px solid var(--rp-rule); }
+.rp-stats i { font-style: normal; font-size: .66em; color: var(--muted); }
+.rp-stats b { font-weight: 300; font-size: 1.02em; font-variant-numeric: tabular-nums; }
+/* 목록: 가는 줄 위에 한 줄씩 · 끝낸 일은 체크 낙서 */
 .rp-list, .rp-list.two { gap: 0 16px; }
-.rp-li { min-height: 27px; border-bottom: 1px solid var(--rp-rule); padding: 0 1px; }
+.rp-li { min-height: 28px; border-bottom: 1px solid var(--rp-rule); padding: 0 1px; }
+.rp-li.on { color: var(--muted); }
+.rp-tick { width: 13px; height: 13px; flex-shrink: 0; }
+.rp-tick path { fill: none; stroke: var(--accent); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .rp-lg { padding: 6px 0; border-bottom: 1px solid var(--rp-rule); }
 .rp-lg + .rp-lg { border-top: 0; }
-.rp-stack { height: 5px; }
-/* 10분 플래너 */
-.rp-ten { display: grid; grid-template-rows: repeat(9, auto); grid-auto-flow: column; column-gap: 14px; border-top: 1px solid var(--rp-rule); }
-.rp-ten-r { display: grid; grid-template-columns: 20px repeat(6, 1fr); height: 17px; border-bottom: 1px solid var(--rp-rule); }
-.rp-ten-h { font-size: .62em; color: var(--muted); align-self: center; font-variant-numeric: tabular-nums; }
-.rp-ten-r i { border-left: 1px dotted var(--rp-rule); }
-.rp-ten-r i:nth-child(5) { border-left-style: solid; }
-/* 별표 D-day: 도장 */
-.rp-dds { display: flex; flex-wrap: wrap; gap: 6px; }
-.rp-dd { display: inline-flex; align-items: baseline; gap: 6px; padding: 3px 9px; border: 1px solid color-mix(in srgb, var(--dc) 55%, transparent); border-radius: 999px; font-size: .78em; color: var(--text); background: color-mix(in srgb, var(--dc) 7%, transparent); }
-.rp-dd b { font-weight: var(--fw-b); color: var(--dc); font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.rp .rp-stack { height: 5px; gap: 3px; }
+.rp .rp-stack i { opacity: .85; -webkit-mask-image: repeating-linear-gradient(-62deg, #000 0 1.6px, rgba(0, 0, 0, .4) 1.6px 3px); mask-image: repeating-linear-gradient(-62deg, #000 0 1.6px, rgba(0, 0, 0, .4) 1.6px 3px); }
+/* 10분 플래너: 가는 가로줄만 · 칠한 칸은 형광펜처럼 */
+.rp-ten { display: grid; grid-template-rows: repeat(9, auto); grid-auto-flow: column; column-gap: 16px; }
+.rp-ten-r { display: grid; grid-template-columns: 18px repeat(6, 1fr); gap: 0 1px; height: 16px; align-items: center; border-bottom: 1px solid var(--rp-rule); }
+.rp-ten-h { font-size: .6em; color: var(--muted); font-variant-numeric: tabular-nums; }
+.rp-ten-r i { height: 9px; border-radius: 2px; }
+/* 별표 D-day: 별 낙서 + 이름 + 남은 날 */
+.rp-dds { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: -8px; }
+.rp-dd { display: inline-flex; align-items: center; gap: 5px; font-size: .84em; }
+.rp-dd b { font-family: var(--rp-hand); font-weight: 400; font-size: 1.15em; margin-left: 2px; }
+.rp-star { width: 13px; height: 13px; flex-shrink: 0; }
+.rp-star path { fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linejoin: round; }
 .rp-actions { border-top: 0; padding-top: 2px; }
-@media (max-width: 380px) { .rp-paper { padding-left: 30px; padding-right: 14px; } .rp-paper::before { left: 19px; } .rp-ten { column-gap: 10px; } }
-/* 어두운 화면: 종이 결 없이 점 모눈만 */
+/* 어두운 화면: 종이 결 없이 */
 :root[data-theme="dark"] .rp { --rp-paper: var(--surface); }
-:root[data-theme="dark"] .rp-paper { background-image: radial-gradient(var(--rp-dot) .8px, transparent 1.1px); background-size: 16px 16px; }
+:root[data-theme="dark"] .rp-paper { background: var(--rp-paper); }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .rp { --rp-paper: var(--surface); }
-  :root:not([data-theme="light"]) .rp-paper { background-image: radial-gradient(var(--rp-dot) .8px, transparent 1.1px); background-size: 16px 16px; }
+  :root:not([data-theme="light"]) .rp-paper { background: var(--rp-paper); }
 }
