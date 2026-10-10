@@ -76,6 +76,8 @@ function calGrid(ctx, x0, y0, w, { month, values, goal, weekStartDow = 1 }, draw
 
 export async function drawReport(d, secs, lines, title, { theme = 'app', head = 'DAILY REPORT', dateTxt, square = false, barScale = 1 } = {}) {
   await document.fonts.ready.catch(() => {})
+  // 손글씨 글꼴(Gaegu)을 먼저 불러 둠
+  await import('../theme/theme.js').then((m) => m.FONTS.gaegu?.load?.()).catch(() => {}); await document.fonts.load('300 40px "Gaegu"').catch(() => {})
   const W = 1080, P = 96, IW = W - P * 2
   const ctx = setup(theme), { T, c, g, f, spaced } = ctx
   const { ink, soft, acc, rule } = T
@@ -86,6 +88,8 @@ export async function drawReport(d, secs, lines, title, { theme = 'app', head = 
   const ops = []; let y = P
   const add = (h, fn) => { const y0 = y; ops.push(() => fn(y0)); y += h }
   if (!dateTxt) { const dd0 = new Date(d.date + 'T00:00'); dateTxt = `${dd0.getFullYear()}. ${dd0.getMonth() + 1}. ${dd0.getDate()} (${'일월화수목금토'[dd0.getDay()]})` }
+  // 손글씨로 쓸 글자(날짜·소제목·숫자)가 든 글꼴 조각을 미리 받아 둠 (한글은 조각마다 따로 받음)
+  { const dd0 = d.kind ? null : new Date(d.date + 'T00:00'); const hand = [dd0 ? `${dd0.getMonth() + 1}월 ${dd0.getDate()}일 ${'일월화수목금토'[dd0.getDay()]}요일` : '', ...secs.map((k) => { try { return title(k, d) } catch { return '' } }), '0123456789:%D-AY'].join(''); await Promise.all([300, 400].map((w) => document.fonts.load(`${w} 40px "Gaegu"`, hand).catch(() => {}))) }
   const pct = Math.round(Math.min(1, d.mins / (d.goal || 1)) * 100)
   // 가는 막대 + 바닥선 + (있으면) 목표 점선
   const bars = (vals, labels, bh, goal) => add(bh + 66, (y0) => {
@@ -97,49 +101,56 @@ export async function drawReport(d, secs, lines, title, { theme = 'app', head = 
   })
 
   // 머리: REPORT 글자 · 날짜(플래너처럼 2026. 10.10 SAT) · 별표 D-day 도장
-  const stamps = (list0, y0, right) => {
-    g.font = f(21); let x = right ? W - P : P
-    const ws = list0.map((s0) => { const a = s0.n === 0 ? 'D-DAY' : 'D-' + s0.n; g.font = f(21, 500); const wa = g.measureText(a).width; g.font = f(21); return { a, wa, w: wa + 10 + g.measureText(s0.t).width + 36, s0 } })
-    if (right) x -= ws.reduce((t, s0) => t + s0.w + 10, -10)
-    for (const it of ws) {
-      const col = it.s0.c || acc
-      g.fillStyle = col; g.globalAlpha = 0.08; rr(x, y0, it.w, 42, 21); g.fill(); g.globalAlpha = 0.6; g.strokeStyle = col; g.lineWidth = 1.5; rr(x + 0.75, y0 + 0.75, it.w - 1.5, 40.5, 20); g.stroke(); g.globalAlpha = 1
-      g.font = f(21, 500); g.fillStyle = col; g.fillText(it.a, x + 18, y0 + 10); g.font = f(21); g.fillStyle = ink; g.fillText(it.s0.t, x + 18 + it.wa + 10, y0 + 10)
-      x += it.w + 10
+  // 별표 D-day: 별 낙서 + 이름 + 남은 날 (테두리 없이)
+  const stamps = (list0, y0) => {
+    let x = P
+    for (const s0 of list0) {
+      const col = s0.c || acc, cx = x + 11, cy = y0 + 20
+      g.strokeStyle = col; g.lineWidth = 1.8; g.lineJoin = 'round'; g.beginPath()
+      for (let i = 0; i < 10; i++) { const r = i % 2 ? 4.6 : 11, a2 = -Math.PI / 2 + (i * Math.PI) / 5; g[i ? 'lineTo' : 'moveTo'](cx + r * Math.cos(a2), cy + r * Math.sin(a2)) }
+      g.closePath(); g.stroke()
+      g.font = f(24); g.fillStyle = ink; g.fillText(s0.t, x + 32, y0 + 6); x += 32 + g.measureText(s0.t).width + 10
+      const dd = s0.n === 0 ? 'D-DAY' : 'D-' + s0.n; g.font = fh(30, 400); g.fillStyle = col; g.fillText(dd, x, y0 + 2); x += g.measureText(dd).width + 40
     }
   }
   add(40, (y0) => spaced(head, 17, P, y0, soft))
+  // 손글씨 글꼴 (앱에서 불러 둔 Gaegu, 없으면 앱 글꼴)
+  const fh = (size, w = 300) => `${w} ${size}px "Gaegu", ${css('--font', 'sans-serif')}`
+  // 손으로 그은 물결선
+  const wave = (x, y0, w, col) => { g.strokeStyle = col; g.globalAlpha = 0.55; g.lineWidth = 2.4; g.lineCap = 'round'; g.beginPath(); g.moveTo(x, y0); for (let t = 0; t <= w; t += 6) g.lineTo(x + t, y0 + Math.sin(t / 19) * 3.2 + Math.sin(t / 7) * 0.6); g.stroke(); g.globalAlpha = 1 }
   if (!d.kind) {
-    const dd0 = new Date(d.date + 'T00:00')
-    add(96, (y0) => {
-      g.font = f(30, TH); g.fillStyle = soft; const yy = dd0.getFullYear() + '. '; g.fillText(yy, P - 2, y0 + 30); let x = P - 2 + g.measureText(yy).width
-      g.font = f(68, TH); g.fillStyle = ink; const md = `${dd0.getMonth() + 1}.${String(dd0.getDate()).padStart(2, '0')}`; g.fillText(md, x, y0); x += g.measureText(md).width + 16
-      spaced(['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][dd0.getDay()], 20, x, y0 + 42, acc)
-      if (!secs.includes('dday') && d.ddays?.length) stamps(d.ddays.slice(0, 2), y0 + 22, true)
+    const dd0 = new Date(d.date + 'T00:00'), dt = `${dd0.getMonth() + 1}월 ${dd0.getDate()}일 ${'일월화수목금토'[dd0.getDay()]}요일`
+    add(108, (y0) => {
+      g.font = fh(64); g.fillStyle = ink; g.fillText(dt, P - 2, y0); const w = Math.min(g.measureText(dt).width * 0.6, 300)
+      wave(P, y0 + 82, w, acc)
     })
+    if (!secs.includes('dday') && d.ddays?.length) add(62, (y0) => stamps(d.ddays.slice(0, 3), y0))
   } else {
     add(84, (y0) => { g.font = f(46, TH); g.fillStyle = ink; g.fillText(dateTxt, P - 2, y0) })
-    if (!secs.includes('dday') && d.ddays?.length) add(62, (y0) => stamps(d.ddays.slice(0, 3), y0, false))
+    if (!secs.includes('dday') && d.ddays?.length) add(62, (y0) => stamps(d.ddays.slice(0, 3), y0))
   }
 
-  const secTitle = (k) => add(70, (y0) => { g.fillStyle = rule; g.fillRect(P, y0, IW, 1.2); spaced(title(k, d).toUpperCase(), 17, P, y0 + 30, soft) })
+  // 소제목: 손글씨 + 형광펜 한 줄 (파스텔 셋을 돌아가며)
+  const HL = ['#a99bc4', '#c9a0a8', '#7a8660']; let hi = 0
+  const secTitle = (k) => add(78, (y0) => { const t = title(k, d); g.font = fh(32, 400); const w = g.measureText(t).width; g.fillStyle = HL[hi++ % 3]; g.globalAlpha = theme === 'dark' ? 0.35 : 0.28; g.fillRect(P - 4, y0 + 40, w + 8, 13); g.globalAlpha = 1; g.fillStyle = ink; g.fillText(t, P, y0 + 18) })
 
   for (const k of secs) {
     if (k === 'study') {
       // 옅은 바탕 위에 큰 공부 시간 · 진행선 · 요약 숫자 셋 (세로 구분선)
       const stats = d.stats || [['이번 주', hm(d.wk || 0)], ['공부 기록', String(d.sess?.length || 0)], ['끝낸 일', String(d.done.length)]]
-      // 플래너 맨 위 표: TOTAL · GOAL · DONE / 진행선 / 요약 셋
-      add(330, (y0) => {
-        g.fillStyle = T.bg; g.globalAlpha = 0.7; rr(P, y0, IW, 300, 14); g.fill(); g.globalAlpha = 1
-        g.strokeStyle = rule; g.lineWidth = 1.5; rr(P + 0.75, y0 + 0.75, IW - 1.5, 298.5, 14); g.stroke()
-        const X = P + 30, c1 = IW * 0.46, c2 = IW * 0.27
-        g.fillStyle = rule; g.fillRect(P + c1, y0, 1.5, 150); g.fillRect(P + c1 + c2, y0, 1.5, 150); g.fillRect(P, y0 + 196, IW, 1.5); g.fillRect(P + IW / 3, y0 + 196, 1.5, 104); g.fillRect(P + IW * 2 / 3, y0 + 196, 1.5, 104)
-        spaced('TOTAL', 15, X, y0 + 26, soft); g.font = f(92, TH); g.fillStyle = ink; g.fillText(hm(d.mins), X - 4, y0 + 50)
-        spaced('GOAL', 15, P + c1 + 26, y0 + 26, soft); g.font = f(44, TH); g.fillStyle = ink; g.fillText(hm(d.goal), P + c1 + 26, y0 + 70)
-        spaced('DONE', 15, P + c1 + c2 + 26, y0 + 26, soft); g.font = f(44, TH); g.fillStyle = acc; g.fillText(`${pct}%`, P + c1 + c2 + 26, y0 + 70)
-        g.fillStyle = rule; rr(X, y0 + 162, IW - 60, 4, 2); g.fill(); g.fillStyle = acc; rr(X, y0 + 162, Math.max(6, (IW - 60) * (pct / 100)), 4, 2); g.fill()
+      // 상자 없이: 큰 손글씨 숫자 · / 목표 · 동그라미 친 % · 연필 진행선 · 얇은 세로선으로 나눈 요약
+      add(280, (y0) => {
+        g.font = fh(120); g.fillStyle = ink; g.fillText(hm(d.mins), P - 4, y0); const w = g.measureText(hm(d.mins)).width
+        g.font = f(28); g.fillStyle = soft; g.fillText(`/ ${hm(d.goal)}`, P + w + 18, y0 + 70)
+        const t2 = `${pct}%`; g.font = fh(40); const pw = g.measureText(t2).width, px = W - P - pw - 20
+        g.fillStyle = acc; g.fillText(t2, px, y0 + 52)
+        g.strokeStyle = acc; g.globalAlpha = 0.5; g.lineWidth = 2; g.beginPath(); g.ellipse(px + pw / 2, y0 + 74, pw / 2 + 26, 32, -0.06, 0.35, Math.PI * 2 + 0.1); g.stroke(); g.globalAlpha = 1
+        g.fillStyle = rule; g.fillRect(P, y0 + 150, IW, 1.5)
+        const pwid = Math.max(8, IW * (pct / 100)); g.save(); rr(P, y0 + 145, pwid, 11, 5.5); g.clip(); g.fillStyle = acc; g.globalAlpha = 0.75
+        for (let x = P - 20; x < P + pwid + 20; x += 6) { g.beginPath(); g.moveTo(x, y0 + 158); g.lineTo(x + 7, y0 + 143); g.lineTo(x + 10, y0 + 143); g.lineTo(x + 3, y0 + 158); g.fill() }
+        g.restore(); g.globalAlpha = 1
         const cw = IW / 3
-        stats.forEach(([l, v], i) => { const x = P + cw * i + 30; spaced(l, 15, x, y0 + 220, soft); g.font = f(38, TH); g.fillStyle = ink; g.fillText(String(v), x, y0 + 246) })
+        stats.forEach(([l, v], i) => { const x = P + cw * i + (i ? 30 : 0); if (i) { g.fillStyle = rule; g.fillRect(P + cw * i, y0 + 186, 1.5, 70) } g.font = f(19); g.fillStyle = soft; g.fillText(l, x, y0 + 186); g.font = f(36, TH); g.fillStyle = ink; g.fillText(String(v), x, y0 + 216) })
       })
       add(26, () => {})
       continue
@@ -151,7 +162,7 @@ export async function drawReport(d, secs, lines, title, { theme = 'app', head = 
       // 과목 비율 띠
       add(46, (y0) => { let x = P; const gap = 4, avail = IW - gap * (d.subs.length - 1); g.save(); rr(P, y0, IW, 12, 6); g.clip(); d.subs.forEach((s2) => { const w = Math.max(6, avail * (s2.m / tot)); g.fillStyle = s2.sub?.color || soft; g.fillRect(x, y0, w, 12); x += w + gap }); g.restore() })
       d.subs.forEach((x, i) => {
-        add(62, (y0) => { if (i) { g.strokeStyle = rule; g.lineWidth = 1.2; g.setLineDash([4, 6]); g.beginPath(); g.moveTo(P, y0 - 2); g.lineTo(W - P, y0 - 2); g.stroke(); g.setLineDash([]) }
+        add(62, (y0) => { if (i) { g.fillStyle = rule; g.fillRect(P, y0 - 2, IW, 1.2) }
           g.fillStyle = x.sub?.color || soft; g.beginPath(); g.arc(P + 8, y0 + 28, 7, 0, Math.PI * 2); g.fill()
           g.font = f(27); g.fillStyle = ink; g.fillText(fit(x.sub?.name || '과목 없음', 27, IW - 300), P + 30, y0 + 13)
           const tv = hm(x.m); g.fillText(tv, W - P - g.measureText(tv).width, y0 + 13)
@@ -163,7 +174,7 @@ export async function drawReport(d, secs, lines, title, { theme = 'app', head = 
     if (k === 'dday') {
       if (!d.ddays?.length) continue
       secTitle(k); add(4, () => {})
-      add(70, (y0) => stamps(d.ddays.slice(0, 3), y0, false))
+      add(62, (y0) => stamps(d.ddays.slice(0, 3), y0))
       continue
     }
     if (k === 'hours' && d.slots) {
@@ -174,13 +185,11 @@ export async function drawReport(d, secs, lines, title, { theme = 'app', head = 
       add(rh * 9 + 30, (y0) => {
         for (let h = 0; h < 18; h++) {
           const x0 = P + (h >= 9 ? colW + 40 : 0), yy = y0 + (h % 9) * rh, cw = (colW - hw) / 6
-          if (h % 9 === 0) { g.fillStyle = rule; g.fillRect(x0, yy, colW, 1.2) }
           g.fillStyle = rule; g.fillRect(x0, yy + rh, colW, 1.2)
           g.font = f(17); g.fillStyle = soft; g.fillText(String(h + 6), x0, yy + 11)
           for (let i = 0; i < 6; i++) {
             const s0 = d.slots[h * 6 + i], cx = x0 + hw + i * cw
-            if (s0.f) { g.fillStyle = s0.c || acc; g.globalAlpha = 0.28 + 0.42 * s0.f; g.fillRect(cx + 1, yy + 2, cw - 1, rh - 3); g.globalAlpha = 1 }
-            g.fillStyle = rule; if (i === 3) g.fillRect(cx, yy, 1.2, rh); else { for (let t = 0; t < rh; t += 6) g.fillRect(cx, yy + t, 1, 3) }
+            if (s0.f) { g.fillStyle = s0.c || acc; g.globalAlpha = 0.28 + 0.42 * s0.f; rr(cx + 1.5, yy + 11, cw - 3, rh - 22, 4); g.fill(); g.globalAlpha = 1 }
           }
         }
       })
@@ -209,7 +218,7 @@ export async function drawReport(d, secs, lines, title, { theme = 'app', head = 
     secTitle(k); add(4, () => {})
     // 표시: 끝낸 것은 채운 작은 네모, 남은 것은 빈 네모, 그 밖은 짧은 선
     const items = ls.map((l) => { const m = /^(✓|–|↺) /.exec(l); return { mark: m ? m[1] : '', text: m ? l.slice(2) : l } })
-    const mark = (it, x, y0) => { if (it.mark === '✓') { g.fillStyle = acc; rr(x, y0 + 8, 16, 16, 4); g.fill() } else if (it.mark) { g.strokeStyle = soft; g.lineWidth = 1.6; rr(x + 0.8, y0 + 8.8, 14.4, 14.4, 4); g.stroke() } else { g.fillStyle = soft; g.fillRect(x + 2, y0 + 16, 10, 1.6) } }
+    const mark = (it, x, y0) => { if (it.mark === '✓') { g.strokeStyle = acc; g.lineWidth = 2.6; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath(); g.moveTo(x + 1, y0 + 17); g.lineTo(x + 7, y0 + 23); g.lineTo(x + 19, y0 + 8); g.stroke() } else if (it.mark) { g.strokeStyle = soft; g.lineWidth = 1.6; rr(x + 0.8, y0 + 8.8, 14.4, 14.4, 4); g.stroke() } else { g.fillStyle = soft; g.fillRect(x + 2, y0 + 16, 10, 1.6) } }
     if (ls.length >= 6) {
       const half = Math.ceil(items.length / 2), colW = IW / 2 - 18
       for (let i = 0; i < half; i++) add(46, (y0) => [items[i], items[i + half]].forEach((it, j) => { if (!it) return; const x = P + j * (colW + 36); mark(it, x, y0); g.font = f(24); g.fillStyle = ink; g.fillText(fit(it.text, 24, colW - 32), x + 32, y0) }))
@@ -218,15 +227,6 @@ export async function drawReport(d, secs, lines, title, { theme = 'app', head = 
     }
     add(26, () => {})
   }
-  // 공책 바탕 (맨 먼저 그림): 옅은 모눈 점 · 왼쪽 여백선 · 위 마스킹 테이프 — 어두운 색에선 점만
-  ops.unshift(() => {
-    const H = c.height
-    g.fillStyle = ink; g.globalAlpha = theme === 'dark' ? 0.16 : 0.12
-    for (let yy = 40; yy < H; yy += 36) for (let xx = 40; xx < W; xx += 36) { g.beginPath(); g.arc(xx, yy, 1.6, 0, Math.PI * 2); g.fill() }
-    g.globalAlpha = 1
-    if (theme !== 'dark') { g.fillStyle = '#d9b3ba'; g.globalAlpha = 0.75; g.fillRect(56, 0, 2, H); g.globalAlpha = 1 }
-    g.save(); g.translate(W / 2, 22); g.rotate(-0.04); g.fillStyle = '#a99bc4'; g.globalAlpha = theme === 'dark' ? 0.35 : 0.28; g.fillRect(-92, -22, 184, 48); g.restore(); g.globalAlpha = 1
-  })
   return finish(c, g, T, ops, W, y + P - 26, square)
 }
 

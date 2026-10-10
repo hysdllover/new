@@ -1,5 +1,6 @@
 // 리포트(하루·주간·월간): 구성(켜기·순서)을 직접 정함 — 공유(텍스트)·이미지·A4 인쇄도 같은 구성
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { FONTS } from '../theme/theme.js'
 import { useColl, useSettings, setSettings, find, list } from '../store/store.js'
 import { pickQuote } from '../lib/quote.js'
 import { drawReport, REPORT_THEMES } from '../lib/reportImage.js'
@@ -135,17 +136,18 @@ const label = (d) => (d.kind === 'month' ? `${d.from.slice(0, 4)}년 ${+d.from.s
 
 const asText = (d, secs) => [`${label(d)} ${NAME[d.kind || 'day']}`, ...secs.flatMap((k) => { const l = lines(k, d); return l.length ? ['', `[${title(k, d)}]`, ...l] : [] })].join('\n')
 
-function printA4(d, secs) {
+async function printA4(d, secs) {
+  await FONTS.gaegu?.load?.().catch(() => {}); await document.fonts.load('300 20px "Gaegu"').catch(() => {})
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
   const el = document.createElement('div'); el.id = 'print-area'; el.className = 'rpa'
   const cs = getComputedStyle(document.documentElement), acc = cs.getPropertyValue('--accent').trim() || '#4a5a78'
   const vbars = (vals, labs, goal) => { const mx = Math.max(60, goal || 0, ...vals); return `<div class="rpa-plot">${goal ? `<span class="rpa-goal" style="bottom:${(goal / mx) * 100}%"></span>` : ''}${vals.map((m) => `<div class="rpa-col"><i style="height:${m ? Math.max(3, (m / mx) * 100) : 0}%;opacity:${goal ? (m >= goal ? 1 : 0.55) : 0.45 + 0.55 * (m / mx)}"></i></div>`).join('')}</div><div class="rpa-lab">${labs.map((l) => `<span>${esc(l)}</span>`).join('')}</div>` }
-  const sec = (k, html, wide) => `<section class="rpa-sec${wide ? ' wide' : ''}"><h3>${esc(title(k, d))}</h3>${html}</section>`
+  const sec = (k, html, wide) => `<section class="rpa-sec${wide ? ' wide' : ''}"><h3><span>${esc(title(k, d))}</span></h3>${html}</section>`
   const pct = Math.round(Math.min(1, d.mins / (d.goal || 1)) * 100)
-  const ddHtml = d.ddays.length ? `<div class="rpa-dds">${d.ddays.map((x) => `<span style="--dc:${x.c || acc}"><b>${x.n === 0 ? 'D-DAY' : 'D-' + x.n}</b>${esc(x.t)}</span>`).join('')}</div>` : ''
-  const dt = d.kind ? `<h1>${esc(label(d))}</h1>` : (() => { const x = new Date(d.date + 'T00:00'); return `<h1><small>${x.getFullYear()}.</small>${x.getMonth() + 1}.${String(x.getDate()).padStart(2, '0')}<em>${['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][x.getDay()]}</em></h1>` })()
+  const ddHtml = d.ddays.length ? `<div class="rpa-dds">${d.ddays.map((x) => `<span style="--dc:${x.c || acc}"><svg class="st" viewBox="0 0 16 16"><path d="M8 1.9l1.7 4 4.2.4-3.2 2.8 1 4.2L8 11.1l-3.7 2.2 1-4.2-3.2-2.8 4.2-.4z"/></svg>${esc(x.t)} <b>${x.n === 0 ? 'D-DAY' : 'D-' + x.n}</b></span>`).join('')}</div>` : ''
+  const dt = `<h1>${esc(d.kind ? label(d) : dayTitle(d.date))}</h1>`
   const parts = secs.map((k) => {
-    if (k === 'study') { const stats = d.stats || [['이번 주', hmS(d.wk)], ['공부 기록', d.sess.length], ['끝낸 일', d.done.length]]; return `<section class="rpa-hero wide"><div class="rpa-stats top"><div><span>TOTAL</span><b class="rpa-big">${hmS(d.mins)}</b></div><div><span>GOAL</span><b>${hmS(d.goal)}</b></div><div><span>DONE</span><b style="color:var(--a)">${pct}%</b></div></div><div class="rpa-track"><i style="width:${pct}%"></i></div><div class="rpa-stats">${stats.map(([l, v]) => `<div><span>${esc(l)}</span><b>${esc(v)}</b></div>`).join('')}</div></section>` }
+    if (k === 'study') { const stats = d.stats || [['이번 주', hmS(d.wk)], ['공부 기록', d.sess.length], ['끝낸 일', d.done.length]]; return `<section class="rpa-hero wide"><div class="rpa-total"><b class="rpa-big">${hmS(d.mins)}</b><small>/ ${hmS(d.goal)}</small><em>${pct}%</em></div><div class="rpa-track"><i style="width:${Math.max(2, pct)}%"></i></div><div class="rpa-stats">${stats.map(([l, v]) => `<div><span>${esc(l)}</span><b>${esc(v)}</b></div>`).join('')}</div></section>` }
     if (k === 'subjects') { if (!d.subs.length) return ''; const tot = d.subs.reduce((a, x) => a + x.m, 0) || 1; return sec(k, `<div class="rpa-stack">${d.subs.map((x) => `<i style="flex:${x.m};background:${x.sub?.color || '#999'}"></i>`).join('')}</div>${d.subs.map((x) => `<div class="rpa-lg"><span class="dot" style="background:${x.sub?.color || '#999'}"></span><span class="n">${esc(x.sub?.name || '과목 없음')}</span><span class="p">${Math.round((x.m / tot) * 100)}%</span><span class="t">${hmS(x.m)}</span>${x.notes.length ? `<div class="note">${esc(x.notes.join(' / '))}</div>` : ''}</div>`).join('')}`) }
     if (k === 'days') return d.days?.some((x) => x.m) ? sec(k, vbars(d.days.map((x) => x.m), d.days.map((x) => (d.kind === 'week' ? x.l : x.l)), d.dayGoal || 0), true) : ''
     if (k === 'hours' && d.slots) return d.hours.some(Boolean) ? sec(k, `<div class="rpa-ten">${Array.from({ length: 18 }, (_, h) => `<div class="r"><span>${h + 6}</span>${d.slots.slice(h * 6, h * 6 + 6).map((x) => `<i${x.f ? ` style="background:color-mix(in srgb, ${x.c || acc} ${Math.round(28 + 42 * x.f)}%, white)"` : ''}></i>`).join('')}</div>`).join('')}</div>`) : ''
@@ -153,11 +155,12 @@ function printA4(d, secs) {
     if (k === 'hours') return d.hours.some(Boolean) ? sec(k, vbars(d.hours, d.hours.map((_, i) => ([0, 6, 12, 17].includes(i) ? i + 6 + '시' : ''))), true) : ''
     if (k === 'cal') { if (!d.cal) return ''; const c = d.cal, lead = (new Date(c.month + 'T00:00').getDay() - c.weekStartDow + 7) % 7, cells = [...Array(lead).fill(null), ...d.days]; while (cells.length % 7) cells.push(null); return sec(k, `<div class="rpa-cal">${Array.from({ length: 7 }, (_, i) => `<span class="wd">${WD[(i + c.weekStartDow) % 7]}</span>`).join('')}${cells.map((x, i) => x ? `<span class="c" style="${x.m ? `background:color-mix(in srgb, ${acc} ${Math.round(14 + 60 * Math.min(1, x.m / (c.goal || 1)))}%, white)` : ''}"><b>${i - lead + 1}</b>${x.m ? hmS(x.m) : ''}</span>` : '<span></span>').join('')}</div>`, true) }
     const l = lines(k, d)
-    return l.length ? sec(k, `<ul class="${l.length >= 8 ? 'two' : ''}">${l.map((x) => { const m = /^(✓|–|↺) /.exec(x); return `<li><span class="mk${m && m[1] === '✓' ? ' on' : m ? '' : ' dash'}"></span>${esc(m ? x.slice(2) : x)}</li>` }).join('')}</ul>`, l.length >= 8) : ''
+    return l.length ? sec(k, `<ul class="${l.length >= 8 ? 'two' : ''}">${l.map((x) => { const m = /^(✓|–|↺) /.exec(x); return `<li${m && m[1] === '✓' ? ' class="on"' : ''}>${m && m[1] === '✓' ? '<svg class="tk" viewBox="0 0 14 14"><path d="M2.4 7.8l3 2.9L11.9 3.2"/></svg>' : `<span class="mk${m ? '' : ' dash'}"></span>`}${esc(m ? x.slice(2) : x)}</li>` }).join('')}</ul>`, l.length >= 8) : ''
   }).join('')
   el.innerHTML = `<style>
-  .rpa { position: relative; font-family: var(--font); color: #2b2e35; font-weight: 300; font-size: 9.5pt; --a: ${acc}; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 2mm 0 0 9mm; background: radial-gradient(#d6d8dc .25mm, transparent .32mm) 0 0 / 5mm 5mm; }
-  .rpa::before { content: ''; position: absolute; left: 4.5mm; top: 0; bottom: 0; border-left: .25mm solid #e2c3c8; }
+  .rpa { position: relative; font-family: var(--font); color: #2b2e35; font-weight: 300; font-size: 9.5pt; --a: ${acc}; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 2mm 0 0; }
+  .rpa-top h1, .rpa-big, .rpa-sec h3 { font-family: "Gaegu", var(--font-head, var(--font)); }
+  .rpa-sec h3 { font-size: 11pt; letter-spacing: 0; color: #2b2e35; border-bottom: 0; } .rpa-sec h3 span { padding: 0 1mm; background: linear-gradient(transparent 58%, color-mix(in srgb, var(--a) 18%, white) 58% 90%, transparent 90%); }
   .rpa-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 6mm; padding-bottom: 3mm; border-bottom: .3mm solid #d9dbe0; margin-bottom: 5mm; background: white; }
   .rpa-top h1 { font-size: 22pt; font-weight: 200; margin: 1mm 0 0; font-family: var(--font-head, inherit); display: flex; align-items: baseline; gap: 1.5mm; } .rpa-top h1 small { font-size: 10pt; color: #8b9099; } .rpa-top h1 em { font-style: normal; font-size: 8pt; letter-spacing: .2em; color: var(--a); margin-left: 1mm; }
   .rpa-top .k { font-size: 6.5pt; letter-spacing: .3em; color: #8b9099; }
@@ -166,7 +169,7 @@ function printA4(d, secs) {
   .rpa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm 8mm; }
   .rpa-sec, .rpa-hero { break-inside: avoid; } .wide { grid-column: 1 / -1; }
   .rpa-sec h3 { font-size: 7pt; letter-spacing: .18em; font-weight: 400; color: #8b9099; margin: 0 0 2.5mm; padding-bottom: 1.5mm; border-bottom: .2mm solid #e3e5e9; }
-  .rpa-hero { background: white; border: .25mm solid #e3e5e9; border-radius: 2mm; padding: 4mm 5mm; } .rpa-stats.top { grid-template-columns: 1.6fr 1fr 1fr; align-items: end; } .rpa-stats.top .rpa-big { font-size: 26pt; line-height: 1; }
+  .rpa-hero { padding: 1mm 0 2mm; } .rpa-stats.top { grid-template-columns: 1.6fr 1fr 1fr; align-items: end; } .rpa-stats.top .rpa-big { font-size: 26pt; line-height: 1; }
   .rpa-big { font-size: 30pt; font-weight: 200; line-height: 1; display: flex; align-items: baseline; gap: 2mm; } .rpa-big small { font-size: 10pt; color: #8b9099; } .rpa-big em { margin-left: auto; font-style: normal; font-size: 10pt; color: var(--a); }
   .rpa-track { height: 1.2mm; background: #e3e5e9; border-radius: 1mm; margin: 4mm 0; overflow: hidden; } .rpa-track i { display: block; height: 100%; background: var(--a); border-radius: 1mm; }
   .rpa-stats { display: grid; grid-template-columns: repeat(3, 1fr); } .rpa-stats div + div { border-left: .2mm solid #d9dbe0; padding-left: 4mm; }
@@ -178,11 +181,23 @@ function printA4(d, secs) {
   .rpa-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1mm; font-size: 7.5pt; } .rpa-cal .wd { text-align: center; color: #8b9099; font-size: 7pt; } .rpa-cal .c { height: 12mm; border-radius: 1.5mm; box-shadow: inset 0 0 0 .2mm #e3e5e9; padding: 1mm 1.5mm; display: flex; flex-direction: column; justify-content: space-between; } .rpa-cal .c b { font-weight: 300; color: #8b9099; }
   .rpa ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1.2mm; } .rpa ul.two { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2mm 6mm; }
   .rpa li { display: flex; gap: 2mm; align-items: center; } .rpa .mk { width: 2.4mm; height: 2.4mm; border: .25mm solid #9aa0aa; border-radius: .6mm; flex-shrink: 0; } .rpa .mk.on { background: var(--a); border-color: var(--a); } .rpa .mk.dash { width: 1.6mm; height: 0; border-width: .25mm 0 0; border-radius: 0; }
+  /* 공책 느낌: 손글씨 날짜·숫자·소제목 · 형광펜 · 가는 선만 */
+  .rpa-top h1, .rpa-big, .rpa-sec h3 { font-family: "Gaegu", var(--font-head, var(--font)); font-weight: 300; }
+  .rpa-top h1 { font-size: 24pt; } .rpa-top { border-bottom: 0; padding-bottom: 0; }
+  .rpa-sec h3 { font-size: 12pt; letter-spacing: 0; color: #2b2e35; font-weight: 400; border-bottom: 0; padding-bottom: 0; margin-bottom: 2mm; }
+  .rpa-sec h3 span { padding: 0 1mm; background: linear-gradient(transparent 58%, color-mix(in srgb, var(--a) 18%, white) 58% 90%, transparent 90%); }
+  .rpa-hero { background: none; border: 0; padding: 0; } .rpa-total { display: flex; align-items: baseline; gap: 3mm; } .rpa-total .rpa-big { font-size: 34pt; line-height: 1; } .rpa-total small { color: #8b9099; font-size: 10pt; } .rpa-total em { margin-left: auto; font-style: normal; font-family: "Gaegu", var(--font); font-size: 15pt; color: var(--a); padding: 1mm 3mm; border: .3mm solid color-mix(in srgb, var(--a) 45%, white); border-radius: 50%; }
+  .rpa-track { height: 1.6mm; background: linear-gradient(#e3e5e9, #e3e5e9) 0 50% / 100% .2mm no-repeat; } .rpa-track i { opacity: .8; -webkit-mask-image: repeating-linear-gradient(-62deg, #000 0 .45mm, rgba(0,0,0,.35) .45mm .85mm); mask-image: repeating-linear-gradient(-62deg, #000 0 .45mm, rgba(0,0,0,.35) .45mm .85mm); }
+  .rpa-lg { border-bottom: .2mm solid #eceef1; } .rpa li { border-bottom: .2mm solid #eceef1; padding-bottom: 1mm; } .rpa li.on { color: #8b9099; }
+  .rpa .tk { width: 3mm; height: 3mm; flex-shrink: 0; } .rpa .tk path { fill: none; stroke: var(--a); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .rpa-ten { border-top: 0; } .rpa-ten i { border-left: 0; height: 2.6mm; align-self: center; border-radius: .6mm; margin: 0 .2mm; } .rpa-ten .r { align-items: center; }
+  .rpa-dds span { border: 0; background: none; padding: 0; font-size: 9pt; } .rpa-dds b { font-family: "Gaegu", var(--font); font-size: 12pt; font-weight: 400; } .rpa-dds .st { width: 3mm; height: 3mm; align-self: center; } .rpa-dds .st path { fill: none; stroke: var(--dc); stroke-width: 1.3; stroke-linejoin: round; }
   </style><div class="rpa-top"><div><span class="k">${NAME_EN[d.kind || 'day']}</span>${dt}</div>${secs.includes('dday') ? '' : ddHtml}</div><div class="rpa-grid">${parts}</div>`
   document.body.appendChild(el); document.body.classList.add('print-area')
   const done = () => { el.remove(); document.body.classList.remove('print-area'); window.removeEventListener('afterprint', done) }
   window.addEventListener('afterprint', done)
-  setTimeout(() => { window.print(); setTimeout(done, 1500) }, 50)
+  // 손글씨 한글 조각까지 받은 뒤 인쇄
+  document.fonts.ready.catch(() => {}).then(() => setTimeout(() => { window.print(); setTimeout(done, 1500) }, 80))
 }
 const NAME_EN = { day: 'DAILY REPORT', week: 'WEEKLY REPORT', month: 'MONTHLY REPORT' }
 
@@ -199,12 +214,18 @@ function TenGrid({ slots }) {
     </div>
   )
 }
-// 별표한 D-day: 도장처럼
-const DdayStamps = ({ list: l }) => l.length ? <div className="rp-dds">{l.map((x, i) => <span key={i} className="rp-dd" style={{ '--dc': x.c || 'var(--accent)' }}><b>{x.n === 0 ? 'D-DAY' : 'D-' + x.n}</b>{x.t}</span>)}</div> : null
-const DATE_EN = (d) => { const x = new Date(d + 'T00:00'); return { y: x.getFullYear(), md: `${x.getMonth() + 1}.${String(x.getDate()).padStart(2, '0')}`, wd: ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][x.getDay()] } }
+// 손으로 그은 듯한 낙서: 물결 밑줄 · 동그라미 · 별 · 체크 (가는 선 하나로)
+const Wave = () => <svg className="rp-wave" viewBox="0 0 120 8" preserveAspectRatio="none" aria-hidden="true"><path d="M1 5.2C12 1.8 22 6.8 34 4.4S56 1.6 68 4.6 92 6.4 104 3.8 116 3.4 119 4.2" /></svg>
+const Loop = () => <svg className="rp-loop" viewBox="0 0 64 30" preserveAspectRatio="none" aria-hidden="true"><path d="M12 5.5C26 1 53 2.5 59 12.5S45 29 27 28.2 2.5 22 4.5 13 23 2.6 41 4.2" /></svg>
+const Star = ({ c }) => <svg className="rp-star" viewBox="0 0 16 16" style={{ color: c }} aria-hidden="true"><path d="M8 1.9l1.7 4 4.2.4-3.2 2.8 1 4.2L8 11.1l-3.7 2.2 1-4.2-3.2-2.8 4.2-.4z" /></svg>
+const Tick = () => <svg className="rp-tick" viewBox="0 0 14 14" aria-hidden="true"><path d="M2.4 7.8l3 2.9L11.9 3.2" /></svg>
+// 별표한 D-day: 별 낙서 + 이름 + 남은 날
+const Ddays = ({ list: l }) => l.length ? <div className="rp-dds">{l.map((x, i) => <span key={i} className="rp-dd"><Star c={x.c || 'var(--accent)'} />{x.t}<b style={{ color: x.c || 'var(--accent)' }}>{x.n === 0 ? 'D-DAY' : 'D-' + x.n}</b></span>)}</div> : null
+const dayTitle = (d) => { const x = new Date(d + 'T00:00'); return `${x.getMonth() + 1}월 ${x.getDate()}일 ${'일월화수목금토'[x.getDay()]}요일` }
 
 export default function DaySummary({ initial = today(), initialMode = 'day' }) {
   const [date, setDate] = useState(initial), [edit, setEdit] = useState(false), [mode, setMode] = useState(initialMode)
+  useEffect(() => { FONTS.gaegu?.load?.().catch(() => {}) }, []) // 날짜·큰 숫자·제목은 손글씨
   const tasks = useColl('tasks'), sessions = useColl('sessions'), subjects = useColl('subjects'), st = useSettings()
   useColl('days'); useColl('conditions')
   const secs = secsOf(st, mode)
@@ -222,11 +243,9 @@ export default function DaySummary({ initial = today(), initialMode = 'day' }) {
   const hl = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`
   const body = (k) => {
     if (k === 'study') { const p = Math.round(Math.min(1, d.mins / (d.goal || 1)) * 100); return <div className="rp-hero">
-      <div className="rp-hc big"><i>TOTAL</i><b className="rp-big">{hmS(d.mins)}</b></div>
-      <div className="rp-hc"><i>GOAL</i><b>{hmS(d.goal)}</b></div>
-      <div className="rp-hc"><i>DONE</i><b className="rp-pct">{p}%</b></div>
-      <div className="rp-hbar"><div className="rp-track"><i style={{ width: p + '%' }} /></div></div>
-      {(d.stats || [['이번 주', hmS(d.wk)], ['공부 기록', d.sess.length], ['끝낸 일', d.done.length]]).map(([l, v]) => <div key={l} className="rp-hc sm"><i>{l}</i><b>{v}</b></div>)}
+      <div className="rp-total"><b className="rp-big">{hmS(d.mins)}</b><span className="rp-of">/ {hmS(d.goal)}</span><span className="grow" /><span className="rp-pct"><Loop />{p}%</span></div>
+      <div className="rp-prog"><i style={{ width: Math.max(2, p) + '%' }} /></div>
+      <div className="rp-stats">{(d.stats || [['이번 주', hmS(d.wk)], ['공부 기록', d.sess.length], ['끝낸 일', d.done.length]]).map(([l, v]) => <span key={l}><i>{l}</i><b>{v}</b></span>)}</div>
     </div> }
     if (k === 'subjects') { if (!d.subs.length) return null; const tot = d.subs.reduce((a, x) => a + x.m, 0) || 1; return <div className="col" style={{ gap: 8 }}>
       <div className="rp-stack">{d.subs.map((x, i) => <i key={i} style={{ flex: x.m, background: x.sub?.color || 'var(--muted)' }} />)}</div>
@@ -238,10 +257,10 @@ export default function DaySummary({ initial = today(), initialMode = 'day' }) {
     </div> }
     if (k === 'cal') return d.cal ? <MonthHeat values={d.cal.values} goal={d.cal.goal} weekStartDow={d.cal.weekStartDow} fixed={d.cal.month} color="var(--accent)" /> : null
     if (k === 'hours' && d.slots) return d.hours.some(Boolean) ? <TenGrid slots={d.slots} /> : null
-    if (k === 'dday') return d.ddays.length ? <DdayStamps list={d.ddays} /> : null
+    if (k === 'dday') return d.ddays.length ? <Ddays list={d.ddays} /> : null
     if (k === 'hours') return d.hours.some(Boolean) ? <div className="rp-chart"><div className="rp-plot" style={{ gap: 3, height: 56 }}>{d.hours.map((m, i) => <div key={i} className="rp-col" title={`${i + 6}시 ${m}분`}><i className="wbar-b" style={{ width: '100%', maxWidth: 10, height: Math.max(m ? 3 : 0, (m / mx) * 100) + '%', opacity: 0.45 + 0.55 * (m / mx) }} /></div>)}</div><div className="row between tiny muted" style={{ marginTop: 4 }}><span>6시</span><span>12시</span><span>18시</span><span>24시</span></div></div> : null
     const l = lines(k, d)
-    return l.length ? <div className={'rp-list' + (l.length >= 6 ? ' two' : '')}>{l.map((x, i) => { const m = /^(✓|–|↺) /.exec(x); return <div key={i} className="rp-li ellipsis">{m ? <span className={'rp-mk' + (m[1] === '✓' ? ' on' : '')}>{m[1] === '↺' ? '↺' : ''}</span> : <span className="rp-dash" />}{m ? x.slice(2) : x}</div> })}</div> : null
+    return l.length ? <div className={'rp-list' + (l.length >= 6 ? ' two' : '')}>{l.map((x, i) => { const m = /^(✓|–|↺) /.exec(x); return <div key={i} className={'rp-li ellipsis' + (m?.[1] === '✓' ? ' on' : '')}>{m?.[1] === '✓' ? <Tick /> : m ? <span className="rp-mk">{m[1] === '↺' ? '↺' : ''}</span> : <span className="rp-dash" />}{m ? x.slice(2) : x}</div> })}</div> : null
   }
   return (
     <div className="col rp">
@@ -255,19 +274,21 @@ export default function DaySummary({ initial = today(), initialMode = 'day' }) {
           <div className="row wrap" style={{ gap: 6, alignItems: 'center' }}><span className="tiny muted">이미지 색</span>{REPORT_THEMES.map(([k, l]) => <button key={k} className={'chip' + (theme === k ? ' on' : '')} onClick={() => setSettings({ reportTheme: k })}>{l}</button>)}</div>
         </div>
       )}
-      {/* 플래너 공책 한 장: 흰 종이 결 · 모눈 점 · 왼쪽 여백선 · 마스킹 테이프 */}
+      {/* 공책 한 장: 흰 종이 결 위에 손글씨 날짜·제목, 가는 선과 낙서만 */}
       <div className="rp-paper">
-        <span className="rp-tape" aria-hidden="true" />
         <div className="rp-head">
-          <button className="icon-btn" onClick={() => step(-1)} aria-label="이전"><Icon name="back" size={16} /></button>
           <div className="rp-dt">
             <span className="rp-kicker">{NAME_EN[mode]}</span>
-            {mode === 'day' ? (() => { const x = DATE_EN(date); return <span className="rp-date"><small>{x.y}.</small>{x.md}<em>{x.wd}</em></span> })() : <span className="rp-date">{label(d)}</span>}
+            <span className="rp-date">{mode === 'day' ? dayTitle(date) : label(d)}</span>
+            <Wave />
           </div>
-          <button className="icon-btn" disabled={nextOff} onClick={() => step(1)} aria-label="다음"><Icon name="next" size={16} /></button>
+          <div className="rp-nav">
+            <button className="icon-btn" onClick={() => step(-1)} aria-label="이전"><Icon name="back" size={15} /></button>
+            <button className="icon-btn" disabled={nextOff} onClick={() => step(1)} aria-label="다음"><Icon name="next" size={15} /></button>
+          </div>
         </div>
-        {!secs.includes('dday') && <DdayStamps list={d.ddays} />}
-        {secs.map((k) => { const b = body(k); return b && <section key={k} className={'rp-sec rp-' + k}>{k !== 'study' && <div className="rp-cap">{title(k, d)}</div>}{b}</section> })}
+        {!secs.includes('dday') && <Ddays list={d.ddays} />}
+        {secs.map((k, i) => { const b = body(k); return b && <section key={k} className={'rp-sec rp-' + k}>{k !== 'study' && <div className={'rp-cap hl' + (i % 3)}><span>{title(k, d)}</span></div>}{b}</section> })}
         {secs.every((k) => !body(k)) && <div className="small muted" style={{ padding: '18px 0', textAlign: 'center' }}>기록이 없어요.</div>}
       </div>
       <div className="rp-actions">
