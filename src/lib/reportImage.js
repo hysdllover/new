@@ -74,10 +74,10 @@ function calGrid(ctx, x0, y0, w, { month, values, goal, weekStartDow = 1 }, draw
   return h
 }
 
-export async function drawReport(d, secs, lines, title, { theme = 'app', head = 'DAILY REPORT', dateTxt, square = false, barScale = 1 } = {}) {
+export async function drawReport(d, secs, lines, title, { theme = 'app', head = 'DAILY REPORT', dateTxt, square = false, barScale = 1, fontKey = '' } = {}) {
   await document.fonts.ready.catch(() => {})
-  // 손글씨 글꼴(Gaegu)을 먼저 불러 둠
-  await import('../theme/theme.js').then((m) => m.FONTS.gaegu?.load?.()).catch(() => {}); await document.fonts.load('300 40px "Gaegu"').catch(() => {})
+  // 날짜·큰 숫자·소제목 글꼴 (리포트 › 구성 › 글꼴)
+  const { reportFamily, loadReportFont, reportScale } = await import('./reportFont.js'), handFam = reportFamily(fontKey), hs = reportScale(fontKey)
   const W = 1080, P = 96, IW = W - P * 2
   const ctx = setup(theme), { T, c, g, f, spaced } = ctx
   const { ink, soft, acc, rule } = T
@@ -89,7 +89,7 @@ export async function drawReport(d, secs, lines, title, { theme = 'app', head = 
   const add = (h, fn) => { const y0 = y; ops.push(() => fn(y0)); y += h }
   if (!dateTxt) { const dd0 = new Date(d.date + 'T00:00'); dateTxt = `${dd0.getFullYear()}. ${dd0.getMonth() + 1}. ${dd0.getDate()} (${'일월화수목금토'[dd0.getDay()]})` }
   // 손글씨로 쓸 글자(날짜·소제목·숫자)가 든 글꼴 조각을 미리 받아 둠 (한글은 조각마다 따로 받음)
-  { const dd0 = d.kind ? null : new Date(d.date + 'T00:00'); const hand = [dd0 ? `${dd0.getMonth() + 1}월 ${dd0.getDate()}일 ${'일월화수목금토'[dd0.getDay()]}요일` : '', ...secs.map((k) => { try { return title(k, d) } catch { return '' } }), '0123456789:%D-AY'].join(''); await Promise.all([300, 400].map((w) => document.fonts.load(`${w} 40px "Gaegu"`, hand).catch(() => {}))) }
+  { const dd0 = d.kind ? null : new Date(d.date + 'T00:00'); const hand = [dd0 ? `${dd0.getMonth() + 1}월 ${dd0.getDate()}일 ${'일월화수목금토'[dd0.getDay()]}요일` : '', ...secs.map((k) => { try { return title(k, d) } catch { return '' } }), '0123456789:%D-AY'].join(''); await loadReportFont(fontKey, hand) }
   const pct = Math.round(Math.min(1, d.mins / (d.goal || 1)) * 100)
   // 가는 막대 + 바닥선 + (있으면) 목표 점선
   const bars = (vals, labels, bh, goal) => add(bh + 66, (y0) => {
@@ -114,8 +114,7 @@ export async function drawReport(d, secs, lines, title, { theme = 'app', head = 
     }
   }
   add(40, (y0) => spaced(head, 17, P, y0, soft))
-  // 손글씨 글꼴 (앱에서 불러 둔 Gaegu, 없으면 앱 글꼴)
-  const fh = (size, w = 300) => `${w} ${size}px "Gaegu", ${css('--font', 'sans-serif')}`
+  const fh = (size, w = 300) => `${w} ${Math.round(size * hs)}px ${handFam}`
   // 손으로 그은 물결선
   const wave = (x, y0, w, col) => { g.strokeStyle = col; g.globalAlpha = 0.55; g.lineWidth = 2.4; g.lineCap = 'round'; g.beginPath(); g.moveTo(x, y0); for (let t = 0; t <= w; t += 6) g.lineTo(x + t, y0 + Math.sin(t / 19) * 3.2 + Math.sin(t / 7) * 0.6); g.stroke(); g.globalAlpha = 1 }
   if (!d.kind) {
