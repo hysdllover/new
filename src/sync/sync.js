@@ -257,12 +257,6 @@ export const widgetGistId = () => ls.get('widget_gist')
 // 위젯은 토큰 없이 비공개 gist 의 raw 주소로 읽음 (스크립트에 토큰을 넣지 않기 위해)
 export const widgetRawUrl = () => { const id = widgetGistId(), who = ls.get('gh_login'); return id && who ? `https://gist.githubusercontent.com/${who}/${id}/raw/widget.json` : null }
 // 캘린더 위젯용: 지난달 말~앞으로 45일 일정(반복 포함)을 날짜별로 펼침
-// 위젯 '잔디'·'요일': 최근 26주 날짜별 공부 분 (기록 전체 대신 합계만)
-function dayTotals() {
-  const from = addDays(today(), -182), out = {}
-  for (const x of Object.values(getState().sessions || {})) if (!x.deleted && x.date >= from && x.dur > 0) out[x.date] = (out[x.date] || 0) + x.dur
-  return out
-}
 function calPayload() {
   if (excluded().has('events')) return {}
   const ymd = (x) => x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0')
@@ -335,7 +329,6 @@ function widgetPayload() {
     tasks: { tasks: keep('tasks', (t) => !t.archived && (!t.done || (t.doneAt && new Date(t.doneAt).getTime() > recent))) },
     study: { subjects: keep('subjects'), sessions: keep('sessions', (x) => x.date >= from), ddays: keep('ddays') },
     cal: calPayload(),
-    dayTot: dayTotals(),
     timer: timerPayload(),
     classes: classesPayload(),
     prog: progPayload(),
