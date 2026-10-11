@@ -100,6 +100,28 @@ export function widgetTimer(act, at, sid) {
     set(null); keepAwake(false)
   }
 }
+// 끝낸 시각을 골라 멈추기 (켜 두고 잊었을 때): 그 시각까지만 기록
+export function stopAt(at) {
+  if (!t) return
+  const was = t, end = Math.max(t.segStart, Math.min(at, Date.now()))
+  if (!t.paused) addSession({ id: 'tm-' + t.segStart, subjectId: t.subjectId, taskId: t.taskId, lectureId: t.lectureId, start: t.segStart, end, kind: t.mode })
+  set(null); keepAwake(false)
+  const total = Math.round(((was.acc || 0) + (was.paused ? 0 : end - was.segStart)) / 60000)
+  if (total >= 1) askWrap(was, total, null)
+}
+// 스톱워치를 3시간 넘게 켜 둔 채면 앱을 열 때 한 번 물어봄 (구간마다 한 번)
+const LONG = 3 * 3600000
+function checkLong() {
+  if (!t || t.paused || t.mode !== 'stopwatch' || Date.now() - t.segStart < LONG) return
+  try { if (localStorage.getItem('timer_long') === String(t.segStart)) return; localStorage.setItem('timer_long', String(t.segStart)) } catch {}
+  Promise.all([import('../components/TimerFix.jsx'), import('../components/ui.jsx')]).then(([{ default: TimerFix }, { openSheet }]) =>
+    openSheet((close) => createElement(TimerFix, { close }), { title: '타이머가 오래 켜져 있어요' })).catch(() => {})
+}
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') setTimeout(checkLong, 800) })
+  setTimeout(checkLong, 2500)
+}
+
 export const setTimerTask = (taskId, subjectId) => t && set({ ...t, taskId, subjectId: subjectId ?? t.subjectId })
 
 // 타이머 끝 확인 (1초마다)
