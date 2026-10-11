@@ -39,24 +39,34 @@ if (inkMode === 'light') { INK = new Color('#ffffff'); SOFT = new Color('#ffffff
 if (inkMode === 'dark') { INK = new Color('#1e232b'); SOFT = new Color('#1e232b', 0.6); RULE = new Color('#1e232b', 0.2) }
 if (!lock) {
   w.setPadding(P, P, P, P)
-  if (WT === 'paper') { if (PAPER) w.backgroundImage = paperBg(SZ[fam] || SZ.large, SZ.h[fam] || SZ.h.large); else w.backgroundColor = new Color('#f2f2f1') }
-  else if (WT === 'night') w.backgroundColor = new Color('#1b1d22')
-  else if (WT === 'mono') w.backgroundColor = new  Color('#1c1d21')
-  else if (FM.fileExists(bgPath(fam, RAWP))) w.backgroundImage = FM.readImage(bgPath(fam, RAWP))
-  else w.backgroundColor = BG
-  // 배경 무늬 (앱 설정 › 위젯 배경 무늬): 모눈·줄
-  const PAT = STM.widgetPattern
-  if ((PAT === 'grid' || PAT === 'line') && !FM.fileExists(bgPath(fam, RAWP))) {
-    const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large, dk = WT === 'night' || WT === 'mono' || (WT !== 'paper' && WT !== 'white' && WT !== 'black' && dark())
-    const c = new DrawContext(); c.size = new Size(W2, H2); c.opaque = true; c.respectScreenScale = true
-    if (WT === 'paper' && PAPER) c.drawImageInRect(paperBg(W2, H2), new Rect(0, 0, W2, H2))
-    else { c.setFillColor(new Color(WT === 'night' ? '#1b1d22' : WT === 'mono' ? '#1c1d21' : WT === 'paper' ? '#f2f2f1' : dk ? '#15181d' : '#f2f4f6')); c.fillRect(new Rect(0, 0, W2, H2)) }
-    c.setFillColor(new Color(dk ? '#ffffff' : '#55658a', dk ? 0.07 : 0.1))
-    const g = PAT === 'grid' ? 14 : 20
-    for (let y = g; y < H2; y += g) c.fillRect(new Rect(0, y, W2, 0.5))
-    if (PAT === 'grid') for (let x = g; x < W2; x += g) c.fillRect(new Rect(x, 0, 0.5, H2))
-    w.backgroundImage = c.getImage()
+  const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large, PAT = STM.widgetPattern
+  const hasBg = FM.fileExists(bgPath(fam, RAWP)), pat = (PAT === 'grid' || PAT === 'line') && !hasBg ? PAT : ''
+  if (WT === 'paper' || pat) {
+    // 종이·무늬 배경: 2배 해상도로 한 번만 그려 파일에 두고 다시 씀 — 큰 위젯이 메모리 한도를 넘어 하얗게 비던 문제
+    const dk = WT === 'night' || WT === 'mono' || (WT !== 'paper' && WT !== 'white' && WT !== 'black' && dark())
+    const cp = FM.joinPath(FM.documentsDirectory(), 'study-cbg-3-' + WT + '-' + (pat || 'plain') + '-' + (dk ? 'd' : 'l') + '-' + Math.round(W2) + 'x' + Math.round(H2) + '.jpg')
+    let img = null
+    try { if (FM.fileExists(cp)) img = FM.readImage(cp) } catch (e) {}
+    if (!img) {
+      const PAPER = WT === 'paper' ? loadPaper() : null
+      const K = 2, c = new DrawContext(); c.size = new Size(W2 * K, H2 * K); c.opaque = true; c.respectScreenScale = false
+      c.setFillColor(new Color(WT === 'night' ? '#1b1d22' : WT === 'mono' ? '#1c1d21' : WT === 'paper' ? '#f2f2f1' : dk ? '#15181d' : '#f2f4f6')); c.fillRect(new Rect(0, 0, W2 * K, H2 * K))
+      if (WT === 'paper' && PAPER) for (let x = 0; x < W2 * K; x += 720) for (let y = 0; y < H2 * K; y += 720) c.drawImageInRect(PAPER, new Rect(x, y, 720, 720))
+      if (pat) {
+        c.setFillColor(new Color(dk ? '#ffffff' : '#55658a', dk ? 0.07 : 0.1))
+        const g = (pat === 'grid' ? 14 : 20) * K
+        for (let y = g; y < H2 * K; y += g) c.fillRect(new Rect(0, y, W2 * K, 1))
+        if (pat === 'grid') for (let x = g; x < W2 * K; x += g) c.fillRect(new Rect(x, 0, 1, H2 * K))
+      }
+      img = c.getImage()
+      if (WT !== 'paper' || PAPER) try { FM.writeImage(cp, img) } catch (e) {} // 결 이미지를 못 받았으면 다음에 다시
+    }
+    w.backgroundImage = img
   }
+  else if (WT === 'night') w.backgroundColor = new Color('#1b1d22')
+  else if (WT === 'mono') w.backgroundColor = new Color('#1c1d21')
+  else if (hasBg) w.backgroundImage = FM.readImage(bgPath(fam, RAWP))
+  else w.backgroundColor = BG
 }
 
 if (!data) {
