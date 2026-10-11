@@ -1045,7 +1045,6 @@ export default () => `  } else if (KIND === 'study') {
       r.addSpacer()
       if (r0.k === 'title' && n) t(r, noteAgo(n.u), label(7), MS)
     }
-    FILL = true
   } else if (KIND === 'print') {
     // ── 흑백 인쇄풍: 테두리선만 있는 표 (색 없이 글자색 한 가지) ──
     const left = items.filter((x) => !x.done), c = nCur || nNext, BW = 0.7, big2 = fam === 'large' || fam === 'extraLarge'
@@ -1165,7 +1164,7 @@ export default () => `  } else if (KIND === 'study') {
     const recs = allSess.slice().sort((p, q) => String(q.date).localeCompare(String(p.date)) || (q.start || 0) - (p.start || 0))
     for (const x of recs.slice(0, nR - 1)) { const sj = subjects.find((y) => y.id === x.subjectId); cardRow(RH, [[c1, x.date.slice(5).replace('-', '.'), MN(8.5)], [0, sj ? sj.name : '공부', tw(10.5)], [c3, hm(x.dur || 0), MN(9), true]], x.date === today ? DI : DS) }
     if (!recs.length) cardRow(RH, [[c1, '', MN(8.5)], [0, '기록이 쌓이면 여기에', tw(10.5)], [c3, '', MN(9)]], DS)
-    w.url = link('study.records'); FILL = true
+    w.url = link('study.records')
   } else if (KIND === 'ddcard') {
     // ── 디데이 카드: 기록 카드와 같은 칸에 남은 날 · 이름 · 날짜 (별표 먼저) ──
     const HH = Math.round((fam === 'small' ? 28 : 32) * SCALE), RH = Math.round(20 * SCALE), c1 = fam === 'small' ? 48 : 56, c3 = fam === 'small' ? 38 : 46, nR = Math.max(2, Math.floor((innerH - HH) / RH))
@@ -1174,7 +1173,7 @@ export default () => `  } else if (KIND === 'study') {
     cardRow(RH, [[c1, 'LEFT', label(6.5)], [0, 'TITLE', label(6.5)], [c3, 'DATE', label(6.5), true]], DS)
     ddAll.slice(0, nR - 1).forEach((x, i) => cardRow(RH, [[c1, ddT(x), MN(9)], [0, x.title, tw(10.5)], [c3, x.date.slice(5).replace('-', '.'), MN(9), true]], i === 0 ? DI : DS))
     if (!ddAll.length) cardRow(RH, [[c1, '', MN(9)], [0, 'D-day 를 추가해 보세요', tw(10.5)], [c3, '', MN(9)]], DS)
-    w.url = link('study.progress'); FILL = true
+    w.url = link('study.progress')
   } else if (KIND === 'journal') {
     // ── 일지: 오늘 한 일을 시각 순으로 (공부 · 끝낸 할 일 · 지난 일정) ──
     const HH = Math.round((fam === 'small' ? 28 : 32) * SCALE), RH = Math.round(20 * SCALE), c1 = fam === 'small' ? 36 : 42, c3 = fam === 'small' ? 34 : 42, nR = Math.max(2, Math.floor((innerH - HH) / RH))
@@ -1188,7 +1187,7 @@ export default () => `  } else if (KIND === 'study') {
     const past = allSess.filter((x) => x.date < today).sort((p, q) => String(q.date).localeCompare(String(p.date)) || (q.start || 0) - (p.start || 0))
     for (const x of past.slice(0, Math.max(0, nR - 1 - Math.min(E.length, nR - 1)))) { const sj = subjects.find((y) => y.id === x.subjectId); cardRow(RH, [[c1, x.date.slice(5).replace('-', '.'), MN(8.5)], [0, sj ? sj.name : '공부', tw(10.5)], [c3, hm(x.dur || 0), MN(9), true]], DS) }
     if (!E.length && !past.length) cardRow(RH, [[c1, '', MN(8.5)], [0, '오늘 첫 기록을 남겨 보세요', tw(10.5)], [c3, '', MN(9)]], DS)
-    w.url = link('study.records'); FILL = true
+    w.url = link('study.records')
   } else if (KIND === 'catalog') {
     // ── 도서 목록 카드: 왼쪽 청구기호 칸 · 오른쪽 기록 (위젯 끝까지 종이 · 먹색만) ──
     const HH = Math.round((fam === 'small' ? 28 : 32) * SCALE), RH = Math.round(19 * SCALE), c1 = fam === 'small' ? 34 : 44, nR = Math.max(2, Math.floor((innerH - HH) / RH))
@@ -1200,7 +1199,7 @@ export default () => `  } else if (KIND === 'study') {
     L.push(['', 'Total', SER(10), DI, hm(mins) + ' / ' + hm(goal)])
     for (const x of items.filter((y) => !y.done)) L.push(['', 'Note. ' + x.title, tw(10), DS, ''])
     for (const [cn, tx, f, col, rt] of L.slice(0, nR)) { const r = w.addStack(); r.size = new Size(inner, RH); const a = r.addStack(); a.size = new Size(c1, RH); a.setPadding(0, 5, 0, 5); a.centerAlignContent(); t(a, cn, MN(8), DS); a.addSpacer(); const b = r.addStack(); b.size = new Size(inner - c1, RH); b.setPadding(0, 8, 0, 5); b.centerAlignContent(); t(b, tx, f, col).minimumScaleFactor = 0.75; b.addSpacer(); if (rt) t(b, rt, MN(9), col) }
-    w.url = link('study.records'); FILL = true
+    w.url = link('study.records')
   } else if (KIND === 'tcard') {
     // ── 타임카드: 이번 주 날마다 처음 시작 · 마지막 끝 · 합계 (오늘 줄은 굵게) ──
     const mm2 = (ts) => { const x = new Date(ts); return x.getHours() * 60 + x.getMinutes() }
@@ -1214,7 +1213,7 @@ export default () => `  } else if (KIND === 'study') {
     const fs = Math.min(10, RH * 0.55), shown = sm ? DAYR.filter((x) => x.k <= today).slice(-3) : DAYR
     for (const x of shown) { const fut = x.k > today; row(WDN[new Date(x.k + 'T12:00:00').getDay()], fut ? '' : tv(x.inn), fut ? '' : tv(x.out), fut ? '' : x.tot ? hm(x.tot) : '—', x.k === today ? new Font('Menlo-Bold', fs * SCALE) : MN(fs), fut ? DS : DI) }
     if (!sm) row('', '', 'TOTAL', hm(wkT), MN(fs), DI)
-    w.url = link('study.records'); FILL = true
+    w.url = link('study.records')
   } else if (KIND === 'mag') {
     // ── 매거진: 제호 · 큰 날짜 숫자 · 이번 호 머리기사(다짐) · 차례 ──
     const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large
