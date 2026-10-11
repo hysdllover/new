@@ -276,8 +276,8 @@ if (!data) {
   const nextEv7 = (() => { for (const d of DAYS7) if (d.ev[0]) return { d, e: d.ev[0] }; return null })()
   const dayName = (d) => (d.i === 0 ? 'TODAY' : d.i === 1 ? 'TMRW' : DAY[d.x.getDay()])
   // ── 종이 디자인 위젯 공용 (티켓 · 영수증 · 기록 카드 · 우표 · 매거진): 자체 종이 · 먹색 · 포인트 색 조금 ──
-  const DK = dark(), DI = new Color(DK ? '#e6e9ee' : '#2a2f38'), DS = new Color(DK ? '#e6e9ee' : '#2a2f38', 0.52), DA = new Color(DK ? '#a9b6cc' : '#55658a'), DRS = new Color(DK ? '#d6a9b3' : '#b9808d')
-  const PG = DK ? '#1a1d22' : '#e8ebef', PW = DK ? '#272b32' : '#fcfcfb', PL = DK ? '#ffffff' : '#2a2f38' // 바탕(블루그레이) · 종이 · 선
+  const DK = dark(), DI = new Color(DK ? '#e6e9ee' : '#2a2f38'), DS = new Color(DK ? '#e6e9ee' : '#2a2f38', 0.52), DA = new Color(DK ? '#b9bcc2' : '#5c6068'), DRS = new Color(DK ? '#b8a9a6' : '#8b7a77')
+  const PG = DK ? '#1b1c1f' : '#e6e7e9', PW = DK ? '#272b32' : '#fcfcfb', PL = DK ? '#ffffff' : '#2a2f38' // 바탕(블루그레이) · 종이 · 선
   const DOY = Math.floor((new Date(today + 'T12:00:00') - new Date(d0.getFullYear() + '-01-01T12:00:00')) / 864e5) + 1
   // 바탕 그림은 2배 해상도로 한 번만 그려 두고 다시 씀
   const dbg = (key, draw) => {
@@ -294,9 +294,9 @@ if (!data) {
   const MN = (s) => new Font('Menlo-Regular', Math.round(s * SCALE * 2) / 2)
   // ── 빈티지 (신문 · 목록 카드 · 문고본 · 타임카드 · 전보): 결 있는 흰 종이 · 먹색 · 포인트 둘(낮은 채도) ──
   const VP = DK ? '#26272a' : '#f4f4f1', VI = new Color(DK ? '#e4e2dd' : '#2e2f33'), VS = new Color(DK ? '#e4e2dd' : '#2e2f33', 0.5), VL = DK ? '#e4e2dd' : '#2e2f33'
-  const VR = new Color(DK ? '#c79fa3' : '#9b6f73'), VN = new Color(DK ? '#a3afc6' : '#5b6883') // 바랜 적갈색 · 바랜 남색
+  const VR = DRS, VN = VS // 포인트는 바랜 회갈색 하나만 · 나머지는 먹색 농담
   const VF = (n) => (s) => new Font(n, Math.round(s * SCALE * 2) / 2)
-  const SER = VF('Baskerville'), SERI = VF('Baskerville-Italic'), DID = VF('Didot'), TYP = VF('AmericanTypewriter'), TYPL = VF('AmericanTypewriter-Light')
+  const SER = VF('Baskerville'), SERI = VF('Baskerville-Italic'), DID = VF('Didot'), TYP = VF('Baskerville'), TYPL = VF('Baskerville') // 타자기체 대신 잡지·카드 같은 세리프
   // 종이 결: 고운 점 + 가장자리 살짝 어둡게 (같은 무늬, 한 번 그려 캐시)
   const grain = (c, K, x0, y0, wd, ht) => { let sd = 7; const rnd = () => ((sd = (sd * 16807) % 2147483647) / 2147483647); c.setFillColor(new Color(VL, DK ? 0.05 : 0.045)); for (let i = 0, n = Math.round((wd * ht) / 26); i < n; i++) { const z = (0.5 + rnd() * 0.8) * K; c.fillRect(new Rect((x0 + rnd() * wd) * K, (y0 + rnd() * ht) * K, z, z)) } for (let k = 0; k < 6; k++) { c.setStrokeColor(new Color(VL, 0.012 * (6 - k))); c.setLineWidth(K); const p = new Path(); p.addRect(new Rect((x0 + k) * K, (y0 + k) * K, (wd - 2 * k) * K, (ht - 2 * k) * K)); c.addPath(p); c.strokePath() } }
   // 할 일 줄 (반반 · 세 단): 제목 누르면 그 할 일, 앞 표시 누르면 완료

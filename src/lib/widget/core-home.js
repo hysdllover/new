@@ -1175,7 +1175,7 @@ export default () => `  } else if (KIND === 'study') {
       const top = w.addStack(); top.layoutVertically(); top.size = new Size(inner, sy - P - 8)
       const h = top.addStack(); t(h, sp('PASS'), label(7), DS); h.addSpacer(); t(h, 'No.' + DOY, MN(7.5), DS)
       top.addSpacer(); t(top, 'TO', label(6.5), DS); t(top, dd ? dd.title : 'D-day 없음', tw(13), DI).minimumScaleFactor = 0.7; top.addSpacer(1)
-      t(top, dd ? ddTxt : '—', thin(30), DDC || DA).minimumScaleFactor = 0.6
+      t(top, dd ? ddTxt : '—', thin(30), DA).minimumScaleFactor = 0.6
       w.addSpacer(16)
       const b = w.addStack(); b.size = new Size(inner, 0); fld(b, 'DATE', dtS); b.addSpacer(); fld(b, 'STUDY', hm(mins))
     } else {
@@ -1201,7 +1201,7 @@ export default () => `  } else if (KIND === 'study') {
       row.addSpacer(24)
       const S0 = row.addStack(); S0.layoutVertically(); S0.size = new Size(rw, innerH)
       t(S0, 'D-DAY', label(6.5), DS); S0.addSpacer(2)
-      t(S0, dd ? (ddN(dd) === 0 ? 'D' : String(ddN(dd))) : '—', thin(big2 ? 46 : 36), DDC || DA).minimumScaleFactor = 0.5
+      t(S0, dd ? (ddN(dd) === 0 ? 'D' : String(ddN(dd))) : '—', thin(big2 ? 46 : 36), DA).minimumScaleFactor = 0.5
       t(S0, 'DAYS LEFT', label(6.5), DS); S0.addSpacer()
       if (dd) t(S0, dd.date.slice(5).replace('-', '.'), MN(9), DS)
       S0.addSpacer(24)
@@ -1293,7 +1293,7 @@ export default () => `  } else if (KIND === 'study') {
     w.url = link('study.progress')
     if (sm) {
       const iw = inner - 6, top = w.addStack(); top.size = new Size(iw, 0); top.topAlignContent(); t(top, 'P O S T', label(6.5), DS); top.addSpacer(); pm(top, 42)
-      w.addSpacer(); const r = w.addStack(); r.bottomAlignContent(); t(r, ddNum, thin(36), DDC || DA); r.addSpacer(4); t(r, dd ? 'DAYS' : '', label(7), DS); r.addSpacer()
+      w.addSpacer(); const r = w.addStack(); r.bottomAlignContent(); t(r, ddNum, thin(36), DA); r.addSpacer(4); t(r, dd ? 'DAYS' : '', label(7), DS); r.addSpacer()
       t(w, dd ? dd.title : 'D-day 없음', tw(11.5), DI).minimumScaleFactor = 0.7
       w.addSpacer(2); t(w, dd ? dd.date.replace(/-/g, '.') : '', MN(7.5), DS)
     } else {
@@ -1306,7 +1306,7 @@ export default () => `  } else if (KIND === 'study') {
       ln('FROM.', '오늘 ' + hm(mins) + ' 공부', tw(fam === 'medium' ? 12 : 14)); L.addSpacer(Math.round(sh * 0.1) - 4)
       row.addSpacer(14)
       const S0 = row.addStack(); S0.layoutVertically(); S0.size = new Size(sw, sh); S0.addSpacer()
-      const a1 = S0.addStack(); a1.addSpacer(); t(a1, ddNum, thin(fam === 'medium' ? 30 : 38), DDC || DA).minimumScaleFactor = 0.5; a1.addSpacer()
+      const a1 = S0.addStack(); a1.addSpacer(); t(a1, ddNum, thin(fam === 'medium' ? 30 : 38), DA).minimumScaleFactor = 0.5; a1.addSpacer()
       const a2 = S0.addStack(); a2.addSpacer(); t(a2, 'D-DAY', label(6.5), DS); a2.addSpacer(); S0.addSpacer()
       if (fam !== 'medium') {
         // 엽서 아래: 줄 위에 남은 할 일 · 다짐
@@ -1361,7 +1361,7 @@ export default () => `  } else if (KIND === 'study') {
       w.addSpacer(7); hr(0.4); w.addSpacer(7)
       const nC = fam === 'extraLarge' ? 3 : 2, cw = Math.floor((inner - (nC - 1) * 21) / nC), ch = Math.max(30, Math.round(innerH - (big2 ? 150 : 100) * SCALE))
       const row = w.addStack(); row.size = new Size(inner, ch); row.topAlignContent()
-      const colT = (k) => { const C = row.addStack(); C.layoutVertically(); C.size = new Size(cw, ch); t(C, k, TYP(7), VR); C.addSpacer(3); return C }
+      const colT = (k) => { const C = row.addStack(); C.layoutVertically(); C.size = new Size(cw, ch); t(C, k.split('').join(' '), label(6.5), VS); C.addSpacer(3); return C }
       const sep = () => { row.addSpacer(10); const v = row.addStack(); v.size = new Size(0.5, ch); v.backgroundColor = VS; row.addSpacer(10) }
       const A = colT('STUDY')
       const para = '오늘 ' + hm(mins) + ' 공부했다. ' + (subMins.length ? subMins.map((x) => x.s.name + ' ' + hm(x.m)).join(', ') + '. ' : '') + (mins >= goal ? '목표를 채웠다.' : '목표까지 ' + hm(goal - mins) + ' 남았다.')
@@ -1398,7 +1398,7 @@ export default () => `  } else if (KIND === 'study') {
   } else if (KIND === 'book') {
     // ── 문고본 표지: 위아래 먹색 띠 · 가운데 흰 종이에 제목(D-day) · 작은 타원 로고만 포인트 색 (중형은 뒤표지 소개글 함께) ──
     const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large, med = fam === 'medium', sm = fam === 'small'
-    const cvW = med ? Math.round(H2 * 0.74) : W2, bh = Math.round(H2 * 0.29), BAND = '#3b3c40'
+    const cvW = med ? Math.round(H2 * 0.74) : W2, bh = Math.round(H2 * 0.29), BAND = DK ? '#4a4a4c' : '#5f5e5c'
     dbg('book' + cvW, (c, K) => {
       c.setFillColor(new Color(VP)); c.fillRect(new Rect(0, 0, W2 * K, H2 * K))
       c.setFillColor(new Color(BAND)); c.fillRect(new Rect(0, 0, cvW * K, bh * K)); c.fillRect(new Rect(0, (H2 - bh) * K, cvW * K, bh * K))
@@ -1420,7 +1420,7 @@ export default () => `  } else if (KIND === 'study') {
     if (med) {
       row.addSpacer(16)
       const R = row.addStack(); R.layoutVertically(); R.size = new Size(W2 - cvW - 16 - P, H2); R.setPadding(P, 0, P, 0)
-      t(R, 'ABOUT THIS BOOK', TYP(7), VR); R.addSpacer(5)
+      t(R, 'A B O U T   T H I S   B O O K', label(6.5), VS); R.addSpacer(5)
       t(R, '오늘 ' + hm(mins) + ' 공부. ' + (subMins.length ? subMins.map((x) => x.s.name + ' ' + hm(x.m)).join(', ') + '.' : '아직 첫 장.'), tw(10.5), VI, 4).minimumScaleFactor = 0.8
       R.addSpacer(); if (quote) { t(R, quote, F(9.5, 'Light'), VS, 2).minimumScaleFactor = 0.8; R.addSpacer(4) }
       t(R, 'STUDY ' + hm(mins) + ' / ' + hm(goal), TYPL(7.5), VS)
