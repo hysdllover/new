@@ -5,10 +5,14 @@ const lock = fam.startsWith('accessory')
 // 진행·남은분은 잠금 원형용 — 다른 크기에선 공부·지금 유형으로
 KIND = fam === 'accessoryCircular' ? BASEKIND : ({ pct: 'study', mins: 'now' }[BASEKIND] || BASEKIND)
 if (KIND === 'custom' && fam.startsWith('accessory')) KIND = 'dash' // 내 위젯의 잠금 화면은 대시보드와 같게
+// 시간대별 자동: 아침(5~12시) 오늘 한눈에 · 낮(12~20시) 공부 · 밤 내일 준비
+if (KIND === 'auto') { const hr = new Date().getHours(); KIND = hr >= 5 && hr < 12 ? 'today' : hr >= 12 && hr < 20 ? 'study' : 'tmrw' }
+// 잠금 화면엔 그림 없이 같은 뜻의 형태로
+if (lock) KIND = ({ big: ARG === '디데이' ? 'dday' : ARG === '할일' ? 'todo' : ARG === '주간' ? 'week' : 'study', spark: 'week', arc: fam === 'accessoryCircular' ? 'pct' : 'study', memo: 'note', print: 'today', split: 'today', hero: 'study', three: 'today' })[KIND] || KIND
 let w = new ListWidget()
 // 한 줄(시계 위) 위젯: iOS 가 텍스트 하나만 시스템 서체로 그림 → 서체·색 지정 없이 짧게 하나만
 const inline = (s) => { s = String(s); const x = w.addText(s.length > 26 ? s.slice(0, 25) + '…' : s); x.lineLimit = 1; return x }
-w.url = link({ todo: 'tasks', due: 'tasks', cal: 'planner.month', week7: 'planner.week', tmrw: 'planner.week', class: 'planner.timetable', default: '', dash: '', quick: 'study.timer', timer: 'study.timer', ddl: 'study.progress', prog: 'study.progress', series: 'tasks.board', board: 'tasks.board', weeks: 'study.records' }[KIND] ?? 'study.records')
+w.url = link({ todo: 'tasks', due: 'tasks', cal: 'planner.month', week7: 'planner.week', tmrw: 'planner.week', class: 'planner.timetable', default: '', dash: '', quick: 'study.timer', timer: 'study.timer', ddl: 'study.progress', prog: 'study.progress', series: 'tasks.board', board: 'tasks.board', weeks: 'study.records', memo: 'notes.pages', print: '', split: '', three: '', hero: 'tasks', pair: 'planner.month', big: ARG === '할일' ? 'tasks' : ARG === '디데이' ? 'study.progress' : 'study.records' }[KIND] ?? 'study.records')
 w.refreshAfterDate = new Date(Date.now() + 5 * 60000) // 5분 뒤 다시 그려 달라고 요청 (실제 시점은 iOS 가 정함)
 // 앱 설정: 위젯 여백 단계 · 구분선 굵기
 const STM = (data && data.settings && data.settings.settings && data.settings.settings.main) || {}
@@ -184,6 +188,7 @@ if (!data) {
   const monthGrid = (parent, cell, gap, showNum, cellH) => {
     const byDay = {}
     for (const s of allSess) byDay[s.date] = (byDay[s.date] || 0) + (s.dur || 0)
+    const SUBC = ARG === '과목' ? (() => { const m = {}, o = {}; for (const s of allSess) { const k = s.date + '|' + s.subjectId; m[k] = (m[k] || 0) + (s.dur || 0) } for (const k in m) { const [dt, sid] = k.split('|'); if (!o[dt] || m[k] > o[dt].m) o[dt] = { m: m[k], sid } } const out = {}; for (const dt in o) { const sj = subjects.find((y) => y.id === o[dt].sid); if (sj && sj.color) out[dt] = sj.color } return out })() : null
     const y = d0.getFullYear(), m = d0.getMonth()
     const n = new Date(y, m + 1, 0).getDate()
     const ws = st.weekStart ?? 1
@@ -199,7 +204,8 @@ if (!data) {
         if (day < 1 || day > n) continue
         const key = y + '-' + pad(m + 1) + '-' + pad(day)
         const v = byDay[key] || 0, r = Math.min(1, v / goal)
-        c.backgroundColor = v ? dyn('#66778f', '#9fadc4', 0.18 + 0.72 * r) : RULE
+        const sc = SUBC ? SUBC[key] : null // 달력:과목 → 그날 가장 오래 공부한 과목 색
+        c.backgroundColor = v ? (sc ? new Color(sc, 0.25 + 0.7 * r) : dyn('#66778f', '#9fadc4', 0.18 + 0.72 * r)) : RULE
         if (key === today) { c.borderWidth = 1; c.borderColor = INK }
         // 대형: 날짜 + 그날 공부 시간 (칸 진하기 = 목표 대비)
         if (showNum) { const fg = r >= 0.6 ? dyn('#ffffff', '#15181d') : v ? INK : SOFT; c.layoutVertically(); c.setPadding(3, 4, 2, 2); t(c, day, label(8), fg); c.addSpacer(); if (v) t(c, hm(v), F(8, 'Medium'), fg).minimumScaleFactor = 0.6 }
@@ -263,6 +269,18 @@ if (!data) {
   const ev7 = DAYS7.reduce((a, d) => a + d.ev.length, 0)
   const nextEv7 = (() => { for (const d of DAYS7) if (d.ev[0]) return { d, e: d.ev[0] }; return null })()
   const dayName = (d) => (d.i === 0 ? 'TODAY' : d.i === 1 ? 'TMRW' : DAY[d.x.getDay()])
+  // 할 일 줄 (반반 · 세 단): 제목 누르면 그 할 일, 앞 표시 누르면 완료
+  const taskRows = (P2, wd, n, fsT) => {
+    for (const x of items.slice(0, n)) {
+      const r = P2.addStack(); r.size = new Size(wd, 0); r.centerAlignContent(); r.spacing = 5; if (x.id) r.url = taskUrl(x.id)
+      if (x.done) { if (DOODLE) { const ck = r.addImage(tickImg(10)); ck.imageSize = new Size(8, 8) } strike(r, x.title, tw(fsT)) }
+      else { const imp = x.priority >= 3; const mk = t(r, imp ? '•' : '–', tw(fsT - 1), imp ? GOLD : SOFT); if (x.id) mk.url = doneUrl(x.id); t(r, x.title, imp ? F(fsT, 'Medium') : tw(fsT), INK).minimumScaleFactor = 0.8 }
+      r.addSpacer(); P2.addSpacer(4)
+    }
+    if (!items.length) t(P2, 'All clear.', tw(fsT), SOFT)
+  }
+  // 다음 일정 하나 (오늘 수업·일정 → 7일 안 일정) — 묶음 위젯
+  const PAIRNX = (() => { const c = nCur || nNext; if (c) return { t: c.t, w: (nCur ? '지금 ~' + clk(c.e) : clk(c.s)) }; const e = nextEv7; return e ? { t: e.e.t, w: (e.d.i === 1 ? '내일 ' : e.d.i ? DAY[e.d.x.getDay()] + ' ' : '') + (e.e.s == null ? '종일' : clk(e.e.s % 1440)) } : null })()
   // 바로 시작: 최근 공부한 과목 먼저
   const recent = allSess.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)) || +new Date(b.updatedAt || 0) - +new Date(a.updatedAt || 0))
   const QS = []
@@ -598,6 +616,16 @@ if (!data) {
         rRow('공부 시작', '오늘 ' + hm(mins), label(8), label(8))
         t(w, s0 ? s0.name : '공부', thin(22)).minimumScaleFactor = 0.6
         lbar(w, mins / goal, LK.rw)
+      }
+    } else if (KIND === 'pair') {
+      // 잠금 화면 묶음: D-day 와 다음 일정을 두 줄로
+      const nx = PAIRNX
+      if (inl) inline((dd ? ddTxt + ' ' + dd.title : 'No D-day') + (nx ? ' · ' + nx.w + ' ' + nx.t : ''))
+      else if (circ) cRows([[dd ? (ddN(dd) === 0 ? 'D' : String(ddN(dd))) : '—', thin(20)], [nx ? nx.w : 'D-DAY', label(7)]])
+      else {
+        rRow(dd ? dd.title : 'No D-day', dd ? ddTxt : '', tw(12), F(15, 'Regular'))
+        w.addSpacer(2); const hr = w.addStack(); hr.size = new Size(LK.rw, 0.5); hr.backgroundColor = new Color('#ffffff', 0.35); w.addSpacer(3)
+        rRow(nx ? nx.t : '다가오는 일정 없음', nx ? nx.w : '', tw(12), F(12, 'Regular'))
       }
     } else if (KIND === 'tbl' || KIND === 'boardn' || KIND === 'photo') {
       const TBS = Array.isArray(data.tables) ? data.tables : [], BDS = Array.isArray(data.boards) ? data.boards : []
