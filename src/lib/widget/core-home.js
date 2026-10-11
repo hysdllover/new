@@ -1341,6 +1341,149 @@ export default () => `  } else if (KIND === 'study') {
       }
     }
     w.url = link('')
+  } else if (KIND === 'news') {
+    // ── 신문 1면: 제호 · 날짜 줄 · 머리기사(D-day) · 단 나눈 기사(공부 · 할 일 · 일정) ──
+    const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large, sm = fam === 'small', big2 = fam === 'large' || fam === 'extraLarge'
+    dbg('news', (c, K) => { c.setFillColor(new Color(VP)); c.fillRect(new Rect(0, 0, W2 * K, H2 * K)); grain(c, K, 0, 0, W2, H2) })
+    const DF = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'], MF = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER']
+    const hr = (h) => { const a = w.addStack(); a.size = new Size(inner, h); a.backgroundColor = VI }
+    const ms = w.addStack(); ms.size = new Size(inner, 0); ms.addSpacer(); t(ms, 'The Daily Study', DID(sm ? 16 : big2 ? 30 : 21), VI).minimumScaleFactor = 0.7; ms.addSpacer()
+    w.addSpacer(3); hr(1.1); w.addSpacer(1.5); hr(0.4); w.addSpacer(2)
+    const dl = w.addStack(); dl.size = new Size(inner, 0); dl.centerAlignContent(); t(dl, 'VOL. ' + DOY, TYPL(sm ? 6.5 : 7.5), VS); dl.addSpacer()
+    if (!sm) { t(dl, DF[d0.getDay()] + ', ' + MF[d0.getMonth()] + ' ' + d0.getDate() + ', ' + d0.getFullYear(), TYPL(7.5), VI).minimumScaleFactor = 0.7; dl.addSpacer() }
+    t(dl, sm ? MON[d0.getMonth()] + ' ' + d0.getDate() : 'STUDY ' + hm(mins), TYPL(sm ? 6.5 : 7.5), VS)
+    w.addSpacer(2); hr(0.4); w.addSpacer(sm ? 7 : 9)
+    const hl = dd ? dd.title + ', ' + (ddN(dd) === 0 ? '바로 오늘' : ddN(dd) + '일 앞으로') : quote || '오늘의 공부 기록'
+    t(w, hl, F(sm ? 13 : big2 ? 22 : 16, 'Medium'), VI, 2).minimumScaleFactor = 0.7
+    if (sm) { w.addSpacer(); t(w, '오늘 ' + hm(mins) + ' 공부 · 목표의 ' + pct + '%', TYPL(8), VS).minimumScaleFactor = 0.7 }
+    else {
+      w.addSpacer(3); t(w, 'Today ' + hm(mins) + ' of ' + hm(goal) + ' — ' + pct + '%', SERI(big2 ? 12 : 10), VS)
+      w.addSpacer(7); hr(0.4); w.addSpacer(7)
+      const nC = fam === 'extraLarge' ? 3 : 2, cw = Math.floor((inner - (nC - 1) * 21) / nC), ch = Math.max(30, Math.round(innerH - (big2 ? 150 : 100) * SCALE))
+      const row = w.addStack(); row.size = new Size(inner, ch); row.topAlignContent()
+      const colT = (k) => { const C = row.addStack(); C.layoutVertically(); C.size = new Size(cw, ch); t(C, k, TYP(7), VR); C.addSpacer(3); return C }
+      const sep = () => { row.addSpacer(10); const v = row.addStack(); v.size = new Size(0.5, ch); v.backgroundColor = VS; row.addSpacer(10) }
+      const A = colT('STUDY')
+      const para = '오늘 ' + hm(mins) + ' 공부했다. ' + (subMins.length ? subMins.map((x) => x.s.name + ' ' + hm(x.m)).join(', ') + '. ' : '') + (mins >= goal ? '목표를 채웠다.' : '목표까지 ' + hm(goal - mins) + ' 남았다.')
+      t(A, para, tw(big2 ? 11 : 10), VI, 12).minimumScaleFactor = 0.8; A.addSpacer()
+      sep()
+      const B = colT('TO DO'), left = items.filter((x) => !x.done)
+      for (const x of left.slice(0, Math.max(1, Math.floor((ch - 14) / (15 * SCALE))))) { const r = B.addStack(); if (x.id) r.url = taskUrl(x.id); t(r, '· ' + x.title, tw(big2 ? 11 : 10), VI).minimumScaleFactor = 0.8; r.addSpacer(); B.addSpacer(2) }
+      if (!left.length) t(B, '오늘 할 일은 모두 끝났다.', tw(10), VS)
+      B.addSpacer()
+      if (nC === 3) { sep(); const Cc = colT('PLAN'); for (const x of NOW.filter((y) => y.e > nm).slice(0, 8)) { t(Cc, clk(x.s) + '  ' + x.t, tw(11), VI).minimumScaleFactor = 0.8; Cc.addSpacer(2) } if (!NOW.some((y) => y.e > nm)) t(Cc, '남은 일정 없음', tw(10), VS); Cc.addSpacer() }
+      FILL = true
+    }
+    w.url = link('')
+  } else if (KIND === 'catalog') {
+    // ── 도서 목록 카드: 타자기 글씨 · 왼쪽 청구기호 · 바랜 적갈색 세로줄 · 아래 구멍 ──
+    const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large, m = Math.round(P * 0.45), sm = fam === 'small'
+    const LH = Math.round((sm ? 15 : 16.5) * SCALE), cw0 = sm ? 30 : 44, rx = P + cw0, nR = Math.max(3, Math.floor((innerH - 10) / LH))
+    dbg('catalog-' + LH + '-' + cw0, (c, K) => {
+      const card = new Path(); card.addRoundedRect(new Rect(m * K, m * K, (W2 - 2 * m) * K, (H2 - 2 * m) * K), 5 * K, 5 * K); c.addPath(card); c.setFillColor(new Color(VP)); c.fillPath(); grain(c, K, m, m, W2 - 2 * m, H2 - 2 * m)
+      for (let k = 1; k <= nR; k++) { c.setFillColor(new Color(VL, k === 1 ? 0.28 : 0.09)); c.fillRect(new Rect((m + 6) * K, (P + k * LH) * K, (W2 - 2 * m - 12) * K, 0.6 * K)) }
+      c.setFillColor(VR); c.fillRect(new Rect(rx * K, m * K, 0.8 * K, (H2 - 2 * m) * K))
+      c.setFillColor(new Color(PG)); c.fillEllipse(new Rect((W2 / 2 - 5.5) * K, (H2 - m - 15) * K, 11 * K, 11 * K))
+    })
+    const tw0 = inner - cw0 - 8
+    const rowL = (cn, txt, f, col, right) => { const r = w.addStack(); r.size = new Size(inner, LH); r.bottomAlignContent(); const a = r.addStack(); a.size = new Size(cw0, LH); a.bottomAlignContent(); t(a, cn, TYPL(sm ? 7.5 : 8.5), VS); a.addSpacer(); r.addSpacer(8); const b = r.addStack(); b.size = new Size(tw0, LH); b.bottomAlignContent(); t(b, txt, f, col || VI).minimumScaleFactor = 0.75; b.addSpacer(); if (right) t(b, right, TYPL(sm ? 8.5 : 9.5), col || VI); return r }
+    const L = [['STU', dd ? dd.title : '공부의 기록', TYP(sm ? 10 : 11.5)], [String(DOY), MON[d0.getMonth()].slice(0, 1) + MON[d0.getMonth()].slice(1).toLowerCase() + '. ' + d0.getDate() + ', ' + d0.getFullYear() + (dd ? '  —  ' + ddTxt : ''), TYPL(sm ? 8.5 : 9.5), VS]]
+    subMins.slice(0, 6).forEach((x, i) => L.push(['', (i + 1) + '. ' + x.s.name, TYPL(sm ? 9 : 10), VI, hm(x.m)]))
+    if (!subMins.length) L.push(['', '오늘 기록 없음', TYPL(sm ? 9 : 10), VS])
+    L.push(['', 'Total', TYP(sm ? 9 : 10), VN, hm(mins) + ' / ' + hm(goal)])
+    if (!sm) for (const x of items.filter((y) => !y.done)) L.push(['', 'Note: ' + x.title, TYPL(9.5), VS])
+    // 맨 아래 줄은 구멍 자리라 비움
+    for (const [cn, tx, f, col, rt] of L.slice(0, nR - 1)) rowL(cn, tx, f, col, rt)
+    w.url = link('study.records'); FILL = true
+  } else if (KIND === 'book') {
+    // ── 문고본 표지: 위아래 먹색 띠 · 가운데 흰 종이에 제목(D-day) · 작은 타원 로고만 포인트 색 (중형은 뒤표지 소개글 함께) ──
+    const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large, med = fam === 'medium', sm = fam === 'small'
+    const cvW = med ? Math.round(H2 * 0.74) : W2, bh = Math.round(H2 * 0.29), BAND = '#3b3c40'
+    dbg('book' + cvW, (c, K) => {
+      c.setFillColor(new Color(VP)); c.fillRect(new Rect(0, 0, W2 * K, H2 * K))
+      c.setFillColor(new Color(BAND)); c.fillRect(new Rect(0, 0, cvW * K, bh * K)); c.fillRect(new Rect(0, (H2 - bh) * K, cvW * K, bh * K))
+      c.setFillColor(new Color(VP, 0.45)); c.fillRect(new Rect(0, (bh - 5) * K, cvW * K, 0.6 * K)); c.fillRect(new Rect(0, (H2 - bh + 4.4) * K, cvW * K, 0.6 * K))
+      c.setFillColor(VR); c.fillEllipse(new Rect((cvW / 2 - 13) * K, (H2 - bh + bh * 0.3) * K, 26 * K, 16 * K))
+      c.setStrokeColor(new Color(VP, 0.8)); c.setLineWidth(0.7 * K); const ov = new Path(); ov.addEllipse(new Rect((cvW / 2 - 10.5) * K, (H2 - bh + bh * 0.3 + 2.5) * K, 21 * K, 11 * K)); c.addPath(ov); c.strokePath()
+      if (med) c.fillRect(new Rect(cvW * K, 0, 0.6 * K, H2 * K))
+      grain(c, K, 0, 0, W2, H2)
+    })
+    w.setPadding(0, 0, 0, 0)
+    const PW0 = new Color(VP), ctr = (parent, wd, s, f, col) => { const r = parent.addStack(); r.size = new Size(wd, 0); r.addSpacer(); t(r, s, f, col).minimumScaleFactor = 0.6; r.addSpacer() }
+    const row = w.addStack(); row.size = new Size(W2, H2)
+    const C = row.addStack(); C.layoutVertically(); C.size = new Size(cvW, H2)
+    const tp = C.addStack(); tp.size = new Size(cvW, bh - 5); tp.centerAlignContent(); tp.layoutVertically(); tp.addSpacer(); ctr(tp, cvW, sm || med ? 'S T U D Y' : 'S T U D Y   C L A S S I C S', label(sm || med ? 6.5 : 8), PW0); tp.addSpacer()
+    const mid = C.addStack(); mid.layoutVertically(); mid.size = new Size(cvW, H2 - 2 * bh + 9); mid.setPadding(0, 10, 0, 10); mid.addSpacer()
+    ctr(mid, cvW - 20, dd ? dd.title : '공부의 기록', F(sm || med ? 15 : 24, 'Regular'), VI); mid.addSpacer(sm || med ? 3 : 6)
+    ctr(mid, cvW - 20, dd ? ddTxt + '  ·  ' + dd.date.slice(5).replace('-', '.') : MON[d0.getMonth()] + ' ' + d0.getDate(), TYPL(sm || med ? 8 : 10), dd ? VN : VS); mid.addSpacer()
+    const bt = C.addStack(); bt.layoutVertically(); bt.size = new Size(cvW, bh - 4); bt.addSpacer(); ctr(bt, cvW, 'VOL. ' + DOY, TYPL(sm || med ? 6.5 : 7.5), PW0); bt.addSpacer(Math.round(bh * 0.1))
+    if (med) {
+      row.addSpacer(16)
+      const R = row.addStack(); R.layoutVertically(); R.size = new Size(W2 - cvW - 16 - P, H2); R.setPadding(P, 0, P, 0)
+      t(R, 'ABOUT THIS BOOK', TYP(7), VR); R.addSpacer(5)
+      t(R, '오늘 ' + hm(mins) + ' 공부. ' + (subMins.length ? subMins.map((x) => x.s.name + ' ' + hm(x.m)).join(', ') + '.' : '아직 첫 장.'), tw(10.5), VI, 4).minimumScaleFactor = 0.8
+      R.addSpacer(); if (quote) { t(R, quote, F(9.5, 'Light'), VS, 2).minimumScaleFactor = 0.8; R.addSpacer(4) }
+      t(R, 'STUDY ' + hm(mins) + ' / ' + hm(goal), TYPL(7.5), VS)
+    }
+    w.url = link('study.progress'); FILL = true
+  } else if (KIND === 'tcard') {
+    // ── 타임카드: 이번 주 날마다 처음 시작 · 마지막 끝 · 합계 (오늘 줄은 바랜 적갈색 도장 잉크) ──
+    const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large, m = Math.round(P * 0.45), sm = fam === 'small'
+    const mm2 = (ts) => { const x = new Date(ts); return x.getHours() * 60 + x.getMinutes() }
+    const DAYR = bwDays.map((k) => { const ss = allSess.filter((x) => x.date === k), st2 = ss.filter((x) => x.start).map((x) => [mm2(x.start), mm2(x.start) + (x.dur || 0)]); let tot = ss.reduce((a, x) => a + (x.dur || 0), 0); if (k === today && SEG) { st2.push([mm2(SEG), nm]); tot = mins } return { k, tot, inn: st2.length ? Math.min(...st2.map((x) => x[0])) : null, out: st2.length ? Math.max(...st2.map((x) => x[1])) : null } })
+    const wkT = DAYR.reduce((a, x) => a + x.tot, 0), tr = DAYR.find((x) => x.k === today) || DAYR[0]
+    const HH = Math.round((sm ? 30 : 34) * SCALE), FH = sm ? 0 : Math.round(18 * SCALE), RH = sm ? 0 : Math.floor((innerH - HH - FH) / 8), c1 = 36
+    dbg('tcard-' + HH + '-' + RH, (c, K) => {
+      const card = new Path(); card.addRoundedRect(new Rect(m * K, m * K, (W2 - 2 * m) * K, (H2 - 2 * m) * K), 4 * K, 4 * K); c.addPath(card); c.setFillColor(new Color(VP)); c.fillPath(); grain(c, K, m, m, W2 - 2 * m, H2 - 2 * m)
+      c.setFillColor(new Color(VL, 0.7)); c.fillRect(new Rect(P * K, (P + HH - 3) * K, (W2 - 2 * P) * K, 0.9 * K))
+      if (!sm) {
+        const y0 = P + HH, cw = (W2 - 2 * P - c1) / 3
+        c.setFillColor(new Color(VL, 0.14)); for (let k = 1; k <= 8; k++) c.fillRect(new Rect(P * K, (y0 + k * RH) * K, (W2 - 2 * P) * K, 0.6 * K))
+        for (const x of [P + c1, P + c1 + cw, P + c1 + 2 * cw]) c.fillRect(new Rect(x * K, y0 * K, 0.6 * K, 8 * RH * K))
+      }
+    })
+    const hd = w.addStack(); hd.size = new Size(inner, HH - 5); hd.topAlignContent()
+    const hl = hd.addStack(); hl.layoutVertically(); t(hl, 'Time Card', DID(sm ? 14 : 16), VI); t(hl, 'WEEK OF ' + bwDays[0].slice(5).replace('-', '.'), TYPL(7), VS)
+    hd.addSpacer(); t(hd, 'No. ' + DOY, TYPL(7.5), VS)
+    w.addSpacer(5)
+    const tv = (m0) => (m0 == null ? '—' : clk(Math.min(1439, m0)))
+    if (sm) {
+      w.addSpacer(4)
+      const r = w.addStack(); r.size = new Size(inner, 0)
+      for (const [l, v] of [['IN', tv(tr.inn)], ['OUT', tv(tr.out)], ['HRS', hm(tr.tot)]]) { const f = r.addStack(); f.layoutVertically(); t(f, l, label(6.5), VS); t(f, v, TYP(11), VR); r.addSpacer() }
+      w.addSpacer(); const b = w.addStack(); b.size = new Size(inner, 0); t(b, 'WEEK', label(6.5), VS); b.addSpacer(); t(b, hm(wkT), TYP(11), VI)
+    } else {
+      const cw = (inner - c1) / 3
+      const cell = (r, wd, s, f, col, right) => { const a = r.addStack(); a.size = new Size(wd, RH); a.setPadding(0, 6, 0, 6); a.centerAlignContent(); if (right) a.addSpacer(); t(a, s, f, col).minimumScaleFactor = 0.7; if (!right) a.addSpacer() }
+      const rowT = (a, b2, cc, d2, f, col, fa) => { const r = w.addStack(); r.size = new Size(inner, RH); cell(r, c1, a, fa || f, col); cell(r, cw, b2, f, col); cell(r, cw, cc, f, col); cell(r, cw, d2, f, col, true) }
+      rowT('DAY', 'IN', 'OUT', 'HOURS', label(6.5), VS)
+      const fs = Math.min(10.5, RH * 0.62)
+      for (const x of DAYR) { const isT = x.k === today, fut = x.k > today; rowT(WDN[new Date(x.k + 'T12:00:00').getDay()], fut ? '' : tv(x.inn), fut ? '' : tv(x.out), fut ? '' : x.tot ? hm(x.tot) : '—', TYP(fs), isT ? VR : fut ? VS : VI, label(8)) }
+      w.addSpacer(3)
+      const ft = w.addStack(); ft.size = new Size(inner, FH - 3); ft.centerAlignContent(); t(ft, 'TOTAL', label(7), VS); ft.addSpacer(); t(ft, hm(wkT), TYP(11), VI)
+      FILL = true
+    }
+    w.url = link('study.records')
+  } else if (KIND === 'telegram') {
+    // ── 전보: 양식 종이에 타자 띠를 붙인 듯 · 문장마다 STOP ──
+    const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large, m = Math.round(P * 0.45), sm = fam === 'small'
+    const headH = Math.round((sm ? 30 : 36) * SCALE), SH = Math.round((sm ? 19 : 21) * SCALE), nS = Math.max(2, Math.min(sm ? 4 : 8, Math.floor((innerH - headH) / SH)))
+    const SP = DK ? '#2f3135' : '#fdfdfc'
+    dbg('telegram-' + headH + '-' + SH + '-' + nS, (c, K) => {
+      const card = new Path(); card.addRoundedRect(new Rect(m * K, m * K, (W2 - 2 * m) * K, (H2 - 2 * m) * K), 3 * K, 3 * K); c.addPath(card); c.setFillColor(new Color(VP)); c.fillPath(); grain(c, K, m, m, W2 - 2 * m, H2 - 2 * m)
+      c.setFillColor(new Color(VL, 0.55)); c.fillRect(new Rect(P * K, (P + headH - 6) * K, (W2 - 2 * P) * K, 0.6 * K)); c.fillRect(new Rect(P * K, (P + headH - 4) * K, (W2 - 2 * P) * K, 0.3 * K))
+      for (let i = 0; i < nS; i++) { const y = P + headH + i * SH + 2, wd = (W2 - 2 * P) * (0.72 + ((i * 37) % 23) / 100); c.setFillColor(new Color(SP)); c.fillRect(new Rect((P - 3) * K, y * K, Math.min(W2 - 2 * P + 6, wd) * K, (SH - 5) * K)); c.setFillColor(new Color(VL, 0.07)); c.fillRect(new Rect((P - 3) * K, (y + SH - 5) * K, Math.min(W2 - 2 * P + 6, wd) * K, 0.6 * K)) }
+    })
+    const tm = pad(new Date().getHours()) + ':' + pad(new Date().getMinutes())
+    const hd = w.addStack(); hd.size = new Size(inner, headH - 8); hd.topAlignContent()
+    const hl = hd.addStack(); hl.layoutVertically(); t(hl, 'T E L E G R A M', DID(sm ? 11 : 14), VI); hl.addSpacer(2); t(hl, 'TO. 나    FROM. 오늘', TYPL(6.5), VS)
+    hd.addSpacer(); t(hd, MON[d0.getMonth()] + ' ' + d0.getDate() + '  ' + tm, TYP(sm ? 7 : 8), VR)
+    w.addSpacer(8)
+    const left = items.filter((x) => !x.done), nx = PAIRNX
+    const L = ['오늘 ' + hm(mins) + ' 공부', mins >= goal ? '목표 달성' : '목표까지 ' + hm(goal - mins), dd ? dd.title + ' ' + ddTxt : null, left.length ? '할 일 ' + left.length + '개 남음' : '할 일 끝', nx ? '다음 ' + nx.w + ' ' + nx.t : null, quote].filter(Boolean)
+    const order = sm || fam === 'medium' ? [L[0], ...(dd ? [L[2]] : []), L.find((s) => s.startsWith('할 일')), L[1]].filter(Boolean) : L
+    for (const s2 of order.slice(0, nS)) { const r = w.addStack(); r.size = new Size(inner, SH); r.centerAlignContent(); t(r, s2, TYP(sm ? 9.5 : 10.5), VI).minimumScaleFactor = 0.7; r.addSpacer(6); t(r, 'STOP', TYPL(sm ? 7 : 8), VS); r.addSpacer() }
+    w.url = link(''); FILL = true
   } else if (KIND === 'quote') {
     // ── 다짐 ──
     t(w, dateStr, label(9), SOFT)
