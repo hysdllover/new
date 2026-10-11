@@ -1220,22 +1220,20 @@ export default () => `  } else if (KIND === 'study') {
     dbg('mag2', (c, K) => paperFill(c, K, W2, H2))
     const sm = fam === 'small', big2 = fam === 'large' || fam === 'extraLarge', left = items.filter((x) => !x.done)
     const dbl = () => { const a = w.addStack(); a.size = new Size(inner, 0.9); a.backgroundColor = DI; w.addSpacer(1.5); const b = w.addStack(); b.size = new Size(inner, 0.4); b.backgroundColor = DI }
-    const hd = w.addStack(); hd.size = new Size(inner, 0); hd.bottomAlignContent(); t(hd, sm ? 'S T U D Y' : 'T H E   S T U D Y', F(sm ? 11 : 13, 'Light'), DI); hd.addSpacer(); t(hd, 'VOL.' + DOY, MN(7.5), DS)
-    w.addSpacer(4); dbl(); w.addSpacer(sm ? 4 : 8)
     const headline = quote || (dd ? dd.title + '까지 ' + ddTxt : '오늘을 기록하다')
     const numCol = (parent, sz) => { const a = parent.addStack(); a.layoutVertically(); t(a, String(d0.getDate()), thin(sz), DI); t(a, MON[d0.getMonth()] + '  ·  ' + DAY[d0.getDay()], label(7.5), DS) }
     if (sm) {
-      numCol(w, 56); w.addSpacer()
+      w.addSpacer(); numCol(w, 64); w.addSpacer()
       t(w, dd ? ddTxt + '  ' + dd.title : headline, tw(10), DI, 2).minimumScaleFactor = 0.8
     } else {
       const row = w.addStack(); row.size = new Size(inner, 0); row.topAlignContent()
-      numCol(row, big2 ? 86 : 64); row.addSpacer(14); vrule(row, big2 ? 108 : Math.round(innerH * 0.6)); row.addSpacer(14)
-      const R = row.addStack(); R.layoutVertically(); t(R, 'COVER STORY', label(6.5), DS); R.addSpacer(4); t(R, headline, F(big2 ? 16 : 13, 'Light'), DI, big2 ? 4 : 3).minimumScaleFactor = 0.8; R.addSpacer()
+      numCol(row, big2 ? 96 : 76); row.addSpacer(14); vrule(row, big2 ? 120 : Math.round(innerH * 0.66)); row.addSpacer(14)
+      const R = row.addStack(); R.layoutVertically(); R.addSpacer(4); t(R, headline, F(big2 ? 16 : 13, 'Light'), DI, big2 ? 4 : 3).minimumScaleFactor = 0.8; R.addSpacer()
       if (!big2) { w.addSpacer(); rule(w, inner); w.addSpacer(5); const f = w.addStack(); f.size = new Size(inner, 0); t(f, '공부 ' + hm(mins), label(8), DI); f.addSpacer(); t(f, dd ? ddTxt : '', label(8), DI); f.addSpacer(); t(f, '할 일 ' + left.length, label(8), DS) }
       else {
-        w.addSpacer(14); t(w, 'C O N T E N T S', label(7), DS); w.addSpacer(6)
+        w.addSpacer(16); dbl(); w.addSpacer(4)
         const nx = PAIRNX, TOC = [['STUDY', hm(mins) + ' / ' + hm(goal)], ['D-DAY', dd ? ddTxt + '  ' + dd.title : '—'], ['NEXT', nx ? nx.w + '  ' + nx.t : '—'], ['TO DO', left.length ? left[0].title + (left.length > 1 ? '  외 ' + (left.length - 1) : '') : '모두 끝'], ['NOTE', NOTES()[0] ? NOTES()[0].t : '—'], ['WEEK', hm(weekTot) + ' · 하루 ' + hm(weekAvg)]]
-        const rh = Math.round(22 * SCALE), nT = Math.max(3, Math.min(TOC.length, Math.floor((innerH - 200 * SCALE) / (rh + 0.5))))
+        const rh = Math.round(22 * SCALE), nT = Math.max(3, Math.min(TOC.length, Math.floor((innerH - 170 * SCALE) / (rh + 0.5))))
         TOC.slice(0, nT).forEach(([k, v], i) => { if (i) { const r0 = w.addStack(); r0.size = new Size(inner, 0.5); r0.backgroundColor = new Color(VL, 0.15) } const r = w.addStack(); r.size = new Size(inner, rh); r.centerAlignContent(); const n0 = r.addStack(); n0.size = new Size(24, 0); t(n0, pad(i + 1), MN(8.5), DS); n0.addSpacer(); const k0 = r.addStack(); k0.size = new Size(54, 0); t(k0, k, label(7), DS); k0.addSpacer(); t(r, v, tw(11.5), DI).minimumScaleFactor = 0.75; r.addSpacer() })
         w.addSpacer()
       }
@@ -1247,18 +1245,14 @@ export default () => `  } else if (KIND === 'study') {
     dbg('news2', (c, K) => paperFill(c, K, W2, H2))
     const DF = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'], MF = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER']
     const hr = (h) => { const a = w.addStack(); a.size = new Size(inner, h); a.backgroundColor = VI }
-    const ms = w.addStack(); ms.size = new Size(inner, 0); ms.addSpacer(); t(ms, 'The Daily Study', DID(sm ? 16 : big2 ? 30 : 21), VI).minimumScaleFactor = 0.7; ms.addSpacer()
-    w.addSpacer(3); hr(1.1); w.addSpacer(1.5); hr(0.4); w.addSpacer(2)
-    const dl = w.addStack(); dl.size = new Size(inner, 0); dl.centerAlignContent(); t(dl, 'VOL. ' + DOY, MN(sm ? 6.5 : 7), VS); dl.addSpacer()
-    if (!sm) { t(dl, DF[d0.getDay()] + ', ' + MF[d0.getMonth()] + ' ' + d0.getDate() + ', ' + d0.getFullYear(), label(7), VI).minimumScaleFactor = 0.7; dl.addSpacer() }
-    t(dl, sm ? MON[d0.getMonth()] + ' ' + d0.getDate() : hm(mins), MN(sm ? 6.5 : 7), VS)
-    w.addSpacer(2); hr(0.4); w.addSpacer(sm ? 7 : 9)
+    const dl = w.addStack(); dl.size = new Size(inner, 0); dl.centerAlignContent(); t(dl, sm ? MON[d0.getMonth()] + ' ' + d0.getDate() + '  ·  ' + DAY[d0.getDay()] : DF[d0.getDay()] + ', ' + MF[d0.getMonth()] + ' ' + d0.getDate(), label(7), VI).minimumScaleFactor = 0.7; dl.addSpacer(); t(dl, hm(mins), MN(sm ? 6.5 : 7), VS)
+    w.addSpacer(3); hr(1.1); w.addSpacer(1.5); hr(0.4); w.addSpacer(sm ? 8 : 10)
     const hl = dd ? dd.title + ', ' + (ddN(dd) === 0 ? '바로 오늘' : ddN(dd) + '일 앞으로') : quote || '오늘의 공부 기록'
     t(w, hl, F(sm ? 13 : big2 ? 21 : 15, 'Regular'), VI, 2).minimumScaleFactor = 0.7
     if (sm) { w.addSpacer(); t(w, '오늘 ' + hm(mins) + ' 공부 · 목표의 ' + pct + '%', label(8), VS).minimumScaleFactor = 0.7 }
     else {
       w.addSpacer(7); hr(0.4); w.addSpacer(7)
-      const nC = fam === 'extraLarge' ? 3 : 2, cw = Math.floor((inner - (nC - 1) * 21) / nC), ch = Math.max(30, Math.round(innerH - (big2 ? 128 : 84) * SCALE))
+      const nC = fam === 'extraLarge' ? 3 : 2, cw = Math.floor((inner - (nC - 1) * 21) / nC), ch = Math.max(30, Math.round(innerH - (big2 ? 92 : 62) * SCALE))
       const row = w.addStack(); row.size = new Size(inner, ch); row.topAlignContent()
       const colT = (k) => { const C = row.addStack(); C.layoutVertically(); C.size = new Size(cw, ch); t(C, k.split('').join(' '), label(6.5), VS); C.addSpacer(4); return C }
       const sep = () => { row.addSpacer(10); const v = row.addStack(); v.size = new Size(0.5, ch); v.backgroundColor = VS; row.addSpacer(10) }
