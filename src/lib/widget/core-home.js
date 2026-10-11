@@ -1076,57 +1076,96 @@ export default () => `  } else if (KIND === 'study') {
       table([['NO', 'TO DO', 'DONE'], ...pfill(tr.length ? tr : [['', '오늘 할 일 없음', '']], nT, 3)], [32, null, 44], rh2, 11.5, true) // 남는 줄도 빈 칸으로 아래까지
     }
   } else if (KIND === 'pweek') {
-    // ── 주간표: 이번 주 날마다 공부 시간 · 할 일 (흑백 인쇄풍 표) ──
-    const vOf = (k) => (k === today ? mins : DM[k] || 0), tot = bwDays.reduce((a, k) => a + (k <= today ? vOf(k) : 0), 0), past = bwDays.filter((k) => k <= today).length
-    phead('WEEKLY SHEET', 'WEEK OF ' + bwDays[0].slice(5).replace('-', '.'))
-    if (fam === 'small') { const f = pfit(22, 3); ptab([['WEEK', hm(tot)], ['AVG', hm(Math.round(tot / Math.max(1, past)))], ['TODAY', hm(mins)]], [44, 0], f.rh, 10.5, { lab0: true }) }
+    // ── 주간표: 칸 띠(합계 · 평균) · 요일 칸 7개(시간 + 진행 선) · 대형은 과목 줄 목록 ──
+    const vOf = (k) => (k === today ? mins : DM[k] || 0), tot = bwDays.reduce((a, k) => a + (k <= today ? vOf(k) : 0), 0), avg = Math.round(tot / Math.max(1, bwDays.filter((k) => k <= today).length))
+    phead('WEEKLY SHEET', (fam === 'small' ? '' : 'WEEK OF ') + bwDays[0].slice(5).replace('-', '.'))
+    if (fam === 'small') pform(w, inner, [[['WEEK', hm(tot)], ['AVG', hm(avg)]], [['TODAY', hm(mins)], ['GOAL', pct + '%']]], Math.floor((PA - PBW) / 2), 15)
     else {
-      const f = pfit(18, 9), nd = Math.min(7, f.n - 2), ti = bwDays.indexOf(today), from = nd >= 7 ? 0 : Math.max(0, Math.min(7 - nd, (ti < 0 ? 6 : ti) - nd + 1))
-      const rows = [['DAY', 'STUDY', 'TO DO'], ...bwDays.slice(from, from + nd).map((k) => { const tk = tasksAll.filter((x) => x.due === k), fut = k > today, v = vOf(k); return Object.assign([WDN[new Date(k + 'T12:00:00').getDay()] + '  ' + k.slice(5).replace('-', '.'), fut ? '' : v ? hm(v) : '—', tk.length ? tk.filter((x) => x.done).length + ' / ' + tk.length : ''], { dim: fut, b: k === today }) }), Object.assign(['TOTAL', hm(tot), '하루 ' + hm(Math.round(tot / Math.max(1, past)))], { b: true })]
-      ptab(rows, [fam === 'medium' ? 76 : 92, 0, 0], f.rh, fam === 'medium' ? 10 : 11.5, { head: true, right: [1, 2] })
+      pform(w, inner, [[['WEEK', hm(tot)], ['AVG / DAY', hm(avg)], ['TODAY', hm(mins)], ['LAST WEEK', hm(lastWeek)]]], PFH, 13)
+      w.addSpacer(PGAP)
+      const big2 = fam !== 'medium', gh = big2 ? Math.round((PA - PFH - PGAP) * 0.38) : PA - PFH - PGAP, cw = Math.floor((inner - PBW * 6) / 7)
+      const g = w.addStack(); g.size = new Size(inner, gh); g.borderWidth = PBW; g.borderColor = INK
+      bwDays.forEach((k, i) => {
+        if (i) pvr(g, gh)
+        const c = g.addStack(); c.size = new Size(cw, gh); c.layoutVertically(); c.setPadding(4, 5, 6, 5)
+        const fut = k > today, v = vOf(k), dt = new Date(k + 'T12:00:00')
+        tl(c, WDN[dt.getDay()] + ' ' + dt.getDate(), label(6.5), k === today ? INK : SOFT); c.addSpacer()
+        tl(c, fut ? ' ' : v ? hm(v) : '—', k === today ? F(big2 ? 12 : 10, 'Medium') : tw(big2 ? 12 : 10), INK); c.addSpacer(4)
+        pline(c, fut ? 0 : v / goal, cw - 10)
+      })
+      if (big2) {
+        w.addSpacer(PGAP)
+        const f = pbfit(PA - PFH - PGAP * 2 - gh, 18, 12), mx = Math.max(1, ...weekSub.map((x) => x.m))
+        pbook(w, inner, [['SUBJECT', '', 'TODAY', 'WEEK'], ...pfill(weekSub.map((x) => [x.s.name, x.m / mx, x.today ? hm(x.today) : '—', hm(x.m)]), f.n - 1, 4)], [0, Math.round(inner * 0.34), 54, 54], f.rh, 11, { head: true, right: [2, 3] })
+      }
     }
     w.url = link('study.records')
   } else if (KIND === 'psubj') {
-    // ── 과목표: 과목마다 오늘 · 이번 주 공부 시간 (흑백 인쇄풍 표) ──
-    const L = subjects.map((s2) => ({ s: s2, t: (subMins.find((x) => x.s === s2) || {}).m || 0, wk: (weekSub.find((x) => x.s === s2) || {}).m || 0 })).filter((x) => x.t || x.wk).sort((a, b) => b.wk - a.wk || b.t - a.t)
-    phead('SUBJECT SHEET', 'TODAY ' + hm(mins))
-    if (fam === 'small') { const f = pfit(20, 4); ptab([['SUBJECT', 'TODAY'], ...pfill(L.map((x) => [x.s.name, hm(x.t)]), f.n - 1, 2)], [0, 50], f.rh, 10.5, { head: true, right: [1] }) }
-    else { const f = pfit(18, 12); ptab([['SUBJECT', 'TODAY', 'WEEK'], ...pfill(L.map((x) => Object.assign([x.s.name, x.t ? hm(x.t) : '—', hm(x.wk)], { dim: !x.t })), f.n - 2, 3), Object.assign(['TOTAL', hm(mins), hm(weekTot)], { b: true })], [0, 62, 62], f.rh, fam === 'medium' ? 10 : 11.5, { head: true, right: [1, 2] }) }
+    // ── 과목표: 큰 수 상자(오늘) + 과목 줄 목록(진행 선) · 대형은 칸 띠 + 목록 ──
+    const L = subjects.map((s2) => ({ s: s2, t: (subMins.find((x) => x.s === s2) || {}).m || 0, wk: (weekSub.find((x) => x.s === s2) || {}).m || 0 })).filter((x) => x.t || x.wk).sort((a, b) => b.t - a.t || b.wk - a.wk)
+    phead('SUBJECT SHEET', DAY[d0.getDay()] + ' ' + (d0.getMonth() + 1) + '.' + pad(d0.getDate()))
+    if (fam === 'small') pbig(w, inner, PA, 'TODAY', hm(mins), 34, '목표 ' + hm(goal) + ' · ' + pct + '%', mins / goal)
+    else if (fam === 'medium') {
+      const bw0 = Math.round(inner * 0.36), rw = inner - bw0 - PGAP, c = pcols(PA), f = pbfit(PA, 18, 8), mx = Math.max(1, ...L.map((x) => x.t))
+      pbig(c, bw0, PA, 'TODAY', hm(mins), 32, '목표 ' + hm(goal) + ' · ' + pct + '%', mins / goal)
+      pbook(c, rw, [['SUBJECT', '', 'TODAY'], ...pfill(L.map((x) => Object.assign([x.s.name, x.t / mx, x.t ? hm(x.t) : '—'], { dim: !x.t })), f.n - 1, 3)], [0, Math.round(rw * 0.3), 44], f.rh, 10.5, { head: true, right: [2] })
+    } else {
+      pform(w, inner, [[['TODAY', hm(mins)], ['GOAL', pct + '%'], ['WEEK', hm(weekTot)], ['AVG / DAY', hm(weekAvg)]]], PFH, 14)
+      w.addSpacer(PGAP)
+      const f = pbfit(PA - PFH - PGAP, 20, 14), mx = Math.max(1, ...L.map((x) => x.wk))
+      pbook(w, inner, [['SUBJECT', 'TODAY', 'WEEK', ''], ...pfill(L.map((x) => Object.assign([x.s.name, x.t ? hm(x.t) : '—', hm(x.wk), x.wk / mx], { dim: !x.t })), f.n - 1, 4)], [0, 54, 54, Math.round(inner * 0.3)], f.rh, 11.5, { head: true, right: [1, 2] })
+    }
     w.url = link('study.records')
   } else if (KIND === 'pplan') {
-    // ── 일정표: 오늘 남은 수업·일정 → 내일 (흑백 인쇄풍 표) ──
-    const L = [...DAYS7[0].ev.filter((e) => e.s == null).map((e) => ['종일', e.t]), ...NOW.filter((x) => x.e > nm).map((x) => Object.assign([clk(x.s), x.t + (x.l ? '  · ' + x.l : '')], { b: x === nCur })), ...TMR.cl.map((c) => Object.assign(['내일 ' + clk(c.start), c.period + '교시 ' + c.title], { dim: true })), ...TMR.ev.map((e) => Object.assign(['내일 ' + (e.s == null ? '종일' : clk(e.s % 1440)), e.t], { dim: true }))]
-    phead('SCHEDULE SHEET', DAY[d0.getDay()] + ' ' + (d0.getMonth() + 1) + '.' + pad(d0.getDate()))
-    const f = pfit(fam === 'small' ? 20 : 18, 14)
-    ptab([['TIME', 'PLAN'], ...pfill(L.length ? L : [['', '남은 일정 없음']], f.n - 1, 2)], [fam === 'small' ? 46 : 70, 0], f.rh, fam === 'small' ? 10 : 11, { head: true })
+    // ── 일정표: 시간 줄(한 시간에 한 줄) · 중형은 두 단 · 소형은 남은 일정 줄 목록 ──
+    const allDay = DAYS7[0].ev.filter((e) => e.s == null).map((e) => e.t)
+    phead('SCHEDULE SHEET', allDay.length ? '종일 ' + allDay[0] + (allDay.length > 1 ? ' +' + (allDay.length - 1) : '') : DAY[d0.getDay()] + ' ' + (d0.getMonth() + 1) + '.' + pad(d0.getDate()))
+    if (fam === 'small') {
+      const L = NOW.filter((x) => x.e > nm).map((x) => Object.assign([clk(x.s), x.t], { b: x === nCur })), f = pbfit(PA, 20, 8)
+      pbook(w, inner, pfill(L.length ? L : [['', '남은 일정 없음']], f.n, 2), [40, 0], f.rh, 10, { lab0: true })
+    } else {
+      const rh0 = Math.round(18 * SCALE), nowH = Math.floor(nm / 60), n = Math.max(2, Math.floor((PA + 0.4) / (rh0 + 0.4))), rh = Math.floor(((PA - 0.4 * (n - 1)) / n) * 10) / 10
+      if (fam === 'medium') { const c = pcols(PA), cw = Math.floor((inner - PGAP) / 2), h0 = Math.max(0, Math.min(24 - 2 * n, nowH - 1)); phours(c, cw, h0, n, rh, NOW, 10); phours(c, inner - cw - PGAP, h0 + n, n, rh, NOW, 10) }
+      else phours(w, inner, Math.max(0, Math.min(24 - n, nowH - 1)), n, rh, NOW, 11)
+    }
     w.url = link('planner.week')
   } else if (KIND === 'pdday') {
-    // ── 디데이표: 남은 날 · 이름 · 날짜 (흑백 인쇄풍 표) ──
-    phead('D-DAY SHEET', ddAll.length + ' items')
-    const f = pfit(fam === 'small' ? 20 : 18, 14)
-    const L = ddAll.map((x, i) => Object.assign([ddT(x), x.title, x.date.slice(5).replace('-', '.')], { b: i === 0 }))
-    if (fam === 'small') ptab([['D-DAY', 'TITLE'], ...pfill(L.map((r) => Object.assign([r[0], r[1]], { b: r.b })), f.n - 1, 2)], [50, 0], f.rh, 10.5, { head: true })
-    else ptab([['D-DAY', 'TITLE', 'DATE'], ...pfill(L.length ? L : [['', 'D-day 를 추가해 보세요', '']], f.n - 1, 3)], [62, 0, 54], f.rh, fam === 'medium' ? 10.5 : 11.5, { head: true, right: [2] })
+    // ── 디데이표: 가장 가까운 D-day 큰 수 상자 + 나머지 줄 목록 · 대형은 위 띠 ──
+    const x0 = ddAll[0], rest = ddAll.slice(1), dt = (x) => x.date.slice(5).replace('-', '.'), wd0 = (x) => DAY[new Date(x.date + 'T12:00:00').getDay()]
+    phead('D-DAY SHEET', ddAll.length + (ddAll.length === 1 ? ' item' : ' items'))
+    if (fam === 'small') pbig(w, inner, PA, x0 ? dt(x0) + '  ' + wd0(x0) : 'D-DAY', x0 ? ddT(x0) : '—', 34, x0 ? x0.title : 'D-day 를 추가해 보세요')
+    else if (fam === 'medium') {
+      const bw0 = Math.round(inner * 0.4), rw = inner - bw0 - PGAP, c = pcols(PA), f = pbfit(PA, 18, 8)
+      pbig(c, bw0, PA, x0 ? dt(x0) + '  ' + wd0(x0) : 'D-DAY', x0 ? ddT(x0) : '—', 34, x0 ? x0.title : 'D-day 를 추가해 보세요')
+      pbook(c, rw, [['D-DAY', 'TITLE', 'DATE'], ...pfill(rest.map((x) => [ddT(x), x.title, dt(x)]), f.n - 1, 3)], [46, 0, 38], f.rh, 10.5, { head: true, right: [2] })
+    } else {
+      const bh = Math.round(PA * 0.28)
+      pform(w, inner, [[['NEXT', x0 ? ddT(x0) : '—', Math.round(inner * 0.36), 30], ['TITLE', x0 ? x0.title : 'D-day 를 추가해 보세요', 0, 15], ['DATE', x0 ? dt(x0) + '  ' + wd0(x0) : '', 80, 13]]], bh)
+      w.addSpacer(PGAP)
+      const f = pbfit(PA - bh - PGAP, 20, 14)
+      pbook(w, inner, [['D-DAY', 'TITLE', 'DATE', 'DAY'], ...pfill(rest.map((x) => [ddT(x), x.title, dt(x), wd0(x)]), f.n - 1, 4)], [62, 0, 50, 40], f.rh, 11.5, { head: true, right: [2, 3] })
+    }
     w.url = link('study.progress')
   } else if (KIND === 'pmonth') {
-    // ── 월간표: 이번 달 칸마다 날짜 · 공부 시간 (흑백 인쇄풍 달력) ──
+    // ── 월간표: 이번 달 칸마다 날짜 · 공부 시간 (흑백 인쇄풍 달력) · 대형은 위 칸 띠 ──
     const y = d0.getFullYear(), mo = d0.getMonth(), n0 = new Date(y, mo + 1, 0).getDate(), ws = st.weekStart != null ? st.weekStart : 1, lead = (new Date(y, mo, 1).getDay() - ws + 7) % 7
     const key = (dd2) => y + '-' + pad(mo + 1) + '-' + pad(dd2), vOf = (k) => (k === today ? mins : DM[k] || 0)
-    const mv = Array.from({ length: n0 }, (_, i) => vOf(key(i + 1))), tot = mv.reduce((a, v) => a + v, 0), days = mv.filter(Boolean).length
-    phead('MONTHLY SHEET', MON[mo] + ' ' + y + '  ·  ' + hm(tot))
-    if (fam === 'small') { const f = pfit(22, 3); const bi = mv.indexOf(Math.max(...mv)); ptab([['TOTAL', hm(tot)], ['DAYS', days + '일'], ['BEST', mv[bi] ? (mo + 1) + '/' + (bi + 1) + '  ' + hm(mv[bi]) : '—']], [44, 0], f.rh, 10.5, { lab0: true }) }
+    const mv = Array.from({ length: n0 }, (_, i) => vOf(key(i + 1))), tot = mv.reduce((a, v) => a + v, 0), days = mv.filter(Boolean).length, bi = mv.indexOf(Math.max(...mv))
+    phead('MONTHLY SHEET', fam === 'small' ? MON[mo] : MON[mo] + ' ' + y + '  ·  ' + hm(tot))
+    if (fam === 'small') pform(w, inner, [[['TOTAL', hm(tot)], ['DAYS', days + '일']], [['BEST', mv[bi] ? (mo + 1) + '/' + (bi + 1) : '—'], ['TODAY', hm(mins)]]], Math.floor((PA - PBW) / 2), 14)
     else {
-      const weeks = Math.ceil((lead + n0) / 7), big2 = fam !== 'medium', avail = innerH - PHH, hh = Math.round(14 * SCALE), rh = Math.floor((avail - hh - PBW * weeks) / weeks)
+      const big2 = fam !== 'medium'
+      if (big2) { pform(w, inner, [[['TOTAL', hm(tot)], ['DAYS', days + '일'], ['AVG / DAY', hm(Math.round(tot / Math.max(1, d0.getDate())))], ['BEST', mv[bi] ? (mo + 1) + '/' + (bi + 1) + '  ' + hm(mv[bi]) : '—']]], PFH, 13); w.addSpacer(PGAP) }
+      const weeks = Math.ceil((lead + n0) / 7), avail = PA - (big2 ? PFH + PGAP : 0), hh = Math.round(14 * SCALE), rh = Math.floor((avail - hh - PBW * weeks) / weeks)
       const rows = [Array.from({ length: 7 }, (_, i) => ['S', 'M', 'T', 'W', 'T', 'F', 'S'][(i + ws) % 7])]
-      for (let wk = 0; wk < weeks; wk++) rows.push(Object.assign(Array.from({ length: 7 }, (_, i) => { const dn = wk * 7 + i - lead + 1; if (dn < 1 || dn > n0) return ''; const v = mv[dn - 1]; return big2 ? dn + (v ? '\\n' + hm(v) : '') : dn + (v ? ' ' + hm(v) : '') }), {}))
-      // 머리 줄은 낮게, 날짜 줄은 남은 높이 나눠서
+      for (let wk = 0; wk < weeks; wk++) rows.push(Array.from({ length: 7 }, (_, i) => { const dn = wk * 7 + i - lead + 1; if (dn < 1 || dn > n0) return ''; const v = mv[dn - 1]; return big2 ? dn + (v ? '\\n' + hm(v) : '') : dn + (v ? ' ' + hm(v) : '') }))
       const tb = w.addStack(); tb.layoutVertically(); tb.borderWidth = PBW; tb.borderColor = INK
       const cw = (inner - PBW * 6) / 7
       rows.forEach((cells, i) => {
-        if (i) { const hr = tb.addStack(); hr.size = new Size(inner, PBW); hr.backgroundColor = INK }
+        if (i) phr(tb, inner)
         const r = tb.addStack(); r.size = new Size(inner, i ? rh : hh)
         cells.forEach((x, j) => {
-          if (j) { const vr = r.addStack(); vr.size = new Size(PBW, i ? rh : hh); vr.backgroundColor = INK }
+          if (j) pvr(r, i ? rh : hh)
           const cc = r.addStack(); cc.size = new Size(cw, i ? rh : hh); cc.setPadding(i ? 2 : 0, 4, 0, 3); if (i) cc.topAlignContent(); else cc.centerAlignContent()
           const isT = i && x && x.split(/\\s/)[0] === String(d0.getDate())
           const tx = t(cc, x, i ? (isT ? F(big2 ? 9.5 : 8, 'Medium') : tw(big2 ? 9.5 : 8)) : label(6.5), i ? INK : SOFT, 2); tx.minimumScaleFactor = 0.6; cc.addSpacer()
@@ -1135,76 +1174,122 @@ export default () => `  } else if (KIND === 'study') {
     }
     w.url = link('study.records')
   } else if (KIND === 'pnote') {
-    // ── 노트표: 노트 줄을 번호 칸 표로 (흑백 인쇄풍) ──
+    // ── 노트표: 공책처럼 · 왼쪽 여백 칸(번호 · 할 일 체크) 과 세로 여백선 · 가로줄만 ──
     const nt = pickNote(), L0 = nt ? nt.l : []; w.url = noteUrl(nt)
     phead(nt ? nt.t : 'NOTE', nt ? noteAgo(nt.u) : '')
-    const f = pfit(fam === 'small' ? 20 : 18, 16)
-    const L = L0.map((l, i) => Object.assign([String(i + 1), (l.k === 'todo' ? (l.d ? '✓ ' : '') : '') + l.x], { dim: l.k === 'todo' && l.d, b: l.k === 'h' }))
-    ptab([['NO', 'NOTE'], ...pfill(L.length ? L : [['', nt ? '내용 없음' : '앱에서 노트를 써 보세요']], f.n - 1, 2)], [fam === 'small' ? 26 : 32, 0], f.rh, fam === 'small' ? 10 : 11, { head: true })
+    const f = pbfit(PA, fam === 'small' ? 19 : 18, 18), mw = Math.round((fam === 'small' ? 18 : 24) * SCALE)
+    const L = L0.map((l, i) => Object.assign([l.k === 'todo' ? !!l.d : String(i + 1), l.x], { dim: l.k === 'todo' && l.d, b: l.k === 'h' }))
+    pbook(w, inner, pfill(L.length ? L : [['', nt ? '내용 없음' : '앱에서 노트를 써 보세요']], f.n, 2), [mw, 0], f.rh, fam === 'small' ? 10 : 11, { lab0: true, center: [0], vr: [0] })
   } else if (KIND === 'ptime') {
-    // ── 수업표: 이번 주 교시 × 요일 (소형은 오늘만) · 흑백 인쇄풍 ──
-    const CLS = data.classes || {}
-    if (fam === 'small') {
-      phead('TIMETABLE', DAY[d0.getDay()] + ' ' + (d0.getMonth() + 1) + '.' + pad(d0.getDate()))
-      const f = pfit(20, 9)
-      const L = CL.map((c) => Object.assign([String(c.period), c.title], { b: c === clCur, dim: c.end <= nm }))
-      ptab([['NO', 'CLASS'], ...pfill(L.length ? L : [['', '오늘 수업 없음']], f.n - 1, 2)], [26, 0], f.rh, 10, { head: true })
+    // ── 수업표: 지금 · 다음 교시 큰 수 상자 + 오늘 수업 줄 목록 · 대형은 칸 띠 + 이번 주 교시 × 요일 표 ──
+    const CLS = data.classes || {}, c0 = clCur || clNext, left = CL.filter((c) => c.end > nm).length
+    const nowTxt = c0 ? c0.period + '교시' : '—', nowSub = c0 ? c0.title + '  ' + clk(c0.start) + '–' + clk(c0.end) : CL.length ? '오늘 수업 끝' : '오늘 수업 없음', nowR = clCur ? (nm - clCur.start) / (clCur.end - clCur.start) : null
+    const dHead = DAY[d0.getDay()] + ' ' + (d0.getMonth() + 1) + '.' + pad(d0.getDate())
+    if (fam === 'small') { phead('TIMETABLE', dHead); pbig(w, inner, PA, clCur ? 'NOW' : 'NEXT', nowTxt, 30, nowSub, nowR) }
+    else if (fam === 'medium') {
+      phead('TIMETABLE', dHead + '  ·  ' + left + ' left')
+      const bw0 = Math.round(inner * 0.34), rw = inner - bw0 - PGAP, c = pcols(PA), f = pbfit(PA, 17, 9), nB = f.n - 1
+      pbig(c, bw0, PA, clCur ? 'NOW' : 'NEXT', nowTxt, 28, nowSub, nowR)
+      const ci = Math.max(0, CL.indexOf(c0)), s0 = CL.length > nB ? Math.max(0, Math.min(CL.length - nB, ci - 1)) : 0
+      pbook(c, rw, [['NO', 'CLASS', 'TIME'], ...pfill(CL.length ? CL.slice(s0, s0 + nB).map((x) => Object.assign([String(x.period), x.title, clk(x.start)], { b: x === clCur, dim: x.end <= nm })) : [['', '오늘 수업 없음', '']], nB, 3)], [22, 0, 40], f.rh, 10, { head: true, right: [2], lab0: true })
     } else {
-      // 평일 + 수업 있는 주말 · 오늘 칸 굵게 · 교시가 다 안 들어가면 지금·다음 교시부터
       const ds = bwDays.filter((k) => (CLS[k] || []).length || new Date(k + 'T12:00:00').getDay() % 6 !== 0)
-      const per = [...new Set(ds.flatMap((k) => (CLS[k] || []).map((c) => c.period)))].sort((a, b) => a - b)
-      const f = pfit(18, 12), nP = f.n - 1, cur = clCur || clNext
-      const s0 = per.length > nP && cur ? Math.max(0, Math.min(per.length - nP, per.indexOf(cur.period))) : 0
-      const body = per.slice(s0, s0 + nP).map((p) => [String(p), ...ds.map((k) => ((CLS[k] || []).find((c) => c.period === p) || {}).title || '')])
+      const per = [...new Set(ds.flatMap((k) => (CLS[k] || []).map((x) => x.period)))].sort((a, b) => a - b)
       phead('TIMETABLE', per.length ? 'WEEK OF ' + bwDays[0].slice(5).replace('-', '.') : '이번 주 수업 없음')
-      ptab([['', ...ds.map((k) => WDN[new Date(k + 'T12:00:00').getDay()] + ' ' + Number(k.slice(8)))], ...pfill(body, nP, ds.length + 1)], [fam === 'medium' ? 22 : 30, ...ds.map(() => 0)], f.rh, fam === 'medium' ? 9.5 : 11, { head: true, pad: 4, center: [0], bc: ds.indexOf(today) + 1 || -1 })
+      pform(w, inner, [[[clCur ? 'NOW' : 'NEXT', c0 ? c0.period + '교시  ' + c0.title : '—', 0], ['TIME', c0 ? clk(c0.start) + '–' + clk(c0.end) : '—', Math.round(inner * 0.3)], ['LEFT', String(left), Math.round(inner * 0.18)]]], PFH, 13)
+      w.addSpacer(PGAP)
+      const f = pfit(18, 12, PA - PFH - PGAP), nP = f.n - 1, s0 = per.length > nP && c0 ? Math.max(0, Math.min(per.length - nP, per.indexOf(c0.period))) : 0
+      const body = per.slice(s0, s0 + nP).map((p) => [String(p), ...ds.map((k) => ((CLS[k] || []).find((x) => x.period === p) || {}).title || '')])
+      ptab([['', ...ds.map((k) => WDN[new Date(k + 'T12:00:00').getDay()] + ' ' + Number(k.slice(8)))], ...pfill(body, nP, ds.length + 1)], [30, ...ds.map(() => 0)], f.rh, 11, { head: true, pad: 4, center: [0], bc: ds.indexOf(today) + 1 || -1 })
     }
     w.url = link('planner.timetable')
   } else if (KIND === 'ptmr') {
-    // ── 내일표: 내일 수업 · 일정 · 마감 할 일 (흑백 인쇄풍 표) ──
+    // ── 내일표: (대형) 칸 띠 · 왼쪽 일정 줄 목록 · 오른쪽 준비할 일 체크 목록 ──
     const td = new Date(tmr + 'T12:00:00')
     const timed = [...TMR.cl.map((c) => ({ s: c.start, x: c.period + '교시 ' + c.title + (c.room ? '  · ' + c.room : '') })), ...TMR.ev.filter((e) => e.s != null).map((e) => ({ s: e.s % 1440, x: e.t + (e.l ? '  · ' + e.l : '') }))].sort((a, b) => a.s - b.s)
-    const L = [...TMR.ev.filter((e) => e.s == null).map((e) => ['종일', e.t]), ...timed.map((x) => [clk(x.s), x.x]), ...TMR.tk.map((x) => Object.assign([x.dueTime != null ? clk(x.dueTime) : '할 일', x.title], x.id ? { url: taskUrl(x.id) } : {}))]
+    const L = [...TMR.ev.filter((e) => e.s == null).map((e) => ['종일', e.t]), ...timed.map((x) => [clk(x.s), x.x])]
+    const TK = TMR.tk.map((x) => Object.assign([false, x.title], x.id ? { url: taskUrl(x.id) } : {}))
     phead('TOMORROW', DAY[td.getDay()] + ' ' + (td.getMonth() + 1) + '.' + pad(td.getDate()))
-    const f = pfit(fam === 'small' ? 20 : 18, 14)
-    ptab([['TIME', 'PLAN'], ...pfill(L.length ? L : [['', '내일 일정 없음']], f.n - 1, 2)], [fam === 'small' ? 44 : 64, 0], f.rh, fam === 'small' ? 10 : 11, { head: true })
+    if (fam === 'small') { const all = [...L, ...TMR.tk.map((x) => ['할 일', x.title])], f = pbfit(PA, 20, 8); pbook(w, inner, pfill(all.length ? all : [['', '내일 일정 없음']], f.n, 2), [40, 0], f.rh, 10, { lab0: true }) }
+    else {
+      let hA = PA
+      if (fam !== 'medium') { pform(w, inner, [[['CLASSES', String(TMR.cl.length)], ['EVENTS', String(TMR.ev.length)], ['TASKS', String(TMR.tk.length)], ['FIRST', timed[0] ? clk(timed[0].s) : '—']]], PFH, 14); w.addSpacer(PGAP); hA = PA - PFH - PGAP }
+      const c = pcols(hA), lw = Math.round((inner - PGAP) * 0.56), rw = inner - lw - PGAP, f = pbfit(hA, 18, 14), fs = fam === 'medium' ? 10 : 11
+      pbook(c, lw, [['TIME', 'SCHEDULE'], ...pfill(L.length ? L : [['', '일정 없음']], f.n - 1, 2)], [Math.round(40 * SCALE), 0], f.rh, fs, { head: true, lab0: true })
+      pbook(c, rw, [['', 'PREPARE'], ...pfill(TK.length ? TK : [['', '할 일 없음']], f.n - 1, 2)], [Math.round(15 * SCALE), 0], f.rh, fs, { head: true })
+    }
     w.url = link('planner.week')
   } else if (KIND === 'pdue') {
-    // ── 마감표: 2주 안 마감 할 일 (흑백 인쇄풍 표) ──
-    const over = DUE.filter((x) => dueIn(x) < 0).length
+    // ── 마감표: 체크 상자 목록 · 중형은 남은 수 큰 상자 · 대형은 기간별 칸 띠 ──
+    const over = DUE.filter((x) => dueIn(x) < 0).length, tdN = DUE.filter((x) => dueIn(x) === 0).length, wkN = DUE.filter((x) => dueIn(x) > 0 && dueIn(x) <= 6).length
+    const row = (x) => Object.assign([false, x.title, dueTxt(x)], { b: dueIn(x) <= 0 }, x.id ? { url: taskUrl(x.id) } : {}), cz = Math.round(15 * SCALE)
     phead('DUE SHEET', DUE.length + ' left' + (over ? '  ·  ' + over + ' over' : ''))
-    const f = pfit(fam === 'small' ? 20 : 18, 14)
-    const L = DUE.map((x) => Object.assign([dueTxt(x), x.title, x.due.slice(5).replace('-', '.')], { b: dueIn(x) <= 0 }, x.id ? { url: taskUrl(x.id) } : {}))
-    if (fam === 'small') ptab([['DUE', 'TASK'], ...pfill(L.length ? L.map((r) => Object.assign([r[0], r[1]], { b: r.b, url: r.url })) : [['', '마감 없음']], f.n - 1, 2)], [46, 0], f.rh, 10, { head: true })
-    else ptab([['DUE', 'TASK', 'DATE'], ...pfill(L.length ? L : [['', '2주 안에 마감 없음', '']], f.n - 1, 3)], [62, 0, 50], f.rh, fam === 'medium' ? 10.5 : 11.5, { head: true, right: [2] })
+    if (fam === 'small') { const f = pbfit(PA, 20, 8); pbook(w, inner, pfill(DUE.length ? DUE.map(row) : [['', '마감 없음', '']], f.n, 3), [cz, 0, 44], f.rh, 10, { right: [2] }) }
+    else if (fam === 'medium') {
+      const bw0 = Math.round(inner * 0.3), rw = inner - bw0 - PGAP, c = pcols(PA), f = pbfit(PA, 18, 8)
+      pbig(c, bw0, PA, '2 WEEKS', String(DUE.length), 36, over ? over + '개 지남' : '이번 주 ' + (tdN + wkN) + '개')
+      pbook(c, rw, [['', 'TASK', 'DUE'], ...pfill(DUE.length ? DUE.map(row) : [['', '2주 안에 마감 없음', '']], f.n - 1, 3)], [cz, 0, 50], f.rh, 10.5, { head: true, right: [2] })
+    } else {
+      pform(w, inner, [[['OVER', String(over)], ['TODAY', String(tdN)], ['THIS WEEK', String(wkN)], ['2 WEEKS', String(DUE.length)]]], PFH, 14)
+      w.addSpacer(PGAP)
+      const f = pbfit(PA - PFH - PGAP, 20, 14)
+      pbook(w, inner, [['', 'TASK', 'DATE', 'DUE'], ...pfill(DUE.length ? DUE.map((x) => Object.assign(row(x).slice(0, 2).concat([x.due.slice(5).replace('-', '.'), dueTxt(x)]), { b: dueIn(x) <= 0, url: x.id ? taskUrl(x.id) : null })) : [['', '2주 안에 마감 없음', '', '']], f.n - 1, 4)], [cz, 0, 50, 62], f.rh, 11.5, { head: true, right: [2, 3] })
+    }
     w.url = link('tasks')
   } else if (KIND === 'pprog') {
-    // ── 진도표: 교재 · 인강 진행 (흑백 인쇄풍 표) ──
-    const pc = (x) => Math.round((x.n / x.of) * 100) + '%'
-    phead('PROGRESS SHEET', PROG.length + ' items')
-    const f = pfit(fam === 'small' ? 20 : 18, 10)
-    if (fam === 'small') ptab([['TITLE', '%'], ...pfill(PROG.length ? PROG.map((x) => [x.t, pc(x)]) : [['진행 중 없음', '']], f.n - 1, 2)], [0, 40], f.rh, 10, { head: true, right: [1] })
-    else ptab([['TITLE', 'DONE', '%'], ...pfill(PROG.length ? PROG.map((x) => [x.t, x.n + ' / ' + x.of + x.u, pc(x)]) : [['진행 중인 교재·인강 없음', '', '']], f.n - 1, 3)], [0, fam === 'medium' ? 76 : 92, 44], f.rh, fam === 'medium' ? 10.5 : 11.5, { head: true, right: [1, 2] })
+    // ── 진도표: 항목마다 제목 · 쪽수 · 진행 선 (두 줄 칸) · 중형은 평균 큰 상자 · 대형은 칸 띠 ──
+    const pc = (x) => Math.round((x.n / x.of) * 100), avgP = PROG.length ? Math.round(PROG.reduce((a, x) => a + pc(x), 0) / PROG.length) : 0
+    phead('PROGRESS SHEET', PROG.length + (PROG.length === 1 ? ' item' : ' items'))
+    const blocks = (p, wd, h, fs) => {
+      const n = Math.max(1, Math.min(8, Math.floor((h - 2 * PBT + PSEP) / (Math.round(30 * SCALE) + PSEP)))), bh = Math.floor(((h - 2 * PBT - PSEP * (n - 1)) / n) * 10) / 10
+      const s = p.addStack(); s.layoutVertically(); phr(s, wd, PBT)
+      for (let i = 0; i < n; i++) {
+        if (i) phr(s, wd, PSEP, SOFT)
+        const x = PROG[i], b = s.addStack(); b.size = new Size(wd, bh); b.layoutVertically(); b.setPadding(3, 1, 5, 1)
+        if (x) { const a = b.addStack(); a.centerAlignContent(); t(a, x.t, tw(fs), INK).minimumScaleFactor = 0.7; a.addSpacer(4); t(a, x.n + ' / ' + x.of + x.u + '   ' + pc(x) + '%', label(7.5), SOFT); b.addSpacer(); pline(b, x.n / x.of, wd - 2) }
+        else if (!i && !PROG.length) tl(b, '진행 중인 교재·인강 없음', tw(fs), SOFT)
+      }
+      phr(s, wd, PBT)
+    }
+    if (fam === 'small') blocks(w, inner, PA, 10)
+    else if (fam === 'medium') { const bw0 = Math.round(inner * 0.3), c = pcols(PA); pbig(c, bw0, PA, 'AVERAGE', avgP + '%', 34, PROG.length + '개 진행 중', avgP / 100); blocks(c, inner - bw0 - PGAP, PA, 10.5) }
+    else {
+      const top = PROG.slice().sort((a, b) => b.n / b.of - a.n / a.of)[0]
+      pform(w, inner, [[['ITEMS', String(PROG.length), Math.round(inner * 0.2)], ['AVERAGE', avgP + '%', Math.round(inner * 0.24)], ['CLOSEST', top ? top.t + '  ' + pc(top) + '%' : '—', 0]]], PFH, 14)
+      w.addSpacer(PGAP); blocks(w, inner, PA - PFH - PGAP, 11.5)
+    }
     w.url = link('study.progress')
   } else if (KIND === 'phabit') {
-    // ── 습관표: 습관 × 최근 7일 체크 (소형은 오늘만) · 흑백 인쇄풍 ──
-    const hs = HABITS(), on = hs.filter((x) => x.on).length; w.url = link('habits')
+    // ── 습관표: 습관 × 최근 7일 네모 칸(한 날 채움) · 소형은 오늘 · 대형은 칸 띠 ──
+    const hs = HABITS(), on = hs.filter((x) => x.on).length, cnt = (x) => (x.w || []).filter(Boolean).length; w.url = link('habits')
     phead('HABIT SHEET', 'TODAY ' + on + ' / ' + hs.length)
-    const f = pfit(fam === 'small' ? 20 : 18, 11)
-    if (fam === 'small') ptab([['HABIT', 'TODAY'], ...pfill(hs.length ? hs.map((x) => [x.t, x.on ? '✓' : '']) : [['앱에서 습관 추가', '']], f.n - 1, 2)], [0, 40], f.rh, 10, { head: true, center: [1] })
+    if (fam === 'small') { const f = pbfit(PA, 19, 8); pbook(w, inner, [['HABIT', 'TODAY'], ...pfill(hs.length ? hs.map((x) => [x.t, !!x.on]) : [['앱에서 습관 추가', '']], f.n - 1, 2)], [0, 42], f.rh, 10, { head: true, center: [1] }) }
     else {
-      const dk = [6, 5, 4, 3, 2, 1, 0].map((k) => new Date(yOff(k) + 'T12:00:00')), dw = Math.min(34, Math.floor((inner * 0.6) / 7)) // 습관 이름 칸이 40% 남게
-      ptab([['HABIT', ...dk.map((x) => WDN[x.getDay()] + ' ' + x.getDate())], ...pfill(hs.length ? hs.map((x) => [x.t, ...(x.w || []).map((v) => (v ? '✓' : ''))]) : [['앱에서 습관을 추가해 보세요', '', '', '', '', '', '', '']], f.n - 1, 8)], [0, ...dk.map(() => dw)], f.rh, fam === 'medium' ? 10 : 11, { head: true, pad: 3, center: [1, 2, 3, 4, 5, 6, 7], bc: 7 })
+      let hA = PA
+      if (fam !== 'medium') {
+        const best = hs.slice().sort((a, b) => cnt(b) - cnt(a))[0], all = hs.reduce((a, x) => a + cnt(x), 0)
+        pform(w, inner, [[['TODAY', on + ' / ' + hs.length], ['7 DAYS', hs.length ? Math.round((all / (hs.length * 7)) * 100) + '%' : '—'], ['MOST', best ? best.t + '  ' + cnt(best) + '/7' : '—', Math.round(inner * 0.42)]]], PFH, 14)
+        w.addSpacer(PGAP); hA = PA - PFH - PGAP
+      }
+      const dk = [6, 5, 4, 3, 2, 1, 0].map((k) => new Date(yOff(k) + 'T12:00:00')), dw = Math.min(30, Math.floor((inner * 0.52) / 7)), f = pbfit(hA, 18, 12)
+      pbook(w, inner, [['HABIT', ...dk.map((x) => WDN[x.getDay()]), '7D'], ...pfill(hs.length ? hs.map((x) => [x.t, ...(x.w || []).map(Boolean), cnt(x) + '/7']) : [['앱에서 습관을 추가해 보세요', '', '', '', '', '', '', '', '']], f.n - 1, 9)], [0, ...dk.map(() => dw), 30], f.rh, fam === 'medium' ? 10 : 11, { head: true, center: [1, 2, 3, 4, 5, 6, 7], right: [8] })
     }
   } else if (KIND === 'plog') {
-    // ── 공부 기록표: 오늘 기록 시작 · 과목 · 시간 (흑백 인쇄풍 표) ──
+    // ── 공부 기록표: 칸 띠(합계 · 횟수 · 목표) + 기록 줄 목록 · 소형은 합계 큰 상자 ──
     const sn = (id) => (subjects.find((y) => y.id === id) || {}).name || '기타', tm = (ts) => { const d = new Date(ts); return pad(d.getHours()) + ':' + pad(d.getMinutes()) }
-    const L = sessions.slice().sort((a, b) => (a.start || 0) - (b.start || 0)).map((s) => [s.start ? tm(s.start) : '—', sn(s.subjectId) + ((fam === 'large' || fam === 'extraLarge') && s.note ? '  · ' + s.note : ''), hm(s.dur || 0)])
-    if (SEG) L.push(Object.assign([tm(SEG), sn(T0.sid), hm(Math.max(0, Math.floor((Date.now() - SEG) / 60000)))], { b: true }))
+    const S0 = sessions.slice().sort((a, b) => (a.start || 0) - (b.start || 0)), live = SEG ? Math.max(0, Math.floor((Date.now() - SEG) / 60000)) : 0, nS = S0.length + (SEG ? 1 : 0)
+    const mx = Math.max(1, live, ...S0.map((s) => s.dur || 0)), big2 = fam === 'large' || fam === 'extraLarge'
+    const L = S0.map((s) => [s.start ? tm(s.start) : '—', sn(s.subjectId) + (big2 && s.note ? '  · ' + s.note : ''), (s.dur || 0) / mx, hm(s.dur || 0)])
+    if (SEG) L.push(Object.assign([tm(SEG), sn(T0.sid), live / mx, hm(live)], { b: true }))
     phead('STUDY LOG', DAY[d0.getDay()] + ' ' + (d0.getMonth() + 1) + '.' + pad(d0.getDate()))
-    const f = pfit(fam === 'small' ? 20 : 18, 14), nB = f.n - 2, body = L.slice(-Math.max(1, nB)) // 머리 · 합계 빼고 · 넘치면 최근 것
-    if (fam === 'small') ptab([['SUBJECT', 'TIME'], ...pfill(body.map((r) => Object.assign([r[1], r[2]], { b: r.b })), nB, 2), Object.assign(['TOTAL', hm(mins)], { b: true })], [0, 46], f.rh, 10, { head: true, right: [1] })
-    else ptab([['START', 'SUBJECT', 'TIME'], ...pfill(body.length ? body : [['', '오늘 기록 없음', '']], nB, 3), Object.assign(['TOTAL', '', hm(mins)], { b: true })], [fam === 'medium' ? 50 : 60, 0, 60], f.rh, fam === 'medium' ? 10.5 : 11.5, { head: true, right: [2] })
+    if (fam === 'small') pbig(w, inner, PA, 'TOTAL', hm(mins), 34, nS + '번 · 목표 ' + pct + '%', mins / goal)
+    else {
+      const first = S0.find((s) => s.start) || null
+      pform(w, inner, [[['TOTAL', hm(mins)], ['SESSIONS', String(nS)], ['GOAL', pct + '%'], ['FIRST', first ? tm(first.start) : SEG ? tm(SEG) : '—']]], PFH, 14)
+      w.addSpacer(PGAP)
+      const f = pbfit(PA - PFH - PGAP, 18, 14), nB = f.n - 1, body = L.slice(-Math.max(1, nB)) // 넘치면 최근 것
+      pbook(w, inner, [['START', 'SUBJECT', '', 'TIME'], ...pfill(body.length ? body : [['', '오늘 기록 없음', '', '']], nB, 4)], [Math.round(42 * SCALE), 0, Math.round(inner * (big2 ? 0.28 : 0.22)), 44], f.rh, big2 ? 11.5 : 10.5, { head: true, right: [3], lab0: true })
+    }
     w.url = link('study.records')
   } else if (KIND === 'split') {
     // ── 좌우 반반: 왼쪽 노트 · 오른쪽 할 일 (소형은 위아래) ──

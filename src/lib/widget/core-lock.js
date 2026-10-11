@@ -320,9 +320,10 @@ if (!data) {
   }
   // ── 흑백 인쇄풍 표 공용 (DAILY SHEET 계열): 테두리선만 · 테마 글자색 한 가지 · 위젯 테마 바탕 그대로 ──
   const PBW = 0.7, PHH = Math.round((fam === 'small' ? 17 : 19) * SCALE)
-  const phead = (title, right) => { const hd = w.addStack(); hd.size = new Size(inner, 0); hd.centerAlignContent(); t(hd, title, label(8), INK).minimumScaleFactor = 0.7; hd.addSpacer(); if (right) t(hd, right, label(8), INK); w.addSpacer(fam === 'small' ? 6 : 8) }
+  // 머리: 높이를 PHH 로 고정 (글은 위 · 아래는 띄움) → 아래 칸 높이 계산이 기기마다 같음
+  const phead = (title, right) => { const hd = w.addStack(); hd.size = new Size(inner, PHH); hd.topAlignContent(); t(hd, title, label(8), INK).minimumScaleFactor = 0.7; hd.addSpacer(); if (right) t(hd, right, label(8), INK).minimumScaleFactor = 0.7 }
   // 줄 수: 남은 높이에 rh0 이상으로 몇 줄 · 줄 높이는 남은 높이를 꽉 채우게
-  const pfit = (rh0, max) => { const avail = innerH - PHH, n = Math.max(2, Math.min(max || 99, Math.floor((avail + PBW) / (Math.round(rh0 * SCALE) + PBW)))); return { n, rh: Math.min(Math.round(30 * SCALE), Math.floor((avail + PBW) / n - PBW)) } }
+  const pfit = (rh0, max, avail = innerH - PHH) => { const n = Math.max(2, Math.min(max || 99, Math.floor((avail + PBW) / (Math.round(rh0 * SCALE) + PBW)))); return { n, rh: Math.min(Math.round(30 * SCALE), Math.floor((avail + PBW) / n - PBW)) } }
   const pfill = (rows, n, k) => { const r = rows.slice(0, Math.max(0, n)); while (r.length < n) r.push(Array(k).fill('')); return r }
   // rows: 칸 글자 배열 (.dim 흐리게 · .b 굵게 · .url 누르면) · cws: 칸 너비(0 = 남는 폭 나눠 씀) · o.head 첫 줄 머리 · o.lab0 첫 칸 라벨 · o.right 오른쪽 정렬 칸 · o.center 가운데 칸 · o.bc 굵게 할 칸
   const ptab = (rows, cws, rh, fs, o = {}) => {
@@ -340,6 +341,80 @@ if (!data) {
         if (!right) cc.addSpacer()
       })
     })
+  }
+  // ── 인쇄풍 시트 조각 (표 하나 대신 여러 구성): 칸 띠 · 큰 수 상자 · 줄 목록 · 체크 상자 · 진행 선 · 시간 줄 ──
+  const PGAP = Math.round(6 * SCALE), PFH = Math.round((fam === 'small' ? 30 : 34) * SCALE), PA = innerH - PHH - 1 // 머리 아래 높이 (1pt 여유)
+  const tl = (p, s2, f, c) => { const a = p.addStack(); const x = t(a, s2, f, c); x.minimumScaleFactor = 0.6; a.addSpacer(); return x } // 왼쪽 붙임 글
+  const pvr = (p, h, c) => { const r = p.addStack(); r.size = new Size(PBW, h); r.backgroundColor = c || INK }
+  const phr = (p, wd, th, c) => { const r = p.addStack(); r.size = new Size(wd, th || PBW); r.backgroundColor = c || INK }
+  // 진행 선: 가는 바탕 선 위로 굵은 먹선
+  const pline = (p, r, wd) => { const s = p.addStack(); s.size = new Size(wd, 3); s.bottomAlignContent(); const a = Math.round(wd * Math.max(0, Math.min(1, r || 0))); if (a > 0) { const f = s.addStack(); f.size = new Size(a, 2.2); f.backgroundColor = INK } if (wd - a > 0) { const b = s.addStack(); b.size = new Size(wd - a, 0.6); b.backgroundColor = SOFT } return s }
+  const pchk = (p, on, z) => { const b = p.addStack(); b.size = new Size(z, z); b.borderWidth = 0.8; b.borderColor = INK; if (on) b.backgroundColor = INK; return b }
+  const pcols = (h) => { const s = w.addStack(); s.size = new Size(inner, h); s.spacing = PGAP; s.topAlignContent(); return s }
+  // 칸 띠: rows = [[[라벨, 값, 너비(0 = 나눔), 글 크기]]] · 칸마다 위 작은 라벨 · 아래 값
+  const pform = (p, wd, rows, h, fs) => {
+    const s = p.addStack(); s.layoutVertically(); s.borderWidth = PBW; s.borderColor = INK
+    rows.forEach((cells, i) => {
+      if (i) phr(s, wd)
+      const r = s.addStack(); r.size = new Size(wd, h)
+      const fixed = cells.reduce((a, c) => a + (c[2] || 0), 0) + PBW * (cells.length - 1), nf = cells.filter((c) => !c[2]).length || 1
+      cells.forEach((c, j) => {
+        if (j) pvr(r, h)
+        const cc = r.addStack(); cc.size = new Size(c[2] || Math.floor((wd - fixed) / nf), h); cc.layoutVertically(); cc.setPadding(4, 6, 4, 6)
+        tl(cc, c[0], label(6.5), SOFT); cc.addSpacer(); const z = c[3] || fs || 13; tl(cc, c[1], z >= 22 ? thin(z) : tw(z), INK).minimumScaleFactor = 0.5
+      })
+    })
+    return s
+  }
+  // 큰 수 상자: 라벨 · 큰 수(가는 글) · 설명 · 진행 선
+  const pbig = (p, wd, h, cap0, num, ns, sub, r) => {
+    const b = p.addStack(); b.size = new Size(wd, h); b.layoutVertically(); b.borderWidth = PBW; b.borderColor = INK; b.setPadding(6, 8, 8, 8)
+    tl(b, cap0, label(6.5), SOFT); b.addSpacer()
+    tl(b, num, thin(ns), INK).minimumScaleFactor = 0.4
+    if (sub) { b.addSpacer(2); tl(b, sub, tw(9.5), SOFT) }
+    if (r != null) { b.addSpacer(6); pline(b, r, wd - 16) }
+    return b
+  }
+  // 줄 목록: 위아래 굵은 선 · 줄 사이 가는 선 · 세로선 없음(o.vr 칸 뒤만) · 칸 값이 true/false 면 체크 상자 · 수면 진행 선 · o.lab0 첫 칸 흐리게
+  const PBT = 1.2, PSEP = 0.7
+  const pbfit = (h, rh0, max) => { const n = Math.max(1, Math.min(max || 99, Math.floor((h - 2 * PBT + PSEP) / (Math.round(rh0 * SCALE) + PSEP)))); return { n, rh: Math.min(Math.round(30 * SCALE), Math.floor(((h - 2 * PBT - PSEP * (n - 1)) / n) * 10) / 10) } }
+  const pbook = (p, wd, rows, cws, rh, fs, o = {}) => {
+    const s = p.addStack(); s.layoutVertically()
+    const fixed = cws.reduce((a, x) => a + (x || 0), 0) + PBW * (o.vr || []).length, nf = cws.filter((x) => !x).length || 1
+    phr(s, wd, PBT)
+    rows.forEach((cells, i) => {
+      if (i) phr(s, wd, PSEP, o.head && i === 1 ? INK : SOFT)
+      const r = s.addStack(); r.size = new Size(wd, rh); r.centerAlignContent(); if (cells.url) r.url = cells.url
+      cells.forEach((x, j) => {
+        const cw = cws[j] || Math.floor((wd - fixed) / nf), cc = r.addStack(); cc.size = new Size(cw, rh); cc.centerAlignContent(); cc.setPadding(0, j ? 4 : 1, 0, 2)
+        const hd = o.head && i === 0, lab = hd || (o.lab0 && j === 0), right = o.right && o.right.includes(j), ctr = o.center && o.center.includes(j)
+        if (right || ctr) cc.addSpacer()
+        if (!hd && typeof x === 'boolean') pchk(cc, x, Math.round(8 * SCALE))
+        else if (!hd && typeof x === 'number') pline(cc, x, cw - 8)
+        else { const tx = t(cc, x, hd ? label(6.5) : lab ? label(7.5) : cells.b || o.bc === j ? F(fs, 'Medium') : tw(fs), lab || cells.dim ? SOFT : INK); tx.minimumScaleFactor = 0.6 }
+        if (!right) cc.addSpacer()
+        if (o.vr && o.vr.includes(j)) pvr(r, rh)
+      })
+    })
+    phr(s, wd, PBT)
+    return s
+  }
+  // 시간 줄: h0시부터 n줄 · 시 칸 | 그 시간에 시작하는 일정
+  const phours = (p, wd, h0, n, rh, items, fs) => {
+    const s = p.addStack(); s.layoutVertically(); s.borderWidth = PBW; s.borderColor = INK
+    const nowH = Math.floor(nm / 60), hw = Math.round(24 * SCALE)
+    for (let i = 0; i < n; i++) {
+      const hh = h0 + i
+      if (i) phr(s, wd, 0.4, SOFT)
+      const r = s.addStack(); r.size = new Size(wd, rh); r.centerAlignContent()
+      const hc = r.addStack(); hc.size = new Size(hw, rh); hc.centerAlignContent(); hc.addSpacer(); t(hc, pad(hh % 24), hh === nowH ? F(8, 'Medium') : label(7.5), hh === nowH ? INK : SOFT); hc.addSpacer()
+      pvr(r, rh)
+      const cc = r.addStack(); cc.size = new Size(wd - hw - PBW, rh); cc.setPadding(0, 6, 0, 6); cc.centerAlignContent()
+      const L = items.filter((x) => Math.floor(x.s / 60) === hh)
+      const tx = t(cc, L.map((x) => (x.s % 60 ? ':' + pad(x.s % 60) + ' ' : '') + x.t).join('   '), hh === nowH ? F(fs, 'Medium') : tw(fs), hh < nowH ? SOFT : INK); tx.minimumScaleFactor = 0.6
+      cc.addSpacer()
+    }
+    return s
   }
   // 줄 하나: cols = [[너비(0 = 남는 폭), 글, 글꼴, 오른쪽 정렬]]
   const cardRow = (RH, cols, col) => { const r = w.addStack(); r.size = new Size(inner, RH); const fixed = cols.reduce((a, x) => a + (x[0] || 0), 0); for (const [wd, s2, f, right] of cols) { const c = r.addStack(); c.size = new Size(wd || inner - fixed, RH); c.setPadding(0, 5, 0, 5); c.centerAlignContent(); if (right) c.addSpacer(); t(c, s2, f, col).minimumScaleFactor = 0.75; if (!right) c.addSpacer() } return r }
