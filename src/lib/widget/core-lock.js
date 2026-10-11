@@ -31,7 +31,10 @@ const WT = (data && data.settings && data.settings.settings && data.settings.set
 MONO = WT === 'mono'
 if (MONO) GOLD = new Color('#ffffff', 0.9)
 PENCIL = WT === 'paper'
-const inkMode = WT === 'white' || WT === 'night' || WT === 'mono' ? 'light' : WT === 'black' || WT === 'paper' ? 'dark' : Keychain.contains('study-ink') ? Keychain.get('study-ink') : 'auto'
+let inkMode = WT === 'white' || WT === 'night' || WT === 'mono' ? 'light' : WT === 'black' || WT === 'paper' ? 'dark' : Keychain.contains('study-ink') ? Keychain.get('study-ink') : 'auto'
+// 투명 배경을 잘라 둘 때 잰 배경 밝기로 글자색 자동 (밝은 배경 → 먹색 · 어두운 배경 → 흰색)
+const inkFile = bgPath(fam, RAWP) + '.ink'
+if (inkMode === 'auto' && FM.fileExists(bgPath(fam, RAWP)) && FM.fileExists(inkFile)) { try { const v = FM.readString(inkFile).trim(); if (v === 'light' || v === 'dark') inkMode = v } catch (e) {} }
 if (inkMode === 'light') { INK = new Color('#ffffff'); SOFT = new Color('#ffffff', 0.72); RULE = new Color('#ffffff', 0.3) }
 if (inkMode === 'dark') { INK = new Color('#1e232b'); SOFT = new Color('#1e232b', 0.6); RULE = new Color('#1e232b', 0.2) }
 if (!lock) {
@@ -105,6 +108,9 @@ if (!data) {
   const weekends = (d) => { let n = 0; const x = new Date(today + 'T00:00'), end = new Date(d.date + 'T00:00'); if (x.getDay() === 0) x.setDate(x.getDate() - 1); for (; x < end; x.setDate(x.getDate() + 1)) if (x.getDay() === 6) n++; return n }
   const dd = ddAll[KIND === 'dday' ? DDI : 0]
   const ddTxt = dd ? ddT(dd) : null
+  DOODLE = st.widgetDoodle !== false
+  if (st.widgetDdColor !== false && !MONO && !lock && ddAll[0] && ddAll[0].pinned && ddAll[0].color) DDHEX = ddAll[0].color
+  const DDC = DDHEX ? new Color(DDHEX) : null
   const quotes = Object.keys(data.settings.quotes || {}).sort().map((k) => data.settings.quotes[k]).filter((q) => !q.deleted)
   const quote = pickQuote(quotes)?.text ?? null // 3시간마다 무작위 (앱과 같은 문구)
   const dateStr = DAY[d0.getDay()] + ' · ' + d0.getDate() + ' ' + MON[d0.getMonth()] + (STALE ? ' · ' + pad(STALE.getHours()) + ':' + pad(STALE.getMinutes()) : '') + (data.sv && data.sv > VER ? ' · 스크립트 업데이트' : '')
@@ -143,9 +149,9 @@ if (!data) {
     if (items.length === n + 1) { n++; gap = Math.max(3, gap - 1) }
     for (const x of items.slice(0, n)) {
       const r = parent.addStack(); r.centerAlignContent(); r.spacing = 8
-      if (x.id) r.url = doneUrl(x.id) // 누르면 앱에서 완료 확인 (중·대 위젯)
-      if (x.done) { t(r, '✓', tw(TS - 2), SOFT); strike(r, x.title, tw(TS)) }
-      else { const imp = x.priority >= 3; t(r, imp ? '•' : '–', tw(TS - 1), imp ? GOLD : SOFT); t(r, x.title, imp ? F(TS, 'Medium') : tw(TS), INK).minimumScaleFactor = 0.85 } // 중요는 진하게
+      if (x.id) r.url = taskUrl(x.id) // 제목을 누르면 그 할 일 자세히 (중·대 위젯)
+      if (x.done) { if (DOODLE) { const ck = r.addImage(tickImg(12)); ck.imageSize = new Size(10, 10) } else t(r, '✓', tw(TS - 2), SOFT); strike(r, x.title, tw(TS)) }
+      else { const imp = x.priority >= 3; const mk = t(r, imp ? '•' : '–', tw(TS - 1), imp ? GOLD : SOFT); if (x.id) mk.url = doneUrl(x.id); t(r, x.title, imp ? F(TS, 'Medium') : tw(TS), INK).minimumScaleFactor = 0.85 } // 표시를 누르면 완료 · 중요는 진하게
       r.addSpacer() // 줄을 꽉 채워 왼쪽 정렬 (스택은 기본 가운데 정렬)
       parent.addSpacer(gap)
     }

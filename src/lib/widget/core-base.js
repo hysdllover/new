@@ -30,7 +30,7 @@ const thin = (s) => F(s, 'Thin')
 const label = (s) => F(s, 'Regular')
 
 // Parameter → 유형 (앱에서 미리보기할 땐 고른 Parameter 로 다시 정함)
-const KINDS = { '공부': 'study', '할일': 'todo', '디데이': 'dday', 'd-day': 'dday', '달력': 'month', '캘린더': 'cal', '일정': 'cal', calendar: 'cal', '다짐': 'quote', '시간표': 'class', '수업': 'class', class: 'class', '주간': 'week', week: 'week', '과목': 'subj', subj: 'subj', '지금': 'now', '다음': 'now', now: 'now', '진도': 'prog', prog: 'prog', '목표': 'goals', goals: 'goals', '오늘': 'today', today: 'today', '대시보드': 'dash', dash: 'dash', '내일': 'tmrw', tomorrow: 'tmrw', '마감': 'due', due: 'due', '일주일': 'week7', '7일': 'week7', week7: 'week7', '디데이목록': 'ddl', ddl: 'ddl', '바로가기': 'quick', '시작': 'quick', quick: 'quick', '구성': 'custom', '내위젯': 'custom', custom: 'custom', '타이머': 'timer', '스톱워치': 'timer', timer: 'timer', '진행': 'pct', '공부진행': 'pct', pct: 'pct', '남은분': 'mins', '분': 'mins', mins: 'mins', '노트': 'note', '메모': 'note', note: 'note', '습관': 'habit', habit: 'habit', '시리즈': 'series', series: 'series', '배치': 'board', '주간배치': 'board', board: 'board', '주차': 'weeks', weeks: 'weeks', '표': 'tbl', table: 'tbl', '보드': 'boardn', '사진': 'photo', photo: 'photo', study: 'study', todo: 'todo', dday: 'dday', month: 'month', quote: 'quote' }
+const KINDS = { '공부': 'study', '할일': 'todo', '디데이': 'dday', 'd-day': 'dday', '달력': 'month', '캘린더': 'cal', '일정': 'cal', calendar: 'cal', '다짐': 'quote', '시간표': 'class', '수업': 'class', class: 'class', '주간': 'week', week: 'week', '과목': 'subj', subj: 'subj', '지금': 'now', '다음': 'now', now: 'now', '진도': 'prog', prog: 'prog', '목표': 'goals', goals: 'goals', '오늘': 'today', today: 'today', '대시보드': 'dash', dash: 'dash', '내일': 'tmrw', tomorrow: 'tmrw', '마감': 'due', due: 'due', '일주일': 'week7', '7일': 'week7', week7: 'week7', '디데이목록': 'ddl', ddl: 'ddl', '바로가기': 'quick', '시작': 'quick', quick: 'quick', '구성': 'custom', '내위젯': 'custom', custom: 'custom', '타이머': 'timer', '스톱워치': 'timer', timer: 'timer', '진행': 'pct', '공부진행': 'pct', pct: 'pct', '남은분': 'mins', '분': 'mins', mins: 'mins', '노트': 'note', '메모': 'note', note: 'note', '습관': 'habit', habit: 'habit', '시리즈': 'series', series: 'series', '배치': 'board', '주간배치': 'board', board: 'board', '주차': 'weeks', weeks: 'weeks', '표': 'tbl', table: 'tbl', '보드': 'boardn', '사진': 'photo', photo: 'photo', '10분': 'ten', '플래너': 'ten', ten: 'ten', '하루': 'dayline', '하루진행': 'dayline', dayline: 'dayline', '한줄': 'line1', '문장': 'line1', line1: 'line1', '공책': 'nb', '한주': 'nb', nb: 'nb', study: 'study', todo: 'todo', dday: 'dday', month: 'month', quote: 'quote' }
 let RAWP, PARAM, DDI, KIND, BASEKIND, ARG
 function setParam(raw) {
   RAWP = String(raw || '').replace(/\\s/g, '').toLowerCase()
@@ -49,6 +49,8 @@ const ghErr = (sc) => (sc === 401 ? '토큰이 만료됐거나 틀려요. 메뉴
 async function tokenOk(tok) { if (!data || !data.gid) return '위젯 데이터에 저장소 정보가 아직 없어요. 홈 화면 앱을 한 번 열어 동기화한 뒤 다시 해 주세요.'; try { const r = new Request('https://api.github.com/gists/' + data.gid); r.headers = { Authorization: 'Bearer ' + tok, Accept: 'application/vnd.github+json' }; await r.loadString(); const sc = r.response && r.response.statusCode; return sc && sc >= 300 ? ghErr(sc) : null } catch (e) { return String(e.message || e) } }
 const link = (path) => (/^(https?|scriptable):/.test(path || '') ? path : RUN && path === 'study.timer' ? RUN + '?act=timer' : RUN ? RUN + '?act=view&go=' + encodeURIComponent(path || '') : APP + (path ? '?go=' + path : ''))
 // 위젯에서 할 일 누르기: 확인 없이 바로 완료 (앱이 잠깐 열렸다가 완료 · 되돌리기 가능)
+// 위젯에서 할 일 제목 누르기: 그 할 일 자세히 (완료는 앞의 표시를 누름)
+const taskUrl = (id) => (RUN ? RUN + '?act=view&go=tasks' : APP + '?task=' + encodeURIComponent(id))
 const doneUrl = (id) => (RUN ? RUN + '?act=done&id=' + encodeURIComponent(id) : APP + '?done=' + encodeURIComponent(id) + '&quick=1')
 
 const pad = (n) => String(n).padStart(2, '0')
@@ -106,19 +108,44 @@ async function load() {
 
 const dark = () => Device.isUsingDarkAppearance()
 // 가는 진행선
+let DDHEX = null // 별표한 D-day 색 (진행선 · D-day 숫자 포인트)
 let PENCIL = false // 종이 테마: 연필 빗금 진행선 · 연필 체크
 function line(ratio, w, fg, bg) {
   const c = new DrawContext(); c.size = new Size(w, 3); c.opaque = false; c.respectScreenScale = true
   if (PENCIL) {
     c.setFillColor(new Color(bg || '#c9cbcf')); c.fillRect(new Rect(0, 1.25, w, 0.5))
-    c.setStrokeColor(new Color(fg || '#66778f')); c.setLineWidth(0.9)
+    c.setStrokeColor(new Color(fg || DDHEX || '#66778f')); c.setLineWidth(0.9)
     for (let x = 0; x < Math.max(2, w * Math.min(1, ratio)) - 1; x += 2.2) { const p = new Path(); p.move(new Point(x, 3)); p.addLine(new Point(x + 1.8, 0)); c.addPath(p); c.strokePath() }
     return c.getImage()
   }
   c.setFillColor(new Color(bg || (dark() ? '#2a2f37' : '#dce1e7'))); c.fillRect(new Rect(0, 1, w, 1))
-  c.setFillColor(new Color(fg || (dark() ? '#9fadc4' : '#66778f'))); c.fillRect(new Rect(0, 0.5, Math.max(2, w * Math.min(1, ratio)), 2))
+  c.setFillColor(new Color(fg || DDHEX || (dark() ? '#9fadc4' : '#66778f'))); c.fillRect(new Rect(0, 0.5, Math.max(2, w * Math.min(1, ratio)), 2))
   return c.getImage()
 }
+// 낙서 (앱 리포트와 같은 결): 물결 밑줄 · 별 · 체크 — 가는 선 하나로
+let DOODLE = true
+const inkHex = () => DDHEX || (dark() ? '#9fadc4' : '#66778f')
+function waveImg(w, hex) {
+  const c = new DrawContext(); c.size = new Size(w, 6); c.opaque = false; c.respectScreenScale = true
+  const p = new Path(); p.move(new Point(1, 3.2))
+  for (let x = 3; x <= w - 1; x += 2) p.addLine(new Point(x, 3 + Math.sin(x / 9) * 1.5 + Math.sin(x / 3.4) * 0.25))
+  c.addPath(p); c.setStrokeColor(new Color(hex || inkHex(), 0.6)); c.setLineWidth(1.1); c.strokePath()
+  return c.getImage()
+}
+function starImg(sz, hex) {
+  const c = new DrawContext(); c.size = new Size(sz, sz); c.opaque = false; c.respectScreenScale = true
+  const p = new Path(), m = sz / 2
+  for (let i = 0; i < 10; i++) { const r = i % 2 ? sz * 0.2 : sz * 0.46, a = -Math.PI / 2 + (i * Math.PI) / 5, pt = new Point(m + r * Math.cos(a), m + r * Math.sin(a)); if (i) p.addLine(pt); else p.move(pt) }
+  p.closeSubpath(); c.addPath(p); c.setStrokeColor(new Color(hex || inkHex())); c.setLineWidth(1); c.strokePath()
+  return c.getImage()
+}
+function tickImg(sz, hex) {
+  const c = new DrawContext(); c.size = new Size(sz, sz); c.opaque = false; c.respectScreenScale = true
+  const p = new Path(); p.move(new Point(sz * 0.14, sz * 0.55)); p.addLine(new Point(sz * 0.4, sz * 0.8)); p.addLine(new Point(sz * 0.88, sz * 0.2))
+  c.addPath(p); c.setStrokeColor(new Color(hex || inkHex())); c.setLineWidth(1.4); c.strokePath()
+  return c.getImage()
+}
+function doodleWave(parent, w) { if (!DOODLE) return; const im = parent.addImage(waveImg(w)); im.imageSize = new Size(w, 6) }
 let RW = 0.6 // 구분선 굵기 (앱 설정 › 위젯 구분선)
 function rule(parent, w) { const s = parent.addStack(); s.size = new Size(w, RW || 0.1); if (RW) s.backgroundColor = RULE }
 function vrule(parent, h) { const s = parent.addStack(); s.size = new Size(RW || 0.1, h); if (RW) s.backgroundColor = RULE }

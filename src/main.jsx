@@ -118,8 +118,11 @@ Promise.all([loadState(), initFonts(), restoreSync()]).then(async () => {
   }
   // 위젯에서 노트 열기: ?open=노트id
   const openIn = q.get('open')
+  // 위젯에서 할 일 열기: ?task=할일id
+  const taskIn = q.get('task')
+  if (taskIn) setTimeout(() => import('./components/ui.jsx').then((m) => m.openDetail('task', taskIn)), 500)
   if (openIn) { const blk = q.get('b'); if (blk) import('./components/BlockEditor.jsx').then((m) => setTimeout(() => m.goBlock(openIn, blk), 400)); else { const { openNote } = await import('./nav.js'); openNote(openIn) } }
-  if (openIn || target || added || link || noteIn != null || healthIn || aiIn != null || doneIn || timerIn != null || newIn || photoIn) history.replaceState(null, '', location.pathname + location.hash)
+  if (taskIn || openIn || target || added || link || noteIn != null || healthIn || aiIn != null || doneIn || timerIn != null || newIn || photoIn) history.replaceState(null, '', location.pathname + location.hash)
   createRoot(document.getElementById('root')).render(<StrictMode><Root /></StrictMode>)
   startServices()
   startNoteVersions()
