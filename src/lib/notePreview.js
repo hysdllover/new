@@ -1,6 +1,6 @@
 // 노트 위젯용 요약: 고정 노트 먼저, 그다음 최근 수정 순 · 노트마다 앞부분 줄(할 일 체크 상태 포함)
 const clean = (s) => String(s || '').replace(/\[\[([^\]]+)\]\]/g, '$1').replace(/==(?:[rgby]:)?([^=\n]+)==/g, '$1').replace(/\*\*([^*\n]+)\*\*/g, '$1').replace(/__([^_\n]+)__/g, '$1').replace(/^\s*[-*]\s+/, '').trim()
-export function noteLines(n, st, max = 24) {
+export function noteLines(n, st, max = 40) {
   const tasks = st.tasks || {}, sync = st.syncBlocks || {}
   const flat = (bs) => (bs || []).flatMap((b) => (b.type === 'sync' ? flat(sync[b.syncId]?.blocks) : b.type === 'cols' ? (b.cols || []).flatMap(flat) : b.type === 'toggle' ? [b, ...flat(b.children)] : [b]))
   const blocks = flat(n.blocks)

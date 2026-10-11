@@ -275,7 +275,8 @@ export default () => `  } else if (KIND === 'study') {
           // 오늘: 채우기 대신 테두리 — 틴트/투명 홈 화면에서도 숫자가 보이게
           if (k === today) { c.borderWidth = 1; c.borderColor = INK; c.cornerRadius = Math.min(cell, cellH) / 2 }
           const a = c.addStack(); a.addSpacer(); t(a, day, k === today ? F(numSize, 'SemiBold') : label(numSize), k === today || has ? INK : SOFT); a.addSpacer()
-          const b = c.addStack(); b.addSpacer(); t(b, has ? '•' : ' ', label(numSize - 2), has && evs[0].c ? new Color(evs[0].c) : GOLD); b.addSpacer()
+          // 일정 없는 날은 빈 칸만 (뷰 수를 줄여 큰 위젯 메모리 절약)
+          const b = c.addStack(); b.size = new Size(cell, Math.round((numSize - 2) * 1.25)); if (has) t(b, '•', label(numSize - 2), evs[0].c ? new Color(evs[0].c) : GOLD)
         }
         parent.addSpacer(gap)
       }
@@ -504,7 +505,7 @@ export default () => `  } else if (KIND === 'study') {
     const habs = Array.isArray(EX.habits) ? EX.habits : [], habOn = habs.filter((x) => x.on).length
     const nLn = (b, n, wd) => { for (const l of (nt0 ? nt0.l : []).slice(0, n)) { noteRow(b, l, wd, LGd ? 11 : 9.5, 1); b.addSpacer(2) } }
     Object.assign(TL, {
-      note: ['NOTE', (b, f, wd) => { b.addSpacer(2); t(b, nt0 ? nt0.t : '노트가 없어요', F(LGd ? 12.5 : 11, 'Regular'), INK, 1).minimumScaleFactor = 0.75; b.addSpacer(3); nLn(b, LGd ? 5 : fam === 'small' ? 2 : 3, wd) }, '', null, noteUrl(nt0), SOFT],
+      note: ['NOTE', (b, f, wd) => { b.addSpacer(2); t(b, nt0 ? nt0.t : '노트가 없어요', F(LGd ? 12.5 : 11, 'Regular'), INK, 1).minimumScaleFactor = 0.75; b.addSpacer(3); if (TILEH && nt0) noteFlow(b, nt0.l, wd, Math.max(20, TILEH - (LGd ? 34 : 30) * SCALE), LGd ? 11 : 9.5); else nLn(b, LGd ? 5 : fam === 'small' ? 2 : 3, wd) }, '', null, noteUrl(nt0), SOFT],
       notes: ['NOTES', (b, f, wd) => { b.addSpacer(3); for (const x of NOTES().slice(0, LGd ? 4 : 3)) { const r = b.addStack(); r.url = noteUrl(x); r.centerAlignContent(); t(r, x.t, tw(LGd ? 12 : 10), INK).minimumScaleFactor = 0.75; r.addSpacer(4); t(r, noteAgo(x.u), label(6), SOFT); b.addSpacer(2) } if (!NOTES().length) t(b, '노트 없음', tw(10), SOFT) }, '', null, 'notes.pages', SOFT],
       month: ['THIS MONTH', hm(monthTot), mDays + '일 공부', null, 'study.records', GOLD],
       left: [mins >= goal ? 'GOAL DONE' : 'LEFT', hm(Math.max(0, goal - mins)), mins >= goal ? '오늘 목표 달성' : '목표까지 남음', mins / goal, 'study.timer', GOLD, leftLive],
@@ -545,16 +546,16 @@ export default () => `  } else if (KIND === 'study') {
         else if (typeof TL[k][1] === 'function') { const x = TL[k]; a.centerAlignContent(); t(a, x[0], label(8), SOFT); a.addSpacer(); if (x[2]) t(a, x[2], tw(10), x[5]); x[1](P2, thin(20), wd) }
         else { const x = TL[k]; a.centerAlignContent(); t(a, x[2], tw(12), INK).minimumScaleFactor = 0.75; a.addSpacer(6); if (x[6]) x[6](a, tw(11), GOLD); else t(a, x[1], tw(11), GOLD); if (x[3] != null) { P2.addSpacer(4); pbar(P2, x[3], wd) } }
       }
-    const col = (P2, ks, wd2) => ks.forEach((k, i) => { if (i) P2.addSpacer(); line(P2, k, wd2) })
+    const col = (P2, ks, wd2, hh) => { TILEH = hh && ks.length ? (hh - (ks.length - 1) * 10) / ks.length : 0; ks.forEach((k, i) => { if (i) P2.addSpacer(); line(P2, k, wd2) }); TILEH = 0 }
     const titleTxt = CW ? (CW.name || '내 위젯 ' + (DDI + 1)) : 'TODAY'
     if (LAY === 'rows') {
       // 내 위젯 · 줄 배치: 블록을 위에서 아래로 (중형은 두 단)
       if (fam !== 'small') { const h = w.addStack(); h.centerAlignContent(); (CW ? t(h, titleTxt, label(10), SOFT) : cap(h, titleTxt)); h.addSpacer(); t(h, dateStr, label(8), SOFT); w.addSpacer(10) }
       if (fam === 'medium') {
         const half = Math.ceil(keys.length / 2), lw = Math.round((inner - 24.6) / 2), row = w.addStack()
-        const L = row.addStack(); L.layoutVertically(); L.size = new Size(lw, MH); col(L, keys.slice(0, half), lw)
+        const L = row.addStack(); L.layoutVertically(); L.size = new Size(lw, MH); col(L, keys.slice(0, half), lw, MH)
         row.addSpacer(12); vrule(row, MH); row.addSpacer(12)
-        const R = row.addStack(); R.layoutVertically(); R.size = new Size(inner - lw - 24.6, MH); col(R, keys.slice(half), inner - lw - 24.6); if (keys.length - half < 2) R.addSpacer()
+        const R = row.addStack(); R.layoutVertically(); R.size = new Size(inner - lw - 24.6, MH); col(R, keys.slice(half), inner - lw - 24.6, MH); if (keys.length - half < 2) R.addSpacer()
       } else { col(w, keys, inner); FILL = true }
     } else if (fam === 'medium') {
       // 중형: 할 일을 고르면 왼쪽 나머지 세 칸 · 오른쪽 할 일 목록, 안 고르면 왼쪽 두 칸 · 오른쪽 두 칸
@@ -564,7 +565,7 @@ export default () => `  } else if (KIND === 'study') {
       const L = row.addStack(); L.layoutVertically(); L.size = new Size(lw, innerH)
       // 그래프 칸이 끼면 높이가 모자라 왼쪽은 두 칸까지
       const isG = (k) => ['bars', 'subjbar', 'ring', 'heat', 'hours', 'compare', 'note', 'notes', 'tmrw', 'due', 'agenda', 'ddl'].includes(k)
-      col(L, hasTodo ? others.slice(0, others.slice(0, 3).some(isG) ? 2 : 3) : others.slice(0, 2), lw)
+      col(L, hasTodo ? others.slice(0, others.slice(0, 3).some(isG) ? 2 : 3) : others.slice(0, 2), lw, innerH)
       row.addSpacer(12); vrule(row, innerH); row.addSpacer(12)
       const R = row.addStack(); R.layoutVertically(); R.size = new Size(rw, innerH)
       if (hasTodo) {
@@ -575,7 +576,7 @@ export default () => `  } else if (KIND === 'study') {
         for (const x of L2.slice(0, n)) { const r = R.addStack(); r.centerAlignContent(); r.spacing = 6; if (x.id) r.url = taskUrl(x.id); const imp = x.priority >= 3; const mk = t(r, imp ? '•' : '–', tw(fs - 1), imp ? GOLD : SOFT); if (x.id) mk.url = doneUrl(x.id); t(r, x.title, imp ? F(fs, 'Medium') : tw(fs), INK).minimumScaleFactor = 0.8; r.addSpacer(); R.addSpacer(4) }
         if (!L2.length) t(R, 'All clear.', tw(fs), SOFT)
         R.addSpacer()
-      } else col(R, others.slice(2, 4), rw)
+      } else col(R, others.slice(2, 4), rw, innerH)
     } else {
     if (fam !== 'small') { const h = w.addStack(); h.centerAlignContent(); (CW ? t(h, titleTxt, label(10), SOFT) : cap(h, titleTxt)); h.addSpacer(); t(h, dateStr, label(LG ? 9 : 8), SOFT); w.addSpacer(12) }
     if (fam === 'small') w.addSpacer() // 소형: 두 줄을 알맞은 간격으로 묶어 세로 가운데
@@ -583,7 +584,11 @@ export default () => `  } else if (KIND === 'study') {
     const wideSet = new Set(CW && Array.isArray(CW.wide) ? CW.wide : []), rowsG = []
     { let cur = []; keys.forEach((k, j) => { if (wideSet.has(k)) { if (cur.length) rowsG.push(cur); cur = []; rowsG.push([j]) } else { cur.push(j); if (cur.length === cols) { rowsG.push(cur); cur = [] } } }); if (cur.length) rowsG.push(cur) }
     rowsG.splice(fam === 'small' ? 2 : 4) // 높이 한도: 소형 두 줄 · 대형 네 줄
+    // 칸 하나 높이: 제목줄 · 줄 간격 · 아래 '이번 주' 를 빼고 줄 수로 나눔 (노트 칸이 높이만큼 채우게)
+    const botH = (fam === 'large' || fam === 'extraLarge') && !CW && !keys.includes('bars') ? innerH * 0.16 + 48 * SCALE : 0
+    const gridH = (innerH - (fam !== 'small' ? 30 * SCALE : 0) - botH - (rowsG.length - 1) * (fam === 'small' ? 16 * SCALE : 14)) / Math.max(1, rowsG.length)
     rowsG.forEach((ids, ri) => {
+      TILEH = fam === 'small' ? 0 : gridH
       const r = w.addStack(); r.spacing = gap
       const wdx = ids.length === 1 && wideSet.has(keys[ids[0]]) ? inner : wd
       for (const x of ids.map((j) => tiles[j])) {
@@ -596,6 +601,7 @@ export default () => `  } else if (KIND === 'study') {
       }
       if (ri < rowsG.length - 1) w.addSpacer(fam === 'small' ? Math.round(16 * SCALE) : 14)
     })
+    TILEH = 0
     }
     // 대형: 아래에 이번 주 공부 (할 일은 위 칸에 있으니 겹치지 않게)
     if ((fam === 'large' || fam === 'extraLarge') && !CW && !keys.includes('bars')) { w.addSpacer(); rule(w, inner); w.addSpacer(10); const s2 = w.addStack(); s2.centerAlignContent(); cap(s2, 'THIS WEEK'); s2.addSpacer(); t(s2, hm(weekTot) + ' · 하루 ' + hm(weekAvg), label(10), SOFT); w.addSpacer(8); bars7(w, inner, Math.round(innerH * 0.16), GOLD, RULE); w.addSpacer(3); wdRow(w, inner, 9); FILL = true }
@@ -818,7 +824,8 @@ export default () => `  } else if (KIND === 'study') {
     w.addSpacer(5); rule(w, inner); w.addSpacer(fam === 'small' ? 5 : 7)
     const avail = innerH - (fs + 0.5) * 1.3 * SCALE - 13
     if (!L0.length) t(w, n ? '내용 없음' : '앱에서 노트를 써 보세요', tw(fs), SOFT)
-    else if (fam === 'medium') {
+    else if (fam !== 'small') {
+      // 넘치면 오른쪽 단으로 이어서 (대형·특대형도)
       const cw = Math.floor((inner - 25) / 2), row = w.addStack(); row.size = new Size(inner, avail); row.topAlignContent()
       const L = row.addStack(); L.layoutVertically(); L.size = new Size(cw, avail); const k = noteFlow(L, L0, cw, avail, fs); L.addSpacer()
       if (k < L0.length) { row.addSpacer(12); vrule(row, avail); row.addSpacer(12); const R = row.addStack(); R.layoutVertically(); R.size = new Size(cw, avail); noteFlow(R, L0.slice(k), cw, avail, fs); R.addSpacer() }

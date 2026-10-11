@@ -405,16 +405,12 @@ const FM = FileManager.local()
 const bgPath = (f, p) => FM.joinPath(FM.documentsDirectory(), 'study-bg-' + f + '-' + (p || 'default') + '.jpg')
 // 종이 테마: 앱과 같은 요철 결 이미지(한 번 받아 두고 씀) → 위젯 크기만큼 타일로 깔기
 const paperPath = FM.joinPath(FM.documentsDirectory(), 'study-paper-2.jpg')
-let PAPER = null
-if (((data && data.settings && data.settings.settings && data.settings.settings.main) || {}).widgetTheme === 'paper') {
-  try { if (!FM.fileExists(paperPath)) FM.writeImage(paperPath, await new Request(APP + 'paper.jpg').loadImage()); PAPER = FM.readImage(paperPath) } catch (e) {}
+// 받아 두기만 하고, 읽는 건 배경을 새로 그릴 때만 (큰 위젯 메모리 절약)
+if (((data && data.settings && data.settings.settings && data.settings.settings.main) || {}).widgetTheme === 'paper' && !FM.fileExists(paperPath)) {
+  try { FM.writeImage(paperPath, await new Request(APP + 'paper.jpg').loadImage()) } catch (e) {}
 }
-function paperBg(wd, ht) {
-  const c = new DrawContext(); c.size = new Size(wd, ht); c.opaque = true; c.respectScreenScale = true
-  c.setFillColor(new Color('#f2f2f1')); c.fillRect(new Rect(0, 0, wd, ht))
-  for (let x = 0; x < wd; x += 360) for (let y = 0; y < ht; y += 360) c.drawImageInRect(PAPER, new Rect(x, y, 360, 360))
-  return c.getImage()
-}
+const loadPaper = () => { try { return FM.fileExists(paperPath) ? FM.readImage(paperPath) : null } catch (e) { return null } }
+let TILEH = 0 // 대시보드 칸 하나에 쓸 수 있는 높이 (노트 칸이 줄을 높이만큼 채우게)
 // 잠금 화면 진행선: 이미지 대신 색 채운 스택 두 겹 (가볍고 확실히 그려짐)
 function lbar(parent, ratio, wd, h = 2) {
   const o = parent.addStack(); o.size = new Size(wd, h); o.cornerRadius = h / 2; o.backgroundColor = new Color('#ffffff', 0.3)
