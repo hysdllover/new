@@ -8,11 +8,11 @@ if (KIND === 'custom' && fam.startsWith('accessory')) KIND = 'dash' // 내 위�
 // 시간대별 자동: 아침(5~12시) 오늘 한눈에 · 낮(12~20시) 공부 · 밤 내일 준비
 if (KIND === 'auto') { const hr = new Date().getHours(); KIND = hr >= 5 && hr < 12 ? 'today' : hr >= 12 && hr < 20 ? 'study' : 'tmrw' }
 // 잠금 화면엔 그림 없이 같은 뜻의 형태로
-if (lock) KIND = ({ news: 'today', catalog: 'study', book: 'dday', tcard: 'week', telegram: 'today', ticket: 'pair', receipt: 'study', rcard: 'study', stamp: 'dday', mag: 'today', big: ARG === '디데이' ? 'dday' : ARG === '할일' ? 'todo' : ARG === '주간' ? 'week' : 'study', spark: 'week', arc: fam === 'accessoryCircular' ? 'pct' : 'study', memo: 'note', print: 'today', split: 'today', hero: 'study', three: 'today' })[KIND] || KIND
+if (lock) KIND = ({ news: 'today', catalog: 'study', tcard: 'week', ddcard: 'ddl', journal: 'today', rcard: 'study', mag: 'today', big: ARG === '디데이' ? 'dday' : ARG === '할일' ? 'todo' : ARG === '주간' ? 'week' : 'study', spark: 'week', arc: fam === 'accessoryCircular' ? 'pct' : 'study', memo: 'note', print: 'today', split: 'today', hero: 'study', three: 'today' })[KIND] || KIND
 let w = new ListWidget()
 // 한 줄(시계 위) 위젯: iOS 가 텍스트 하나만 시스템 서체로 그림 → 서체·색 지정 없이 짧게 하나만
 const inline = (s) => { s = String(s); const x = w.addText(s.length > 26 ? s.slice(0, 25) + '…' : s); x.lineLimit = 1; return x }
-w.url = link({ todo: 'tasks', due: 'tasks', cal: 'planner.month', week7: 'planner.week', tmrw: 'planner.week', class: 'planner.timetable', default: '', dash: '', quick: 'study.timer', timer: 'study.timer', ddl: 'study.progress', prog: 'study.progress', series: 'tasks.board', board: 'tasks.board', weeks: 'study.records', memo: 'notes.pages', print: '', split: '', three: '', hero: 'tasks', pair: 'planner.month', news: '', catalog: 'study.records', book: 'study.progress', tcard: 'study.records', telegram: '', ticket: 'study.progress', receipt: 'study.records', rcard: 'study.records', stamp: 'study.progress', mag: '', big: ARG === '할일' ? 'tasks' : ARG === '디데이' ? 'study.progress' : 'study.records' }[KIND] ?? 'study.records')
+w.url = link({ todo: 'tasks', due: 'tasks', cal: 'planner.month', week7: 'planner.week', tmrw: 'planner.week', class: 'planner.timetable', default: '', dash: '', quick: 'study.timer', timer: 'study.timer', ddl: 'study.progress', prog: 'study.progress', series: 'tasks.board', board: 'tasks.board', weeks: 'study.records', memo: 'notes.pages', print: '', split: '', three: '', hero: 'tasks', pair: 'planner.month', news: '', catalog: 'study.records', tcard: 'study.records', ddcard: 'study.progress', journal: 'study.records', rcard: 'study.records', mag: '', big: ARG === '할일' ? 'tasks' : ARG === '디데이' ? 'study.progress' : 'study.records' }[KIND] ?? 'study.records')
 w.refreshAfterDate = new Date(Date.now() + 5 * 60000) // 5분 뒤 다시 그려 달라고 요청 (실제 시점은 iOS 가 정함)
 // 앱 설정: 위젯 여백 단계 · 구분선 굵기
 const STM = (data && data.settings && data.settings.settings && data.settings.settings.main) || {}
@@ -287,18 +287,31 @@ if (!data) {
     if (!im) { const K = 2, c = new DrawContext(); c.size = new Size(W2 * K, H2 * K); c.opaque = true; c.respectScreenScale = false; c.setFillColor(new Color(PG)); c.fillRect(new Rect(0, 0, W2 * K, H2 * K)); draw(c, K, W2, H2); im = c.getImage(); try { FM.writeImage(fp, im) } catch (e) {} }
     w.backgroundImage = im
   }
-  // 가는 점선 (이미지 한 장)
-  const dashLine = (parent, wd, alpha = 0.35) => { const c = new DrawContext(); c.size = new Size(wd, 1); c.opaque = false; c.respectScreenScale = true; c.setFillColor(new Color(PL, alpha)); for (let x = 0; x < wd; x += 4) c.fillRect(new Rect(x, 0, 2, 0.7)); const im = parent.addImage(c.getImage()); im.imageSize = new Size(wd, 1) }
-  // 바코드 (장식): 날짜와 상관없이 같은 무늬
-  const barcode = (c, x, y, wd, h, K) => { c.setFillColor(new Color(PL, 0.75)); let px = x, i = 0; while (px < x + wd) { const bw = [1, 2, 1, 3, 1, 1, 2][i % 7] * K * 0.8; c.fillRect(new Rect(px, y, bw, h)); px += bw + [2, 1, 3, 1, 2, 2, 1][(i * 3) % 7] * K * 0.8; i++ } }
   const MN = (s) => new Font('Menlo-Regular', Math.round(s * SCALE * 2) / 2)
+  // 기록 카드 공용 (기록카드 · 디데이카드 · 일지 · 목록카드 · 타임카드): 위젯 끝까지 종이 · 머리 이중선 · 가는 줄 칸
+  const cardBg = (key, HH, RH, nR, xs) => dbg(key + '-' + HH + '-' + RH + '-' + nR + '-' + xs.join('.'), (c, K, W2, H2) => {
+    c.setFillColor(new Color(VP)); c.fillRect(new Rect(0, 0, W2 * K, H2 * K)); grain(c, K, 0, 0, W2, H2)
+    const y0 = P + HH
+    c.setFillColor(new Color(VL, 0.75)); c.fillRect(new Rect(P * K, (y0 - 3) * K, (W2 - 2 * P) * K, 0.8 * K)); c.fillRect(new Rect(P * K, (y0 - 0.8) * K, (W2 - 2 * P) * K, 0.4 * K))
+    c.setFillColor(new Color(VL, 0.16)); for (let k = 1; k <= nR; k++) c.fillRect(new Rect(P * K, (y0 + k * RH) * K, (W2 - 2 * P) * K, 0.6 * K))
+    for (const x of xs) c.fillRect(new Rect((P + x) * K, y0 * K, 0.6 * K, nR * RH * K))
+  })
+  const cardHead = (HH, title, sub, stamp) => {
+    const h = w.addStack(); h.size = new Size(inner, HH - 4); h.topAlignContent()
+    const hl = h.addStack(); hl.layoutVertically(); t(hl, title.split('').join(' ').replace(/ {3}/g, '   '), label(fam === 'small' ? 7.5 : 8), DI); hl.addSpacer(2); t(hl, sub, MN(7.5), DS)
+    h.addSpacer()
+    if (stamp) { const stp = h.addStack(); stp.borderWidth = 1; stp.borderColor = DRS; stp.cornerRadius = 3; stp.setPadding(1, 4, 1, 4); t(stp, stamp, MN(7.5), DRS) }
+    w.addSpacer(4)
+  }
+  // 줄 하나: cols = [[너비(0 = 남는 폭), 글, 글꼴, 오른쪽 정렬]]
+  const cardRow = (RH, cols, col) => { const r = w.addStack(); r.size = new Size(inner, RH); const fixed = cols.reduce((a, x) => a + (x[0] || 0), 0); for (const [wd, s2, f, right] of cols) { const c = r.addStack(); c.size = new Size(wd || inner - fixed, RH); c.setPadding(0, 5, 0, 5); c.centerAlignContent(); if (right) c.addSpacer(); t(c, s2, f, col).minimumScaleFactor = 0.75; if (!right) c.addSpacer() } return r }
   // ── 빈티지 (신문 · 목록 카드 · 문고본 · 타임카드 · 전보): 결 있는 흰 종이 · 먹색 · 포인트 둘(낮은 채도) ──
   const VP = DK ? '#26272a' : '#f4f4f1', VI = new Color(DK ? '#e4e2dd' : '#2e2f33'), VS = new Color(DK ? '#e4e2dd' : '#2e2f33', 0.5), VL = DK ? '#e4e2dd' : '#2e2f33'
   const VR = DRS, VN = VS // 포인트는 바랜 회갈색 하나만 · 나머지는 먹색 농담
   const VF = (n) => (s) => new Font(n, Math.round(s * SCALE * 2) / 2)
   const SER = VF('Baskerville'), SERI = VF('Baskerville-Italic'), DID = VF('Didot'), TYP = VF('Baskerville'), TYPL = VF('Baskerville') // 타자기체 대신 잡지·카드 같은 세리프
   // 종이 결: 고운 점 + 가장자리 살짝 어둡게 (같은 무늬, 한 번 그려 캐시)
-  const grain = (c, K, x0, y0, wd, ht) => { let sd = 7; const rnd = () => ((sd = (sd * 16807) % 2147483647) / 2147483647); c.setFillColor(new Color(VL, DK ? 0.05 : 0.045)); for (let i = 0, n = Math.round((wd * ht) / 26); i < n; i++) { const z = (0.5 + rnd() * 0.8) * K; c.fillRect(new Rect((x0 + rnd() * wd) * K, (y0 + rnd() * ht) * K, z, z)) } for (let k = 0; k < 6; k++) { c.setStrokeColor(new Color(VL, 0.012 * (6 - k))); c.setLineWidth(K); const p = new Path(); p.addRect(new Rect((x0 + k) * K, (y0 + k) * K, (wd - 2 * k) * K, (ht - 2 * k) * K)); c.addPath(p); c.strokePath() } }
+  const grain = (c, K, x0, y0, wd, ht) => { let sd = 7; const rnd = () => ((sd = (sd * 16807) % 2147483647) / 2147483647); c.setFillColor(new Color(VL, DK ? 0.035 : 0.03)); for (let i = 0, n = Math.round((wd * ht) / 26); i < n; i++) { const z = (0.5 + rnd() * 0.8) * K; c.fillRect(new Rect((x0 + rnd() * wd) * K, (y0 + rnd() * ht) * K, z, z)) } for (let k = 0; k < 6; k++) { c.setStrokeColor(new Color(VL, 0.006 * (6 - k))); c.setLineWidth(K); const p = new Path(); p.addRect(new Rect((x0 + k) * K, (y0 + k) * K, (wd - 2 * k) * K, (ht - 2 * k) * K)); c.addPath(p); c.strokePath() } }
   // 할 일 줄 (반반 · 세 단): 제목 누르면 그 할 일, 앞 표시 누르면 완료
   const taskRows = (P2, wd, n, fsT) => {
     for (const x of items.slice(0, n)) {

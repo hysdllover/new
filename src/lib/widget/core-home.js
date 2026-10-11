@@ -1156,170 +1156,69 @@ export default () => `  } else if (KIND === 'study') {
       for (const x of ddAll.filter((y) => y !== dd).slice(0, 4)) { const r = w.addStack(); r.centerAlignContent(); t(r, x.title, tw(12), INK); r.addSpacer(); t(r, ddT(x), tw(12), GOLD); w.addSpacer(6) }
     }
     w.addSpacer(); FILL = true
-  } else if (KIND === 'ticket') {
-    // ── 티켓: D-day 를 목적지로 한 승차권 · 오른쪽 떼는 부분에 남은 날 (소형은 아래가 떼는 부분) ──
-    const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large, m = Math.round(P * 0.45), sm = fam === 'small'
-    const stubW = sm ? 0 : fam === 'medium' ? 92 : 112, sx = W2 - m - stubW, sy = sm ? Math.round(H2 * 0.64) : 0
-    dbg('ticket' + stubW + '-' + sy, (c, K) => {
-      const card = new Path(); card.addRoundedRect(new Rect(m * K, m * K, (W2 - 2 * m) * K, (H2 - 2 * m) * K), 10 * K, 10 * K); c.addPath(card); c.setFillColor(new Color(PW)); c.fillPath()
-      c.setFillColor(new Color(PG))
-      const notch = (x, y) => c.fillEllipse(new Rect((x - 7) * K, (y - 7) * K, 14 * K, 14 * K))
-      if (sm) { notch(m, sy); notch(W2 - m, sy); c.setFillColor(new Color(PL, 0.3)); for (let x = m + 12; x < W2 - m - 12; x += 6) c.fillRect(new Rect(x * K, sy * K, 3 * K, 0.6 * K)) }
-      else { notch(sx, m); notch(sx, H2 - m); c.setFillColor(new Color(PL, 0.3)); for (let y = m + 12; y < H2 - m - 12; y += 6) c.fillRect(new Rect(sx * K, y * K, 0.6 * K, 3 * K)); barcode(c, (sx + 14) * K, (H2 - P - 18) * K, (W2 - P - sx - 14) * K, 16 * K, K) }
-    })
-    const sp = (s) => s.split('').join(' ')
-    const fld = (parent, l, v) => { const f = parent.addStack(); f.layoutVertically(); t(f, l, label(6.5), DS); f.addSpacer(1); t(f, v, MN(10.5), DI).minimumScaleFactor = 0.7; return f }
-    const nx = PAIRNX, dtS = pad(d0.getMonth() + 1) + '.' + pad(d0.getDate())
-    w.url = link('study.progress')
-    if (sm) {
-      const top = w.addStack(); top.layoutVertically(); top.size = new Size(inner, sy - P - 8)
-      const h = top.addStack(); t(h, sp('PASS'), label(7), DS); h.addSpacer(); t(h, 'No.' + DOY, MN(7.5), DS)
-      top.addSpacer(); t(top, 'TO', label(6.5), DS); t(top, dd ? dd.title : 'D-day 없음', tw(13), DI).minimumScaleFactor = 0.7; top.addSpacer(1)
-      t(top, dd ? ddTxt : '—', thin(30), DA).minimumScaleFactor = 0.6
-      w.addSpacer(16)
-      const b = w.addStack(); b.size = new Size(inner, 0); fld(b, 'DATE', dtS); b.addSpacer(); fld(b, 'STUDY', hm(mins))
-    } else {
-      const mw = sx - P - 12, rw = W2 - P - sx - 12, big2 = !sm && fam !== 'medium'
-      const row = w.addStack(); row.size = new Size(inner, innerH)
-      const M0 = row.addStack(); M0.layoutVertically(); M0.size = new Size(mw, innerH)
-      const h = M0.addStack(); h.size = new Size(mw, 0); t(h, sp('STUDY PASS'), label(7), DS); h.addSpacer(); t(h, 'No.' + DOY, MN(7.5), DS)
-      M0.addSpacer(big2 ? 14 : 8)
-      const rt = M0.addStack(); rt.size = new Size(mw, 0); rt.bottomAlignContent()
-      const a = rt.addStack(); a.layoutVertically(); t(a, 'FROM', label(6.5), DS); t(a, '오늘', tw(big2 ? 17 : 14), DI)
-      rt.addSpacer(10); const ln = rt.addStack(); ln.layoutVertically(); const l0 = ln.addStack(); l0.size = new Size(big2 ? 46 : 26, 0.7); l0.backgroundColor = DS; ln.addSpacer(big2 ? 9 : 7); rt.addSpacer(10)
-      const b = rt.addStack(); b.layoutVertically(); t(b, 'TO', label(6.5), DS); t(b, dd ? dd.title : 'D-day 없음', tw(big2 ? 17 : 14), DI).minimumScaleFactor = 0.6; rt.addSpacer()
-      M0.addSpacer()
-      if (big2) {
-        // 여정: 오늘 남은 일정·할 일
-        t(M0, sp('ITINERARY'), label(6.5), DS); M0.addSpacer(5)
-        const IT = [...NOW.filter((x) => x.e > nm).map((x) => [clk(x.s), x.t]), ...items.filter((x) => !x.done).map((x) => ['', x.title])]
-        for (const [tm, ti] of IT.slice(0, Math.max(1, Math.floor((innerH - 150 * SCALE) / (17 * SCALE))))) { const r = M0.addStack(); r.size = new Size(mw, 0); r.centerAlignContent(); const tc = r.addStack(); tc.size = new Size(40, 0); t(tc, tm || '–', MN(9), DS); tc.addSpacer(); t(r, ti, tw(11), DI).minimumScaleFactor = 0.8; r.addSpacer(); M0.addSpacer(4) }
-        if (!IT.length) t(M0, '오늘 남은 일정 없음', tw(11), DS)
-        M0.addSpacer()
-      }
-      const fr = M0.addStack(); fr.size = new Size(mw, 0); fld(fr, 'DATE', dtS); fr.addSpacer(); fld(fr, 'BOARDING', nx ? nx.w.replace('지금 ~', '~') : '—'); fr.addSpacer(); fld(fr, 'STUDY', hm(mins)); if (big2) { fr.addSpacer(); fld(fr, 'GOAL', pct + '%') }
-      row.addSpacer(24)
-      const S0 = row.addStack(); S0.layoutVertically(); S0.size = new Size(rw, innerH)
-      t(S0, 'D-DAY', label(6.5), DS); S0.addSpacer(2)
-      t(S0, dd ? (ddN(dd) === 0 ? 'D' : String(ddN(dd))) : '—', thin(big2 ? 46 : 36), DA).minimumScaleFactor = 0.5
-      t(S0, 'DAYS LEFT', label(6.5), DS); S0.addSpacer()
-      if (dd) t(S0, dd.date.slice(5).replace('-', '.'), MN(9), DS)
-      S0.addSpacer(24)
-      FILL = true
-    }
-  } else if (KIND === 'receipt') {
-    // ── 영수증: 오늘 공부를 과목별 품목으로 · 아래는 톱니 모양으로 찢은 종이 ──
-    const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large, m = Math.round(P * 0.45)
-    dbg('receipt', (c, K) => { const yb = H2 - m, pts = [new Point(m * K, m * K), new Point((W2 - m) * K, m * K)]; for (let x = W2 - m; x > m; x -= 6) { pts.push(new Point(x * K, yb * K)); pts.push(new Point((x - 3) * K, (yb - 4) * K)) } pts.push(new Point(m * K, yb * K)); const p = new Path(); p.addLines(pts); p.closeSubpath(); c.addPath(p); c.setFillColor(new Color(PW)); c.fillPath() })
-    const ctr = (parent, s, font, col) => { const r = parent.addStack(); r.size = new Size(inner, 0); r.addSpacer(); t(r, s, font, col); r.addSpacer(); return r }
-    const kv = (parent, wd, k, v, fk, fv, col) => { const r = parent.addStack(); r.size = new Size(wd, 0); r.centerAlignContent(); t(r, k, fk, col || DI).minimumScaleFactor = 0.8; r.addSpacer(6); t(r, v, fv, col || DI); return r }
-    const items2 = (parent, wd, n) => { for (const x of subMins.slice(0, n)) { kv(parent, wd, x.s.name, hm(x.m), tw(11), MN(10)); parent.addSpacer(3) } if (!subMins.length) { t(parent, '오늘 공부 기록 없음', tw(10.5), DS); parent.addSpacer(3) } }
-    const totals = (parent, wd) => { kv(parent, wd, 'TOTAL', hm(mins), F(11, 'Medium'), MN(12)); parent.addSpacer(3); kv(parent, wd, 'GOAL', hm(goal), label(8), MN(9), DS); parent.addSpacer(2); kv(parent, wd, 'RATE', pct + '%', label(8), MN(9), DS) }
-    const tm = pad(new Date().getHours()) + ':' + pad(new Date().getMinutes())
-    w.url = link('study.records')
-    ctr(w, 'S T U D Y   R E C E I P T', label(fam === 'small' ? 7.5 : 8.5), DI)
-    w.addSpacer(2); ctr(w, d0.getFullYear() + '.' + pad(d0.getMonth() + 1) + '.' + pad(d0.getDate()) + ' ' + DAY[d0.getDay()] + ' ' + tm, MN(7.5), DS)
-    w.addSpacer(6); dashLine(w, inner); w.addSpacer(6)
-    if (fam === 'small') { items2(w, inner, 2); w.addSpacer(3); dashLine(w, inner); w.addSpacer(5); kv(w, inner, 'TOTAL', hm(mins), F(11, 'Medium'), MN(12)) }
-    else if (fam === 'medium') {
-      const row = w.addStack(), lw = Math.round((inner - 25) * 0.56), rw = inner - lw - 25
-      const L = row.addStack(); L.layoutVertically(); L.size = new Size(lw, 0); items2(L, lw, 3); L.addSpacer()
-      row.addSpacer(12); vrule(row, 50); row.addSpacer(12)
-      const R = row.addStack(); R.layoutVertically(); R.size = new Size(rw, 0); totals(R, rw)
-    } else {
-      items2(w, inner, 6); w.addSpacer(4); dashLine(w, inner); w.addSpacer(7); totals(w, inner)
-      w.addSpacer(8); dashLine(w, inner); w.addSpacer(7)
-      kv(w, inner, 'DONE', String(done), label(8), MN(10)); w.addSpacer(2); kv(w, inner, 'LEFT', String(items.filter((x) => !x.done).length), label(8), MN(10), DS)
-      w.addSpacer()
-      ctr(w, '오늘도 수고했어요', tw(10), DS); w.addSpacer(6)
-      const bc = new DrawContext(), bw = Math.round(inner * 0.62); bc.size = new Size(bw, 20); bc.opaque = false; bc.respectScreenScale = true; barcode(bc, 0, 0, bw, 20, 1)
-      const br = w.addStack(); br.size = new Size(inner, 20); br.addSpacer(); const bi = br.addImage(bc.getImage()); bi.imageSize = new Size(bw, 20); br.addSpacer()
-      w.addSpacer(3); ctr(w, 'No.' + pad(DOY) + pad(d0.getDate()), MN(7), DS); w.addSpacer(6)
-      FILL = true
-    }
   } else if (KIND === 'rcard') {
-    // ── 기록 카드: 도서 대출 카드처럼 날짜 · 과목 · 시간 칸 · 오늘 공부했으면 로즈 도장 ──
-    const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large, HH = Math.round((fam === 'small' ? 28 : 32) * SCALE), RH = Math.round(20 * SCALE)
-    const c1 = fam === 'small' ? 36 : 42, c3 = fam === 'small' ? 38 : 46, nR = Math.max(2, Math.floor((innerH - HH) / RH))
-    dbg('rcard-' + HH + '-' + RH, (c, K) => {
-      c.setFillColor(new Color(PW)); c.fillRect(new Rect(0, 0, W2 * K, H2 * K))
-      const y0 = P + HH
-      c.setFillColor(new Color(PL, 0.7)); c.fillRect(new Rect(P * K, (y0 - 3) * K, (W2 - 2 * P) * K, 0.8 * K)); c.fillRect(new Rect(P * K, (y0 - 0.8) * K, (W2 - 2 * P) * K, 0.4 * K))
-      c.setFillColor(new Color(PL, 0.18))
-      for (let k = 1; k <= nR; k++) c.fillRect(new Rect(P * K, (y0 + k * RH) * K, (W2 - 2 * P) * K, 0.6 * K))
-      c.fillRect(new Rect((P + c1) * K, y0 * K, 0.6 * K, nR * RH * K)); c.fillRect(new Rect((W2 - P - c3) * K, y0 * K, 0.6 * K, nR * RH * K))
-    })
-    const h = w.addStack(); h.size = new Size(inner, HH - 4); h.topAlignContent()
-    const hl = h.addStack(); hl.layoutVertically(); t(hl, fam === 'small' ? 'R E C O R D' : 'S T U D Y   R E C O R D   C A R D', label(fam === 'small' ? 7.5 : 8), DI); hl.addSpacer(2); t(hl, 'No. ' + DOY + '  ·  ' + hm(mins), MN(7.5), DS)
-    h.addSpacer()
-    if (mins > 0) { const stp = h.addStack(); stp.layoutVertically(); stp.borderWidth = 1; stp.borderColor = DRS; stp.cornerRadius = 3; stp.setPadding(1, 4, 1, 4); const a = stp.addStack(); a.addSpacer(); t(a, MON[d0.getMonth()] + ' ' + d0.getDate(), MN(7.5), DRS); a.addSpacer() }
-    w.addSpacer(4)
-    const cell = (r, wd, s, font, col, right) => { const c = r.addStack(); if (wd) c.size = new Size(wd, RH); c.setPadding(0, 5, 0, 5); c.centerAlignContent(); if (right) c.addSpacer(); t(c, s, font, col).minimumScaleFactor = 0.75; if (!right) c.addSpacer(); return c }
-    const rowC = (a, b, cc, fa, fb, fc, col) => { const r = w.addStack(); r.size = new Size(inner, RH); cell(r, c1, a, fa, col); cell(r, inner - c1 - c3, b, fb, col); cell(r, c3, cc, fc, col, true); return r }
-    rowC('DATE', 'SUBJECT', 'TIME', label(6.5), label(6.5), label(6.5), DS)
+    // ── 기록 카드: 도서 대출 카드처럼 날짜 · 과목 · 시간 칸 · 오늘 공부했으면 도장 ──
+    const HH = Math.round((fam === 'small' ? 28 : 32) * SCALE), RH = Math.round(20 * SCALE), c1 = fam === 'small' ? 36 : 42, c3 = fam === 'small' ? 38 : 46, nR = Math.max(2, Math.floor((innerH - HH) / RH))
+    cardBg('rc', HH, RH, nR, [c1, inner - c3])
+    cardHead(HH, fam === 'small' ? 'RECORD' : 'STUDY RECORD CARD', 'No. ' + DOY + '  ·  ' + hm(mins), mins > 0 ? MON[d0.getMonth()] + ' ' + d0.getDate() : null)
+    cardRow(RH, [[c1, 'DATE', label(6.5)], [0, 'SUBJECT', label(6.5)], [c3, 'TIME', label(6.5), true]], DS)
     const recs = allSess.slice().sort((p, q) => String(q.date).localeCompare(String(p.date)) || (q.start || 0) - (p.start || 0))
-    for (const x of recs.slice(0, nR - 1)) { const sj = subjects.find((y) => y.id === x.subjectId); rowC(x.date.slice(5).replace('-', '.'), sj ? sj.name : '공부', hm(x.dur || 0), MN(8.5), tw(10.5), MN(9), x.date === today ? DI : DS) }
-    if (!recs.length) rowC('', '기록이 쌓이면 여기에', '', MN(8.5), tw(10.5), MN(9), DS)
+    for (const x of recs.slice(0, nR - 1)) { const sj = subjects.find((y) => y.id === x.subjectId); cardRow(RH, [[c1, x.date.slice(5).replace('-', '.'), MN(8.5)], [0, sj ? sj.name : '공부', tw(10.5)], [c3, hm(x.dur || 0), MN(9), true]], x.date === today ? DI : DS) }
+    if (!recs.length) cardRow(RH, [[c1, '', MN(8.5)], [0, '기록이 쌓이면 여기에', tw(10.5)], [c3, '', MN(9)]], DS)
     w.url = link('study.records'); FILL = true
-  } else if (KIND === 'stamp') {
-    // ── 우표: 톱니 테두리 우표에 D-day · 소인에 오늘 날짜 (중형 이상은 우표 붙인 엽서) ──
-    const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large, m = Math.round(P * 0.45), sm = fam === 'small'
-    const sw = sm ? W2 - 2 * m : fam === 'medium' ? 84 : 104, sh = sm ? H2 - 2 * m : fam === 'medium' ? H2 - 2 * P : 124
-    const sx0 = sm ? m : W2 - P - sw, sy0 = sm ? m : P, LH = Math.round(22 * SCALE), ly0 = sy0 + sh + 18
-    const SF = DK ? '#30343c' : '#f3f4f7'
-    dbg('stamp' + sw + 'x' + sh + '-' + LH, (c, K) => {
-      if (!sm) { const card = new Path(); card.addRoundedRect(new Rect(m * K, m * K, (W2 - 2 * m) * K, (H2 - 2 * m) * K), 8 * K, 8 * K); c.addPath(card); c.setFillColor(new Color(PW)); c.fillPath() }
-      c.setFillColor(new Color(sm ? PW : SF)); c.fillRect(new Rect(sx0 * K, sy0 * K, sw * K, sh * K))
-      c.setFillColor(new Color(sm ? PG : PW)); const r0 = 2.6
-      for (let x = sx0; x <= sx0 + sw; x += 8) { c.fillEllipse(new Rect((x - r0) * K, (sy0 - r0) * K, 2 * r0 * K, 2 * r0 * K)); c.fillEllipse(new Rect((x - r0) * K, (sy0 + sh - r0) * K, 2 * r0 * K, 2 * r0 * K)) }
-      for (let y = sy0; y <= sy0 + sh; y += 8) { c.fillEllipse(new Rect((sx0 - r0) * K, (y - r0) * K, 2 * r0 * K, 2 * r0 * K)); c.fillEllipse(new Rect((sx0 + sw - r0) * K, (y - r0) * K, 2 * r0 * K, 2 * r0 * K)) }
-      const fr = new Path(); fr.addRoundedRect(new Rect((sx0 + 7) * K, (sy0 + 7) * K, (sw - 14) * K, (sh - 14) * K), 2 * K, 2 * K); c.addPath(fr); c.setStrokeColor(new Color(PL, 0.3)); c.setLineWidth(0.8 * K); c.strokePath()
-      if (!sm) {
-        c.setFillColor(new Color(PL, 0.22))
-        for (const yy of [sy0 + sh * 0.56, sy0 + sh * 0.9]) c.fillRect(new Rect(P * K, yy * K, (sx0 - 14 - P) * K, 0.6 * K))
-        if (fam !== 'medium') for (let y = ly0 + LH; y < H2 - P + 2; y += LH) c.fillRect(new Rect(P * K, y * K, (W2 - 2 * P) * K, 0.6 * K))
-      }
-    })
-    // 소인: 겹동그라미 안 날짜 + 물결 세 줄 (매번 그림, 작음)
-    const postmark = (sz) => {
-      const c = new DrawContext(); c.size = new Size(sz * 1.8, sz); c.opaque = false; c.respectScreenScale = true; const col = new Color(PL, 0.5)
-      c.setStrokeColor(col); c.setLineWidth(0.9); c.strokeEllipse(new Rect(1, 1, sz - 2, sz - 2)); c.strokeEllipse(new Rect(4.5, 4.5, sz - 9, sz - 9))
-      for (let k = 0; k < 3; k++) { const pts = []; for (let x = sz * 0.8; x <= sz * 1.8; x += 2) pts.push(new Point(x, sz * 0.32 + k * sz * 0.18 + Math.sin(x / 4) * 1.4)); const p = new Path(); p.addLines(pts); c.addPath(p); c.strokePath() }
-      c.setFont(new Font('Menlo-Regular', Math.max(5.5, sz * 0.15))); c.setTextColor(col); c.setTextAlignedCenter(); c.drawTextInRect(MON[d0.getMonth()] + ' ' + d0.getDate(), new Rect(0, sz / 2 - sz * 0.2, sz, sz * 0.2)); c.drawTextInRect(String(d0.getFullYear()), new Rect(0, sz / 2 + 1, sz, sz * 0.2))
-      return c.getImage()
-    }
-    const pm = (parent, sz) => { const im = parent.addImage(postmark(sz)); im.imageSize = new Size(sz * 1.8, sz) }
-    const ddNum = dd ? (ddN(dd) === 0 ? 'D' : String(ddN(dd))) : '—'
-    w.url = link('study.progress')
-    if (sm) {
-      const iw = inner - 6, top = w.addStack(); top.size = new Size(iw, 0); top.topAlignContent(); t(top, 'P O S T', label(6.5), DS); top.addSpacer(); pm(top, 42)
-      w.addSpacer(); const r = w.addStack(); r.bottomAlignContent(); t(r, ddNum, thin(36), DA); r.addSpacer(4); t(r, dd ? 'DAYS' : '', label(7), DS); r.addSpacer()
-      t(w, dd ? dd.title : 'D-day 없음', tw(11.5), DI).minimumScaleFactor = 0.7
-      w.addSpacer(2); t(w, dd ? dd.date.replace(/-/g, '.') : '', MN(7.5), DS)
-    } else {
-      const lw = sx0 - 14 - P, row = w.addStack(); row.size = new Size(inner, sh); row.topAlignContent()
-      const L = row.addStack(); L.layoutVertically(); L.size = new Size(lw, sh)
-      const hh = L.addStack(); hh.size = new Size(lw, 0); hh.topAlignContent(); t(hh, 'P O S T   C A R D', label(7), DS); hh.addSpacer(); pm(hh, fam === 'medium' ? 40 : 46)
-      L.addSpacer()
-      const ln = (lab, val, f) => { const a = L.addStack(); a.size = new Size(lw, 0); a.bottomAlignContent(); t(a, lab, label(7), DS); a.addSpacer(6); t(a, val, f, DI).minimumScaleFactor = 0.6; a.addSpacer() }
-      ln('TO.', dd ? dd.title + '  ' + ddTxt : 'D-day 없음', tw(fam === 'medium' ? 13 : 15)); L.addSpacer(Math.round(sh * 0.34) - 20)
-      ln('FROM.', '오늘 ' + hm(mins) + ' 공부', tw(fam === 'medium' ? 12 : 14)); L.addSpacer(Math.round(sh * 0.1) - 4)
-      row.addSpacer(14)
-      const S0 = row.addStack(); S0.layoutVertically(); S0.size = new Size(sw, sh); S0.addSpacer()
-      const a1 = S0.addStack(); a1.addSpacer(); t(a1, ddNum, thin(fam === 'medium' ? 30 : 38), DA).minimumScaleFactor = 0.5; a1.addSpacer()
-      const a2 = S0.addStack(); a2.addSpacer(); t(a2, 'D-DAY', label(6.5), DS); a2.addSpacer(); S0.addSpacer()
-      if (fam !== 'medium') {
-        // 엽서 아래: 줄 위에 남은 할 일 · 다짐
-        w.addSpacer(18)
-        const L2 = [...items.filter((x) => !x.done).map((x) => '– ' + x.title), ...(quote ? [quote] : [])], nL = Math.max(1, Math.floor((H2 - P - ly0) / LH))
-        for (const s of L2.slice(0, nL)) { const r = w.addStack(); r.size = new Size(inner, LH); r.bottomAlignContent(); t(r, s, tw(12), DI).minimumScaleFactor = 0.8; r.addSpacer() }
-      }
-      FILL = true
-    }
+  } else if (KIND === 'ddcard') {
+    // ── 디데이 카드: 기록 카드와 같은 칸에 남은 날 · 이름 · 날짜 (별표 먼저) ──
+    const HH = Math.round((fam === 'small' ? 28 : 32) * SCALE), RH = Math.round(20 * SCALE), c1 = fam === 'small' ? 48 : 56, c3 = fam === 'small' ? 38 : 46, nR = Math.max(2, Math.floor((innerH - HH) / RH))
+    cardBg('dd', HH, RH, nR, [c1, inner - c3])
+    cardHead(HH, fam === 'small' ? 'D-DAY' : 'D-DAY RECORD', 'No. ' + DOY + '  ·  ' + ddAll.length, null)
+    cardRow(RH, [[c1, 'LEFT', label(6.5)], [0, 'TITLE', label(6.5)], [c3, 'DATE', label(6.5), true]], DS)
+    ddAll.slice(0, nR - 1).forEach((x, i) => cardRow(RH, [[c1, ddT(x), MN(9)], [0, x.title, tw(10.5)], [c3, x.date.slice(5).replace('-', '.'), MN(9), true]], i === 0 ? DI : DS))
+    if (!ddAll.length) cardRow(RH, [[c1, '', MN(9)], [0, 'D-day 를 추가해 보세요', tw(10.5)], [c3, '', MN(9)]], DS)
+    w.url = link('study.progress'); FILL = true
+  } else if (KIND === 'journal') {
+    // ── 일지: 오늘 한 일을 시각 순으로 (공부 · 끝낸 할 일 · 지난 일정) ──
+    const HH = Math.round((fam === 'small' ? 28 : 32) * SCALE), RH = Math.round(20 * SCALE), c1 = fam === 'small' ? 36 : 42, c3 = fam === 'small' ? 34 : 42, nR = Math.max(2, Math.floor((innerH - HH) / RH))
+    cardBg('jn', HH, RH, nR, [c1, inner - c3])
+    cardHead(HH, 'JOURNAL', d0.getFullYear() + '.' + pad(d0.getMonth() + 1) + '.' + pad(d0.getDate()) + '  ' + DAY[d0.getDay()], null)
+    const mm2 = (ts) => { const x = new Date(ts); return x.getHours() * 60 + x.getMinutes() }
+    const E = [...sessions.map((x) => { const sj = subjects.find((y) => y.id === x.subjectId); return { m: x.start ? mm2(x.start) : -1, s: sj ? sj.name : '공부', d: hm(x.dur || 0) } }), ...doneT.map((x) => ({ m: mm2(x.doneAt), s: x.title, d: '완료' })), ...NOW.filter((x) => x.s <= nm).map((x) => ({ m: x.s, s: x.t, d: '' }))].sort((a, b) => a.m - b.m)
+    cardRow(RH, [[c1, 'TIME', label(6.5)], [0, 'ENTRY', label(6.5)], [c3, '', label(6.5), true]], DS)
+    for (const x of E.slice(-(nR - 1))) cardRow(RH, [[c1, x.m < 0 ? '—' : clk(x.m), MN(8.5)], [0, x.s, tw(10.5)], [c3, x.d, x.d === '완료' ? label(8) : MN(9), true]], DI)
+    // 남는 줄은 지난 기록으로 채움 (흐리게, 날짜 칸)
+    const past = allSess.filter((x) => x.date < today).sort((p, q) => String(q.date).localeCompare(String(p.date)) || (q.start || 0) - (p.start || 0))
+    for (const x of past.slice(0, Math.max(0, nR - 1 - Math.min(E.length, nR - 1)))) { const sj = subjects.find((y) => y.id === x.subjectId); cardRow(RH, [[c1, x.date.slice(5).replace('-', '.'), MN(8.5)], [0, sj ? sj.name : '공부', tw(10.5)], [c3, hm(x.dur || 0), MN(9), true]], DS) }
+    if (!E.length && !past.length) cardRow(RH, [[c1, '', MN(8.5)], [0, '오늘 첫 기록을 남겨 보세요', tw(10.5)], [c3, '', MN(9)]], DS)
+    w.url = link('study.records'); FILL = true
+  } else if (KIND === 'catalog') {
+    // ── 도서 목록 카드: 왼쪽 청구기호 칸 · 오른쪽 기록 (위젯 끝까지 종이 · 먹색만) ──
+    const HH = Math.round((fam === 'small' ? 28 : 32) * SCALE), RH = Math.round(19 * SCALE), c1 = fam === 'small' ? 34 : 44, nR = Math.max(2, Math.floor((innerH - HH) / RH))
+    cardBg('ct', HH, RH, nR, [c1])
+    cardHead(HH, fam === 'small' ? 'CATALOG' : 'CATALOG CARD', 'STU ' + DOY, null)
+    const L = [['STU', dd ? dd.title : '공부의 기록', F(11, 'Regular'), DI, ''], [String(DOY), MON[d0.getMonth()] + ' ' + d0.getDate() + ', ' + d0.getFullYear() + (dd ? '  ·  ' + ddTxt : ''), SER(fam === 'small' ? 8.5 : 9.5), DS, '']]
+    subMins.forEach((x, i) => L.push(['', (i + 1) + '. ' + x.s.name, tw(10.5), DI, hm(x.m)]))
+    if (!subMins.length) L.push(['', '오늘 기록 없음', tw(10.5), DS, ''])
+    L.push(['', 'Total', SER(10), DI, hm(mins) + ' / ' + hm(goal)])
+    for (const x of items.filter((y) => !y.done)) L.push(['', 'Note. ' + x.title, tw(10), DS, ''])
+    for (const [cn, tx, f, col, rt] of L.slice(0, nR)) { const r = w.addStack(); r.size = new Size(inner, RH); const a = r.addStack(); a.size = new Size(c1, RH); a.setPadding(0, 5, 0, 5); a.centerAlignContent(); t(a, cn, MN(8), DS); a.addSpacer(); const b = r.addStack(); b.size = new Size(inner - c1, RH); b.setPadding(0, 8, 0, 5); b.centerAlignContent(); t(b, tx, f, col).minimumScaleFactor = 0.75; b.addSpacer(); if (rt) t(b, rt, MN(9), col) }
+    w.url = link('study.records'); FILL = true
+  } else if (KIND === 'tcard') {
+    // ── 타임카드: 이번 주 날마다 처음 시작 · 마지막 끝 · 합계 (오늘 줄은 굵게) ──
+    const mm2 = (ts) => { const x = new Date(ts); return x.getHours() * 60 + x.getMinutes() }
+    const DAYR = bwDays.map((k) => { const ss = allSess.filter((x) => x.date === k), st2 = ss.filter((x) => x.start).map((x) => [mm2(x.start), mm2(x.start) + (x.dur || 0)]); let tot = ss.reduce((a, x) => a + (x.dur || 0), 0); if (k === today && SEG) { st2.push([mm2(SEG), nm]); tot = mins } return { k, tot, inn: st2.length ? Math.min(...st2.map((x) => x[0])) : null, out: st2.length ? Math.max(...st2.map((x) => x[1])) : null } })
+    const wkT = DAYR.reduce((a, x) => a + x.tot, 0), sm = fam === 'small', tv = (m0) => (m0 == null ? '—' : clk(Math.min(1439, m0)))
+    const HH = Math.round((sm ? 28 : 32) * SCALE), nR = sm ? 4 : 9, RH = Math.floor((innerH - HH) / nR), c1 = sm ? 30 : 36, cw = Math.floor((inner - c1) / 3)
+    cardBg('tc', HH, RH, nR, [c1, c1 + cw, c1 + 2 * cw])
+    cardHead(HH, 'TIME CARD', 'WEEK OF ' + bwDays[0].slice(5).replace('-', '.') + '  ·  ' + hm(wkT), null)
+    const row = (a, b, c, d2, f, col) => cardRow(RH, [[c1, a, label(7.5)], [cw, b, f], [cw, c, f], [0, d2, f, true]], col)
+    row('DAY', 'IN', 'OUT', 'HOURS', label(6.5), DS)
+    const fs = Math.min(10, RH * 0.55), shown = sm ? DAYR.filter((x) => x.k <= today).slice(-3) : DAYR
+    for (const x of shown) { const fut = x.k > today; row(WDN[new Date(x.k + 'T12:00:00').getDay()], fut ? '' : tv(x.inn), fut ? '' : tv(x.out), fut ? '' : x.tot ? hm(x.tot) : '—', x.k === today ? new Font('Menlo-Bold', fs * SCALE) : MN(fs), fut ? DS : DI) }
+    if (!sm) row('', '', 'TOTAL', hm(wkT), MN(fs), DI)
+    w.url = link('study.records'); FILL = true
   } else if (KIND === 'mag') {
     // ── 매거진: 제호 · 큰 날짜 숫자 · 이번 호 머리기사(다짐) · 차례 ──
     const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large
-    dbg('mag', (c, K) => { c.setFillColor(new Color(PW)); c.fillRect(new Rect(0, 0, W2 * K, H2 * K)) })
+    dbg('mag2', (c, K) => { c.setFillColor(new Color(VP)); c.fillRect(new Rect(0, 0, W2 * K, H2 * K)); grain(c, K, 0, 0, W2, H2) })
     const sm = fam === 'small', big2 = fam === 'large' || fam === 'extraLarge', left = items.filter((x) => !x.done)
     const dbl = () => { const a = w.addStack(); a.size = new Size(inner, 0.9); a.backgroundColor = DI; w.addSpacer(1.5); const b = w.addStack(); b.size = new Size(inner, 0.4); b.backgroundColor = DI }
     const hd = w.addStack(); hd.size = new Size(inner, 0); hd.bottomAlignContent(); t(hd, sm ? 'S T U D Y' : 'T H E   S T U D Y', F(sm ? 11 : 13, 'Light'), DI); hd.addSpacer(); t(hd, 'VOL.' + DOY, MN(7.5), DS)
@@ -1333,39 +1232,40 @@ export default () => `  } else if (KIND === 'study') {
       const row = w.addStack(); row.size = new Size(inner, 0); row.topAlignContent()
       numCol(row, big2 ? 86 : 64); row.addSpacer(14); vrule(row, big2 ? 108 : Math.round(innerH * 0.6)); row.addSpacer(14)
       const R = row.addStack(); R.layoutVertically(); t(R, 'COVER STORY', label(6.5), DS); R.addSpacer(4); t(R, headline, F(big2 ? 16 : 13, 'Light'), DI, big2 ? 4 : 3).minimumScaleFactor = 0.8; R.addSpacer()
-      if (!big2) { w.addSpacer(); rule(w, inner); w.addSpacer(5); const f = w.addStack(); f.size = new Size(inner, 0); t(f, '공부 ' + hm(mins), label(8), DI); f.addSpacer(); t(f, dd ? ddTxt : '', label(8), DA); f.addSpacer(); t(f, '할 일 ' + left.length, label(8), DS) }
+      if (!big2) { w.addSpacer(); rule(w, inner); w.addSpacer(5); const f = w.addStack(); f.size = new Size(inner, 0); t(f, '공부 ' + hm(mins), label(8), DI); f.addSpacer(); t(f, dd ? ddTxt : '', label(8), DI); f.addSpacer(); t(f, '할 일 ' + left.length, label(8), DS) }
       else {
         w.addSpacer(14); t(w, 'C O N T E N T S', label(7), DS); w.addSpacer(6)
-        const nx = PAIRNX, TOC = [['STUDY', hm(mins) + ' / ' + hm(goal)], ['D-DAY', dd ? ddTxt + '  ' + dd.title : '—'], ['NEXT', nx ? nx.w + '  ' + nx.t : '—'], ['TO DO', left.length ? left[0].title + (left.length > 1 ? '  외 ' + (left.length - 1) : '') : '모두 끝'], ['NOTE', NOTES()[0] ? NOTES()[0].t : '—']]
-        TOC.forEach(([k, v], i) => { if (i) { const r0 = w.addStack(); r0.size = new Size(inner, 0.5); r0.backgroundColor = new Color(PL, 0.15) } const r = w.addStack(); r.size = new Size(inner, Math.round(22 * SCALE)); r.centerAlignContent(); const n0 = r.addStack(); n0.size = new Size(24, 0); t(n0, pad(i + 1), MN(8.5), DS); n0.addSpacer(); const k0 = r.addStack(); k0.size = new Size(54, 0); t(k0, k, label(7), DS); k0.addSpacer(); t(r, v, tw(11.5), k === 'D-DAY' ? DA : DI).minimumScaleFactor = 0.75; r.addSpacer() })
+        const nx = PAIRNX, TOC = [['STUDY', hm(mins) + ' / ' + hm(goal)], ['D-DAY', dd ? ddTxt + '  ' + dd.title : '—'], ['NEXT', nx ? nx.w + '  ' + nx.t : '—'], ['TO DO', left.length ? left[0].title + (left.length > 1 ? '  외 ' + (left.length - 1) : '') : '모두 끝'], ['NOTE', NOTES()[0] ? NOTES()[0].t : '—'], ['WEEK', hm(weekTot) + ' · 하루 ' + hm(weekAvg)]]
+        const rh = Math.round(22 * SCALE), nT = Math.max(3, Math.min(TOC.length, Math.floor((innerH - 200 * SCALE) / (rh + 0.5))))
+        TOC.slice(0, nT).forEach(([k, v], i) => { if (i) { const r0 = w.addStack(); r0.size = new Size(inner, 0.5); r0.backgroundColor = new Color(VL, 0.15) } const r = w.addStack(); r.size = new Size(inner, rh); r.centerAlignContent(); const n0 = r.addStack(); n0.size = new Size(24, 0); t(n0, pad(i + 1), MN(8.5), DS); n0.addSpacer(); const k0 = r.addStack(); k0.size = new Size(54, 0); t(k0, k, label(7), DS); k0.addSpacer(); t(r, v, tw(11.5), DI).minimumScaleFactor = 0.75; r.addSpacer() })
+        w.addSpacer()
       }
     }
-    w.url = link('')
+    w.url = link(''); FILL = big2
   } else if (KIND === 'news') {
-    // ── 신문 1면: 제호 · 날짜 줄 · 머리기사(D-day) · 단 나눈 기사(공부 · 할 일 · 일정) ──
+    // ── 신문 1면: 제호 · 날짜 줄 · 머리기사(D-day) · 단 나눈 기사 (먹색만) ──
     const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large, sm = fam === 'small', big2 = fam === 'large' || fam === 'extraLarge'
-    dbg('news', (c, K) => { c.setFillColor(new Color(VP)); c.fillRect(new Rect(0, 0, W2 * K, H2 * K)); grain(c, K, 0, 0, W2, H2) })
+    dbg('news2', (c, K) => { c.setFillColor(new Color(VP)); c.fillRect(new Rect(0, 0, W2 * K, H2 * K)); grain(c, K, 0, 0, W2, H2) })
     const DF = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'], MF = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER']
     const hr = (h) => { const a = w.addStack(); a.size = new Size(inner, h); a.backgroundColor = VI }
     const ms = w.addStack(); ms.size = new Size(inner, 0); ms.addSpacer(); t(ms, 'The Daily Study', DID(sm ? 16 : big2 ? 30 : 21), VI).minimumScaleFactor = 0.7; ms.addSpacer()
     w.addSpacer(3); hr(1.1); w.addSpacer(1.5); hr(0.4); w.addSpacer(2)
-    const dl = w.addStack(); dl.size = new Size(inner, 0); dl.centerAlignContent(); t(dl, 'VOL. ' + DOY, TYPL(sm ? 6.5 : 7.5), VS); dl.addSpacer()
-    if (!sm) { t(dl, DF[d0.getDay()] + ', ' + MF[d0.getMonth()] + ' ' + d0.getDate() + ', ' + d0.getFullYear(), TYPL(7.5), VI).minimumScaleFactor = 0.7; dl.addSpacer() }
-    t(dl, sm ? MON[d0.getMonth()] + ' ' + d0.getDate() : 'STUDY ' + hm(mins), TYPL(sm ? 6.5 : 7.5), VS)
+    const dl = w.addStack(); dl.size = new Size(inner, 0); dl.centerAlignContent(); t(dl, 'VOL. ' + DOY, MN(sm ? 6.5 : 7), VS); dl.addSpacer()
+    if (!sm) { t(dl, DF[d0.getDay()] + ', ' + MF[d0.getMonth()] + ' ' + d0.getDate() + ', ' + d0.getFullYear(), label(7), VI).minimumScaleFactor = 0.7; dl.addSpacer() }
+    t(dl, sm ? MON[d0.getMonth()] + ' ' + d0.getDate() : hm(mins), MN(sm ? 6.5 : 7), VS)
     w.addSpacer(2); hr(0.4); w.addSpacer(sm ? 7 : 9)
     const hl = dd ? dd.title + ', ' + (ddN(dd) === 0 ? '바로 오늘' : ddN(dd) + '일 앞으로') : quote || '오늘의 공부 기록'
-    t(w, hl, F(sm ? 13 : big2 ? 22 : 16, 'Medium'), VI, 2).minimumScaleFactor = 0.7
-    if (sm) { w.addSpacer(); t(w, '오늘 ' + hm(mins) + ' 공부 · 목표의 ' + pct + '%', TYPL(8), VS).minimumScaleFactor = 0.7 }
+    t(w, hl, F(sm ? 13 : big2 ? 21 : 15, 'Regular'), VI, 2).minimumScaleFactor = 0.7
+    if (sm) { w.addSpacer(); t(w, '오늘 ' + hm(mins) + ' 공부 · 목표의 ' + pct + '%', label(8), VS).minimumScaleFactor = 0.7 }
     else {
-      w.addSpacer(3); t(w, 'Today ' + hm(mins) + ' of ' + hm(goal) + ' — ' + pct + '%', SERI(big2 ? 12 : 10), VS)
       w.addSpacer(7); hr(0.4); w.addSpacer(7)
-      const nC = fam === 'extraLarge' ? 3 : 2, cw = Math.floor((inner - (nC - 1) * 21) / nC), ch = Math.max(30, Math.round(innerH - (big2 ? 150 : 100) * SCALE))
+      const nC = fam === 'extraLarge' ? 3 : 2, cw = Math.floor((inner - (nC - 1) * 21) / nC), ch = Math.max(30, Math.round(innerH - (big2 ? 128 : 84) * SCALE))
       const row = w.addStack(); row.size = new Size(inner, ch); row.topAlignContent()
-      const colT = (k) => { const C = row.addStack(); C.layoutVertically(); C.size = new Size(cw, ch); t(C, k.split('').join(' '), label(6.5), VS); C.addSpacer(3); return C }
+      const colT = (k) => { const C = row.addStack(); C.layoutVertically(); C.size = new Size(cw, ch); t(C, k.split('').join(' '), label(6.5), VS); C.addSpacer(4); return C }
       const sep = () => { row.addSpacer(10); const v = row.addStack(); v.size = new Size(0.5, ch); v.backgroundColor = VS; row.addSpacer(10) }
       const A = colT('STUDY')
-      const para = '오늘 ' + hm(mins) + ' 공부했다. ' + (subMins.length ? subMins.map((x) => x.s.name + ' ' + hm(x.m)).join(', ') + '. ' : '') + (mins >= goal ? '목표를 채웠다.' : '목표까지 ' + hm(goal - mins) + ' 남았다.')
-      t(A, para, tw(big2 ? 11 : 10), VI, 12).minimumScaleFactor = 0.8; A.addSpacer()
+      const para = '오늘 ' + hm(mins) + ' 공부했다. ' + (subMins.length ? subMins.map((x) => x.s.name + ' ' + hm(x.m)).join(', ') + '. ' : '') + (mins >= goal ? '목표를 채웠다.' : '목표까지 ' + hm(goal - mins) + ' 남았다.') + (quote ? ' “' + quote + '”' : '')
+      t(A, para, tw(big2 ? 11 : 10), VI, 14).minimumScaleFactor = 0.8; A.addSpacer()
       sep()
       const B = colT('TO DO'), left = items.filter((x) => !x.done)
       for (const x of left.slice(0, Math.max(1, Math.floor((ch - 14) / (15 * SCALE))))) { const r = B.addStack(); if (x.id) r.url = taskUrl(x.id); t(r, '· ' + x.title, tw(big2 ? 11 : 10), VI).minimumScaleFactor = 0.8; r.addSpacer(); B.addSpacer(2) }
@@ -1375,115 +1275,6 @@ export default () => `  } else if (KIND === 'study') {
       FILL = true
     }
     w.url = link('')
-  } else if (KIND === 'catalog') {
-    // ── 도서 목록 카드: 타자기 글씨 · 왼쪽 청구기호 · 바랜 적갈색 세로줄 · 아래 구멍 ──
-    const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large, m = Math.round(P * 0.45), sm = fam === 'small'
-    const LH = Math.round((sm ? 15 : 16.5) * SCALE), cw0 = sm ? 30 : 44, rx = P + cw0, nR = Math.max(3, Math.floor((innerH - 10) / LH))
-    dbg('catalog-' + LH + '-' + cw0, (c, K) => {
-      const card = new Path(); card.addRoundedRect(new Rect(m * K, m * K, (W2 - 2 * m) * K, (H2 - 2 * m) * K), 5 * K, 5 * K); c.addPath(card); c.setFillColor(new Color(VP)); c.fillPath(); grain(c, K, m, m, W2 - 2 * m, H2 - 2 * m)
-      for (let k = 1; k <= nR; k++) { c.setFillColor(new Color(VL, k === 1 ? 0.28 : 0.09)); c.fillRect(new Rect((m + 6) * K, (P + k * LH) * K, (W2 - 2 * m - 12) * K, 0.6 * K)) }
-      c.setFillColor(VR); c.fillRect(new Rect(rx * K, m * K, 0.8 * K, (H2 - 2 * m) * K))
-      c.setFillColor(new Color(PG)); c.fillEllipse(new Rect((W2 / 2 - 5.5) * K, (H2 - m - 15) * K, 11 * K, 11 * K))
-    })
-    const tw0 = inner - cw0 - 8
-    const rowL = (cn, txt, f, col, right) => { const r = w.addStack(); r.size = new Size(inner, LH); r.bottomAlignContent(); const a = r.addStack(); a.size = new Size(cw0, LH); a.bottomAlignContent(); t(a, cn, TYPL(sm ? 7.5 : 8.5), VS); a.addSpacer(); r.addSpacer(8); const b = r.addStack(); b.size = new Size(tw0, LH); b.bottomAlignContent(); t(b, txt, f, col || VI).minimumScaleFactor = 0.75; b.addSpacer(); if (right) t(b, right, TYPL(sm ? 8.5 : 9.5), col || VI); return r }
-    const L = [['STU', dd ? dd.title : '공부의 기록', TYP(sm ? 10 : 11.5)], [String(DOY), MON[d0.getMonth()].slice(0, 1) + MON[d0.getMonth()].slice(1).toLowerCase() + '. ' + d0.getDate() + ', ' + d0.getFullYear() + (dd ? '  —  ' + ddTxt : ''), TYPL(sm ? 8.5 : 9.5), VS]]
-    subMins.slice(0, 6).forEach((x, i) => L.push(['', (i + 1) + '. ' + x.s.name, TYPL(sm ? 9 : 10), VI, hm(x.m)]))
-    if (!subMins.length) L.push(['', '오늘 기록 없음', TYPL(sm ? 9 : 10), VS])
-    L.push(['', 'Total', TYP(sm ? 9 : 10), VN, hm(mins) + ' / ' + hm(goal)])
-    if (!sm) for (const x of items.filter((y) => !y.done)) L.push(['', 'Note: ' + x.title, TYPL(9.5), VS])
-    // 맨 아래 줄은 구멍 자리라 비움
-    for (const [cn, tx, f, col, rt] of L.slice(0, nR - 1)) rowL(cn, tx, f, col, rt)
-    w.url = link('study.records'); FILL = true
-  } else if (KIND === 'book') {
-    // ── 문고본 표지: 위아래 먹색 띠 · 가운데 흰 종이에 제목(D-day) · 작은 타원 로고만 포인트 색 (중형은 뒤표지 소개글 함께) ──
-    const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large, med = fam === 'medium', sm = fam === 'small'
-    const cvW = med ? Math.round(H2 * 0.74) : W2, bh = Math.round(H2 * 0.29), BAND = DK ? '#4a4a4c' : '#5f5e5c'
-    dbg('book' + cvW, (c, K) => {
-      c.setFillColor(new Color(VP)); c.fillRect(new Rect(0, 0, W2 * K, H2 * K))
-      c.setFillColor(new Color(BAND)); c.fillRect(new Rect(0, 0, cvW * K, bh * K)); c.fillRect(new Rect(0, (H2 - bh) * K, cvW * K, bh * K))
-      c.setFillColor(new Color(VP, 0.45)); c.fillRect(new Rect(0, (bh - 5) * K, cvW * K, 0.6 * K)); c.fillRect(new Rect(0, (H2 - bh + 4.4) * K, cvW * K, 0.6 * K))
-      c.setFillColor(VR); c.fillEllipse(new Rect((cvW / 2 - 13) * K, (H2 - bh + bh * 0.3) * K, 26 * K, 16 * K))
-      c.setStrokeColor(new Color(VP, 0.8)); c.setLineWidth(0.7 * K); const ov = new Path(); ov.addEllipse(new Rect((cvW / 2 - 10.5) * K, (H2 - bh + bh * 0.3 + 2.5) * K, 21 * K, 11 * K)); c.addPath(ov); c.strokePath()
-      if (med) c.fillRect(new Rect(cvW * K, 0, 0.6 * K, H2 * K))
-      grain(c, K, 0, 0, W2, H2)
-    })
-    w.setPadding(0, 0, 0, 0)
-    const PW0 = new Color(VP), ctr = (parent, wd, s, f, col) => { const r = parent.addStack(); r.size = new Size(wd, 0); r.addSpacer(); t(r, s, f, col).minimumScaleFactor = 0.6; r.addSpacer() }
-    const row = w.addStack(); row.size = new Size(W2, H2)
-    const C = row.addStack(); C.layoutVertically(); C.size = new Size(cvW, H2)
-    const tp = C.addStack(); tp.size = new Size(cvW, bh - 5); tp.centerAlignContent(); tp.layoutVertically(); tp.addSpacer(); ctr(tp, cvW, sm || med ? 'S T U D Y' : 'S T U D Y   C L A S S I C S', label(sm || med ? 6.5 : 8), PW0); tp.addSpacer()
-    const mid = C.addStack(); mid.layoutVertically(); mid.size = new Size(cvW, H2 - 2 * bh + 9); mid.setPadding(0, 10, 0, 10); mid.addSpacer()
-    ctr(mid, cvW - 20, dd ? dd.title : '공부의 기록', F(sm || med ? 15 : 24, 'Regular'), VI); mid.addSpacer(sm || med ? 3 : 6)
-    ctr(mid, cvW - 20, dd ? ddTxt + '  ·  ' + dd.date.slice(5).replace('-', '.') : MON[d0.getMonth()] + ' ' + d0.getDate(), TYPL(sm || med ? 8 : 10), dd ? VN : VS); mid.addSpacer()
-    const bt = C.addStack(); bt.layoutVertically(); bt.size = new Size(cvW, bh - 4); bt.addSpacer(); ctr(bt, cvW, 'VOL. ' + DOY, TYPL(sm || med ? 6.5 : 7.5), PW0); bt.addSpacer(Math.round(bh * 0.1))
-    if (med) {
-      row.addSpacer(16)
-      const R = row.addStack(); R.layoutVertically(); R.size = new Size(W2 - cvW - 16 - P, H2); R.setPadding(P, 0, P, 0)
-      t(R, 'A B O U T   T H I S   B O O K', label(6.5), VS); R.addSpacer(5)
-      t(R, '오늘 ' + hm(mins) + ' 공부. ' + (subMins.length ? subMins.map((x) => x.s.name + ' ' + hm(x.m)).join(', ') + '.' : '아직 첫 장.'), tw(10.5), VI, 4).minimumScaleFactor = 0.8
-      R.addSpacer(); if (quote) { t(R, quote, F(9.5, 'Light'), VS, 2).minimumScaleFactor = 0.8; R.addSpacer(4) }
-      t(R, 'STUDY ' + hm(mins) + ' / ' + hm(goal), TYPL(7.5), VS)
-    }
-    w.url = link('study.progress'); FILL = true
-  } else if (KIND === 'tcard') {
-    // ── 타임카드: 이번 주 날마다 처음 시작 · 마지막 끝 · 합계 (오늘 줄은 바랜 적갈색 도장 잉크) ──
-    const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large, m = Math.round(P * 0.45), sm = fam === 'small'
-    const mm2 = (ts) => { const x = new Date(ts); return x.getHours() * 60 + x.getMinutes() }
-    const DAYR = bwDays.map((k) => { const ss = allSess.filter((x) => x.date === k), st2 = ss.filter((x) => x.start).map((x) => [mm2(x.start), mm2(x.start) + (x.dur || 0)]); let tot = ss.reduce((a, x) => a + (x.dur || 0), 0); if (k === today && SEG) { st2.push([mm2(SEG), nm]); tot = mins } return { k, tot, inn: st2.length ? Math.min(...st2.map((x) => x[0])) : null, out: st2.length ? Math.max(...st2.map((x) => x[1])) : null } })
-    const wkT = DAYR.reduce((a, x) => a + x.tot, 0), tr = DAYR.find((x) => x.k === today) || DAYR[0]
-    const HH = Math.round((sm ? 30 : 34) * SCALE), FH = sm ? 0 : Math.round(18 * SCALE), RH = sm ? 0 : Math.floor((innerH - HH - FH) / 8), c1 = 36
-    dbg('tcard-' + HH + '-' + RH, (c, K) => {
-      const card = new Path(); card.addRoundedRect(new Rect(m * K, m * K, (W2 - 2 * m) * K, (H2 - 2 * m) * K), 4 * K, 4 * K); c.addPath(card); c.setFillColor(new Color(VP)); c.fillPath(); grain(c, K, m, m, W2 - 2 * m, H2 - 2 * m)
-      c.setFillColor(new Color(VL, 0.7)); c.fillRect(new Rect(P * K, (P + HH - 3) * K, (W2 - 2 * P) * K, 0.9 * K))
-      if (!sm) {
-        const y0 = P + HH, cw = (W2 - 2 * P - c1) / 3
-        c.setFillColor(new Color(VL, 0.14)); for (let k = 1; k <= 8; k++) c.fillRect(new Rect(P * K, (y0 + k * RH) * K, (W2 - 2 * P) * K, 0.6 * K))
-        for (const x of [P + c1, P + c1 + cw, P + c1 + 2 * cw]) c.fillRect(new Rect(x * K, y0 * K, 0.6 * K, 8 * RH * K))
-      }
-    })
-    const hd = w.addStack(); hd.size = new Size(inner, HH - 5); hd.topAlignContent()
-    const hl = hd.addStack(); hl.layoutVertically(); t(hl, 'Time Card', DID(sm ? 14 : 16), VI); t(hl, 'WEEK OF ' + bwDays[0].slice(5).replace('-', '.'), TYPL(7), VS)
-    hd.addSpacer(); t(hd, 'No. ' + DOY, TYPL(7.5), VS)
-    w.addSpacer(5)
-    const tv = (m0) => (m0 == null ? '—' : clk(Math.min(1439, m0)))
-    if (sm) {
-      w.addSpacer(4)
-      const r = w.addStack(); r.size = new Size(inner, 0)
-      for (const [l, v] of [['IN', tv(tr.inn)], ['OUT', tv(tr.out)], ['HRS', hm(tr.tot)]]) { const f = r.addStack(); f.layoutVertically(); t(f, l, label(6.5), VS); t(f, v, TYP(11), VR); r.addSpacer() }
-      w.addSpacer(); const b = w.addStack(); b.size = new Size(inner, 0); t(b, 'WEEK', label(6.5), VS); b.addSpacer(); t(b, hm(wkT), TYP(11), VI)
-    } else {
-      const cw = (inner - c1) / 3
-      const cell = (r, wd, s, f, col, right) => { const a = r.addStack(); a.size = new Size(wd, RH); a.setPadding(0, 6, 0, 6); a.centerAlignContent(); if (right) a.addSpacer(); t(a, s, f, col).minimumScaleFactor = 0.7; if (!right) a.addSpacer() }
-      const rowT = (a, b2, cc, d2, f, col, fa) => { const r = w.addStack(); r.size = new Size(inner, RH); cell(r, c1, a, fa || f, col); cell(r, cw, b2, f, col); cell(r, cw, cc, f, col); cell(r, cw, d2, f, col, true) }
-      rowT('DAY', 'IN', 'OUT', 'HOURS', label(6.5), VS)
-      const fs = Math.min(10.5, RH * 0.62)
-      for (const x of DAYR) { const isT = x.k === today, fut = x.k > today; rowT(WDN[new Date(x.k + 'T12:00:00').getDay()], fut ? '' : tv(x.inn), fut ? '' : tv(x.out), fut ? '' : x.tot ? hm(x.tot) : '—', TYP(fs), isT ? VR : fut ? VS : VI, label(8)) }
-      w.addSpacer(3)
-      const ft = w.addStack(); ft.size = new Size(inner, FH - 3); ft.centerAlignContent(); t(ft, 'TOTAL', label(7), VS); ft.addSpacer(); t(ft, hm(wkT), TYP(11), VI)
-      FILL = true
-    }
-    w.url = link('study.records')
-  } else if (KIND === 'telegram') {
-    // ── 전보: 양식 종이에 타자 띠를 붙인 듯 · 문장마다 STOP ──
-    const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large, m = Math.round(P * 0.45), sm = fam === 'small'
-    const headH = Math.round((sm ? 30 : 36) * SCALE), SH = Math.round((sm ? 19 : 21) * SCALE), nS = Math.max(2, Math.min(sm ? 4 : 8, Math.floor((innerH - headH) / SH)))
-    const SP = DK ? '#2f3135' : '#fdfdfc'
-    dbg('telegram-' + headH + '-' + SH + '-' + nS, (c, K) => {
-      const card = new Path(); card.addRoundedRect(new Rect(m * K, m * K, (W2 - 2 * m) * K, (H2 - 2 * m) * K), 3 * K, 3 * K); c.addPath(card); c.setFillColor(new Color(VP)); c.fillPath(); grain(c, K, m, m, W2 - 2 * m, H2 - 2 * m)
-      c.setFillColor(new Color(VL, 0.55)); c.fillRect(new Rect(P * K, (P + headH - 6) * K, (W2 - 2 * P) * K, 0.6 * K)); c.fillRect(new Rect(P * K, (P + headH - 4) * K, (W2 - 2 * P) * K, 0.3 * K))
-      for (let i = 0; i < nS; i++) { const y = P + headH + i * SH + 2, wd = (W2 - 2 * P) * (0.72 + ((i * 37) % 23) / 100); c.setFillColor(new Color(SP)); c.fillRect(new Rect((P - 3) * K, y * K, Math.min(W2 - 2 * P + 6, wd) * K, (SH - 5) * K)); c.setFillColor(new Color(VL, 0.07)); c.fillRect(new Rect((P - 3) * K, (y + SH - 5) * K, Math.min(W2 - 2 * P + 6, wd) * K, 0.6 * K)) }
-    })
-    const tm = pad(new Date().getHours()) + ':' + pad(new Date().getMinutes())
-    const hd = w.addStack(); hd.size = new Size(inner, headH - 8); hd.topAlignContent()
-    const hl = hd.addStack(); hl.layoutVertically(); t(hl, 'T E L E G R A M', DID(sm ? 11 : 14), VI); hl.addSpacer(2); t(hl, 'TO. 나    FROM. 오늘', TYPL(6.5), VS)
-    hd.addSpacer(); t(hd, MON[d0.getMonth()] + ' ' + d0.getDate() + '  ' + tm, TYP(sm ? 7 : 8), VR)
-    w.addSpacer(8)
-    const left = items.filter((x) => !x.done), nx = PAIRNX
-    const L = ['오늘 ' + hm(mins) + ' 공부', mins >= goal ? '목표 달성' : '목표까지 ' + hm(goal - mins), dd ? dd.title + ' ' + ddTxt : null, left.length ? '할 일 ' + left.length + '개 남음' : '할 일 끝', nx ? '다음 ' + nx.w + ' ' + nx.t : null, quote].filter(Boolean)
-    const order = sm || fam === 'medium' ? [L[0], ...(dd ? [L[2]] : []), L.find((s) => s.startsWith('할 일')), L[1]].filter(Boolean) : L
-    for (const s2 of order.slice(0, nS)) { const r = w.addStack(); r.size = new Size(inner, SH); r.centerAlignContent(); t(r, s2, TYP(sm ? 9.5 : 10.5), VI).minimumScaleFactor = 0.7; r.addSpacer(6); t(r, 'STOP', TYPL(sm ? 7 : 8), VS); r.addSpacer() }
-    w.url = link(''); FILL = true
   } else if (KIND === 'quote') {
     // ── 다짐 ──
     t(w, dateStr, label(9), SOFT)
