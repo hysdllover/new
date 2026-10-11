@@ -1013,16 +1013,16 @@ export default () => `  } else if (KIND === 'study') {
     // ── 종이 메모: 줄 노트 위에 노트 줄을 줄 간격에 맞춰 (왼쪽 여백선은 연한 로즈) · 긴 줄은 다음 줄로 이어서 ──
     const n = pickNote(), L0 = n ? n.l : []; w.url = noteUrl(n)
     const dk = dark(), fs = fam === 'small' ? 11 : 12.5, LH = Math.round(fs * 1.75 * SCALE)
-    const MI = new Color(dk ? '#e6e9ee' : '#2a2f38'), MS = new Color(dk ? '#e6e9ee' : '#2a2f38', 0.5)
+    const MI = THEMED ? DI : new Color(dk ? '#e6e9ee' : '#2a2f38'), MS = THEMED ? DS : new Color(dk ? '#e6e9ee' : '#2a2f38', 0.5)
     const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large, nR = Math.max(2, Math.floor(innerH / LH))
-    const mp = FM.joinPath(FM.documentsDirectory(), 'study-memo-1-' + (dk ? 'd' : 'l') + '-' + W2 + 'x' + H2 + '-' + LH + '-' + P + '.jpg')
+    const mp = FM.joinPath(FM.documentsDirectory(), 'study-memo-2-' + (THEMED ? WT + (HASBG ? 'bg' : '') : 'p') + '-' + (dk ? 'd' : 'l') + '-' + W2 + 'x' + H2 + '-' + LH + '-' + P + '.jpg')
     let mimg = null
     try { if (FM.fileExists(mp)) mimg = FM.readImage(mp) } catch (e) {}
     if (!mimg) {
       // 2배 해상도로 한 번만 그려 두고 다시 씀
       const K = 2, c = new DrawContext(); c.size = new Size(W2 * K, H2 * K); c.opaque = true; c.respectScreenScale = false
-      c.setFillColor(new Color(dk ? '#1c1f24' : '#fbfbf9')); c.fillRect(new Rect(0, 0, W2 * K, H2 * K))
-      c.setFillColor(new Color(dk ? '#9fadc4' : '#8fa0bb', dk ? 0.16 : 0.32))
+      if (THEMED) themeBase(c, K, W2, H2); else { c.setFillColor(new Color(dk ? '#1c1f24' : '#fbfbf9')); c.fillRect(new Rect(0, 0, W2 * K, H2 * K)) }
+      c.setFillColor(new Color(THEMED ? PL : dk ? '#9fadc4' : '#8fa0bb', THEMED ? 0.2 : dk ? 0.16 : 0.32))
       for (let i = 1; i <= nR; i++) c.fillRect(new Rect(0, (P + LH * i) * K - 1, W2 * K, 1.2))
       c.setFillColor(new Color('#d6a3b0', dk ? 0.35 : 0.55)); c.fillRect(new Rect((P - 7) * K, 0, 1.2, H2 * K))
       mimg = c.getImage(); try { FM.writeImage(mp, mimg) } catch (e) {}
@@ -1218,7 +1218,7 @@ export default () => `  } else if (KIND === 'study') {
   } else if (KIND === 'mag') {
     // ── 매거진: 제호 · 큰 날짜 숫자 · 이번 호 머리기사(다짐) · 차례 ──
     const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large
-    dbg('mag2', (c, K) => { c.setFillColor(new Color(VP)); c.fillRect(new Rect(0, 0, W2 * K, H2 * K)); grain(c, K, 0, 0, W2, H2) })
+    dbg('mag2', (c, K) => paperFill(c, K, W2, H2))
     const sm = fam === 'small', big2 = fam === 'large' || fam === 'extraLarge', left = items.filter((x) => !x.done)
     const dbl = () => { const a = w.addStack(); a.size = new Size(inner, 0.9); a.backgroundColor = DI; w.addSpacer(1.5); const b = w.addStack(); b.size = new Size(inner, 0.4); b.backgroundColor = DI }
     const hd = w.addStack(); hd.size = new Size(inner, 0); hd.bottomAlignContent(); t(hd, sm ? 'S T U D Y' : 'T H E   S T U D Y', F(sm ? 11 : 13, 'Light'), DI); hd.addSpacer(); t(hd, 'VOL.' + DOY, MN(7.5), DS)
@@ -1245,7 +1245,7 @@ export default () => `  } else if (KIND === 'study') {
   } else if (KIND === 'news') {
     // ── 신문 1면: 제호 · 날짜 줄 · 머리기사(D-day) · 단 나눈 기사 (먹색만) ──
     const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large, sm = fam === 'small', big2 = fam === 'large' || fam === 'extraLarge'
-    dbg('news2', (c, K) => { c.setFillColor(new Color(VP)); c.fillRect(new Rect(0, 0, W2 * K, H2 * K)); grain(c, K, 0, 0, W2, H2) })
+    dbg('news2', (c, K) => paperFill(c, K, W2, H2))
     const DF = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'], MF = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER']
     const hr = (h) => { const a = w.addStack(); a.size = new Size(inner, h); a.backgroundColor = VI }
     const ms = w.addStack(); ms.size = new Size(inner, 0); ms.addSpacer(); t(ms, 'The Daily Study', DID(sm ? 16 : big2 ? 30 : 21), VI).minimumScaleFactor = 0.7; ms.addSpacer()
