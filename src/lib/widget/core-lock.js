@@ -8,11 +8,11 @@ if (KIND === 'custom' && fam.startsWith('accessory')) KIND = 'dash' // 내 위�
 // 시간대별 자동: 아침(5~12시) 오늘 한눈에 · 낮(12~20시) 공부 · 밤 내일 준비
 if (KIND === 'auto') { const hr = new Date().getHours(); KIND = hr >= 5 && hr < 12 ? 'today' : hr >= 12 && hr < 20 ? 'study' : 'tmrw' }
 // 잠금 화면엔 그림 없이 같은 뜻의 형태로
-if (lock) KIND = ({ dial: 'study', grass: 'month', wday: 'week', tline: 'week7', big: ARG === '디데이' ? 'dday' : ARG === '할일' ? 'todo' : ARG === '주간' ? 'week' : 'study', spark: 'week', arc: fam === 'accessoryCircular' ? 'pct' : 'study', memo: 'note', print: 'today', split: 'today', hero: 'study', three: 'today' })[KIND] || KIND
+if (lock) KIND = ({ ticket: 'pair', receipt: 'study', rcard: 'study', stamp: 'dday', mag: 'today', big: ARG === '디데이' ? 'dday' : ARG === '할일' ? 'todo' : ARG === '주간' ? 'week' : 'study', spark: 'week', arc: fam === 'accessoryCircular' ? 'pct' : 'study', memo: 'note', print: 'today', split: 'today', hero: 'study', three: 'today' })[KIND] || KIND
 let w = new ListWidget()
 // 한 줄(시계 위) 위젯: iOS 가 텍스트 하나만 시스템 서체로 그림 → 서체·색 지정 없이 짧게 하나만
 const inline = (s) => { s = String(s); const x = w.addText(s.length > 26 ? s.slice(0, 25) + '…' : s); x.lineLimit = 1; return x }
-w.url = link({ todo: 'tasks', due: 'tasks', cal: 'planner.month', week7: 'planner.week', tmrw: 'planner.week', class: 'planner.timetable', default: '', dash: '', quick: 'study.timer', timer: 'study.timer', ddl: 'study.progress', prog: 'study.progress', series: 'tasks.board', board: 'tasks.board', weeks: 'study.records', memo: 'notes.pages', print: '', split: '', three: '', hero: 'tasks', pair: 'planner.month', dial: 'study.records', grass: 'study.records', wday: 'study.records', tline: 'planner.week', pace: 'study.timer', card: 'notes.pages', big: ARG === '할일' ? 'tasks' : ARG === '디데이' ? 'study.progress' : 'study.records' }[KIND] ?? 'study.records')
+w.url = link({ todo: 'tasks', due: 'tasks', cal: 'planner.month', week7: 'planner.week', tmrw: 'planner.week', class: 'planner.timetable', default: '', dash: '', quick: 'study.timer', timer: 'study.timer', ddl: 'study.progress', prog: 'study.progress', series: 'tasks.board', board: 'tasks.board', weeks: 'study.records', memo: 'notes.pages', print: '', split: '', three: '', hero: 'tasks', pair: 'planner.month', ticket: 'study.progress', receipt: 'study.records', rcard: 'study.records', stamp: 'study.progress', mag: '', big: ARG === '할일' ? 'tasks' : ARG === '디데이' ? 'study.progress' : 'study.records' }[KIND] ?? 'study.records')
 w.refreshAfterDate = new Date(Date.now() + 5 * 60000) // 5분 뒤 다시 그려 달라고 요청 (실제 시점은 iOS 가 정함)
 // 앱 설정: 위젯 여백 단계 · 구분선 굵기
 const STM = (data && data.settings && data.settings.settings && data.settings.settings.main) || {}
@@ -275,6 +275,23 @@ if (!data) {
   const ev7 = DAYS7.reduce((a, d) => a + d.ev.length, 0)
   const nextEv7 = (() => { for (const d of DAYS7) if (d.ev[0]) return { d, e: d.ev[0] }; return null })()
   const dayName = (d) => (d.i === 0 ? 'TODAY' : d.i === 1 ? 'TMRW' : DAY[d.x.getDay()])
+  // ── 종이 디자인 위젯 공용 (티켓 · 영수증 · 기록 카드 · 우표 · 매거진): 자체 종이 · 먹색 · 포인트 색 조금 ──
+  const DK = dark(), DI = new Color(DK ? '#e6e9ee' : '#2a2f38'), DS = new Color(DK ? '#e6e9ee' : '#2a2f38', 0.52), DA = new Color(DK ? '#a9b6cc' : '#55658a'), DRS = new Color(DK ? '#d6a9b3' : '#b9808d')
+  const PG = DK ? '#1a1d22' : '#e8ebef', PW = DK ? '#272b32' : '#fcfcfb', PL = DK ? '#ffffff' : '#2a2f38' // 바탕(블루그레이) · 종이 · 선
+  const DOY = Math.floor((new Date(today + 'T12:00:00') - new Date(d0.getFullYear() + '-01-01T12:00:00')) / 864e5) + 1
+  // 바탕 그림은 2배 해상도로 한 번만 그려 두고 다시 씀
+  const dbg = (key, draw) => {
+    const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large, fp = FM.joinPath(FM.documentsDirectory(), 'study-d1-' + key + '-' + (DK ? 'd' : 'l') + '-' + W2 + 'x' + H2 + '-' + P + '.jpg')
+    let im = null
+    try { if (FM.fileExists(fp)) im = FM.readImage(fp) } catch (e) {}
+    if (!im) { const K = 2, c = new DrawContext(); c.size = new Size(W2 * K, H2 * K); c.opaque = true; c.respectScreenScale = false; c.setFillColor(new Color(PG)); c.fillRect(new Rect(0, 0, W2 * K, H2 * K)); draw(c, K, W2, H2); im = c.getImage(); try { FM.writeImage(fp, im) } catch (e) {} }
+    w.backgroundImage = im
+  }
+  // 가는 점선 (이미지 한 장)
+  const dashLine = (parent, wd, alpha = 0.35) => { const c = new DrawContext(); c.size = new Size(wd, 1); c.opaque = false; c.respectScreenScale = true; c.setFillColor(new Color(PL, alpha)); for (let x = 0; x < wd; x += 4) c.fillRect(new Rect(x, 0, 2, 0.7)); const im = parent.addImage(c.getImage()); im.imageSize = new Size(wd, 1) }
+  // 바코드 (장식): 날짜와 상관없이 같은 무늬
+  const barcode = (c, x, y, wd, h, K) => { c.setFillColor(new Color(PL, 0.75)); let px = x, i = 0; while (px < x + wd) { const bw = [1, 2, 1, 3, 1, 1, 2][i % 7] * K * 0.8; c.fillRect(new Rect(px, y, bw, h)); px += bw + [2, 1, 3, 1, 2, 2, 1][(i * 3) % 7] * K * 0.8; i++ } }
+  const MN = (s) => new Font('Menlo-Regular', Math.round(s * SCALE * 2) / 2)
   // 할 일 줄 (반반 · 세 단): 제목 누르면 그 할 일, 앞 표시 누르면 완료
   const taskRows = (P2, wd, n, fsT) => {
     for (const x of items.slice(0, n)) {
@@ -285,14 +302,6 @@ if (!data) {
     }
     if (!items.length) t(P2, 'All clear.', tw(fsT), SOFT)
   }
-  // 페이스: 목표까지 남은 공부 ÷ 취침까지 남은 시간
-  const PACE = (() => { const de = st.dayEnd != null ? st.dayEnd : 1440, ds = st.dayStart != null ? st.dayStart : 420, left = Math.max(0, de - Math.max(nm, ds)), need = Math.max(0, goal - mins); return { left, need, per: left > 0 ? Math.round(need / (left / 60)) : need, de } })()
-  // 다음 과목: 최근 공부한 과목 중 이번 주 가장 적게 한 순서
-  const PICKS = (() => { const ids = new Set(allSess.map((x) => x.subjectId)); const l = subjects.map((s) => ({ s, m: allSess.filter((x) => x.subjectId === s.id && x.date >= wFrom).reduce((a, x) => a + (x.dur || 0), 0) })); const r = l.filter((x) => ids.has(x.s.id)); return (r.length ? r : l).sort((a, b) => a.m - b.m) })()
-  // 암기 카드: 노트 줄(할 일 빼고)을 30분마다 바꿔 가며 ('카드:제목' 은 그 노트만)
-  const CARDS = (() => { const ns = ARG ? NOTES().filter((n) => nzT(n.t).includes(ARG)) : NOTES(), pool = []; for (const n of ns) for (const l of n.l) if (l.k !== 'todo' && l.x.length >= 4) pool.push({ n, l }); return pool })(), SLOT = Math.floor(Date.now() / 1800000)
-  const cardAt = (i) => CARDS.length ? CARDS[(SLOT * 7 + i * 13) % CARDS.length] : null
-  if (KIND === 'card') w.refreshAfterDate = new Date(Math.min(w.refreshAfterDate.getTime(), (SLOT + 1) * 1800000))
   // 다음 일정 하나 (오늘 수업·일정 → 7일 안 일정) — 묶음 위젯
   const PAIRNX = (() => { const c = nCur || nNext; if (c) return { t: c.t, w: (nCur ? '지금 ~' + clk(c.e) : clk(c.s)) }; const e = nextEv7; return e ? { t: e.e.t, w: (e.d.i === 1 ? '내일 ' : e.d.i ? DAY[e.d.x.getDay()] + ' ' : '') + (e.e.s == null ? '종일' : clk(e.e.s % 1440)) } : null })()
   // 바로 시작: 최근 공부한 과목 먼저
@@ -631,21 +640,6 @@ if (!data) {
         t(w, s0 ? s0.name : '공부', thin(22)).minimumScaleFactor = 0.6
         lbar(w, mins / goal, LK.rw)
       }
-    } else if (KIND === 'pace') {
-      const s2 = PACE.need ? (PACE.left ? '시간당 ' + PACE.per + '분' : hm(PACE.need) + ' 남음') : '목표 달성'
-      if (inl) inline('페이스 · ' + s2)
-      else if (circ) cRows([[PACE.need ? String(PACE.per) : 'OK', thin(22)], [PACE.need ? '분/시간' : 'GOAL', label(7)]], mins / goal)
-      else { rRow('PACE', '남은 ' + hm(PACE.need), label(8), label(8)); t(w, s2, thin(20)).minimumScaleFactor = 0.6; lbar(w, mins / goal, LK.rw) }
-    } else if (KIND === 'pick') {
-      const p0 = PICKS[0]; if (p0) w.url = startUrl(p0.s)
-      if (inl) inline(p0 ? '다음 과목 · ' + p0.s.name : '과목 없음')
-      else if (circ) cRows(p0 ? [['NEXT', label(7)], [p0.s.name, tw(12)], [hm(p0.m), label(7)]] : [['—', tw(14)]])
-      else { rRow('NEXT UP', '이번 주', label(8), label(8)); t(w, p0 ? p0.s.name : '과목 없음', thin(20)).minimumScaleFactor = 0.6; if (p0) t(w, '이번 주 ' + hm(p0.m) + ' · 가장 적게', label(8)) }
-    } else if (KIND === 'card') {
-      const c0 = cardAt(0); if (c0) w.url = noteUrl(c0.n)
-      if (inl) inline(c0 ? c0.l.x : '노트 없음')
-      else if (circ) cRows([['CARD', label(7)], [c0 ? c0.n.t : '—', tw(10)]])
-      else { rRow(c0 ? c0.n.t : 'CARD', '', label(8), label(8)); t(w, c0 ? c0.l.x : '노트에 내용을 적어 보세요', tw(12), null, 3).minimumScaleFactor = 0.7 }
     } else if (KIND === 'pair') {
       // 잠금 화면 묶음: D-day 와 다음 일정을 두 줄로
       const nx = PAIRNX
