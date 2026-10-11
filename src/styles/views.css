@@ -1130,3 +1130,60 @@ input.input[type="date"]::-webkit-date-and-time-value { text-align: left; }
   :root:not([data-theme="light"]) .rp { --rp-paper: var(--surface); }
   :root:not([data-theme="light"]) .rp-paper { background: var(--rp-paper); }
 }
+
+/* ── 움직임 리듬: 시트·메뉴·알림·체크가 같은 속도와 곡선 ── */
+:root { --ease: cubic-bezier(.2, .8, .2, 1); --t-fast: 140ms; --t-mid: 220ms; --t-slow: 320ms; }
+.sheet-bg { animation: fade var(--t-mid) var(--ease); }
+.sheet { animation: up var(--t-slow) var(--ease); }
+@media (min-width: 768px) { .sheet { animation: fade var(--t-mid) var(--ease); } }
+.toast { animation: up var(--t-mid) var(--ease); }
+.menu { animation: fade var(--t-fast) var(--ease); }
+.check.on { animation: pop var(--t-mid) var(--ease); }
+.prog > i, .bar-t i, .subj-bar i { transition: width var(--t-slow) var(--ease); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; scroll-behavior: auto !important; }
+}
+
+/* ── 날짜 머리: 손글씨 + 물결 밑줄 (설정 › 디자인 세부) ── */
+html[data-datehead="hand"] :is(.date-label, .topbar .title.is-date) { font-family: var(--font-hand, var(--font-head)); font-weight: 300; }
+html[data-datehead="hand"] .date-label { display: inline-block; }
+html[data-datehead="hand"] .date-label b { font-weight: inherit; }
+html[data-datehead="hand"] :is(.date-label, .topbar .title.is-date)::after { content: ''; display: block; width: min(110px, 92%); height: 6px; margin-top: 1px; background: color-mix(in srgb, var(--accent) 55%, transparent); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 8' preserveAspectRatio='none'%3E%3Cpath d='M1 5.2C12 1.8 22 6.8 34 4.4S56 1.6 68 4.6 92 6.4 104 3.8 116 3.4 119 4.2' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat 0 0 / 100% 100%; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 8' preserveAspectRatio='none'%3E%3Cpath d='M1 5.2C12 1.8 22 6.8 34 4.4S56 1.6 68 4.6 92 6.4 104 3.8 116 3.4 119 4.2' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat 0 0 / 100% 100%; }
+html[data-datehead="hand"] .topbar .title.is-date { overflow: visible; }
+
+/* ── 노트 기본 폭 (노트마다 따로 정하지 않았을 때) ── */
+html[data-nwidth="narrow"] .note-page:not(.nw-wide) { max-width: 680px; }
+html[data-nwidth="wide"] .note-page:not(.nw-narrow) { max-width: none; }
+@media (min-width: 1100px) { html[data-nwidth="wide"] .content-inner:has(.note-page:not(.nw-narrow)) { max-width: 1400px; } }
+
+/* ── 그래프 한 문법: 진행선·막대·과목 띠 굵기는 '그래프 막대 굵기' 하나로, 모양은 '진행선' 하나로 ── */
+:root { --bar-h: 3px; }
+html[data-bar="thin"] { --bar-h: 2px; } html[data-bar="thick"] { --bar-h: 5px; }
+.prog, .bar-t, .subj-bar, .rp .rp-stack { height: var(--bar-h); }
+.subj-bar i, .rp-prog i { height: 100%; }
+.prog, .prog > i, .bar-t, .bar-t i, .subj-bar, .subj-bar i, .rp .rp-stack, .rp-prog i { border-radius: 999px; }
+.rp-prog { height: max(var(--bar-h), 4px); }
+.rp-prog i { top: 50%; height: var(--bar-h); transform: translateY(-50%); -webkit-mask-image: none; mask-image: none; background: var(--accent); }
+.rp .rp-stack i { opacity: 1; -webkit-mask-image: none; mask-image: none; }
+html[data-prog="pencil"] :is(.rp-prog i, .rp .rp-stack i) { -webkit-mask-image: repeating-linear-gradient(-62deg, #000 0 1.6px, rgba(0, 0, 0, .45) 1.6px 3.2px); mask-image: repeating-linear-gradient(-62deg, #000 0 1.6px, rgba(0, 0, 0, .45) 1.6px 3.2px); }
+html[data-prog="dot"] :is(.rp-prog i, .rp .rp-stack i) { -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 4px, transparent 4px 7px); mask-image: repeating-linear-gradient(90deg, #000 0 4px, transparent 4px 7px); }
+/* 리포트 종이 결도 '종이 결 세기'를 따름 */
+.rp-paper { isolation: isolate; }
+.rp-paper { background: var(--rp-paper) !important; }
+.rp-paper::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background-image: var(--relief, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.06' numOctaves='4' seed='5'/%3E%3CfeDiffuseLighting lighting-color='%23fff' surfaceScale='1'%3E%3CfeDistantLight azimuth='225' elevation='70'/%3E%3C/feDiffuseLighting%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)' opacity='.45'/%3E%3C/svg%3E")); background-size: 240px 240px; opacity: calc(var(--grain, 1) * .9); pointer-events: none; }
+:root[data-theme="dark"] .rp-paper::before { display: none; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .rp-paper::before { display: none; } }
+
+/* ── 연필 줄긋기: 할 일을 끝내면 손으로 긋듯 살짝 흔들리는 선이 그어짐 ── */
+.task-item .title .ttl { background: none; position: relative; }
+.task-item .title .ttl::after { content: ''; position: absolute; left: -1px; top: 54%; height: 5px; width: 0; background: currentColor; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 6' preserveAspectRatio='none'%3E%3Cpath d='M1 3.6C30 2.4 60 3.9 92 3C124 2.2 160 3.8 199 2.6' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat 0 0 / 100% 100%; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 6' preserveAspectRatio='none'%3E%3Cpath d='M1 3.6C30 2.4 60 3.9 92 3C124 2.2 160 3.8 199 2.6' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat 0 0 / 100% 100%; transition: width var(--t-slow) var(--ease); pointer-events: none; }
+.item.task-item.done .title .ttl::after { width: calc(100% + 2px); }
+html[data-done="fade"] .task-item .title .ttl::after, html[data-done="keep"] .task-item .title .ttl::after { display: none; }
+
+/* ── 눌림: 손끝 자리에 아주 옅게 번지는 잉크 ── */
+.ink { position: fixed; z-index: 200; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--accent) 22%, transparent) 0 45%, transparent 70%); pointer-events: none; animation: ink 420ms var(--ease) forwards; }
+@keyframes ink { from { transform: scale(.3); opacity: 1; } to { transform: scale(1.5); opacity: 0; } }
+
+/* ── 빈 화면 낙서 ── */
+.doodle { width: 46px; height: 40px; color: color-mix(in srgb, var(--muted) 75%, transparent); margin-bottom: 2px; }
+.doodle path { fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }

@@ -123,6 +123,7 @@ Promise.all([loadState(), initFonts(), restoreSync()]).then(async () => {
   createRoot(document.getElementById('root')).render(<StrictMode><Root /></StrictMode>)
   startServices()
   startNoteVersions()
+  import('./lib/ink.js').then((m) => m.installInk()).catch(() => {})
   // 노트에서 만든 할 일 제목에 남은 꾸밈 기호(==형광== 등) 정리
   import('./lib/marks.js').then(({ plainText }) => import('./store/store.js').then(({ list, patch }) => { for (const t of list('tasks')) { const p = plainText(t.title); if (p !== t.title) patch('tasks', t.id, { title: p }) } }))
   import('./lib/resume.js').then((m) => m.startResume())

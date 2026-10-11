@@ -121,7 +121,7 @@ export default function Settings() {
           <Field label={`모서리 둥글기 ${th.radius}px`}><input type="range" min="0" max="20" value={th.radius} onChange={(e) => setTheme({ radius: +e.target.value })} /></Field>
           <Field label="간격 · 이 기기만 (아이패드 기본 여유)"><Seg value={eff.density} onChange={(v) => { setDeviceTheme({ density: v }, th); bump() }} options={[['compact', '촘촘'], ['normal', '보통'], ['relaxed', '여유']]} /></Field>
           <Field label="아이패드 가로 2단 (오른쪽에 함께 보기)"><Seg value={st.splitPane || ''} onChange={(v) => setSettings({ splitPane: v || null })} options={[['', '끔'], ['planner', '오늘 일정'], ['timer', '타이머'], ['tasks', '오늘 할 일'], ['notes', '데일리']]} /></Field>
-          <Field label="아이콘"><div className="row wrap" style={{ gap: 6 }}><Seg value={th.iconWeight || 'normal'} onChange={(v) => setTheme({ iconWeight: v })} options={[['thin', '가늘게'], ['normal', '보통'], ['bold', '굵게']]} /><Seg value={th.iconShape || 'round'} onChange={(v) => setTheme({ iconShape: v })} options={[['round', '둥글게'], ['square', '각지게']]} /></div></Field>
+          <Field label="아이콘"><div className="row wrap" style={{ gap: 6 }}><Seg value={th.iconWeight || 'auto'} onChange={(v) => setTheme({ iconWeight: v === 'auto' ? null : v })} options={[['auto', '글자 따라'], ['thin', '가늘게'], ['normal', '보통'], ['bold', '굵게']]} /><Seg value={th.iconShape || 'round'} onChange={(v) => setTheme({ iconShape: v })} options={[['round', '둥글게'], ['square', '각지게']]} /></div></Field>
           <AppIconPick />
           <Field label="카드 스타일"><Seg value={th.card} onChange={(v) => setTheme({ card: v })} options={[['line', '선'], ['shadow', '그림자'], ['flat', '평면'], ['glass', '유리'], ['paper', '종이'], ['note', '노트']]} /></Field>
         </div>
@@ -841,6 +841,9 @@ function DesignDetail({ th, setTheme, st }) {
         <DesignPreview />
         <div className="row wrap" style={{ gap: 12 }}>{S('제목 1 크기', 'h1Size', [['s', '작게'], ['m', '기본'], ['l', '크게']], 'm')}{S('제목 2 크기', 'h2Size', [['s', '작게'], ['m', '기본'], ['l', '크게']], 'm')}</div>
         {S('본문 글자 색', 'textTone', [['dark', '진하게'], ['ink', '먹색'], ['pencil', '연필 회색']], 'ink')}
+        {S('날짜 머리', 'dateHead', [['plain', '기본'], ['hand', '손글씨 + 물결 밑줄']], 'plain')}
+        {th.dateHead === 'hand' && <Field label="날짜 손글씨 글꼴"><select className="input" value={th.handFont || ''} onChange={(e) => setTheme({ handFont: e.target.value || null })}><option value="">제목 글꼴과 같게</option>{Object.entries(FONTS).map(([k, f]) => <option key={k} value={k}>{f.name}</option>)}</select></Field>}
+        {S('노트 기본 폭 (노트마다 따로 정할 수도 있어요)', 'noteWidth', [['narrow', '좁게'], ['normal', '보통'], ['wide', '넓게']], 'normal')}
         <Field label="노트 본문 글꼴 (앱 글꼴과 따로)"><select className="input" value={th.noteFont || ''} onChange={(e) => setTheme({ noteFont: e.target.value || null })}><option value="">앱 글꼴과 같게</option>{Object.entries(FONTS).map(([k, f]) => <option key={k} value={k}>{f.name}</option>)}</select></Field>
         {S('노트 줄 맞춤', 'noteAlign', [['left', '왼쪽'], ['justify', '양쪽 맞춤']], 'left')}
         {S('노트 이미지', 'noteImg', [['round', '둥글게'], ['square', '각지게'], ['frame', '사진 테두리']], 'round')}
@@ -866,7 +869,7 @@ function DesignDetail({ th, setTheme, st }) {
         {S('카드 테두리', 'cardBorder', [['none', '없음'], ['thin', '가늘게'], ['normal', '보통'], ['bold', '진하게']], 'normal')}
         {S('아이콘', 'iconFill', [['line', '선'], ['fill', '옅게 채움']], 'line')}
         <Field label="탭바 · 사이드바"><Seg value={th.tabLabels === false ? 'icon' : 'text'} onChange={(v) => setTheme({ tabLabels: v !== 'icon' })} options={[['text', '글자 함께'], ['icon', '아이콘만']]} /></Field>
-        {paper && <Field label={`종이 결 세기 ${Math.round((th.grain ?? 1) * 100)}%`}><input type="range" min="0" max="1.6" step="0.1" value={th.grain ?? 1} onChange={(e) => setTheme({ grain: +e.target.value })} /></Field>}
+        <Field label={`종이 결 세기 ${Math.round((th.grain ?? 1) * 100)}% · ${paper ? '종이 테마·' : ''}리포트`}><input type="range" min="0" max="1.6" step="0.1" value={th.grain ?? 1} onChange={(e) => setTheme({ grain: +e.target.value })} /></Field>
         {note && <Field label="노트 모눈"><div className="row wrap" style={{ gap: 6 }}><Seg value={th.gridSize || 18} onChange={(v) => setTheme({ gridSize: v })} options={[[14, '촘촘'], [18, '기본'], [24, '넓게']]} /><Seg value={th.gridAlpha ?? 5.5} onChange={(v) => setTheme({ gridAlpha: v })} options={[[0, '없음'], [3, '옅게'], [5.5, '기본'], [9, '진하게']]} /></div></Field>}
         {paper && S('카드 그림자', 'shadowDepth', [['none', '없음'], ['soft', '옅게'], ['normal', '보통'], ['deep', '깊게']], 'normal')}
         <Toggle label="노트 왼쪽 세로줄 (공책 여백선)" checked={!!th.noteMargin} onChange={(v) => setTheme({ noteMargin: v })} />

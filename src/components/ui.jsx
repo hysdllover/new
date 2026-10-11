@@ -209,9 +209,19 @@ export function NoteIcon({ icon, size = 16 }) {
   return <Icon name={icon ? icon.slice(2) : 'file'} size={size} />
 }
 
+// 빈 화면 낙서: 가는 선 공책 한 권과 별 하나 (리포트 낙서와 같은 결)
+const Doodle = () => (
+  <svg className="doodle" viewBox="0 0 46 40" aria-hidden="true">
+    <path d="M9 6.5C17 5.6 29 5.8 35.5 6.6c.6 9 .5 18.6-.2 27.2-8.4.8-18.7.7-26.4-.1-.5-9-.6-18.3.1-27.2z" />
+    <path d="M13.5 6.4c-.4 9.2-.3 18.4.2 27.4" />
+    <path d="M18 14c4.6-.5 9.4-.3 13.4.1M18 19.6c3.8-.4 8-.3 11.6 0M18 25c2.4-.3 4.8-.2 7 .1" />
+    <path d="M40 4.6l.9 2 2.2.2-1.7 1.5.5 2.2-1.9-1.2-1.9 1.2.5-2.2-1.7-1.5 2.2-.2z" />
+  </svg>
+)
 export function Empty({ children, hint, action }) {
   return (
     <div className={'empty' + (hint || action ? ' empty-guide' : '')}>
+      {(hint || action) && <Doodle />}
       <div>{children}</div>
       {hint && <div className="tiny muted empty-hint">{hint}</div>}
       {action && <button className="btn sm" onClick={action.fn}>{action.label}</button>}

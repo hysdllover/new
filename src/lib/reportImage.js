@@ -145,8 +145,12 @@ export async function drawReport(d, secs, lines, title, { theme = 'app', head = 
         g.fillStyle = acc; g.fillText(t2, px, y0 + 52)
         g.strokeStyle = acc; g.globalAlpha = 0.5; g.lineWidth = 2; g.beginPath(); g.ellipse(px + pw / 2, y0 + 74, pw / 2 + 26, 32, -0.06, 0.35, Math.PI * 2 + 0.1); g.stroke(); g.globalAlpha = 1
         g.fillStyle = rule; g.fillRect(P, y0 + 150, IW, 1.5)
-        const pwid = Math.max(8, IW * (pct / 100)); g.save(); rr(P, y0 + 145, pwid, 11, 5.5); g.clip(); g.fillStyle = acc; g.globalAlpha = 0.75
-        for (let x = P - 20; x < P + pwid + 20; x += 6) { g.beginPath(); g.moveTo(x, y0 + 158); g.lineTo(x + 7, y0 + 143); g.lineTo(x + 10, y0 + 143); g.lineTo(x + 3, y0 + 158); g.fill() }
+        // 진행선 모양은 앱 설정(설정 › 디자인 세부 › 진행선)을 따름: 연필 빗금 · 점선 · 실선
+        const pwid = Math.max(8, IW * (pct / 100)), pst = document.documentElement.dataset.prog
+        g.save(); rr(P, y0 + 146, pwid, 9, 4.5); g.clip(); g.fillStyle = acc
+        if (pst === 'pencil') { g.globalAlpha = 0.75; for (let x = P - 20; x < P + pwid + 20; x += 6) { g.beginPath(); g.moveTo(x, y0 + 158); g.lineTo(x + 7, y0 + 143); g.lineTo(x + 10, y0 + 143); g.lineTo(x + 3, y0 + 158); g.fill() } }
+        else if (pst === 'dot') { for (let x = P; x < P + pwid; x += 14) g.fillRect(x, y0 + 147, 8, 7) }
+        else g.fillRect(P, y0 + 147, pwid, 7)
         g.restore(); g.globalAlpha = 1
         const cw = IW / 3
         stats.forEach(([l, v], i) => { const x = P + cw * i + (i ? 30 : 0); if (i) { g.fillStyle = rule; g.fillRect(P + cw * i, y0 + 186, 1.5, 70) } g.font = f(19); g.fillStyle = soft; g.fillText(l, x, y0 + 186); g.font = f(36, TH); g.fillStyle = ink; g.fillText(String(v), x, y0 + 216) })
