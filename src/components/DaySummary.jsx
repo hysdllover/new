@@ -133,6 +133,22 @@ function lines(k, d) {
   return []
 }
 const title = (k, d) => ({ done: `끝낸 일 ${d.done.length}`, left: `남은 할 일 ${d.left.length}`, sessions: `공부 기록 ${d.sess.length}` })[k] || (d.kind ? [...PSECTIONS, ...SECTIONS] : SECTIONS).find(([x]) => x === k)[1]
+// 흑백 인쇄풍 표: 머리줄은 영문 작은 글자 · 칸마다 가는 테두리 (화면·A4·이미지 공용)
+export const EN = { study: 'STUDY', subjects: 'SUBJECTS', sessions: 'LOG', hours: 'TIME', focus: 'FOCUS', week: 'WEEK', top3: 'TOP 3', done: 'DONE', left: 'TO DO', events: 'PLAN', tomorrow: 'TOMORROW', habits: 'HABITS', reviews: 'REVIEW', progress: 'PROGRESS', dday: 'D-DAY', condition: 'CONDITION', quote: 'QUOTE', comment: 'NOTE', days: 'DAYS', cal: 'CALENDAR', best: 'BEST DAY', comments: 'NOTES' }
+// 표 한 장: cols 는 열 너비(0 = 남는 폭), 칸 k — n 번호·시각 · t 글 · ok 완료 표시 · dd D-day 숫자 · dot 과목 색 + 이름 · note 한 줄 전체
+export function sheetOf(k, d) {
+  if (k === 'dday') return d.ddays.length ? { cols: [0, 86], rows: d.ddays.map((x) => [{ k: 't', t: x.t, star: x.c || true }, { k: 'dd', t: x.n === 0 ? 'D-DAY' : 'D-' + x.n, c: x.c }]) } : null
+  if (k === 'subjects') {
+    if (!d.subs.length) return null
+    const tot = d.subs.reduce((a, x) => a + x.m, 0) || 1
+    return { cols: [0, 48, 64], stack: d.subs.map((x) => ({ m: x.m, c: x.sub?.color })), rows: d.subs.flatMap((x) => [[{ k: 'dot', t: x.sub?.name || '과목 없음', c: x.sub?.color }, { k: 'n', t: Math.round((x.m / tot) * 100) + '%' }, { k: 'n', t: hmS(x.m), ink: true }], ...(x.notes.length ? [[{ k: 'note', t: x.notes.join(' / ') }]] : [])]) }
+  }
+  const l = lines(k, d)
+  if (!l.length) return null
+  const it = l.map((x) => { const m = /^(✓|–|↺) /.exec(x), tx = m ? x.slice(2) : x, tm = /^(\d{1,2}:\d{2}|종일) (.+)$/.exec(tx); return { mk: m ? m[1] : '', t: tm ? tm[2] : tx, tm: tm ? tm[1] : '' } })
+  const ok = it.some((x) => x.mk === '✓' || x.mk === '↺'), tmc = it.every((x) => x.tm)
+  return { cols: [tmc ? 52 : 34, 0, ...(ok ? [48] : [])], head: [tmc ? 'TIME' : 'NO', EN[k] || '', ...(ok ? ['DONE'] : [])], rows: it.map((x, i) => [{ k: 'n', t: tmc ? x.tm : String(i + 1) }, { k: 't', t: x.t, dim: x.mk === '✓' && k !== 'done' }, ...(ok ? [{ k: 'ok', t: x.mk === '✓' ? '✓' : x.mk === '↺' ? '↺' : '' }] : [])]) }
+}
 const NAME = { day: '하루 리포트', week: '주간 리포트', month: '월간 리포트' }
 const label = (d) => (d.kind === 'month' ? `${d.from.slice(0, 4)}년 ${+d.from.slice(5, 7)}월` : d.kind === 'week' ? `${fmtShort(d.from)} – ${fmtShort(d.to)}` : fmtDate(d.date))
 
@@ -144,57 +160,54 @@ async function printA4(d, secs, fontKey) {
   const el = document.createElement('div'); el.id = 'print-area'; el.className = 'rpa'
   const cs = getComputedStyle(document.documentElement), acc = cs.getPropertyValue('--accent').trim() || '#4a5a78'
   const vbars = (vals, labs, goal) => { const mx = Math.max(60, goal || 0, ...vals); return `<div class="rpa-plot">${goal ? `<span class="rpa-goal" style="bottom:${(goal / mx) * 100}%"></span>` : ''}${vals.map((m) => `<div class="rpa-col"><i style="height:${m ? Math.max(3, (m / mx) * 100) : 0}%;opacity:${goal ? (m >= goal ? 1 : 0.55) : 0.45 + 0.55 * (m / mx)}"></i></div>`).join('')}</div><div class="rpa-lab">${labs.map((l) => `<span>${esc(l)}</span>`).join('')}</div>` }
-  const sec = (k, html, wide) => `<section class="rpa-sec${wide ? ' wide' : ''}"><h3><span>${esc(title(k, d))}</span></h3>${html}</section>`
+  // 흑백 인쇄풍 표 (화면과 같은 구성)
+  const mm = (cols) => cols.map((n) => (n ? (n * 0.27).toFixed(1) + 'mm' : 'minmax(0, 1fr)')).join(' ')
+  const star = (c) => `<svg class="st" viewBox="0 0 16 16"><path style="stroke:${c}" d="M8 1.9l1.7 4 4.2.4-3.2 2.8 1 4.2L8 11.1l-3.7 2.2 1-4.2-3.2-2.8 4.2-.4z"/></svg>`
+  const cell = (c) => `<span class="c-${c.k}${c.dim ? ' dim' : ''}${c.ink ? ' strong' : ''}"${c.k === 'dd' && c.c ? ` style="color:${c.c}"` : ''}>${c.k === 'dot' ? `<i style="background:${c.c || '#999'}"></i>` : ''}${c.star ? star(c.star === true ? '#c9a0a8' : c.star) : ''}<span class="tx">${esc(c.t)}</span></span>`
+  const head = (k) => `<div class="h"><b>${esc(EN[k] || '')}</b><em>${esc(title(k, d))}</em></div>`
+  const box = (i, inner, wide) => `<section class="sh hc${i % 3}${wide ? ' wide' : ''}">${inner}</section>`
+  const table = (k, i, s) => box(i, (s.head ? `<div class="r hr" style="grid-template-columns:${mm(s.cols)}">${s.head.map((h, j) => (j === 1 ? `<span class="hl"><b>${esc(h)}</b><em>${esc(title(k, d))}</em></span>` : `<span class="c-l">${h}</span>`)).join('')}</div>` : head(k))
+    + (s.stack ? `<div class="sstk">${s.stack.map((x) => `<i style="flex:${x.m};background:${x.c || '#999'}"></i>`).join('')}</div>` : '')
+    + s.rows.map((r) => `<div class="r" style="grid-template-columns:${r[0].k === 'note' ? '1fr' : mm(s.cols)}">${r.map(cell).join('')}</div>`).join(''), s.rows.length >= 9)
   const pct = Math.round(Math.min(1, d.mins / (d.goal || 1)) * 100)
-  const ddHtml = d.ddays.length ? `<div class="rpa-dds">${d.ddays.map((x) => `<span style="--dc:${x.c || acc}"><svg class="st" viewBox="0 0 16 16"><path d="M8 1.9l1.7 4 4.2.4-3.2 2.8 1 4.2L8 11.1l-3.7 2.2 1-4.2-3.2-2.8 4.2-.4z"/></svg>${esc(x.t)} <b>${x.n === 0 ? 'D-DAY' : 'D-' + x.n}</b></span>`).join('')}</div>` : ''
   const dt = `<h1>${esc(d.kind ? label(d) : dayTitle(d.date))}</h1>`
-  const parts = secs.map((k) => {
-    if (k === 'study') { const stats = d.stats || [['이번 주', hmS(d.wk)], ['공부 기록', d.sess.length], ['끝낸 일', d.done.length]]; return `<section class="rpa-hero wide"><div class="rpa-total"><b class="rpa-big">${hmS(d.mins)}</b><small>/ ${hmS(d.goal)}</small><em>${pct}%</em></div><div class="rpa-track"><i style="width:${Math.max(2, pct)}%"></i></div><div class="rpa-stats">${stats.map(([l, v]) => `<div><span>${esc(l)}</span><b>${esc(v)}</b></div>`).join('')}</div></section>` }
-    if (k === 'subjects') { if (!d.subs.length) return ''; const tot = d.subs.reduce((a, x) => a + x.m, 0) || 1; return sec(k, `<div class="rpa-stack">${d.subs.map((x) => `<i style="flex:${x.m};background:${x.sub?.color || '#999'}"></i>`).join('')}</div>${d.subs.map((x) => `<div class="rpa-lg"><span class="dot" style="background:${x.sub?.color || '#999'}"></span><span class="n">${esc(x.sub?.name || '과목 없음')}</span><span class="p">${Math.round((x.m / tot) * 100)}%</span><span class="t">${hmS(x.m)}</span>${x.notes.length ? `<div class="note">${esc(x.notes.join(' / '))}</div>` : ''}</div>`).join('')}`) }
-    if (k === 'days') return d.days?.some((x) => x.m) ? sec(k, vbars(d.days.map((x) => x.m), d.days.map((x) => (d.kind === 'week' ? x.l : x.l)), d.dayGoal || 0), true) : ''
-    if (k === 'hours' && d.slots) return d.hours.some(Boolean) ? sec(k, `<div class="rpa-ten">${Array.from({ length: 18 }, (_, h) => `<div class="r"><span>${h + 6}</span>${d.slots.slice(h * 6, h * 6 + 6).map((x) => `<i${x.f ? ` style="background:color-mix(in srgb, ${x.c || acc} ${Math.round(28 + 42 * x.f)}%, white)"` : ''}></i>`).join('')}</div>`).join('')}</div>`) : ''
-    if (k === 'dday') return d.ddays.length ? sec(k, ddHtml) : ''
-    if (k === 'hours') return d.hours.some(Boolean) ? sec(k, vbars(d.hours, d.hours.map((_, i) => ([0, 6, 12, 17].includes(i) ? i + 6 + '시' : ''))), true) : ''
-    if (k === 'cal') { if (!d.cal) return ''; const c = d.cal, lead = (new Date(c.month + 'T00:00').getDay() - c.weekStartDow + 7) % 7, cells = [...Array(lead).fill(null), ...d.days]; while (cells.length % 7) cells.push(null); return sec(k, `<div class="rpa-cal">${Array.from({ length: 7 }, (_, i) => `<span class="wd">${WD[(i + c.weekStartDow) % 7]}</span>`).join('')}${cells.map((x, i) => x ? `<span class="c" style="${x.m ? `background:color-mix(in srgb, ${acc} ${Math.round(14 + 60 * Math.min(1, x.m / (c.goal || 1)))}%, white)` : ''}"><b>${i - lead + 1}</b>${x.m ? hmS(x.m) : ''}</span>` : '<span></span>').join('')}</div>`, true) }
-    const l = lines(k, d)
-    return l.length ? sec(k, `<ul class="${l.length >= 8 ? 'two' : ''}">${l.map((x) => { const m = /^(✓|–|↺) /.exec(x); return `<li${m && m[1] === '✓' ? ' class="on"' : ''}>${m && m[1] === '✓' ? '<svg class="tk" viewBox="0 0 14 14"><path d="M2.4 7.8l3 2.9L11.9 3.2"/></svg>' : `<span class="mk${m ? '' : ' dash'}"></span>`}${esc(m ? x.slice(2) : x)}</li>` }).join('')}</ul>`, l.length >= 8) : ''
-  }).join('')
+  const parts = (secs.includes('dday') || !d.ddays.length ? [] : [table('dday', 1, sheetOf('dday', d))]).concat(secs.map((k, i) => {
+    if (k === 'study') { const stats = d.stats || [['이번 주', hmS(d.wk)], ['공부 기록', d.sess.length], ['끝낸 일', d.done.length]]; return box(i, `${head(k)}<div class="r" style="grid-template-columns:18mm 1fr"><span class="c-l">TOTAL</span><span class="study"><span class="tot"><b class="big">${hmS(d.mins)}</b><small>/ ${hmS(d.goal)}</small><em>${pct}%</em></span><span class="trk"><i style="width:${Math.max(2, pct)}%"></i></span></span></div><div class="r" style="grid-template-columns:repeat(${stats.length}, 1fr)">${stats.map(([l, v]) => `<span class="sx"><i>${esc(l)}</i><b>${esc(v)}</b></span>`).join('')}</div>`, true) }
+    if (k === 'days') return d.days?.some((x) => x.m) ? box(i, head(k) + `<div class="b">${vbars(d.days.map((x) => x.m), d.days.map((x) => x.l), d.dayGoal || 0)}</div>`, true) : ''
+    if (k === 'hours' && d.slots) return d.hours.some(Boolean) ? box(i, head(k) + `<div class="b"><div class="rpa-ten">${Array.from({ length: 18 }, (_, h) => `<div class="r2"><span>${h + 6}</span>${d.slots.slice(h * 6, h * 6 + 6).map((x) => `<i${x.f ? ` style="background:color-mix(in srgb, ${x.c || acc} ${Math.round(28 + 42 * x.f)}%, white)"` : ''}></i>`).join('')}</div>`).join('')}</div></div>`) : ''
+    if (k === 'hours') return d.hours.some(Boolean) ? box(i, head(k) + `<div class="b">${vbars(d.hours, d.hours.map((_, j) => ([0, 6, 12, 17].includes(j) ? j + 6 + '시' : '')))}</div>`, true) : ''
+    if (k === 'cal') { if (!d.cal) return ''; const c = d.cal, lead = (new Date(c.month + 'T00:00').getDay() - c.weekStartDow + 7) % 7, cells = [...Array(lead).fill(null), ...d.days]; while (cells.length % 7) cells.push(null); return box(i, head(k) + `<div class="b"><div class="rpa-cal">${Array.from({ length: 7 }, (_, j) => `<span class="wd">${WD[(j + c.weekStartDow) % 7]}</span>`).join('')}${cells.map((x, j) => (x ? `<span class="c" style="${x.m ? `background:color-mix(in srgb, ${acc} ${Math.round(14 + 60 * Math.min(1, x.m / (c.goal || 1)))}%, white)` : ''}"><b>${j - lead + 1}</b>${x.m ? hmS(x.m) : ''}</span>` : '<span></span>')).join('')}</div></div>`, true) }
+    const s = sheetOf(k, d); return s ? table(k, i, s) : ''
+  })).join('')
   el.innerHTML = `<style>
-  .rpa { position: relative; font-family: var(--font); color: #2b2e35; font-weight: 300; font-size: 9.5pt; --a: ${acc}; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 2mm 0 0; }
-  .rpa-top h1, .rpa-big, .rpa-sec h3 { font-family: ${hand}; }
-  .rpa-sec h3 { font-size: 11pt; letter-spacing: 0; color: #2b2e35; border-bottom: 0; } .rpa-sec h3 span { padding: 0 1mm; background: linear-gradient(transparent 58%, color-mix(in srgb, var(--a) 18%, white) 58% 90%, transparent 90%); }
-  .rpa-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 6mm; padding-bottom: 3mm; border-bottom: .3mm solid #d9dbe0; margin-bottom: 5mm; background: white; }
-  .rpa-top h1 { font-size: 22pt; font-weight: 200; margin: 1mm 0 0; font-family: var(--font-head, inherit); display: flex; align-items: baseline; gap: 1.5mm; } .rpa-top h1 small { font-size: 10pt; color: #8b9099; } .rpa-top h1 em { font-style: normal; font-size: 8pt; letter-spacing: .2em; color: var(--a); margin-left: 1mm; }
-  .rpa-top .k { font-size: 6.5pt; letter-spacing: .3em; color: #8b9099; }
-  .rpa-dds { display: flex; flex-wrap: wrap; gap: 1.5mm; justify-content: flex-end; } .rpa-dds span { display: inline-flex; gap: 1.5mm; align-items: baseline; padding: .6mm 2.4mm; border: .25mm solid color-mix(in srgb, var(--dc) 60%, white); border-radius: 4mm; font-size: 8pt; background: color-mix(in srgb, var(--dc) 7%, white); } .rpa-dds b { color: var(--dc); font-weight: 500; }
-  .rpa-ten { display: grid; grid-template-rows: repeat(9, auto); grid-auto-flow: column; column-gap: 5mm; border-top: .2mm solid #e3e5e9; background: white; } .rpa-ten .r { display: grid; grid-template-columns: 6mm repeat(6, 1fr); height: 4.6mm; border-bottom: .2mm solid #e3e5e9; } .rpa-ten span { font-size: 6.5pt; color: #8b9099; align-self: center; } .rpa-ten i { border-left: .2mm dotted #d9dbe0; } .rpa-ten i:nth-child(5) { border-left-style: solid; }
-  .rpa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm 8mm; }
-  .rpa-sec, .rpa-hero { break-inside: avoid; } .wide { grid-column: 1 / -1; }
-  .rpa-sec h3 { font-size: 7pt; letter-spacing: .18em; font-weight: 400; color: #8b9099; margin: 0 0 2.5mm; padding-bottom: 1.5mm; border-bottom: .2mm solid #e3e5e9; }
-  .rpa-hero { padding: 1mm 0 2mm; } .rpa-stats.top { grid-template-columns: 1.6fr 1fr 1fr; align-items: end; } .rpa-stats.top .rpa-big { font-size: 26pt; line-height: 1; }
-  .rpa-big { font-size: 30pt; font-weight: 200; line-height: 1; display: flex; align-items: baseline; gap: 2mm; } .rpa-big small { font-size: 10pt; color: #8b9099; } .rpa-big em { margin-left: auto; font-style: normal; font-size: 10pt; color: var(--a); }
-  .rpa-track { height: 1.2mm; background: #e3e5e9; border-radius: 1mm; margin: 4mm 0; overflow: hidden; } .rpa-track i { display: block; height: 100%; background: var(--a); border-radius: 1mm; }
-  .rpa-stats { display: grid; grid-template-columns: repeat(3, 1fr); } .rpa-stats div + div { border-left: .2mm solid #d9dbe0; padding-left: 4mm; }
-  .rpa-stats span { display: block; font-size: 6.5pt; letter-spacing: .12em; color: #8b9099; } .rpa-stats b { font-weight: 200; font-size: 15pt; }
-  .rpa-stack { display: flex; gap: .6mm; height: 2mm; border-radius: 1mm; overflow: hidden; margin-bottom: 2mm; }
-  .rpa-lg { display: flex; flex-wrap: wrap; align-items: center; gap: 2mm; padding: 1.2mm 0; border-bottom: .2mm dashed #e3e5e9; } .rpa-lg .dot { width: 2mm; height: 2mm; border-radius: 50%; } .rpa-lg .n { flex: 1; } .rpa-lg .p { color: #8b9099; font-size: 8pt; } .rpa-lg .t { min-width: 10mm; text-align: right; } .rpa-lg .note { flex-basis: 100%; padding-left: 4mm; color: #8b9099; font-size: 8pt; }
+  .rpa { position: relative; font-family: var(--font); color: #2b2e35; font-weight: 300; font-size: 9.5pt; --a: ${acc}; --ink: rgba(43, 46, 53, .72); -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 2mm 0 0;
+    background-image: linear-gradient(#eef0f3 .2mm, transparent .2mm), linear-gradient(90deg, #eef0f3 .2mm, transparent .2mm); background-size: 5mm 5mm; }
+  .rpa-top { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 5mm; }
+  .rpa-top .k { font-size: 6.5pt; letter-spacing: .3em; color: #8b9099; } .rpa-top h1 { font-family: ${hand}; font-size: ${20 * hs}pt; font-weight: 300; margin: 1mm 0 0; }
+  .rpa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm 5mm; align-items: start; }
+  .sh { border: .25mm solid var(--ink); background: white; break-inside: avoid; } .wide { grid-column: 1 / -1; }
+  .hc0 { --hc: #a99bc4; } .hc1 { --hc: #c9a0a8; } .hc2 { --hc: #7a8660; }
+  .sh .h { display: flex; justify-content: space-between; align-items: baseline; padding: 1.4mm 2.6mm; border-bottom: .25mm solid var(--ink); background: color-mix(in srgb, var(--hc) 9%, white); }
+  .sh .h b, .sh .hl b { font-weight: 400; font-size: 6.5pt; letter-spacing: .2em; color: #8b9099; } .sh .h em, .sh .hl em { font-style: normal; font-size: 7pt; color: #8b9099; }
+  .sh .r { display: grid; min-height: 7mm; } .sh .r + .r { border-top: .25mm solid var(--ink); }
+  .sh .r > * { display: flex; align-items: center; gap: 1.6mm; padding: 1.2mm 2.4mm; min-width: 0; } .sh .r > * + * { border-left: .25mm solid var(--ink); }
+  .sh .hr { min-height: 5.5mm; background: color-mix(in srgb, var(--hc) 9%, white); border-bottom: .25mm solid var(--ink); } .sh .hr + .r { border-top: 0; } .sh .hl { justify-content: space-between; }
+  .c-l { font-size: 6.5pt; letter-spacing: .16em; color: #8b9099; justify-content: center; white-space: nowrap; } .c-n { justify-content: center; font-size: 8pt; color: #8b9099; } .c-n.strong { color: #2b2e35; }
+  .tx { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .c-t.dim { color: #8b9099; }
+  .c-ok { justify-content: center; color: #7a8660; } .c-dd { justify-content: center; font-family: ${hand}; font-size: ${11 * hs}pt; color: #c9a0a8; }
+  .c-dot i { width: 2mm; height: 2mm; border-radius: .4mm; flex-shrink: 0; } .c-note { font-size: 7.5pt; color: #8b9099; padding-left: 6mm !important; }
+  .sstk { display: flex; gap: .6mm; height: 1.2mm; margin: 2mm 2.6mm; } .sstk i { border-radius: .6mm; opacity: .8; } .sstk + .r { border-top: .25mm solid var(--ink); }
+  .st { width: 3mm; height: 3mm; flex-shrink: 0; } .st path { fill: none; stroke-width: 1.3; stroke-linejoin: round; }
+  .study { flex-direction: column; align-items: stretch !important; gap: 2mm !important; padding: 2.4mm 3mm !important; } .tot { display: flex; align-items: baseline; gap: 2mm; }
+  .big { font-family: ${hand}; font-size: ${26 * hs}pt; font-weight: 300; line-height: 1; } .tot small { color: #8b9099; font-size: 9pt; } .tot em { margin-left: auto; font-style: normal; color: var(--a); font-size: 11pt; }
+  .trk { display: block; height: 1.2mm; background: linear-gradient(#e3e5e9, #e3e5e9) 0 50% / 100% .2mm no-repeat; } .trk i { display: block; height: 100%; background: var(--a); border-radius: 1mm; }
+  .sx { flex-direction: column; align-items: flex-start !important; gap: .4mm !important; } .sx i { font-style: normal; font-size: 6.5pt; color: #8b9099; } .sx b { font-weight: 300; font-size: 12pt; }
+  .b { padding: 2.6mm 3mm 3mm; }
+  .rpa-ten { display: grid; grid-template-rows: repeat(9, auto); grid-auto-flow: column; column-gap: 5mm; } .rpa-ten .r2 { display: grid; grid-template-columns: 6mm repeat(6, 1fr); height: 4.6mm; align-items: center; border-bottom: .2mm solid #e3e5e9; } .rpa-ten span { font-size: 6.5pt; color: #8b9099; } .rpa-ten i { height: 2.6mm; border-radius: .6mm; margin: 0 .2mm; }
   .rpa-plot { position: relative; height: 26mm; display: flex; gap: 1.5mm; align-items: flex-end; border-bottom: .2mm solid #d9dbe0; } .rpa-col { flex: 1; height: 100%; display: flex; align-items: flex-end; justify-content: center; } .rpa-col i { display: block; width: min(3mm, 70%); background: var(--a); border-radius: 1.5mm 1.5mm .3mm .3mm; }
   .rpa-goal { position: absolute; left: 0; right: 0; border-top: .25mm dashed #9aa0aa; } .rpa-lab { display: flex; gap: 1.5mm; margin-top: 1mm; } .rpa-lab span { flex: 1; text-align: center; font-size: 7pt; color: #8b9099; white-space: nowrap; }
-  .rpa-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1mm; font-size: 7.5pt; } .rpa-cal .wd { text-align: center; color: #8b9099; font-size: 7pt; } .rpa-cal .c { height: 12mm; border-radius: 1.5mm; box-shadow: inset 0 0 0 .2mm #e3e5e9; padding: 1mm 1.5mm; display: flex; flex-direction: column; justify-content: space-between; } .rpa-cal .c b { font-weight: 300; color: #8b9099; }
-  .rpa ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1.2mm; } .rpa ul.two { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2mm 6mm; }
-  .rpa li { display: flex; gap: 2mm; align-items: center; } .rpa .mk { width: 2.4mm; height: 2.4mm; border: .25mm solid #9aa0aa; border-radius: .6mm; flex-shrink: 0; } .rpa .mk.on { background: var(--a); border-color: var(--a); } .rpa .mk.dash { width: 1.6mm; height: 0; border-width: .25mm 0 0; border-radius: 0; }
-  /* 공책 느낌: 손글씨 날짜·숫자·소제목 · 형광펜 · 가는 선만 */
-  .rpa-top h1, .rpa-big, .rpa-sec h3 { font-family: ${hand}; font-weight: 300; }
-  .rpa-top h1 { font-size: ${24 * hs}pt; } .rpa-top { border-bottom: 0; padding-bottom: 0; }
-  .rpa-sec h3 { font-size: ${12 * hs}pt; letter-spacing: 0; color: #2b2e35; font-weight: 400; border-bottom: 0; padding-bottom: 0; margin-bottom: 2mm; }
-  .rpa-sec h3 span { padding: 0 1mm; background: linear-gradient(transparent 58%, color-mix(in srgb, var(--a) 18%, white) 58% 90%, transparent 90%); }
-  .rpa-hero { background: none; border: 0; padding: 0; } .rpa-total { display: flex; align-items: baseline; gap: 3mm; } .rpa-total .rpa-big { font-size: ${34 * hs}pt; line-height: 1; } .rpa-total small { color: #8b9099; font-size: 10pt; } .rpa-total em { margin-left: auto; font-style: normal; font-family: ${hand}; font-size: 15pt; color: var(--a); padding: 1mm 3mm; border: .3mm solid color-mix(in srgb, var(--a) 45%, white); border-radius: 50%; }
-  .rpa-track { height: 1.6mm; background: linear-gradient(#e3e5e9, #e3e5e9) 0 50% / 100% .2mm no-repeat; } .rpa-track i { opacity: .8; -webkit-mask-image: repeating-linear-gradient(-62deg, #000 0 .45mm, rgba(0,0,0,.35) .45mm .85mm); mask-image: repeating-linear-gradient(-62deg, #000 0 .45mm, rgba(0,0,0,.35) .45mm .85mm); }
-  .rpa-lg { border-bottom: .2mm solid #eceef1; } .rpa li { border-bottom: .2mm solid #eceef1; padding-bottom: 1mm; } .rpa li.on { color: #8b9099; }
-  .rpa .tk { width: 3mm; height: 3mm; flex-shrink: 0; } .rpa .tk path { fill: none; stroke: var(--a); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-  .rpa-ten { border-top: 0; } .rpa-ten i { border-left: 0; height: 2.6mm; align-self: center; border-radius: .6mm; margin: 0 .2mm; } .rpa-ten .r { align-items: center; }
-  .rpa-dds span { border: 0; background: none; padding: 0; font-size: 9pt; } .rpa-dds b { font-family: ${hand}; font-size: 12pt; font-weight: 400; } .rpa-dds .st { width: 3mm; height: 3mm; align-self: center; } .rpa-dds .st path { fill: none; stroke: var(--dc); stroke-width: 1.3; stroke-linejoin: round; }
-  </style><div class="rpa-top"><div><span class="k">${NAME_EN[d.kind || 'day']}</span>${dt}</div>${secs.includes('dday') ? '' : ddHtml}</div><div class="rpa-grid">${parts}</div>`
+  .rpa-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1mm; font-size: 7.5pt; } .rpa-cal .wd { text-align: center; color: #8b9099; font-size: 7pt; } .rpa-cal .c { height: 12mm; border: .2mm solid #e3e5e9; padding: 1mm 1.5mm; display: flex; flex-direction: column; justify-content: space-between; } .rpa-cal .c b { font-weight: 300; color: #8b9099; }
+  </style><div class="rpa-top"><div><span class="k">${NAME_EN[d.kind || 'day']}</span>${dt}</div></div><div class="rpa-grid">${parts}</div>`
   document.body.appendChild(el); document.body.classList.add('print-area')
   const done = () => { el.remove(); document.body.classList.remove('print-area'); window.removeEventListener('afterprint', done) }
   window.addEventListener('afterprint', done)
@@ -216,13 +229,22 @@ function TenGrid({ slots }) {
     </div>
   )
 }
-// 손으로 그은 듯한 낙서: 물결 밑줄 · 동그라미 · 별 · 체크 (가는 선 하나로)
-const Wave = () => <svg className="rp-wave" viewBox="0 0 120 8" preserveAspectRatio="none" aria-hidden="true"><path d="M1 5.2C12 1.8 22 6.8 34 4.4S56 1.6 68 4.6 92 6.4 104 3.8 116 3.4 119 4.2" /></svg>
-const Loop = () => <svg className="rp-loop" viewBox="0 0 64 30" preserveAspectRatio="none" aria-hidden="true"><path d="M12 5.5C26 1 53 2.5 59 12.5S45 29 27 28.2 2.5 22 4.5 13 23 2.6 41 4.2" /></svg>
+// 별 (별표한 D-day)
 const Star = ({ c }) => <svg className="rp-star" viewBox="0 0 16 16" style={{ color: c }} aria-hidden="true"><path d="M8 1.9l1.7 4 4.2.4-3.2 2.8 1 4.2L8 11.1l-3.7 2.2 1-4.2-3.2-2.8 4.2-.4z" /></svg>
-const Tick = () => <svg className="rp-tick" viewBox="0 0 14 14" aria-hidden="true"><path d="M2.4 7.8l3 2.9L11.9 3.2" /></svg>
-// 별표한 D-day: 별 낙서 + 이름 + 남은 날
-const Ddays = ({ list: l }) => l.length ? <div className="rp-dds">{l.map((x, i) => <span key={i} className="rp-dd"><Star c={x.c || 'var(--accent)'} />{x.t}<b style={{ color: x.c || 'var(--accent)' }}>{x.n === 0 ? 'D-DAY' : 'D-' + x.n}</b></span>)}</div> : null
+const colsCss = (cols) => cols.map((n) => (n ? n + 'px' : 'minmax(0, 1fr)')).join(' ')
+const SCell = ({ c }) => <span className={'sh-' + c.k + (c.dim ? ' dim' : '') + (c.ink ? ' strong' : '')} style={c.k === 'dd' && c.c ? { color: c.c } : null}>{c.k === 'dot' && <i style={{ background: c.c || 'var(--muted)' }} />}{c.star && <Star c={c.star === true ? 'var(--c4, #c9a0a8)' : c.star} />}<span className="ellipsis">{c.t}</span></span>
+// 표 한 장 (머리줄 + 줄들)
+function SheetTable({ k, d, i, s }) {
+  const cols = colsCss(s.cols)
+  return (
+    <section className={'sh hc' + (i % 3)}>
+      {s.head ? <div className="sh-r sh-hr" style={{ '--cols': cols }}>{s.head.map((h, j) => <span key={j} className={j === 1 ? 'sh-hl' : 'sh-l'}>{j === 1 ? <><b>{h}</b><em>{title(k, d)}</em></> : h}</span>)}</div>
+        : <div className="sh-h"><b>{EN[k] || ''}</b><em>{title(k, d)}</em></div>}
+      {s.stack && <div className="sh-stack">{s.stack.map((x, j) => <i key={j} style={{ flex: x.m, background: x.c || 'var(--muted)' }} />)}</div>}
+      {s.rows.map((r, j) => <div key={j} className="sh-r" style={{ '--cols': r[0].k === 'note' ? 'minmax(0, 1fr)' : cols }}>{r.map((c, m) => <SCell key={m} c={c} />)}</div>)}
+    </section>
+  )
+}
 const dayTitle = (d) => { const x = new Date(d + 'T00:00'); return `${x.getMonth() + 1}월 ${x.getDate()}일 ${'일월화수목금토'[x.getDay()]}요일` }
 
 export default function DaySummary({ initial = today(), initialMode = 'day' }) {
@@ -244,13 +266,13 @@ export default function DaySummary({ initial = today(), initialMode = 'day' }) {
   const move = (i, dir) => { const a = [...secs], j = i + dir; if (j < 0 || j >= a.length) return; [a[i], a[j]] = [a[j], a[i]]; setSecs(a) }
   const share = async () => { const text = asText(d, secs); try { if (navigator.share) await navigator.share({ text }); else { await navigator.clipboard.writeText(text); toast('복사했어요') } } catch {} }
   const mx = Math.max(60, ...d.hours)
+  const CHARTS = new Set(['days', 'cal', 'hours'])
   const hl = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`
   const body = (k) => {
-    if (k === 'study') { const p = Math.round(Math.min(1, d.mins / (d.goal || 1)) * 100); return <div className="rp-hero">
-      <div className="rp-total"><b className="rp-big"><CountUp key={mode + date} to={d.mins} fmt={(v) => hmS(Math.round(v))} /></b><span className="rp-of">/ {hmS(d.goal)}</span><span className="grow" /><span className="rp-pct"><Loop />{p}%</span></div>
-      <div className="rp-prog"><i style={{ width: Math.max(2, p) + '%' }} /></div>
-      <div className="rp-stats">{(d.stats || [['이번 주', hmS(d.wk)], ['공부 기록', d.sess.length], ['끝낸 일', d.done.length]]).map(([l, v]) => <span key={l}><i>{l}</i><b>{v}</b></span>)}</div>
-    </div> }
+    if (k === 'study') { const p = Math.round(Math.min(1, d.mins / (d.goal || 1)) * 100), st3 = d.stats || [['이번 주', hmS(d.wk)], ['공부 기록', d.sess.length], ['끝낸 일', d.done.length]]; return <>
+      <div className="sh-r" style={{ '--cols': '64px minmax(0, 1fr)' }}><span className="sh-l">TOTAL</span><span className="sh-study"><span className="rp-total"><b className="rp-big"><CountUp key={mode + date} to={d.mins} fmt={(v) => hmS(Math.round(v))} /></b><span className="rp-of">/ {hmS(d.goal)}</span><span className="grow" /><b className="rp-pct">{p}%</b></span><span className="rp-prog"><i style={{ width: Math.max(2, p) + '%' }} /></span></span></div>
+      <div className="sh-r" style={{ '--cols': colsCss(st3.map(() => 0)) }}>{st3.map(([l, v]) => <span key={l} className="sh-st"><i>{l}</i><b>{v}</b></span>)}</div>
+    </> }
     if (k === 'subjects') { if (!d.subs.length) return null; const tot = d.subs.reduce((a, x) => a + x.m, 0) || 1; return <div className="col" style={{ gap: 8 }}>
       <div className="rp-stack">{d.subs.map((x, i) => <i key={i} style={{ flex: x.m, background: x.sub?.color || 'var(--muted)' }} />)}</div>
       <div className="rp-legend">{d.subs.map((x, i) => <div key={i} className="rp-lg"><span className="dot" style={{ background: x.sub?.color || 'var(--muted)' }} /><span className="grow ellipsis">{x.sub?.name || '과목 없음'}</span><span className="muted tiny">{Math.round((x.m / tot) * 100)}%</span><span className="rp-num">{hmS(x.m)}</span>{x.notes.length > 0 && <div className="rp-note">{x.notes.join(' / ')}</div>}</div>)}</div>
@@ -261,10 +283,8 @@ export default function DaySummary({ initial = today(), initialMode = 'day' }) {
     </div> }
     if (k === 'cal') return d.cal ? <MonthHeat values={d.cal.values} goal={d.cal.goal} weekStartDow={d.cal.weekStartDow} fixed={d.cal.month} color="var(--accent)" /> : null
     if (k === 'hours' && d.slots) return d.hours.some(Boolean) ? <TenGrid slots={d.slots} /> : null
-    if (k === 'dday') return d.ddays.length ? <Ddays list={d.ddays} /> : null
     if (k === 'hours') return d.hours.some(Boolean) ? <div className="rp-chart"><div className="rp-plot" style={{ gap: 3, height: 56 }}>{d.hours.map((m, i) => <div key={i} className="rp-col" title={`${i + 6}시 ${m}분`}><i className="wbar-b" style={{ width: '100%', maxWidth: 10, height: Math.max(m ? 3 : 0, (m / mx) * 100) + '%', opacity: 0.45 + 0.55 * (m / mx) }} /></div>)}</div><div className="row between tiny muted" style={{ marginTop: 4 }}><span>6시</span><span>12시</span><span>18시</span><span>24시</span></div></div> : null
-    const l = lines(k, d)
-    return l.length ? <div className={'rp-list' + (l.length >= 6 ? ' two' : '')}>{l.map((x, i) => { const m = /^(✓|–|↺) /.exec(x); return <div key={i} className={'rp-li ellipsis' + (m?.[1] === '✓' ? ' on' : '')}>{m?.[1] === '✓' ? <Tick /> : m ? <span className="rp-mk">{m[1] === '↺' ? '↺' : ''}</span> : <span className="rp-dash" />}{m ? x.slice(2) : x}</div> })}</div> : null
+    return null
   }
   return (
     <div className="col rp" style={{ '--rp-hand': reportFamily(fontKey), '--rp-hs': reportScale(fontKey) }}>
@@ -279,27 +299,30 @@ export default function DaySummary({ initial = today(), initialMode = 'day' }) {
           <div className="row wrap" style={{ gap: 6, alignItems: 'center' }}><span className="tiny muted">이미지 색</span>{REPORT_THEMES.map(([k, l]) => <button key={k} className={'chip' + (theme === k ? ' on' : '')} onClick={() => setSettings({ reportTheme: k })}>{l}</button>)}</div>
         </div>
       )}
-      {/* 공책 한 장: 흰 종이 결 위에 손글씨 날짜·제목, 가는 선과 낙서만 */}
-      <div className="rp-paper">
+      {/* 흑백 인쇄풍 한 장: 모눈 종이 위에 가는 테두리 표 · 채도 낮은 포인트 색 조금 */}
+      <div className="rp-paper rp-sheet">
         <div className="rp-head">
           <div className="rp-dt">
             <span className="rp-kicker">{NAME_EN[mode]}</span>
             <span className="rp-date">{mode === 'day' ? dayTitle(date) : label(d)}</span>
-            <Wave />
           </div>
           <div className="rp-nav">
             <button className="icon-btn" onClick={() => step(-1)} aria-label="이전"><Icon name="back" size={15} /></button>
             <button className="icon-btn" disabled={nextOff} onClick={() => step(1)} aria-label="다음"><Icon name="next" size={15} /></button>
           </div>
         </div>
-        {!secs.includes('dday') && <Ddays list={d.ddays} />}
-        {secs.map((k, i) => { const b = body(k); return b && <section key={k} className={'rp-sec rp-' + k}>{k !== 'study' && <div className={'rp-cap hl' + (i % 3)}><span>{title(k, d)}</span></div>}{b}</section> })}
-        {secs.every((k) => !body(k)) && <div className="small muted" style={{ padding: '18px 0', textAlign: 'center' }}>기록이 없어요.</div>}
+        {!secs.includes('dday') && d.ddays.length > 0 && <SheetTable k="dday" d={d} i={1} s={sheetOf('dday', d)} />}
+        {secs.map((k, i) => {
+          if (k === 'study') return <section key={k} className={'sh hc' + (i % 3)}><div className="sh-h"><b>STUDY</b><em>{title(k, d)}</em></div>{body(k)}</section>
+          if (CHARTS.has(k)) { const b = body(k); return b && <section key={k} className={'sh hc' + (i % 3)}><div className="sh-h"><b>{EN[k]}</b><em>{title(k, d)}</em></div><div className="sh-b">{b}</div></section> }
+          const sh = sheetOf(k, d); return sh && <SheetTable key={k} k={k} d={d} i={i} s={sh} />
+        })}
+        {secs.every((k) => k !== 'study' && !(CHARTS.has(k) ? body(k) : sheetOf(k, d))) && <div className="small muted" style={{ padding: '18px 0', textAlign: 'center' }}>기록이 없어요.</div>}
       </div>
       <div className="rp-actions">
         <button className={'btn ghost sm' + (edit ? ' on-acc' : '')} onClick={() => setEdit(!edit)}><Icon name="layers" size={14} />구성</button>
         <button className="btn ghost sm" onClick={share}><Icon name="share" size={14} />텍스트</button>
-        <button className="btn ghost sm" onClick={async () => { const blob = await drawReport(d, secs, lines, title, { theme, head: { day: 'DAILY', week: 'WEEKLY', month: 'MONTHLY' }[mode] + ' REPORT', dateTxt: mode === 'day' ? undefined : label(d), square: st.reportSize === 'square', fontKey: st.reportFont || '', barScale: { thin: 0.6, thick: 1.6 }[st.theme?.chartBar] || 1 }); const r = await shareBlob(blob, `리포트-${mode === 'day' ? date : d.from}.png`); if (r === 'saved') toast('이미지를 저장했어요') }}><Icon name="image" size={14} />이미지</button>
+        <button className="btn ghost sm" onClick={async () => { const blob = await drawReport(d, secs, lines, title, { theme, head: { day: 'DAILY', week: 'WEEKLY', month: 'MONTHLY' }[mode] + ' REPORT', dateTxt: mode === 'day' ? undefined : label(d), square: st.reportSize === 'square', fontKey: st.reportFont || '', barScale: { thin: 0.6, thick: 1.6 }[st.theme?.chartBar] || 1, sheetOf, EN }); const r = await shareBlob(blob, `리포트-${mode === 'day' ? date : d.from}.png`); if (r === 'saved') toast('이미지를 저장했어요') }}><Icon name="image" size={14} />이미지</button>
         <button className="btn ghost sm" onClick={() => printA4(d, secs, st.reportFont || '')}><Icon name="print" size={14} />A4</button>
       </div>
     </div>
