@@ -9,6 +9,7 @@ import Hub from './notes/Hub.jsx'
 import Graph from './notes/Graph.jsx'
 import Library from './notes/Library.jsx'
 import Todos from './notes/Todos.jsx'
+import Books from './notes/Books.jsx'
 import DBView from './tasks/DBView.jsx'
 import { setParams, openNote } from '../nav.js'
 import { today, addDays, fmtDate, fmtTime, fmtDur, tsToMin, tsToYmd } from '../engine/date.js'
@@ -44,7 +45,7 @@ export default function Notes({ seg, params }) {
 function Pages({ params, compact }) {
   const notes = useColl('notes')
   const subjects = useColl('subjects')
-  const [mode, setMode] = useState(params.mode || 'list')
+  const [mode, setMode] = useState(params.mode || 'list'), [book, setBook] = useState(null) // book: 공책에서 연 과목 id ('' = 과목 없음)
   const [type, setType] = useState('all')
   const [q, setQ] = useState(''), [lab, setLab] = useState(null), [byLab, setByLab] = useState(() => { try { return localStorage.getItem('notes_bylabel') === '1' } catch { return false } })
   const st = useSettings(), manual = st.notesSort === 'manual', [arrange, setArrange] = useState(false)
@@ -55,6 +56,7 @@ function Pages({ params, compact }) {
   const list = notes.filter((n) => (q || !childIds.has(n.id)) && n.type !== 'daily' && (type === 'template' ? n.isTemplate : type === 'all' || (n.type || 'page') === type))
     .filter((n) => !q || (n.title || '').includes(q) || noteText(n).includes(q))
     .filter((n) => !lab || n.label === lab)
+    .filter((n) => book === null || mode !== 'books' || (book ? n.subjectId === book : !n.subjectId || !subjects.some((s) => s.id === n.subjectId)))
     .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (manual ? (a.order ?? -a.updatedAt) - (b.order ?? -b.updatedAt) : b.updatedAt - a.updatedAt))
   // 내 순서로 옮기기: 처음 옮길 때 지금 보이는 순서대로 번호를 매기고 바꿈
   const shift = (i, d) => { const j = i + d; if (j < 0 || j >= list.length || !!list[i].pinned !== !!list[j].pinned) return; const a = [...list];[a[i], a[j]] = [a[j], a[i]]; a.forEach((n, k) => { if (n.order !== k * 10) patch('notes', n.id, { order: k * 10 }) }) }
@@ -62,14 +64,15 @@ function Pages({ params, compact }) {
   return (
     <div className="col">
       <div className="row wrap">
-        <Seg value={mode} onChange={(v) => { setMode(v); setParams('notes', { mode: v }) }} options={[['list', '목록'], ['db', 'DB 뷰']]} />
+        <Seg value={mode} onChange={(v) => { setMode(v); setBook(null); setParams('notes', { mode: v }) }} options={[['list', '목록'], ['books', '공책'], ['db', 'DB 뷰']]} />
         <span className="grow" />
         <button className="btn" onClick={() => import('../components/MdImport.jsx').then((m) => openSheet((c) => <m.default close={c} />, { title: '가져오기' }))}><Icon name="upload" size={15} />가져오기</button>
         <button className="btn" onClick={() => openSheet((c) => <NotesExport close={c} />, { title: '내보내기' })}><Icon name="download" size={15} />내보내기</button>
         <button className="btn primary" onClick={create}><Icon name="plus" size={16} />새 페이지</button>
       </div>
-      {mode === 'db' ? <DBView source="notes" /> : (
+      {mode === 'db' ? <DBView source="notes" /> : mode === 'books' && book === null ? <Books notes={list} onOpen={setBook} /> : (
         <>
+          {mode === 'books' && <div className="row" style={{ gap: 6 }}><button className="btn sm ghost" onClick={() => setBook(null)}><Icon name="back" size={14} />공책</button><b style={{ fontWeight: 'var(--fw-b)' }}>{book ? subjects.find((s) => s.id === book)?.cover?.title || subjects.find((s) => s.id === book)?.name : '과목 없음'}</b></div>}
           <div className="row wrap" style={{ gap: 6 }}>
             <input className="input grow" style={{ minWidth: 140 }} placeholder="노트 검색" value={q} onChange={(e) => setQ(e.target.value)} />
             <button className={'chip' + (manual ? ' on' : '')} onClick={() => { setSettings({ notesSort: manual ? 'recent' : 'manual' }); if (manual) setArrange(false) }}>{manual ? '내 순서' : '최근 수정순'}</button>
