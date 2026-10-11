@@ -41,7 +41,15 @@ async function transparentSetup() {
   const wpx = size === 'small' ? L.small : L.medium, hpx = size === 'large' ? L.large : L.small
   const c = new DrawContext(); c.size = new Size(wpx, hpx); c.drawImageAtPoint(img, new Point(-L[hx], -L[vy]))
   FM.writeImage(bgPath(size, key), c.getImage())
-  a = new Alert(); a.title = '저장했어요'; a.message = '위젯이 곧 새 배경으로 바뀌어요. 글자가 잘 안 보이면 메뉴에서 글자색을 바꿔 보세요.'; a.addAction('확인'); await a.present()
+  // 잘라 둔 배경의 밝기를 재서 글자색 자동 (밝으면 먹색 · 어두우면 흰색) — Scriptable 은 픽셀을 못 읽어서 웹뷰 캔버스로
+  let lum = null
+  try {
+    const wv = new WebView()
+    await wv.loadHTML('<img id="i" src="data:image/jpeg;base64,' + Data.fromJPEG(c.getImage()).toBase64String() + '">')
+    lum = await wv.evaluateJavaScript("var i=document.getElementById('i');function run(){var k=document.createElement('canvas');k.width=32;k.height=32;var g=k.getContext('2d');g.drawImage(i,0,0,32,32);var d=g.getImageData(0,0,32,32).data,s=0;for(var n=0;n<d.length;n+=4)s+=0.2126*d[n]+0.7152*d[n+1]+0.0722*d[n+2];completion(s/(d.length/4))}if(i.complete)run();else i.onload=run", true)
+  } catch (e) {}
+  if (typeof lum === 'number') FM.writeString(bgPath(size, key) + '.ink', lum > 150 ? 'dark' : 'light')
+  a = new Alert(); a.title = '저장했어요'; a.message = '위젯이 곧 새 배경으로 바뀌어요. ' + (typeof lum === 'number' ? '배경이 ' + (lum > 150 ? '밝아서 먹색' : '어두워서 흰색') + ' 글자로 맞췄어요. ' : '') + '바꾸려면 메뉴에서 글자색을 고르세요.'; a.addAction('확인'); await a.present()
 }
 if (config.runsInWidget) Script.setWidget(w)
 else {
