@@ -276,21 +276,36 @@ if (!data) {
   const nextEv7 = (() => { for (const d of DAYS7) if (d.ev[0]) return { d, e: d.ev[0] }; return null })()
   const dayName = (d) => (d.i === 0 ? 'TODAY' : d.i === 1 ? 'TMRW' : DAY[d.x.getDay()])
   // ── 종이 디자인 위젯 공용 (티켓 · 영수증 · 기록 카드 · 우표 · 매거진): 자체 종이 · 먹색 · 포인트 색 조금 ──
-  const DK = dark(), DI = new Color(DK ? '#e6e9ee' : '#2a2f38'), DS = new Color(DK ? '#e6e9ee' : '#2a2f38', 0.52), DA = new Color(DK ? '#b9bcc2' : '#5c6068'), DRS = new Color(DK ? '#b8a9a6' : '#8b7a77')
-  const PG = DK ? '#1b1c1f' : '#e6e7e9', PW = DK ? '#272b32' : '#fcfcfb', PL = DK ? '#ffffff' : '#2a2f38' // 바탕(블루그레이) · 종이 · 선
+  // 위젯 테마(종이 · 다크 · 모노 · 흰/검은 글씨 · 배경 잘라 붙이기)를 고르면 그 바탕 위에 칸·선만 그리고 글자색도 테마를 따름
+  const HASBG = !lock && FM.fileExists(bgPath(fam, RAWP)), THEMED = ['paper', 'night', 'mono', 'white', 'black'].includes(WT) || HASBG
+  const DK = dark(), LIK = THEMED ? inkMode === 'light' || (inkMode === 'auto' && DK) : DK, INKH = LIK ? (THEMED ? '#ffffff' : '#e6e9ee') : '#2a2f38'
+  const DI = new Color(INKH), DS = new Color(INKH, THEMED ? 0.62 : 0.52), DA = new Color(LIK ? '#c9ccd2' : '#5c6068'), DRS = new Color(LIK ? '#c8b9b6' : '#8b7a77')
+  const PG = DK ? '#1b1c1f' : '#e6e7e9', PW = DK ? '#272b32' : '#fcfcfb', PL = LIK ? '#ffffff' : '#2a2f38' // 바탕(블루그레이) · 종이 · 선
   const DOY = Math.floor((new Date(today + 'T12:00:00') - new Date(d0.getFullYear() + '-01-01T12:00:00')) / 864e5) + 1
+  // 테마 바탕: 종이 결 · 다크 · 모노 · 잘라 붙인 배경 · 기본(블루그레이)
+  const themeBase = (c, K, W2, H2) => {
+    const all = new Rect(0, 0, W2 * K, H2 * K)
+    if (WT === 'paper') { c.setFillColor(new Color('#f2f2f1')); c.fillRect(all); const pp = loadPaper(); if (pp) for (let x = 0; x < W2 * K; x += 720) for (let y = 0; y < H2 * K; y += 720) c.drawImageInRect(pp, new Rect(x, y, 720, 720)) }
+    else if (WT === 'night' || WT === 'mono') { c.setFillColor(new Color(WT === 'night' ? '#1b1d22' : '#1c1d21')); c.fillRect(all) }
+    else if (HASBG) { c.setFillColor(new Color(PG)); c.fillRect(all); try { c.drawImageInRect(FM.readImage(bgPath(fam, RAWP)), all) } catch (e) {} }
+    else if (WT === 'white' || WT === 'black') { c.setFillColor(new Color(DK ? '#15181d' : '#f2f4f6')); c.fillRect(all) }
+    else { c.setFillColor(new Color(PG)); c.fillRect(all) }
+  }
+  // 기본 종이 (테마를 고르지 않았을 때만): 결 있는 흰 종이
+  const paperFill = (c, K, W2, H2) => { if (THEMED) return; c.setFillColor(new Color(VP)); c.fillRect(new Rect(0, 0, W2 * K, H2 * K)); grain(c, K, 0, 0, W2, H2) }
   // 바탕 그림은 2배 해상도로 한 번만 그려 두고 다시 씀
   const dbg = (key, draw) => {
-    const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large, fp = FM.joinPath(FM.documentsDirectory(), 'study-d1-' + key + '-' + (DK ? 'd' : 'l') + '-' + W2 + 'x' + H2 + '-' + P + '.jpg')
+    let tk = 'p'; if (THEMED) { tk = WT; if (HASBG) { tk += '-bg'; try { tk += FM.modificationDate(bgPath(fam, RAWP)).getTime() } catch (e) {} } }
+    const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large, fp = FM.joinPath(FM.documentsDirectory(), 'study-d2-' + key + '-' + tk + '-' + (DK ? 'd' : 'l') + '-' + W2 + 'x' + H2 + '-' + P + '.jpg')
     let im = null
     try { if (FM.fileExists(fp)) im = FM.readImage(fp) } catch (e) {}
-    if (!im) { const K = 2, c = new DrawContext(); c.size = new Size(W2 * K, H2 * K); c.opaque = true; c.respectScreenScale = false; c.setFillColor(new Color(PG)); c.fillRect(new Rect(0, 0, W2 * K, H2 * K)); draw(c, K, W2, H2); im = c.getImage(); try { FM.writeImage(fp, im) } catch (e) {} }
+    if (!im) { const K = 2, c = new DrawContext(); c.size = new Size(W2 * K, H2 * K); c.opaque = true; c.respectScreenScale = false; themeBase(c, K, W2, H2); draw(c, K, W2, H2); im = c.getImage(); try { FM.writeImage(fp, im) } catch (e) {} }
     w.backgroundImage = im
   }
   const MN = (s) => new Font('Menlo-Regular', Math.round(s * SCALE * 2) / 2)
   // 기록 카드 공용 (기록카드 · 디데이카드 · 일지 · 목록카드 · 타임카드): 위젯 끝까지 종이 · 머리 이중선 · 가는 줄 칸
   const cardBg = (key, HH, RH, nR, xs) => dbg(key + '-' + HH + '-' + RH + '-' + nR + '-' + xs.join('.'), (c, K, W2, H2) => {
-    c.setFillColor(new Color(VP)); c.fillRect(new Rect(0, 0, W2 * K, H2 * K)); grain(c, K, 0, 0, W2, H2)
+    paperFill(c, K, W2, H2)
     const y0 = P + HH
     c.setFillColor(new Color(VL, 0.75)); c.fillRect(new Rect(P * K, (y0 - 3) * K, (W2 - 2 * P) * K, 0.8 * K)); c.fillRect(new Rect(P * K, (y0 - 0.8) * K, (W2 - 2 * P) * K, 0.4 * K))
     c.setFillColor(new Color(VL, 0.16)); for (let k = 1; k <= nR; k++) c.fillRect(new Rect(P * K, (y0 + k * RH) * K, (W2 - 2 * P) * K, 0.6 * K))
@@ -306,7 +321,7 @@ if (!data) {
   // 줄 하나: cols = [[너비(0 = 남는 폭), 글, 글꼴, 오른쪽 정렬]]
   const cardRow = (RH, cols, col) => { const r = w.addStack(); r.size = new Size(inner, RH); const fixed = cols.reduce((a, x) => a + (x[0] || 0), 0); for (const [wd, s2, f, right] of cols) { const c = r.addStack(); c.size = new Size(wd || inner - fixed, RH); c.setPadding(0, 5, 0, 5); c.centerAlignContent(); if (right) c.addSpacer(); t(c, s2, f, col).minimumScaleFactor = 0.75; if (!right) c.addSpacer() } return r }
   // ── 빈티지 (신문 · 목록 카드 · 문고본 · 타임카드 · 전보): 결 있는 흰 종이 · 먹색 · 포인트 둘(낮은 채도) ──
-  const VP = DK ? '#26272a' : '#f4f4f1', VI = new Color(DK ? '#e4e2dd' : '#2e2f33'), VS = new Color(DK ? '#e4e2dd' : '#2e2f33', 0.5), VL = DK ? '#e4e2dd' : '#2e2f33'
+  const VP = DK ? '#26272a' : '#f4f4f1', VI = DI, VS = DS, VL = PL
   const VR = DRS, VN = VS // 포인트는 바랜 회갈색 하나만 · 나머지는 먹색 농담
   const VF = (n) => (s) => new Font(n, Math.round(s * SCALE * 2) / 2)
   const SER = VF('Baskerville'), SERI = VF('Baskerville-Italic'), DID = VF('Didot'), TYP = VF('Baskerville'), TYPL = VF('Baskerville') // 타자기체 대신 잡지·카드 같은 세리프
