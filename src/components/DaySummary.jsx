@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { reportFamily, loadReportFont, reportFontOptions, reportScale } from '../lib/reportFont.js'
 import { useMyFonts } from '../lib/fonts.js'
+import { CountUp } from './Roll.jsx'
 import { useColl, useSettings, setSettings, find, list } from '../store/store.js'
 import { pickQuote } from '../lib/quote.js'
 import { drawReport, REPORT_THEMES } from '../lib/reportImage.js'
@@ -246,7 +247,7 @@ export default function DaySummary({ initial = today(), initialMode = 'day' }) {
   const hl = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`
   const body = (k) => {
     if (k === 'study') { const p = Math.round(Math.min(1, d.mins / (d.goal || 1)) * 100); return <div className="rp-hero">
-      <div className="rp-total"><b className="rp-big">{hmS(d.mins)}</b><span className="rp-of">/ {hmS(d.goal)}</span><span className="grow" /><span className="rp-pct"><Loop />{p}%</span></div>
+      <div className="rp-total"><b className="rp-big"><CountUp key={mode + date} to={d.mins} fmt={(v) => hmS(Math.round(v))} /></b><span className="rp-of">/ {hmS(d.goal)}</span><span className="grow" /><span className="rp-pct"><Loop />{p}%</span></div>
       <div className="rp-prog"><i style={{ width: Math.max(2, p) + '%' }} /></div>
       <div className="rp-stats">{(d.stats || [['이번 주', hmS(d.wk)], ['공부 기록', d.sess.length], ['끝낸 일', d.done.length]]).map(([l, v]) => <span key={l}><i>{l}</i><b>{v}</b></span>)}</div>
     </div> }

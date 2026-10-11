@@ -66,7 +66,8 @@ export function applyTheme(t0) {
   root.dataset.card = t.card === 'note' ? 'paper' : t.card
   root.toggleAttribute('data-note', t.card === 'note')
   // 아이콘 선 굵기·끝 모양
-  root.style.setProperty('--icon-sw', { thin: 1.15, normal: 1.5, bold: 2 }[t.iconWeight] || 1.5)
+  // 아이콘 선 굵기: '글자 따라'(기본)면 글자 굵기에 맞춤
+  root.style.setProperty('--icon-sw', { thin: 1.15, normal: 1.5, bold: 2 }[t.iconWeight] || ({ 300: 1.25, 400: 1.5, 500: 1.75 }[t.fontWeight] || 1.4))
   root.dataset.icons = t.iconShape === 'square' ? 'square' : 'round'
   // 디자인 세부 (설정 › 디자인 세부)
   const paper = t.card === 'paper' || t.card === 'note'
@@ -92,6 +93,10 @@ export function applyTheme(t0) {
   const R = t.radius ?? 10
   root.style.setProperty('--r-card', (t.rCard ?? R) + 'px'); root.style.setProperty('--r-btn', (t.rBtn ?? Math.max(0, R - 2)) + 'px'); root.style.setProperty('--r-input', (t.rInput ?? Math.max(0, R - 2)) + 'px')
   root.style.setProperty('--grain', t.grain ?? 1)
+  // 날짜 머리(손글씨 + 물결 밑줄) · 손글씨 글꼴 · 노트 기본 폭
+  root.dataset.datehead = t.dateHead || 'plain'
+  root.style.setProperty('--font-hand', (t.handFont && familyOf(t.handFont)) || 'var(--font-head)')
+  root.dataset.nwidth = t.noteWidth || 'normal'
   root.style.setProperty('--grid-size', (t.gridSize || 18) + 'px')
   root.style.setProperty('--grid-a', (t.gridAlpha ?? 5.5) + '%')
   if (t.mode === 'system') delete root.dataset.theme

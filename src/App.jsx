@@ -124,7 +124,7 @@ export default function App() {
 
       <div className="main">
         <header className="topbar no-print">
-          <div className="title ellipsis">{TITLES[tab] || fmtDate(today())}</div>
+          <div className={'title ellipsis' + (TITLES[tab] ? '' : ' is-date')}>{TITLES[tab] || fmtDate(today())}</div>
           <button className="icon-btn" onClick={() => syncNow()} title={sync.error || '동기화'} aria-label="동기화 상태">
             <span className={'sync-dot ' + sync.state} />
           </button>

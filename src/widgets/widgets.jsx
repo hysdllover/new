@@ -1,4 +1,4 @@
-import { Roll } from '../components/Roll.jsx'
+import { Roll, CountUp } from '../components/Roll.jsx'
 import { useColl, useSettings, setSettings, put, patch, remove } from '../store/store.js'
 import { dayRec, setDay, toggleTask, completeReview } from '../store/actions.js'
 import { eventsOn, classesOn } from '../engine/scheduler.js'
@@ -117,8 +117,8 @@ function Goal() {
   return (
     <Card className="center" onClick={goto('study', 'records')} style={{ cursor: 'pointer' }}>
       <div className="col" style={{ alignItems: 'center', gap: 4 }}>
-        <Ring value={m / st.goalDaily} size={78}><b className="small"><Roll value={Math.round((m / st.goalDaily) * 100) + '%'} /></b></Ring>
-        <span className="small"><Roll value={fmtDur(m)} /></span><span className="tiny muted">목표 {fmtDur(st.goalDaily)}</span>
+        <Ring value={m / st.goalDaily} size={78}><b className="small"><CountUp to={(m / st.goalDaily) * 100} fmt={(v) => Math.round(v) + '%'} /></b></Ring>
+        <span className="small"><CountUp to={m} fmt={(v) => fmtDur(Math.round(v))} /></span><span className="tiny muted">목표 {fmtDur(st.goalDaily)}</span>
       </div>
     </Card>
   )
