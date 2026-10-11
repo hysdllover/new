@@ -8,11 +8,11 @@ if (KIND === 'custom' && fam.startsWith('accessory')) KIND = 'dash' // 내 위�
 // 시간대별 자동: 아침(5~12시) 오늘 한눈에 · 낮(12~20시) 공부 · 밤 내일 준비
 if (KIND === 'auto') { const hr = new Date().getHours(); KIND = hr >= 5 && hr < 12 ? 'today' : hr >= 12 && hr < 20 ? 'study' : 'tmrw' }
 // 잠금 화면엔 그림 없이 같은 뜻의 형태로
-if (lock) KIND = ({ news: 'today', catalog: 'study', tcard: 'week', ddcard: 'ddl', journal: 'today', rcard: 'study', mag: 'today', big: ARG === '디데이' ? 'dday' : ARG === '할일' ? 'todo' : ARG === '주간' ? 'week' : 'study', spark: 'week', arc: fam === 'accessoryCircular' ? 'pct' : 'study', memo: 'note', print: 'today', split: 'today', hero: 'study', three: 'today' })[KIND] || KIND
+if (lock) KIND = ({ pweek: 'week', psubj: 'subj', pplan: 'week7', pdday: 'ddl', pmonth: 'month', pnote: 'note', news: 'today', catalog: 'study', tcard: 'week', ddcard: 'ddl', journal: 'today', rcard: 'study', mag: 'today', big: ARG === '디데이' ? 'dday' : ARG === '할일' ? 'todo' : ARG === '주간' ? 'week' : 'study', spark: 'week', arc: fam === 'accessoryCircular' ? 'pct' : 'study', memo: 'note', print: 'today', split: 'today', hero: 'study', three: 'today' })[KIND] || KIND
 let w = new ListWidget()
 // 한 줄(시계 위) 위젯: iOS 가 텍스트 하나만 시스템 서체로 그림 → 서체·색 지정 없이 짧게 하나만
 const inline = (s) => { s = String(s); const x = w.addText(s.length > 26 ? s.slice(0, 25) + '…' : s); x.lineLimit = 1; return x }
-w.url = link({ todo: 'tasks', due: 'tasks', cal: 'planner.month', week7: 'planner.week', tmrw: 'planner.week', class: 'planner.timetable', default: '', dash: '', quick: 'study.timer', timer: 'study.timer', ddl: 'study.progress', prog: 'study.progress', series: 'tasks.board', board: 'tasks.board', weeks: 'study.records', memo: 'notes.pages', print: '', split: '', three: '', hero: 'tasks', pair: 'planner.month', news: '', catalog: 'study.records', tcard: 'study.records', ddcard: 'study.progress', journal: 'study.records', rcard: 'study.records', mag: '', big: ARG === '할일' ? 'tasks' : ARG === '디데이' ? 'study.progress' : 'study.records' }[KIND] ?? 'study.records')
+w.url = link({ todo: 'tasks', due: 'tasks', cal: 'planner.month', week7: 'planner.week', tmrw: 'planner.week', class: 'planner.timetable', default: '', dash: '', quick: 'study.timer', timer: 'study.timer', ddl: 'study.progress', prog: 'study.progress', series: 'tasks.board', board: 'tasks.board', weeks: 'study.records', memo: 'notes.pages', print: '', split: '', three: '', hero: 'tasks', pair: 'planner.month', pweek: 'study.records', psubj: 'study.records', pplan: 'planner.week', pdday: 'study.progress', pmonth: 'study.records', pnote: 'notes.pages', news: '', catalog: 'study.records', tcard: 'study.records', ddcard: 'study.progress', journal: 'study.records', rcard: 'study.records', mag: '', big: ARG === '할일' ? 'tasks' : ARG === '디데이' ? 'study.progress' : 'study.records' }[KIND] ?? 'study.records')
 w.refreshAfterDate = new Date(Date.now() + 5 * 60000) // 5분 뒤 다시 그려 달라고 요청 (실제 시점은 iOS 가 정함)
 // 앱 설정: 위젯 여백 단계 · 구분선 굵기
 const STM = (data && data.settings && data.settings.settings && data.settings.settings.main) || {}
@@ -317,6 +317,29 @@ if (!data) {
     h.addSpacer()
     if (stamp) { const stp = h.addStack(); stp.borderWidth = 1; stp.borderColor = DRS; stp.cornerRadius = 3; stp.setPadding(1, 4, 1, 4); t(stp, stamp, MN(7.5), DRS) }
     w.addSpacer(4)
+  }
+  // ── 흑백 인쇄풍 표 공용 (DAILY SHEET 계열): 테두리선만 · 테마 글자색 한 가지 · 위젯 테마 바탕 그대로 ──
+  const PBW = 0.7, PHH = Math.round((fam === 'small' ? 17 : 19) * SCALE)
+  const phead = (title, right) => { const hd = w.addStack(); hd.size = new Size(inner, 0); hd.centerAlignContent(); t(hd, title, label(8), INK).minimumScaleFactor = 0.7; hd.addSpacer(); if (right) t(hd, right, label(8), INK); w.addSpacer(fam === 'small' ? 6 : 8) }
+  // 줄 수: 남은 높이에 rh0 이상으로 몇 줄 · 줄 높이는 남은 높이를 꽉 채우게
+  const pfit = (rh0, max) => { const avail = innerH - PHH, n = Math.max(2, Math.min(max || 99, Math.floor((avail + PBW) / (Math.round(rh0 * SCALE) + PBW)))); return { n, rh: Math.min(Math.round(30 * SCALE), Math.floor((avail + PBW) / n - PBW)) } }
+  const pfill = (rows, n, k) => { const r = rows.slice(0, Math.max(0, n)); while (r.length < n) r.push(Array(k).fill('')); return r }
+  // rows: 칸 글자 배열 (.dim 흐리게 · .b 굵게 · .url 누르면) · cws: 칸 너비(0 = 남는 폭 나눠 씀) · o.head 첫 줄 머리 · o.lab0 첫 칸 라벨 · o.right 오른쪽 정렬 칸
+  const ptab = (rows, cws, rh, fs, o = {}) => {
+    const tb = w.addStack(); tb.layoutVertically(); tb.borderWidth = PBW; tb.borderColor = INK
+    const fixed = cws.reduce((a, x) => a + (x || 0), 0) + PBW * (cws.length - 1), flexN = cws.filter((x) => !x).length || 1
+    rows.forEach((cells, i) => {
+      if (i) { const hr = tb.addStack(); hr.size = new Size(inner, PBW); hr.backgroundColor = INK }
+      const r = tb.addStack(); r.size = new Size(inner, rh); r.centerAlignContent(); if (cells.url) r.url = cells.url
+      cells.forEach((x, j) => {
+        if (j) { const vr = r.addStack(); vr.size = new Size(PBW, rh); vr.backgroundColor = INK }
+        const cc = r.addStack(); cc.size = new Size(cws[j] || Math.floor((inner - fixed) / flexN), rh); cc.setPadding(0, o.pad != null ? o.pad : 6, 0, o.pad != null ? o.pad : 6); cc.centerAlignContent()
+        const lab = (o.head && i === 0) || (o.lab0 && j === 0), right = !lab && o.right && o.right.includes(j)
+        if (right || (lab && o.head && i === 0 && o.centerHead)) cc.addSpacer()
+        const tx = t(cc, x, lab ? label(o.lf || 8) : cells.b ? F(fs, 'Medium') : tw(fs), lab || cells.dim ? SOFT : INK, o.lines || 1); tx.minimumScaleFactor = 0.65
+        if (!right) cc.addSpacer()
+      })
+    })
   }
   // 줄 하나: cols = [[너비(0 = 남는 폭), 글, 글꼴, 오른쪽 정렬]]
   const cardRow = (RH, cols, col) => { const r = w.addStack(); r.size = new Size(inner, RH); const fixed = cols.reduce((a, x) => a + (x[0] || 0), 0); for (const [wd, s2, f, right] of cols) { const c = r.addStack(); c.size = new Size(wd || inner - fixed, RH); c.setPadding(0, 5, 0, 5); c.centerAlignContent(); if (right) c.addSpacer(); t(c, s2, f, col).minimumScaleFactor = 0.75; if (!right) c.addSpacer() } return r }
