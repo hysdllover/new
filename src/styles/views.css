@@ -1254,3 +1254,5 @@ html[data-done="fade"] .task-item .title .ttl::after, html[data-done="keep"] .ta
 .sh .rp-ten-r i { filter: grayscale(1); }
 .sh-b .wbar-b { background: color-mix(in srgb, var(--text) 55%, transparent) !important; }
 .sh-b .wbars-goal { border-color: color-mix(in srgb, var(--text) 30%, transparent); }
+.dw.dw-full { padding: 0; }
+.dw.dw-full .dw-in { border-radius: inherit; }
