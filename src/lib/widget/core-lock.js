@@ -20,7 +20,13 @@ const P = Math.round((fam === 'small' ? 16 : 18) * ({ tight: 0.72, roomy: 1.25 }
 RW = { none: 0, thin: 0.4, bold: 1 }[STM.widgetRule] ?? 0.6
 // 기기별 위젯 크기(pt) — 아이폰은 화면 폭별 실제 크기표(가장 가까운 폭), 아이패드는 고정값
 const SZ = (() => {
-  if (Device.isPad()) return { small: 158, medium: 342, large: 342, extraLarge: 715, h: { small: 158, medium: 158, large: 342, extraLarge: 342 } }
+  if (Device.isPad()) {
+    // 아이패드: 모델(화면 짧은 변)별 위젯 크기 — 13형 1024·1032 · 11형 834 · 10.9형 820 · 10.2형 810 · mini 744
+    const sc = Device.screenSize(), sw = Math.min(sc.width, sc.height)
+    const T = { 1032: [170, 378.5, 795], 1024: [170, 378.5, 795], 834: [155, 342, 715.5], 820: [155, 342, 715.5], 810: [146, 320.5, 669], 744: [141, 305.5, 634.5] }
+    const k = Object.keys(T).map(Number).sort((a, b) => Math.abs(a - sw) - Math.abs(b - sw))[0], [sm, md, xl] = T[k]
+    return { small: sm, medium: md, large: md, extraLarge: xl, h: { small: sm, medium: sm, large: md, extraLarge: md } }
+  }
   const sc = Device.screenSize(), sw = Math.min(sc.width, sc.height)
   const T = { 440: [176, 376, 392], 430: [170, 364, 382], 428: [170, 364, 382], 414: [169, 360, 379], 402: [162, 345, 362], 393: [158, 338, 354], 390: [158, 338, 354], 375: [155, 329, 345], 360: [155, 329, 345], 320: [141, 292, 311] }
   const k = Object.keys(T).map(Number).sort((a, b) => Math.abs(a - sw) - Math.abs(b - sw))[0], [sm, md, lh] = T[k]
