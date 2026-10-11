@@ -53,8 +53,8 @@ const finish = async (c, g, T, ops, W, y, square) => {
 }
 
 // 월 달력 칸 (칸 진하기 = 목표 대비, 칸 안에 공부 시간) → 높이
-function calGrid(ctx, x0, y0, w, { month, values, goal, weekStartDow = 1 }, draw = true) {
-  const { g, f, T } = ctx
+function calGrid(ctx, x0, y0, w, { month, values, goal, weekStartDow = 1, mono }, draw = true) {
+  const { g, f, T } = ctx, hc = mono ? T.ink : T.acc
   const y = +month.slice(0, 4), mo = +month.slice(5, 7) - 1, n = new Date(y, mo + 1, 0).getDate()
   const lead = (new Date(y, mo, 1).getDay() - weekStartDow + 7) % 7, rows = Math.ceil((lead + n) / 7)
   const gap = 8, cw = (w - gap * 6) / 7, ch = Math.round(cw * 0.86), head = 40
@@ -65,10 +65,10 @@ function calGrid(ctx, x0, y0, w, { month, values, goal, weekStartDow = 1 }, draw
   for (let d = 1; d <= n; d++) {
     const k = `${y}-${String(mo + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`, v = values[k] || 0, r = Math.min(1, v / (goal || 1))
     const p = lead + d - 1, cx = x0 + (p % 7) * (cw + gap), cy = y0 + head + Math.floor(p / 7) * (ch + gap)
-    g.fillStyle = v ? T.acc : T.rule; g.globalAlpha = v ? 0.14 + 0.66 * r : 0.45
+    g.fillStyle = v ? hc : T.rule; g.globalAlpha = v ? (mono ? 0.08 + 0.5 * r : 0.14 + 0.66 * r) : 0.45
     g.beginPath(); g.roundRect ? g.roundRect(cx, cy, cw, ch, 10) : g.rect(cx, cy, cw, ch); g.fill(); g.globalAlpha = 1
-    const tc = r >= 0.6 ? T.bg : T.ink
-    g.font = f(18); g.fillStyle = r >= 0.6 ? T.bg : T.soft; g.fillText(String(d), cx + 12, cy + 10)
+    const dk = r >= (mono ? 0.85 : 0.6), tc = dk ? T.bg : T.ink
+    g.font = f(18); g.fillStyle = dk ? T.bg : T.soft; g.fillText(String(d), cx + 12, cy + 10)
     if (v) { g.font = f(24); g.fillStyle = tc; const s = hm(v); g.fillText(s, cx + cw - 12 - g.measureText(s).width, cy + ch - 34) }
   }
   return h
@@ -82,7 +82,7 @@ export async function drawReport(d, secs, lines, title, { theme = 'app', head = 
   const W = 1080, P = 84, IW = W - P * 2, K = 2.2, BW = 1.6, HH = 50
   const ctx = setup(theme), { T, c, g, f, spaced } = ctx
   const { ink, soft, acc, rule } = T
-  const HC = ['#a99bc4', '#c9a0a8', '#7a8660'], OLIVE = '#7a8660', ROSE = '#c9a0a8'
+  const HC = [ink], OLIVE = '#7a8660', ROSE = '#c9a0a8'
   const fh = (size, w = 300) => `${w} ${Math.round(size * hs)}px ${handFam}`
   const fit = (text, font, maxW) => { g.font = font; let s = String(text); if (g.measureText(s).width <= maxW) return s; while (s && g.measureText(s + '…').width > maxW) s = s.slice(0, -1); return s + '…' }
   const rr = (x, y, w, h, r) => { g.beginPath(); g.roundRect ? g.roundRect(x, y, w, h, r) : g.rect(x, y, w, h) }
@@ -90,7 +90,7 @@ export async function drawReport(d, secs, lines, title, { theme = 'app', head = 
   const ops = []; let y = P, X0 = P, XW0 = IW // 차트 안쪽 여백 (그릴 때가 아니라 배치할 때 값)
   const add = (h, fn) => { const y0 = y; ops.push(() => fn(y0)); y += h }
   // 모눈 (종이 전체)
-  ops.push(() => { g.fillStyle = acc; g.globalAlpha = theme === 'dark' ? 0.08 : 0.06; for (let x = 0; x < W; x += 30) g.fillRect(x, 0, 1.2, c.height); for (let yy = 0; yy < c.height; yy += 30) g.fillRect(0, yy, W, 1.2); g.globalAlpha = 1 })
+  ops.push(() => { g.fillStyle = ink; g.globalAlpha = theme === 'dark' ? 0.07 : 0.05; for (let x = 0; x < W; x += 30) g.fillRect(x, 0, 1.2, c.height); for (let yy = 0; yy < c.height; yy += 30) g.fillRect(0, yy, W, 1.2); g.globalAlpha = 1 })
   if (!dateTxt) { const dd0 = new Date(d.date + 'T00:00'); dateTxt = `${dd0.getMonth() + 1}월 ${dd0.getDate()}일 ${'일월화수목금토'[dd0.getDay()]}요일` }
   await loadReportFont(fontKey, dateTxt + '0123456789:%D-AY')
   const pct = Math.round(Math.min(1, d.mins / (d.goal || 1)) * 100)
@@ -101,7 +101,7 @@ export async function drawReport(d, secs, lines, title, { theme = 'app', head = 
   let bi = 0
   const box = (en, ko, inner, noHead) => {
     const y0 = y, hc = HC[bi++ % 3]
-    const tint = (yy, h) => { g.fillStyle = hc; g.globalAlpha = theme === 'dark' ? 0.16 : 0.1; g.fillRect(P, yy, IW, h); g.globalAlpha = 1 }
+    const tint = (yy, h) => { g.fillStyle = hc; g.globalAlpha = theme === 'dark' ? 0.07 : 0.04; g.fillRect(P, yy, IW, h); g.globalAlpha = 1 }
     if (!noHead) add(HH, (yy) => { tint(yy, HH); spaced(en, 15, P + 22, yy + 17, soft); g.font = f(19); g.fillStyle = soft; g.fillText(ko, W - P - 22 - g.measureText(ko).width, yy + 15); line(P, yy + HH, W - P, yy + HH) })
     inner(tint)
     const h = y - y0
@@ -125,7 +125,7 @@ export async function drawReport(d, secs, lines, title, { theme = 'app', head = 
   const sheetT = (k, s) => box(EN[k] || '', title(k, d), (tint) => {
     const xs = xsOf(s.cols)
     if (s.head) add(HH, (yy) => { tint(yy, HH); s.head.forEach((h, j) => { if (j === 1) { spaced(h, 15, xs[1] + 22, yy + 17, soft); const ko = title(k, d); g.font = f(19); g.fillStyle = soft; g.fillText(ko, xs[2] - 22 - g.measureText(ko).width, yy + 15) } else { g.font = f(15, 400); const w0 = g.measureText(h).width + h.length * 2.7; spaced(h, 15, xs[j] + (xs[j + 1] - xs[j] - w0) / 2, yy + 17, soft) } if (j) line(xs[j], yy, xs[j], yy + HH) }); line(P, yy + HH, W - P, yy + HH) })
-    if (s.stack) add(40, (yy) => { const tot = s.stack.reduce((a, x) => a + x.m, 0) || 1, gap = 4, avail = IW - 44 - gap * (s.stack.length - 1); let x = P + 22; s.stack.forEach((x2) => { const w = Math.max(6, avail * (x2.m / tot)); g.fillStyle = x2.c || soft; g.globalAlpha = 0.85; rr(x, yy + 16, w, 8, 4); g.fill(); x += w + gap }); g.globalAlpha = 1; line(P, yy + 40, W - P, yy + 40) })
+    if (s.stack) add(40, (yy) => { const tot = s.stack.reduce((a, x) => a + x.m, 0) || 1, gap = 4, avail = IW - 44 - gap * (s.stack.length - 1); let x = P + 22; s.stack.forEach((x2, j) => { const w = Math.max(6, avail * (x2.m / tot)); g.fillStyle = ink; g.globalAlpha = Math.max(0.15, 0.55 - j * 0.1); rr(x, yy + 16, w, 8, 4); g.fill(); x += w + gap }); g.globalAlpha = 1; line(P, yy + 40, W - P, yy + 40) })
     s.rows.forEach((r, ri) => {
       const note = r[0].k === 'note', rh = note ? 50 : 66, xr = note ? [P, W - P] : xs
       add(rh, (yy) => { if (ri) line(P, yy, W - P, yy); r.forEach((cl, j) => { cellDraw(cl, xr[j], xr[j + 1], yy, rh); if (j) line(xr[j], yy, xr[j], yy + rh) }) })
@@ -134,7 +134,7 @@ export async function drawReport(d, secs, lines, title, { theme = 'app', head = 
   // 막대: 바닥선 + (있으면) 목표 점선
   const bars = (vals, labels, bh, goal) => { const X = X0, XW = XW0; add(bh + 66, (y0) => {
     const n = vals.length, gap = n > 20 ? 6 : 12, cw = (XW - gap * (n - 1)) / n, bw = Math.min((n > 20 ? 12 : 18) * barScale, cw), mx = Math.max(60, goal || 0, ...vals)
-    vals.forEach((m, i) => { if (!m) return; const h = Math.max(4, (m / mx) * bh), x = X + i * (cw + gap) + (cw - bw) / 2; g.fillStyle = acc; g.globalAlpha = goal ? (m >= goal ? 1 : 0.55) : 0.4 + 0.6 * (m / mx); rr(x, y0 + bh - h, bw, h, [bw / 2, bw / 2, 2, 2]); g.fill(); if (n <= 7) { g.globalAlpha = 1; g.font = f(18); g.fillStyle = soft; const tv = hm(m); g.fillText(tv, x + bw / 2 - g.measureText(tv).width / 2, y0 + bh - h - 28) } })
+    vals.forEach((m, i) => { if (!m) return; const h = Math.max(4, (m / mx) * bh), x = X + i * (cw + gap) + (cw - bw) / 2; g.fillStyle = ink; g.globalAlpha = goal ? (m >= goal ? 0.6 : 0.35) : 0.25 + 0.4 * (m / mx); rr(x, y0 + bh - h, bw, h, [bw / 2, bw / 2, 2, 2]); g.fill(); if (n <= 7) { g.globalAlpha = 1; g.font = f(18); g.fillStyle = soft; const tv = hm(m); g.fillText(tv, x + bw / 2 - g.measureText(tv).width / 2, y0 + bh - h - 28) } })
     g.globalAlpha = 1; g.fillStyle = rule; g.fillRect(X, y0 + bh, XW, 1.5)
     if (goal) { const gy = y0 + bh - (goal / mx) * bh; g.strokeStyle = soft; g.globalAlpha = 0.6; g.lineWidth = 1.5; g.setLineDash([6, 6]); g.beginPath(); g.moveTo(X, gy); g.lineTo(X + XW, gy); g.stroke(); g.setLineDash([]); g.globalAlpha = 1 }
     g.font = f(18); g.fillStyle = soft; labels.forEach((l, i) => { if (!l) return; g.fillText(l, X + i * (cw + gap) + (cw - g.measureText(l).width) / 2, y0 + bh + 16) })
@@ -172,14 +172,14 @@ export async function drawReport(d, secs, lines, title, { theme = 'app', head = 
           const x0 = X + (h >= 9 ? colW + 40 : 0), yy = y0 + (h % 9) * rh, cw = (colW - hw) / 6
           g.fillStyle = rule; g.fillRect(x0, yy + rh, colW, 1.2)
           g.font = f(17); g.fillStyle = soft; g.fillText(String(h + 6), x0, yy + 11)
-          for (let i = 0; i < 6; i++) { const s0 = d.slots[h * 6 + i], cx = x0 + hw + i * cw; if (s0.f) { g.fillStyle = s0.c || acc; g.globalAlpha = 0.28 + 0.42 * s0.f; rr(cx + 1.5, yy + 11, cw - 3, rh - 22, 4); g.fill(); g.globalAlpha = 1 } }
+          for (let i = 0; i < 6; i++) { const s0 = d.slots[h * 6 + i], cx = x0 + hw + i * cw; if (s0.f) { g.fillStyle = ink; g.globalAlpha = 0.18 + 0.4 * s0.f; rr(cx + 1.5, yy + 11, cw - 3, rh - 22, 4); g.fill(); g.globalAlpha = 1 } }
         }
       }) })
       continue
     }
     if (k === 'hours') { if (!d.hours.some(Boolean)) continue; chart(k, () => bars(d.hours, d.hours.map((_, i) => ([0, 6, 12, 17].includes(i) ? String(i + 6) + '시' : '')), 120)); continue }
     if (k === 'days') { if (!d.days?.some((x) => x.m)) continue; chart(k, () => { add(20, () => {}); bars(d.days.map((x) => x.m), d.days.map((x) => x.l), 150, d.dayGoal || 0) }); continue }
-    if (k === 'cal') { if (!d.cal) continue; chart(k, () => { const X = X0, XW = XW0; add(calGrid(ctx, X, 0, XW, d.cal, false) + 6, (y0) => calGrid(ctx, X, y0, XW, d.cal)) }); continue }
+    if (k === 'cal') { if (!d.cal) continue; chart(k, () => { const X = X0, XW = XW0; add(calGrid(ctx, X, 0, XW, { ...d.cal, mono: true }, false) + 6, (y0) => calGrid(ctx, X, y0, XW, { ...d.cal, mono: true })) }); continue }
     const s = sheetOf ? sheetOf(k, d) : null
     if (s) sheetT(k, s)
   }
