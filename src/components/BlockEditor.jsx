@@ -487,6 +487,10 @@ function TCell({ value, onChange, ...rest }) {
 // 표: 칸을 누르면 그 줄·칸 도구 · 왼쪽(줄)·위쪽(칸) 손잡이를 끌어 순서 바꾸기, 누르면 줄·칸 전체 선택
 // Tab 다음 칸 (마지막 칸이면 줄 추가) · ⌥↑↓ 줄 옮기기 · 시트에서 복사한 칸 붙여넣기
 const COLW = { s: 'minmax(56px, .6fr)', n: 'minmax(70px, 1fr)', w: 'minmax(130px, 2fr)' }
+// 칸 폭: 그 칸에서 가장 긴 글 길이로 최소 폭 (한글 ≈ 13px · 영문·숫자 ≈ 7.5px) — 64~220px, 넘치면 그 안에서 줄바꿈 · 칸 너비 설정(좁게·넓게)은 배수로
+const textW = (s, fs) => { let w = 0; for (const ch of String(s || '').replace(/\*\*|==|__/g, '')) w += /[\u1100-\u11ff\u3130-\u318f\uac00-\ud7af\u3000-\u9fff\uff00-\uffef]/.test(ch) ? fs : fs * 0.58; return w }
+// fs: 칸 실제 글자 크기 (아이폰은 입력 칸 확대 방지로 16px)
+const colMins = (rows, colW, fs = 13) => colW.map((k, c) => Math.round(Math.min(fs * 17, Math.max(fs * 5, ...rows.map((r) => textW(r[c], fs) + 18))) * ({ s: 0.75, w: 1.5 }[k] || 1)))
 const AL = { l: 'left', c: 'center', r: 'right' }
 // 파일 저장: 아이폰·아이패드는 공유 시트(파일에 저장), 그 밖은 내려받기
 async function saveBlob(blob, name) {
@@ -510,8 +514,12 @@ function TableBlock({ b, note, onMeta, readOnly }) {
   const focusCell = (r, c) => setTimeout(() => wrap.current?.querySelector(`[data-rc="${r}-${c}"]`)?.focus(), 0)
   const apply = (p, ns) => { onMeta(p); if (ns) { setSel(ns); if (ns.m === 'cell') focusCell(ns.r, ns.c) } }
   const setCell = (i, j, v) => onMeta({ rows: rows.map((r, k) => (k === i ? r.map((x, c) => (c === j ? v : x)) : r)) })
-  const colsTpl = colW.map((w) => COLW[w] || COLW.n).join(' ')
+  const [cfs, setCfs] = useState(13)
+  useEffect(() => { const c = wrap.current?.querySelector('.tblk-c'); const f = c && parseFloat(getComputedStyle(c).fontSize); if (f && Math.abs(f - cfs) > 0.5) setCfs(f) }, [cfs])
+  const mins = colMins(rows, colW, cfs)
+  const colsTpl = mins.map((m) => `minmax(${m}px, ${(m / 100).toFixed(2)}fr)`).join(' ')
   const tpl = readOnly ? colsTpl : '18px ' + colsTpl
+  const minW = mins.reduce((a, m) => a + m, 0) + (readOnly ? 0 : 18) // 화면보다 넓으면 표만 가로로 밀기 (페이지는 그대로)
 
   // 손잡이: 끌면 옮기기, 그냥 누르면 줄·칸 선택
   const grip = (k, idx) => (e) => {
@@ -628,7 +636,7 @@ function TableBlock({ b, note, onMeta, readOnly }) {
   return (
     <div className="tblk" ref={wrap}>
       <div className="tblk-scroll">
-        <div className="tblk-grid" style={{ gridTemplateColumns: tpl, '--tplp': colsTpl }}>
+        <div className="tblk-grid" style={{ gridTemplateColumns: tpl, minWidth: minW, '--tplp': colsTpl }}>
           {!readOnly && <div className="tblk-corner no-print" />}
           {!readOnly && Array.from({ length: cols }, (_, j) => <div key={'h' + j} data-ch={j} className={'tblk-ch no-print' + (sel?.m === 'col' && sel.c === j ? ' on' : '')} onPointerDown={grip('col', j)} aria-label={`${j + 1}번째 칸 선택·옮기기`}><span /></div>)}
           {rows.map((row, i) => (

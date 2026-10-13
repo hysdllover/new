@@ -61,7 +61,7 @@ export default function NotePage({ id, split }) {
     { label: '삭제', icon: 'trash', danger: true, onClick: () => { remove('notes', id); setParams('notes', { noteId: null }); toast('노트 삭제됨', { label: '되돌리기', fn: () => { restore('notes', id); openNote(id) } }) } },
   ])
   return (
-    <div className="note-wrap"><div className="note-grid">
+    <div className="note-wrap"><div className="nwp-grid">
     <div className={'note-page' + (n.width ? ' nw-' + n.width : '') + (reading ? ' reading' : '') + (n.bg ? ' note-bg note-bg-' + n.bg : '')}>
       <div className="row no-print" style={{ marginBottom: 6 }}>
         {split && !full
