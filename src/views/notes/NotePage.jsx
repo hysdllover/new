@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { syncSoon } from '../../sync/sync.js'
 import { useRec, useColl, patch, remove, restore, useSettings, setSettings } from '../../store/store.js'
 import { addReview } from '../../store/actions.js'
 import BlockEditor from '../../components/BlockEditor.jsx'
@@ -27,6 +28,8 @@ const ICONS = ['📄', '📘', '🧪', '🧮', '🌏', '✏️', '💡', '📌',
 
 export default function NotePage({ id, split }) {
   const [full, setFullS] = useState(() => { try { return sessionStorage.getItem('page_full') === '1' } catch { return false } })
+  // 노트를 나가면 미뤄 둔 변경을 곧 올림 (쓰는 동안엔 동기화를 길게 미룸)
+  useEffect(() => () => syncSoon(), [id])
   useEffect(() => { document.documentElement.classList.toggle('page-full', full); return () => document.documentElement.classList.remove('page-full') }, [full])
   const toggleFull = (v = !full) => { setFullS(v); try { sessionStorage.setItem('page_full', v ? '1' : '0') } catch {} }
   useEffect(() => { if (!full) return; const k = (e) => { if (e.key === 'Escape' && !/INPUT|TEXTAREA/.test(document.activeElement?.tagName || '')) toggleFull(false) }; window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k) }, [full])
