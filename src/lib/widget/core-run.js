@@ -51,14 +51,17 @@ async function transparentSetup() {
   if (typeof lum === 'number') FM.writeString(bgPath(size, key) + '.ink', lum > 150 ? 'dark' : 'light')
   a = new Alert(); a.title = '저장했어요'; a.message = '위젯이 곧 새 배경으로 바뀌어요. ' + (typeof lum === 'number' ? '배경이 ' + (lum > 150 ? '밝아서 먹색' : '어두워서 흰색') + ' 글자로 맞췄어요. ' : '') + '바꾸려면 메뉴에서 글자색을 고르세요.'; a.addAction('확인'); await a.present()
 }
-// 앱에 새 위젯 본체가 올라왔으면(위젯 데이터의 sv 가 이 본체보다 큼) 로더의 20분 확인을 기다리지 않고 바로 받아 둠 → 1분 뒤 새 모양으로 다시 그림
+// 새 위젯 본체 확인: 앱이 새 버전을 알리면(위젯 데이터의 sv 가 이 본체보다 큼) 바로, 아니면 5분에 한 번 (작은 버전 파일만) → 받으면 1분 뒤 새 모양으로 다시 그림
+// 예전 로더(20분 간격)를 다시 붙여 넣지 않아도 이 본체가 5분마다 확인
 try {
   const LFM = FileManager.local(), cp = LFM.joinPath(LFM.documentsDirectory(), 'study-core.js'), vp = LFM.joinPath(LFM.documentsDirectory(), 'study-core.ver')
-  if (data && data.sv && data.sv > VER && APP && LFM.fileExists(cp)) {
+  const stale = !LFM.fileExists(vp) || Date.now() - LFM.modificationDate(vp).getTime() > 5 * 60000
+  if (APP && LFM.fileExists(cp) && ((data && data.sv && data.sv > VER) || stale)) {
     const lockW = String(config.widgetFamily || '').startsWith('accessory')
     const rv = new Request(APP + 'widget-core.ver?t=' + Date.now()); rv.timeoutInterval = lockW ? 3 : 6
     const ver = (await rv.loadString()).trim(), cur = LFM.fileExists(vp) ? LFM.readString(vp).trim() : ''
-    if (/^[0-9a-f]{6,40}$/.test(ver) && ver !== cur) {
+    if (ver === cur) LFM.writeString(vp, cur) // 확인한 시각만 새로
+    else if (/^[0-9a-f]{6,40}$/.test(ver)) {
       const r = new Request(APP + 'widget-core.js?v=' + ver); r.timeoutInterval = lockW ? 4 : 8
       const s = await r.loadString()
       if (s && s.includes('STUDY_CORE')) { LFM.writeString(cp, s); LFM.writeString(vp, ver); w.refreshAfterDate = new Date(Date.now() + 60000) }
