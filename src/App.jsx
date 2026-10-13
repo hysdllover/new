@@ -15,6 +15,7 @@ import BlockEditor from './components/BlockItemEditor.jsx'
 import Home from './views/Home.jsx'
 import Health from './views/Health.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
+import { maybeWelcome } from './components/Welcome.jsx'
 
 // 홈·건강(홈 위젯이 씀) 말고는 처음 열 때 받음 · 앱이 뜬 뒤 쉬는 시간에 미리 받아 둠(오프라인 대비)
 const LOAD = { planner: () => import('./views/Planner.jsx'), tasks: () => import('./views/Tasks.jsx'), study: () => import('./views/Study.jsx'), notes: () => import('./views/Notes.jsx'), settings: () => import('./views/Settings.jsx') }
@@ -64,6 +65,9 @@ export default function App() {
     el.addEventListener('scroll', on, { passive: true })
     return () => { el.removeEventListener('scroll', on); root.classList.remove('sc-away', 'sc-down') }
   }, [tab])
+
+  // 처음 실행이면 짧은 환영 (한 번만)
+  useEffect(() => { const t = setTimeout(maybeWelcome, 700); return () => clearTimeout(t) }, [])
 
   useEffect(() => {
     const onKey = (e) => {

@@ -160,7 +160,7 @@ function TodayList() {
         </div>
         <div className="list">
           {due.slice(0, 10).map((t) => <TaskItem key={t.id} t={t} subjects={subjects} projects={projects} />)}
-          {!openCount(due) && <Empty>모두 끝냈어요</Empty>}
+          {!openCount(due) && <Empty>{due.length ? '모두 끝냈어요' : '오늘 할 일이 없어요'}</Empty>}
         </div>
       </div>
     </Card>
