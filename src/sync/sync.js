@@ -308,6 +308,8 @@ function extraPayload() {
     habits: list('habits').filter((h) => !h.archived).slice(0, 10).map((h) => ({ id: h.id, t: h.title, c: h.color || null, on: !!h.days?.[d], w: Array.from({ length: 7 }, (_, i) => !!h.days?.[addDays(d, i - 6)]) })),
     rev: list('reviews').filter((r) => r.next && r.next <= d && !r.done).length,
     one: one ? { t: oneT ? oneT.title : one.text || '', d: oneT ? !!oneT.done : !!one.done } : null,
+    // 오늘의 Top 3 (앱 '오늘'에서 정한 순서대로) — 매거진 위젯 차례
+    top3: (day?.top3 || []).map((id) => getState().tasks?.[id]).filter((t) => t && !t.deleted).slice(0, 3).map((t) => ({ id: t.id, t: t.title, d: !!t.done })),
   }
 }
 // 기기별 마지막 동기화 (다른 기기에서도 보이게, 30분에 한 번만 기록)
@@ -345,7 +347,7 @@ function widgetPayload() {
   })
 }
 const ATT_MAX = 7 * 1024 * 1024 // gist 한 파일로 올릴 수 있는 첨부 크기 (base64 로 늘어나는 걸 고려)
-const WIDGET_GAP = 60000, WIDGET_FORCE_GAP = 15000 // 위젯 gist 쓰기 최소 간격 1분 (앱을 나갈 때·타이머는 15초) — GitHub 쓰기 제한 대비
+const WIDGET_GAP = 30000, WIDGET_FORCE_GAP = 10000 // 위젯 gist 쓰기 최소 간격 30초 (앱을 나갈 때·타이머는 10초) — GitHub 쓰기 제한 대비
 let widgetDirty = false, widgetTimer = null
 // 아이폰 캘린더 구독용 .ics (일정·할 일·D-day)
 function calendarIcs() {

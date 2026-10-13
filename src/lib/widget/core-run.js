@@ -51,6 +51,20 @@ async function transparentSetup() {
   if (typeof lum === 'number') FM.writeString(bgPath(size, key) + '.ink', lum > 150 ? 'dark' : 'light')
   a = new Alert(); a.title = '저장했어요'; a.message = '위젯이 곧 새 배경으로 바뀌어요. ' + (typeof lum === 'number' ? '배경이 ' + (lum > 150 ? '밝아서 먹색' : '어두워서 흰색') + ' 글자로 맞췄어요. ' : '') + '바꾸려면 메뉴에서 글자색을 고르세요.'; a.addAction('확인'); await a.present()
 }
+// 앱에 새 위젯 본체가 올라왔으면(위젯 데이터의 sv 가 이 본체보다 큼) 로더의 20분 확인을 기다리지 않고 바로 받아 둠 → 1분 뒤 새 모양으로 다시 그림
+try {
+  const LFM = FileManager.local(), cp = LFM.joinPath(LFM.documentsDirectory(), 'study-core.js'), vp = LFM.joinPath(LFM.documentsDirectory(), 'study-core.ver')
+  if (data && data.sv && data.sv > VER && APP && LFM.fileExists(cp)) {
+    const lockW = String(config.widgetFamily || '').startsWith('accessory')
+    const rv = new Request(APP + 'widget-core.ver?t=' + Date.now()); rv.timeoutInterval = lockW ? 3 : 6
+    const ver = (await rv.loadString()).trim(), cur = LFM.fileExists(vp) ? LFM.readString(vp).trim() : ''
+    if (/^[0-9a-f]{6,40}$/.test(ver) && ver !== cur) {
+      const r = new Request(APP + 'widget-core.js?v=' + ver); r.timeoutInterval = lockW ? 4 : 8
+      const s = await r.loadString()
+      if (s && s.includes('STUDY_CORE')) { LFM.writeString(cp, s); LFM.writeString(vp, ver); w.refreshAfterDate = new Date(Date.now() + 60000) }
+    }
+  }
+} catch (e) {}
 if (config.runsInWidget) Script.setWidget(w)
 else {
   const m = new Alert(); m.title = '스터디 위젯'
