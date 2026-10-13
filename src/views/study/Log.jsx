@@ -1,4 +1,5 @@
 import { focusLabel } from '../../components/StudyWrap.jsx'
+import { goalFor } from '../../engine/goal.js'
 import { useColl, useSettings } from '../../store/store.js'
 import { Card, Icon, Empty, Ring, openSheet } from '../../components/ui.jsx'
 import RecordEditor from '../../components/RecordEditor.jsx'
@@ -35,7 +36,7 @@ export default function Log({ params = {} }) {
         </div>
         <Card>
           <div className="row" style={{ gap: 14 }}>
-            <Ring value={total / (st.goalDaily || 1)} size={72}><b className="small">{Math.round(total / (st.goalDaily || 1) * 100)}%</b></Ring>
+            <Ring value={total / goalFor(st, today())} size={72}><b className="small">{Math.round(total / goalFor(st, today()) * 100)}%</b></Ring>
             <div className="grow">
               <div style={{ fontSize: '1.3em', fontWeight: 'var(--fw-b)' }}>{fmtDur(total)}</div>
               <div className="stack-bar">{bySub.map(({ s, m }) => <i key={s.id} style={{ flex: m, background: s.color }} title={s.name} />)}</div>

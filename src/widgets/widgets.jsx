@@ -1,4 +1,5 @@
 import { Roll, CountUp } from '../components/Roll.jsx'
+import { goalFor } from '../engine/goal.js'
 import { useColl, useSettings, setSettings, put, patch, remove } from '../store/store.js'
 import { dayRec, setDay, toggleTask, completeReview } from '../store/actions.js'
 import { eventsOn, classesOn } from '../engine/scheduler.js'
@@ -117,8 +118,8 @@ function Goal() {
   return (
     <Card className="center" onClick={goto('study', 'records')} style={{ cursor: 'pointer' }}>
       <div className="col" style={{ alignItems: 'center', gap: 4 }}>
-        <Ring value={m / st.goalDaily} size={78}><b className="small"><CountUp to={(m / st.goalDaily) * 100} fmt={(v) => Math.round(v) + '%'} /></b></Ring>
-        <span className="small"><CountUp to={m} fmt={(v) => fmtDur(Math.round(v))} /></span><span className="tiny muted">목표 {fmtDur(st.goalDaily)}</span>
+        <Ring value={m / goalFor(st, today())} size={78}><b className="small"><CountUp to={(m / goalFor(st, today())) * 100} fmt={(v) => Math.round(v) + '%'} /></b></Ring>
+        <span className="small"><CountUp to={m} fmt={(v) => fmtDur(Math.round(v))} /></span><span className="tiny muted">목표 {fmtDur(goalFor(st, today()))}</span>
       </div>
     </Card>
   )
@@ -377,7 +378,7 @@ function WeekStudy() {
   const byDay = {}
   for (const x of sessions) byDay[x.date] = (byDay[x.date] || 0) + x.dur
   const week = Array.from({ length: 7 }, (_, i) => byDay[addDays(today(), i - 6)] || 0).reduce((a, b) => a + b, 0)
-  return <Card title="최근 7일" action={<span className="tiny muted">{fmtDur(week)}</span>}><WeekBars values={byDay} goal={st.goalDaily} /></Card>
+  return <Card title="최근 7일" action={<span className="tiny muted">{fmtDur(week)}</span>}><WeekBars values={byDay} goal={goalFor(st, today())} /></Card>
 }
 
 function MonthHeatW({ w }) {
@@ -387,7 +388,7 @@ function MonthHeatW({ w }) {
   for (const x of sessions) byDay[x.date] = (byDay[x.date] || 0) + x.dur
   return (
     <Card title="공부 달력">
-      <MonthHeat values={byDay} goal={st.goalDaily} weekStartDow={st.weekStart} compact={(w.cols || { s: 2, m: 4, l: 4, t: 2 }[w.size || 's']) < 4} onPick={() => go('study', 'records')} />
+      <MonthHeat values={byDay} goal={(k) => goalFor(st, k)} weekStartDow={st.weekStart} compact={(w.cols || { s: 2, m: 4, l: 4, t: 2 }[w.size || 's']) < 4} onPick={() => go('study', 'records')} />
     </Card>
   )
 }
@@ -631,7 +632,7 @@ function MonthStats() {
   const list = sessions.filter((x) => x.date.startsWith(m0))
   const total = sumBy(list), days = new Set(list.map((x) => x.date)).size
   const bySub = subjects.map((s) => ({ s, m: sumBy(list.filter((x) => x.subjectId === s.id)) })).sort((a, b) => b.m - a.m)[0]
-  const hit = [...new Set(list.map((x) => x.date))].filter((d) => sumBy(list.filter((x) => x.date === d)) >= st.goalDaily).length
+  const hit = [...new Set(list.map((x) => x.date))].filter((d) => sumBy(list.filter((x) => x.date === d)) >= goalFor(st, d)).length
   const tile = (k, v) => <div className="stat-tile"><span className="tiny muted">{k}</span><b>{v}</b></div>
   const hm = (x) => `${Math.floor(x / 60)}:${String(Math.round(x % 60)).padStart(2, '0')}`
   return (

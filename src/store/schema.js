@@ -37,7 +37,7 @@ export const DEFAULT_SETTINGS = {
   widgets: DEFAULT_WIDGETS,
   dayStart: 7 * 60, dayEnd: 24 * 60,
   weekStart: 1,
-  goalDaily: 240, goalWeekly: 1500,
+  goalDaily: 240, goalWeekly: 1500, goalByDay: {}, // goalByDay: 요일(0=일)별 하루 목표(분) · 없으면 goalDaily
   pomodoro: { work: 25, short: 5, long: 15, every: 4 },
   reviewIntervals: [1, 3, 7, 14, 30],
   syncExclude: {},

@@ -1,5 +1,6 @@
 // 오늘 계획 세우기: 밀린 일 → 받은 편지함 → 오늘 할 일 확인 → 오늘의 하나 (Sunsama식 아침 루틴)
 import { useState } from 'react'
+import { goalFor } from '../engine/goal.js'
 import { useColl, useSettings, patch } from '../store/store.js'
 import { moveTasks, dayRec, setDay, updateTask } from '../store/actions.js'
 import { today, fmtDur, fmtShort } from '../engine/date.js'
@@ -45,8 +46,8 @@ function PlanDay({ close }) {
       </>}
       {step === 2 && <>
         <div className="plan-goals"><span className="tiny muted">이번 주 목표</span><WeekGoals compact /></div>
-        <div className="small muted">오늘 할 일 {todays.length}개{est ? ` · 예상 ${fmtDur(est)}` : ''} · 공부 목표 {fmtDur(st.goalDaily)}</div>
-        {est > st.goalDaily * 1.2 && <div className="small" style={{ color: 'var(--danger)' }}>예상 시간이 목표보다 많아요. 몇 개는 내일로 옮겨 보세요.</div>}
+        <div className="small muted">오늘 할 일 {todays.length}개{est ? ` · 예상 ${fmtDur(est)}` : ''} · 공부 목표 {fmtDur(goalFor(st, today()))}</div>
+        {est > goalFor(st, today()) * 1.2 && <div className="small" style={{ color: 'var(--danger)' }}>예상 시간이 목표보다 많아요. 몇 개는 내일로 옮겨 보세요.</div>}
         <div className="list">{todays.map((t) => <Row key={t.id} t={t}>{t.estimate ? <span className="tiny muted">{t.estimate}분</span> : null}{B('내일로', () => moveTasks([t.id], 'tomorrow'))}</Row>)}</div>
         {!todays.length && <div className="empty">오늘 할 일이 없어요</div>}
       </>}

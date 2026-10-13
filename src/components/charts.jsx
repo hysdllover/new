@@ -77,6 +77,8 @@ export function Heatmap({ values, weeks = 15, max, color = 'var(--c2)', onPick }
 const hmT = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`
 // 월별 공부 달력: 칸 진하기 = 목표 대비 공부량
 export function MonthHeat({ values, goal = 240, weekStartDow = 1, color = 'var(--c2)', onPick, compact, fixed }) {
+  // goal: 숫자 또는 날짜 → 그날 목표 (요일별 목표)
+  const gOf = typeof goal === 'function' ? goal : () => goal
   const t = today()
   const [m0, setMonth] = useState(monthStart(t)), month = fixed || m0
   // 이미지로 저장 (리포트 이미지 색 설정을 따름)
@@ -91,7 +93,7 @@ export function MonthHeat({ values, goal = 240, weekStartDow = 1, color = 'var(-
   const days = Array.from({ length: n }, (_, i) => addDays(month, i))
   const vals = days.map((d) => values[d] || 0)
   const total = vals.reduce((a, v) => a + v, 0), studied = vals.filter(Boolean).length
-  const hit = vals.filter((v) => v >= goal).length
+  const hit = days.filter((d, i) => vals[i] >= gOf(d)).length
   const wd = Array.from({ length: 7 }, (_, i) => WD[(i + weekStartDow) % 7])
   return (
     <div className={'mheat' + (compact ? ' compact' : '')}>
@@ -107,7 +109,7 @@ export function MonthHeat({ values, goal = 240, weekStartDow = 1, color = 'var(-
         {wd.map((w) => <span key={w} className="mheat-wd">{w}</span>)}
         {Array.from({ length: lead }, (_, i) => <span key={'e' + i} />)}
         {days.map((d, i) => {
-          const v = vals[i], r = Math.min(1, v / goal)
+          const v = vals[i], r = Math.min(1, v / (gOf(d) || 1))
           return (
             <button key={d} className={'mheat-cell' + (d === t ? ' today' : '') + (r >= .9 ? ' dark' : '') + (v ? '' : ' empty')} disabled={d > t} onClick={() => onPick?.(d)}
               style={v ? { background: `color-mix(in srgb, ${color} ${Math.round(16 + 70 * r)}%, var(--surface))` } : null}>

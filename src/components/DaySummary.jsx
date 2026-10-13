@@ -1,5 +1,6 @@
 // 리포트(하루·주간·월간): 구성(켜기·순서)을 직접 정함 — 공유(텍스트)·이미지·A4 인쇄도 같은 구성
 import { useEffect, useState } from 'react'
+import { goalFor } from '../engine/goal.js'
 import { reportFamily, loadReportFont, reportFontOptions, reportScale } from '../lib/reportFont.js'
 import { useMyFonts } from '../lib/fonts.js'
 import { CountUp } from './Roll.jsx'
@@ -73,7 +74,7 @@ export function daySummary(date, { tasks, sessions, subjects, goal, ...opts }) {
 const pinnedDdays = (from) => list('ddays').filter((x) => x.pinned && x.date >= from).sort((a, b) => a.date.localeCompare(b.date)).map((x) => ({ t: x.title, n: diffDays(x.date, from), c: x.color || null }))
 
 // 주간·월간 요약 (from~to)
-export function periodSummary(kind, from, to, { tasks, sessions, subjects, goal, weekStart: wsd = 1 }) {
+export function periodSummary(kind, from, to, { tasks, sessions, subjects, goal, goalOf, weekStart: wsd = 1 }) {
   const sub = (id) => subjects.find((s) => s.id === id)
   const ds = range(from, to), inR = (x) => x >= from && x <= to
   const ss = sessions.filter((s) => inR(s.date))
@@ -90,14 +91,16 @@ export function periodSummary(kind, from, to, { tasks, sessions, subjects, goal,
   const left = live.filter((t) => !t.done && t.due && inR(t.due))
   const fc = { 상: 0, 중: 0, 하: 0 }; for (const s of ss) if (s.focus) fc[focusLabel(s.focus)]++
   const nd = ds.filter((d) => d <= today()).length || 1
+  // 기간 목표: 요일별 목표가 있으면 오늘까지 날마다 더함
+  const gSum = goalOf ? ds.filter((d) => d <= today()).reduce((a, d) => a + goalOf(d), 0) || goalOf(from) : goal * nd
   const habits = list('habits').map((h) => ({ title: h.title, n: ds.filter((d) => h.days?.[d]).length, of: nd }))
   const prog = [...list('lectures').map((x) => ({ t: x.title, n: Object.values(x.done || {}).filter((v) => inR(v)).length, all: Object.keys(x.done || {}).length, of: x.total, u: '강' })), ...list('textbooks').map((x) => ({ t: x.title, n: 0, all: x.current || 0, of: x.total, u: x.unit || 'p' }))].filter((x) => x.of)
   const ddays = pinnedDdays(today())
   const comments = ds.map((d) => [d, dayRec(d).comment]).filter(([, c]) => c)
   const hmx = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`
   return {
-    kind, date: from, from, to, mins, goal: goal * nd, dayGoal: goal, subs: Object.values(bySub).sort((a, b) => b.m - a.m), hours, days, done, left, fc, habits, prog, ddays, comments, best: best?.m ? best : null,
-    sess: ss, cal: kind === 'month' ? { month: from, values: byDay, goal, weekStartDow: wsd } : null,
+    kind, date: from, from, to, mins, goal: gSum, dayGoal: goal, subs: Object.values(bySub).sort((a, b) => b.m - a.m), hours, days, done, left, fc, habits, prog, ddays, comments, best: best?.m ? best : null,
+    sess: ss, cal: kind === 'month' ? { month: from, values: byDay, goal: goalOf || goal, weekStartDow: wsd } : null,
     stats: [['하루 평균', hmx(studied ? Math.round(mins / studied) : 0)], ['공부한 날', `${studied}일`], ['끝낸 일', String(done.length)]],
   }
 }
@@ -176,7 +179,7 @@ async function printA4(d, secs, fontKey) {
     if (k === 'days') return d.days?.some((x) => x.m) ? box(i, head(k) + `<div class="b">${vbars(d.days.map((x) => x.m), d.days.map((x) => x.l), d.dayGoal || 0)}</div>`, true) : ''
     if (k === 'hours' && d.slots) return d.hours.some(Boolean) ? box(i, head(k) + `<div class="b"><div class="rpa-ten">${Array.from({ length: 18 }, (_, h) => `<div class="r2"><span>${h + 6}</span>${d.slots.slice(h * 6, h * 6 + 6).map((x) => `<i${x.f ? ` style="background:color-mix(in srgb, #4b505a ${Math.round(22 + 40 * x.f)}%, white)"` : ''}></i>`).join('')}</div>`).join('')}</div></div>`) : ''
     if (k === 'hours') return d.hours.some(Boolean) ? box(i, head(k) + `<div class="b">${vbars(d.hours, d.hours.map((_, j) => ([0, 6, 12, 17].includes(j) ? j + 6 + '시' : '')))}</div>`, true) : ''
-    if (k === 'cal') { if (!d.cal) return ''; const c = d.cal, lead = (new Date(c.month + 'T00:00').getDay() - c.weekStartDow + 7) % 7, cells = [...Array(lead).fill(null), ...d.days]; while (cells.length % 7) cells.push(null); return box(i, head(k) + `<div class="b"><div class="rpa-cal">${Array.from({ length: 7 }, (_, j) => `<span class="wd">${WD[(j + c.weekStartDow) % 7]}</span>`).join('')}${cells.map((x, j) => (x ? `<span class="c" style="${x.m ? `background:color-mix(in srgb, #4b505a ${Math.round(10 + 50 * Math.min(1, x.m / (c.goal || 1)))}%, white)` : ''}"><b>${j - lead + 1}</b>${x.m ? hmS(x.m) : ''}</span>` : '<span></span>')).join('')}</div></div>`, true) }
+    if (k === 'cal') { if (!d.cal) return ''; const c = d.cal, lead = (new Date(c.month + 'T00:00').getDay() - c.weekStartDow + 7) % 7, cells = [...Array(lead).fill(null), ...d.days]; while (cells.length % 7) cells.push(null); return box(i, head(k) + `<div class="b"><div class="rpa-cal">${Array.from({ length: 7 }, (_, j) => `<span class="wd">${WD[(j + c.weekStartDow) % 7]}</span>`).join('')}${cells.map((x, j) => (x ? `<span class="c" style="${x.m ? `background:color-mix(in srgb, #4b505a ${Math.round(10 + 50 * Math.min(1, x.m / ((typeof c.goal === 'function' ? c.goal(x.d) : c.goal) || 1)))}%, white)` : ''}"><b>${j - lead + 1}</b>${x.m ? hmS(x.m) : ''}</span>` : '<span></span>')).join('')}</div></div>`, true) }
     const s = sheetOf(k, d); return s ? table(k, i, s) : ''
   })).join('')
   el.innerHTML = `<style>
@@ -256,7 +259,7 @@ export default function DaySummary({ initial = today(), initialMode = 'day' }) {
   useMyFonts()
   useEffect(() => { loadReportFont(fontKey).catch(() => {}) }, [fontKey]) // 날짜·큰 숫자·소제목 글꼴
   useColl('habits'); useColl('reviews'); useColl('lectures'); useColl('textbooks'); useColl('ddays'); useColl('quotes')
-  const opt = { tasks, sessions, subjects, goal: st.goalDaily || 240, weekStart: st.weekStart ?? 1 }
+  const opt = { tasks, sessions, subjects, goal: goalFor(st, date), goalOf: (k) => goalFor(st, k), weekStart: st.weekStart ?? 1 }
   const from = mode === 'week' ? weekStart(date, opt.weekStart) : monthStart(date)
   const d = mode === 'day' ? daySummary(date, opt) : periodSummary(mode, from, mode === 'week' ? addDays(from, 6) : addDays(from, daysInMonth(+from.slice(0, 4), +from.slice(5, 7) - 1) - 1), opt)
   const step = (n) => setDate(mode === 'day' ? addDays(date, n) : mode === 'week' ? addDays(date, 7 * n) : addMonths(monthStart(date), n))

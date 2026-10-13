@@ -341,7 +341,7 @@ async function miniApp(Q) {
     study: () => {
       const ss = Object.values((data.study && data.study.sessions) || {}).filter((x) => !x.deleted && x.date === td)
       const T = ACT.timer(), live = T && !T.paused && T.start ? Math.round((Date.now() - T.start) / 60000) : 0
-      const mins = ss.reduce((a, x) => a + (x.dur || 0), 0), goal = (data.settings && data.settings.settings && data.settings.settings.main && data.settings.settings.main.goalDaily) || 240
+      const mins = ss.reduce((a, x) => a + (x.dur || 0), 0), SM0 = (data.settings && data.settings.settings && data.settings.settings.main) || {}, gv = +((SM0.goalByDay || {})[new Date().getDay()]), goal = gv > 0 ? gv : SM0.goalDaily || 240
       head('공부')
       row(hmS(mins) + ' / ' + hmS(goal), T ? (T.paused ? '일시정지 · ' : '공부 중 · ') + (T.name || '공부') + (T.paused ? ' ' + Math.round((T.acc || 0) / 60000) + '분' : ' ' + live + '분째') : '오늘 공부 시간', { font: Font.thinSystemFont(26), h: 64 })
       if (T) { row(T.paused ? '계속하기' : '일시정지 · 정지', null, { color: C.acc, onSelect: () => act(ACT.timerMenu) }) }
