@@ -541,6 +541,7 @@ export async function syncNow({ flush = false } = {}) {
   // 받기만 하는 동기화는 20초 안에 다시 하지 않음 (요청 수 절약)
   if (!flush && status.state !== 'pending' && !widgetDirty && Date.now() - lastRun < 20000) return
   lastRun = Date.now()
+  pendingSince = 0 // 이번에 올림 (실패하면 다음 변경부터 다시 셈)
   running = (async () => {
     setStatus({ state: 'syncing', error: null, auth: false })
     try {
@@ -630,7 +631,11 @@ export async function syncNow({ flush = false } = {}) {
       if (!settings().noteTaskClean1) import('../lib/notes.js').then((m) => m.cleanNoteTasksOnce()).catch(() => {})
     } catch (e) {
       if (e.until) pause(e.until)
-      else {
+      else if ([409, 422, 500, 502, 503, 504].includes(e.status) || (e instanceof TypeError && /fetch|network|load failed/i.test(e.message))) {
+        // 잠깐 생기는 오류(동시에 고침 · GitHub 서버 · 네트워크 끊김): 오류로 띄우지 않고 1분 뒤 조용히 다시
+        setStatus({ state: 'pending' }); clearTimeout(timer); timer = setTimeout(() => syncNow(), 60000)
+        addLog({ at: Date.now(), err: '잠깐 실패 · 1분 뒤 다시 (' + (e.status || '네트워크') + ')' })
+      } else {
         if (/Gist 를 찾을 수 없/.test(e.message)) ls.set('gist_id', null) // 지워진 gist → 다음에 다시 찾거나 만듦
         setStatus({ state: 'error', error: e.message, auth: !!e.auth })
         addLog({ at: Date.now(), err: String(e.message || e).slice(0, 80) })
@@ -644,13 +649,25 @@ export async function syncNow({ flush = false } = {}) {
 }
 
 let timer = null
+// 노트 쓰는 중: 글자마다 올리지 않음 — 손을 멈추고 90초 뒤, 계속 쓰는 중이면 5분에 한 번만 (노트를 나가거나 앱을 닫으면 바로)
+const NOTE_COLLS = new Set(['notes', 'syncBlocks', 'files'])
+let lastNoteEdit = 0, pendingSince = 0 // pendingSince: 아직 안 올린 변경이 처음 생긴 때
+const noteEditing = () => Date.now() - lastNoteEdit < 90000
+// 노트 화면을 나갈 때: 미뤄 둔 노트 변경을 곧 올림
+export function syncSoon() {
+  if (!token() || status.state !== 'pending') return
+  lastNoteEdit = 0; clearTimeout(timer)
+  timer = setTimeout(() => syncNow(), Math.max(3000, lastPush + 30000 - Date.now()))
+}
 export function startSync() {
-  onChange(() => {
+  onChange((coll) => {
     if (!token()) return
     if (status.state !== 'syncing') setStatus({ state: 'pending' })
     clearTimeout(timer)
-    // 입력이 멈추고 4초 뒤, 연속 업로드는 최소 30초 간격 (GitHub 쓰기 제한 대비)
-    timer = setTimeout(() => syncNow(), Math.max(4000, lastPush + 30000 - Date.now()))
+    if (NOTE_COLLS.has(coll)) lastNoteEdit = Date.now()
+    if (!pendingSince) pendingSince = Date.now()
+    // 노트 쓰는 중이면 (노트 안 체크 줄이 만든 할 일 변경도 같이) 길게 미룸 · 그 밖엔 입력이 멈추고 4초 뒤, 연속 업로드는 최소 30초 간격 (GitHub 쓰기 제한 대비)
+    timer = setTimeout(() => syncNow(), noteEditing() ? Math.max(4000, Math.min(90000, pendingSince + 300000 - Date.now())) : Math.max(4000, lastPush + 30000 - Date.now()))
   })
   // 앱을 나갈 때 대기 중인 변경을 바로 올림 (iOS 는 백그라운드에서 곧 멈춤)
   const flush = () => { if (status.state === 'pending' || widgetDirty) { clearTimeout(timer); syncNow({ flush: true }) } }
@@ -661,7 +678,7 @@ export function startSync() {
   window.addEventListener('online', () => syncNow())
   // 열려 있는 동안 다른 기기 변경 받기: 설정의 자동 동기화 간격(기본 3분 · 절약 10분 · 끄기) — 타이머 중엔 1분
   setInterval(() => {
-    if (document.visibilityState !== 'visible') return
+    if (document.visibilityState !== 'visible' || noteEditing()) return // 노트 쓰는 중엔 받아 오기도 쉼 (쓰던 글이 흔들리지 않게)
     const every = { normal: 180000, eco: 600000, off: 0 }[settings().syncEvery || 'normal']
     const need = localStorage.getItem('timer') ? Math.min(every || 60000, 60000) : every
     if (need && Date.now() - lastRun >= need - 1000) syncNow()
