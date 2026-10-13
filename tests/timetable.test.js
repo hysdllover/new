@@ -34,3 +34,12 @@ test('주말 독서실 시간표', () => {
   assert.equal(sch[0].title, '수학'); assert.equal(sch[0].wk, undefined)
   assert.equal(classesFor(tt, '2026-10-12', subs).length, 0) // 평일 · 방학
 })
+
+test('요일별 하루 목표', async () => {
+  const { goalFor } = await import('../src/engine/goal.js')
+  const st = { goalDaily: 240, goalByDay: { 6: 420, 0: 420, 3: 0 } }
+  assert.equal(goalFor(st, '2026-10-17'), 420) // 토
+  assert.equal(goalFor(st, '2026-10-14'), 240) // 수: 0 은 기본값
+  assert.equal(goalFor({ goalDaily: 180 }, '2026-10-17'), 180)
+  assert.equal(goalFor({}, '2026-10-17'), 240)
+})

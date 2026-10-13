@@ -161,6 +161,7 @@ export default function Settings() {
             <Field label="하루 목표(분)"><input className="input" type="number" step="10" value={st.goalDaily} onChange={(e) => setSettings({ goalDaily: +e.target.value })} /></Field>
             <Field label="주간 목표(분)"><input className="input" type="number" step="30" value={st.goalWeekly} onChange={(e) => setSettings({ goalWeekly: +e.target.value })} /></Field>
           </div>
+          <GoalByDayField />
           <Field label="복습 간격(일, 쉼표)"><input className="input" defaultValue={st.reviewIntervals.join(', ')} onBlur={(e) => { const v = e.target.value.split(/[,\s]+/).map(Number).filter((n) => n > 0); if (v.length) setSettings({ reviewIntervals: v }) }} /></Field>
           <Field label="일정 기본 이동·준비 버퍼(분)"><input className="input" type="number" min="0" step="5" value={st.defaultBuffer} onChange={(e) => setSettings({ defaultBuffer: +e.target.value })} /></Field>
           <Toggle label="요일 템플릿 자동 적용" checked={st.autoTemplate} onChange={(v) => setSettings({ autoTemplate: v })} />
@@ -904,3 +905,26 @@ function DesignPreview() {
     </div>
   )
 }
+
+// 요일별 하루 목표 (시간 단위 · 비우면 기본 하루 목표) — 예: 평일 4시간 · 주말 독서실 7시간
+function GoalByDayField() {
+  const st = useSettings(), gbd = st.goalByDay || {}, ws = st.weekStart ?? 1
+  const days = Array.from({ length: 7 }, (_, i) => (i + ws) % 7)
+  const set = (d, v) => { const n = { ...gbd }; if (v > 0) n[d] = Math.round(v * 60); else delete n[d]; setSettings({ goalByDay: n }) }
+  const on = Object.keys(gbd).length > 0
+  return (
+    <Field label="요일별 하루 목표 (시간 · 비우면 기본)">
+      <div className="goal-days">
+        {days.map((d) => (
+          <label key={d} className={'goal-day' + (d === 0 ? ' sun' : d === 6 ? ' sat' : '')}>
+            <span>{WD[d]}</span>
+            <input className="input" type="number" inputMode="decimal" min="0" step="0.5" placeholder={String(+(st.goalDaily / 60).toFixed(1))}
+              defaultValue={gbd[d] ? +(gbd[d] / 60).toFixed(2) : ''} key={gbd[d] || 'x'} onBlur={(e) => set(d, parseFloat(e.target.value))} aria-label={`${WD[d]}요일 목표 시간`} />
+          </label>
+        ))}
+      </div>
+      {on && <button className="tiny muted" style={{ alignSelf: 'flex-start', marginTop: 4 }} onClick={() => setSettings({ goalByDay: {} })}>요일별 목표 지우기</button>}
+    </Field>
+  )
+}
+

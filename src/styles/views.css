@@ -1256,3 +1256,8 @@ html[data-done="fade"] .task-item .title .ttl::after, html[data-done="keep"] .ta
 .sh-b .wbars-goal { border-color: color-mix(in srgb, var(--text) 30%, transparent); }
 .dw.dw-full { padding: 0; }
 .dw.dw-full .dw-in { border-radius: inherit; }
+/* 설정 › 요일별 하루 목표: 요일 7칸 */
+.goal-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.goal-day { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: .84em; color: var(--muted); }
+.goal-day .input { width: 100%; text-align: center; padding: 0 2px; min-height: 34px; }
+

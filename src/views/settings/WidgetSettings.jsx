@@ -1,5 +1,6 @@
 // 설정 › 위젯: 위젯 글꼴·대시보드 칸·내 위젯 구성·홈/잠금 화면 미리보기 (Settings.jsx 에서 나눔)
 import { useTimerState, useTick, elapsed, remaining } from '../../lib/timer.js'
+import { goalFor } from '../../engine/goal.js'
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { useSettings, setSettings, useColl, put, remove, patch, exportJSON, importJSON, uid, getState, deviceId as myDevice } from '../../store/store.js'
 import { seriesSummary } from '../../lib/series.js'
@@ -103,7 +104,7 @@ export function WidgetPreview() {
   const d = today()
   const today0 = sessions.filter((x) => x.date === d)
   const mins = today0.reduce((a, x) => a + x.dur, 0)
-  const goal = st.goalDaily || 240
+  const goal = goalFor(st, d)
   const pct = Math.round(Math.min(1, mins / goal) * 100)
   const todo = sortTasks(tasks.filter((t) => !t.archived && !t.done && t.due && t.due <= d), 'due')
   const doneT = tasks.filter((t) => !t.archived && t.done && t.doneAt && new Date(t.doneAt).toDateString() === new Date().toDateString())

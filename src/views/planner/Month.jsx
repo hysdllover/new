@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { goalFor } from '../../engine/goal.js'
 import { useColl, useSettings, setSettings, put, find } from '../../store/store.js'
 import { Sticker, TAPES } from '../../components/Stickers.jsx'
 import { eventsOn } from '../../engine/scheduler.js'
@@ -67,7 +68,7 @@ export default function Month({ date, setDate }) {
             const evs = eventsOn(d, events).filter((e) => (e.layer === 'academy' ? layers.academy : layers.events))
             const due = layers.tasks ? tasks.filter((t) => t.due === d && !t.archived) : []
             const mins = studyBy[d] || 0
-            const heat = layers.study && mins ? Math.min(1, mins / (st.goalDaily || 240)) : 0
+            const heat = layers.study && mins ? Math.min(1, mins / goalFor(st, d)) : 0
             const hDone = layers.habits ? habits.filter((h) => h.days?.[d]).length : 0
             const medDone = layers.meds && medTotal ? medLogs.filter((l) => l.date === d && l.taken).length : 0
             return (
@@ -84,7 +85,7 @@ export default function Month({ date, setDate }) {
                   {evs.length > 3 && <div className="tiny muted">+{evs.length - 3}</div>}
                   {due.length > 0 && (st.theme?.calTaskDots ? <div className="mtdots">{due.slice(0, 8).map((t) => <i key={t.id} className={t.done ? 'on' : ''} />)}</div> : <div className="mtask tiny">☐ {due.filter((t) => !t.done).length}/{due.length}</div>)}
                 </div>
-                {layers.study && mins > 0 && <span className="mstudy" style={{ width: Math.min(100, (mins / (st.goalDaily || 240)) * 100) + '%' }}>{Object.entries(subBy[d] || {}).sort((a, b) => b[1] - a[1]).map(([sid, m]) => <i key={sid} style={{ flex: m, background: subjects.find((x) => x.id === sid)?.color || 'var(--c2)' }} />)}</span>}
+                {layers.study && mins > 0 && <span className="mstudy" style={{ width: Math.min(100, (mins / goalFor(st, d)) * 100) + '%' }}>{Object.entries(subBy[d] || {}).sort((a, b) => b[1] - a[1]).map(([sid, m]) => <i key={sid} style={{ flex: m, background: subjects.find((x) => x.id === sid)?.color || 'var(--c2)' }} />)}</span>}
                 {ci % 7 === 0 && ddW && d <= ddW.date && <span className="mwk">{Math.ceil(diffDays(ddW.date, d) / 7)}주</span>}
                 {ddW && d === ddW.date && <span className="mdd" />}
                 <div className="mfoot">

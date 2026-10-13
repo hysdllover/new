@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { goalFor } from '../../engine/goal.js'
 import { drawShareCard, shareBlob } from '../../lib/shareCard.js'
 import { pickQuote } from '../../lib/quote.js'
 import { useColl, useSettings, put, patch, remove } from '../../store/store.js'
@@ -40,17 +41,17 @@ export default function Records() {
       <WeekSwipe sessions={sessions} subjects={subjects} s={s} st={st} />
       <Card title="목표" action={<button className="btn ghost sm" onClick={() => openSheet(() => <ShareCardSheet />, { title: '공부 인증 카드' })}><Icon name="share" size={13} />인증 카드</button>}>
         <div className="goal-rows">
-          {[['오늘', s.today, st.goalDaily, 'var(--accent)'], ['이번 주', s.week, st.goalWeekly, 'var(--c2)']].map(([l, v, g, c]) => <GoalRow key={l} label={l} pct={v / (g || 1)} color={c} value={hmS(v)} of={hmS(g)} />)}
+          {[['오늘', s.today, goalFor(st, today()), 'var(--accent)'], ['이번 주', s.week, st.goalWeekly, 'var(--c2)']].map(([l, v, g, c]) => <GoalRow key={l} label={l} pct={v / (g || 1)} color={c} value={hmS(v)} of={hmS(g)} />)}
           <GoalRow label="이번 주 할 일" pct={doneRate} color="var(--c3)" value={`${weekTasks.filter((t) => t.done).length}`} of={`${weekTasks.length}개`} />
         </div>
         <div className="tiny muted" style={{ marginTop: 10 }}>어제 {hmS(s.yesterday)} · 하루 평균 {hmS(Math.round(s.week / Math.max(1, diffDays(today(), s.ws) + 1)))}</div>
       </Card>
       <Card title="최근 7일">
-        <WeekBars values={s.byDay} goal={st.goalDaily} />
+        <WeekBars values={s.byDay} goal={goalFor(st, today())} />
         {subBars.length > 0 && <div style={{ marginTop: 10 }}><Bars items={subBars} /></div>}
       </Card>
       <Card title="공부 캘린더">
-        <MonthHeat values={s.byDay} goal={st.goalDaily} weekStartDow={st.weekStart} onPick={(d) => openSheet(() => <DayRecords date={d} />, { title: fmtDate(d) })} />
+        <MonthHeat values={s.byDay} goal={(k) => goalFor(st, k)} weekStartDow={st.weekStart} onPick={(d) => openSheet(() => <DayRecords date={d} />, { title: fmtDate(d) })} />
       </Card>
       <DdayCard />
       <WeeksToDday byDay={s.byDay} st={st} />
@@ -81,7 +82,7 @@ function WeekSwipe({ sessions, subjects, s, st }) {
   const bySub = {}; for (const x of wk) bySub[x.subjectId || '-'] = (bySub[x.subjectId || '-'] || 0) + (x.dur || 0)
   const topSub = Object.entries(bySub).sort((a, b) => b[1] - a[1])[0], sub = topSub && subjects.find((x) => x.id === topSub[0])
   const bestDay = days.reduce((a, d) => ((s.byDay[d] || 0) > (s.byDay[a] || 0) ? d : a), days[0])
-  const hit = days.filter((d) => (s.byDay[d] || 0) >= (st.goalDaily || 240)).length
+  const hit = days.filter((d) => (s.byDay[d] || 0) >= goalFor(st, d)).length
   const fc = { 3: 0, 2: 0, 1: 0 }; for (const x of wk) if (x.focus) fc[x.focus >= 4 ? 3 : x.focus >= 3 ? 2 : 1]++
   const slot = { '오전': 0, '오후': 0, '저녁': 0, '밤': 0 }
   for (const x of wk) if (x.start != null) { const h = new Date(x.start).getHours(); slot[h < 12 ? '오전' : h < 18 ? '오후' : h < 22 ? '저녁' : '밤'] += x.dur || 0 }
@@ -125,7 +126,7 @@ function ShareCardSheet() {
     const other = todays.filter((x) => !subjects.some((sb) => sb.id === x.subjectId)).reduce((a, x) => a + x.dur, 0)
     if (other) subs.push({ name: '기타', m: other })
     let u
-    drawShareCard({ date: fmtDate(d, { year: true }), mins: s.today, goal: st.goalDaily, subjects: subs, week: s.week, yesterday: s.yesterday, quote: pickQuote([...quotes].sort((a, b) => a.id.localeCompare(b.id)))?.text })
+    drawShareCard({ date: fmtDate(d, { year: true }), mins: s.today, goal: goalFor(st, today()), subjects: subs, week: s.week, yesterday: s.yesterday, quote: pickQuote([...quotes].sort((a, b) => a.id.localeCompare(b.id)))?.text })
       .then((b) => { setBlob(b); u = URL.createObjectURL(b); setUrl(u) })
     return () => u && URL.revokeObjectURL(u)
   }, []) // eslint-disable-line

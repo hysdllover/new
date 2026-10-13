@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { goalFor } from '../../engine/goal.js'
 import { useColl, useSettings, put, patch, remove } from '../../store/store.js'
 import { useTimerState, useTick, elapsed, remaining, startStopwatch, startCountdown, pause, resume, stop, setTimerTask } from '../../lib/timer.js'
 import { today, fmtClock, fmtDur, fmtTime, tsToMin } from '../../engine/date.js'
@@ -50,9 +51,9 @@ export default function Timer() {
             </div>
           ) : (
             <div className="col" style={{ alignItems: 'center', gap: 12, padding: '10px 0' }}>
-              <Ring value={total / (st.goalDaily || 1)} size={150} stroke={7}>
+              <Ring value={total / goalFor(st, today())} size={150} stroke={7}>
                 <div style={{ fontSize: '1.4em', fontWeight: 'var(--fw-b)' }}>{fmtDur(total)}</div>
-                <div className="tiny muted">목표 {fmtDur(st.goalDaily)}</div>
+                <div className="tiny muted">목표 {fmtDur(goalFor(st, today()))}</div>
               </Ring>
               <StartPanel subjects={subjects} />
             </div>

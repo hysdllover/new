@@ -1091,7 +1091,7 @@ export default () => `  } else if (KIND === 'study') {
         const fut = k > today, v = vOf(k), dt = new Date(k + 'T12:00:00')
         tl(c, WDN[dt.getDay()] + ' ' + dt.getDate(), label(6.5), k === today ? INK : SOFT); c.addSpacer()
         tl(c, fut ? ' ' : v ? hm(v) : '—', k === today ? F(big2 ? 12 : 10, 'Medium') : tw(big2 ? 12 : 10), INK); c.addSpacer(4)
-        pline(c, fut ? 0 : v / goal, cw - 10)
+        pline(c, fut ? 0 : v / goalOf(k), cw - 10)
       })
       if (big2) {
         w.addSpacer(PGAP)

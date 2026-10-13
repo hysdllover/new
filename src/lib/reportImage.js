@@ -63,7 +63,7 @@ function calGrid(ctx, x0, y0, w, { month, values, goal, weekStartDow = 1, mono }
   g.font = f(18); g.fillStyle = T.soft
   for (let i = 0; i < 7; i++) { const s = '일월화수목금토'[(i + weekStartDow) % 7]; g.fillText(s, x0 + i * (cw + gap) + (cw - g.measureText(s).width) / 2, y0) }
   for (let d = 1; d <= n; d++) {
-    const k = `${y}-${String(mo + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`, v = values[k] || 0, r = Math.min(1, v / (goal || 1))
+    const k = `${y}-${String(mo + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`, v = values[k] || 0, r = Math.min(1, v / ((typeof goal === 'function' ? goal(k) : goal) || 1))
     const p = lead + d - 1, cx = x0 + (p % 7) * (cw + gap), cy = y0 + head + Math.floor(p / 7) * (ch + gap)
     g.fillStyle = v ? hc : T.rule; g.globalAlpha = v ? (mono ? 0.08 + 0.5 * r : 0.14 + 0.66 * r) : 0.45
     g.beginPath(); g.roundRect ? g.roundRect(cx, cy, cw, ch, 10) : g.rect(cx, cy, cw, ch); g.fill(); g.globalAlpha = 1
@@ -192,8 +192,8 @@ export async function drawMonthCal({ month, values, goal = 240, weekStartDow = 1
   const W = 1080, P = 96, IW = W - P * 2
   const ctx = setup(theme), { T, c, g, f, spaced } = ctx
   const y0m = +month.slice(0, 4), mo = +month.slice(5, 7) - 1, n = new Date(y0m, mo + 1, 0).getDate()
-  const vals = Array.from({ length: n }, (_, i) => values[`${month.slice(0, 8)}${String(i + 1).padStart(2, '0')}`] || 0)
-  const total = vals.reduce((a, v) => a + v, 0), studied = vals.filter(Boolean).length, hit = vals.filter((v) => v >= goal).length
+  const keys = Array.from({ length: n }, (_, i) => `${month.slice(0, 8)}${String(i + 1).padStart(2, '0')}`), vals = keys.map((k) => values[k] || 0)
+  const total = vals.reduce((a, v) => a + v, 0), studied = vals.filter(Boolean).length, hit = vals.filter((v, i) => v >= (typeof goal === 'function' ? goal(keys[i]) : goal)).length
   const ops = []; let y = P
   const add = (h, fn) => { const y0 = y; ops.push(() => fn(y0)); y += h }
   add(80, (y0) => { g.font = f(48, 200); g.fillStyle = T.ink; g.fillText(`${y0m}. ${mo + 1}`, P, y0); spaced('STUDY CALENDAR', 18, W - P, y0 + 22, T.soft, true) })

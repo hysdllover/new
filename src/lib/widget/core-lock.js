@@ -96,7 +96,9 @@ if (!data) {
     RULE = inkMode === 'light' ? new Color('#ffffff', 0.5) : inkMode === 'dark' ? new Color('#1e232b', 0.35) : dyn('#2a2f38', '#e6e9ee', 0.35)
   }
   MH = innerH - Math.round(11 * SCALE) - 10
-  const goal = st.goalDaily || 240
+  // 하루 목표: 요일별 목표가 있으면 그 요일 값 (앱 설정 › 요일별 하루 목표)
+  const goalOf = (k) => { const v = +((st.goalByDay || {})[new Date(k + 'T12:00:00').getDay()]); return v > 0 ? v : +st.goalDaily || 240 }
+  const goal = goalOf(today)
   const subjects = alive(data.study.subjects)
   const allSess = alive(data.study.sessions)
   const sessions = allSess.filter((s) => s.date === today)
