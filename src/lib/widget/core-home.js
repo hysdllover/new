@@ -1448,18 +1448,18 @@ export default () => `  } else if (KIND === 'study') {
       if (!big2) { w.addSpacer(); rule(w, inner); w.addSpacer(5); const f = w.addStack(); f.size = new Size(inner, 0); t(f, '공부 ' + hm(mins), label(8), DI); f.addSpacer(); t(f, dd ? ddTxt : '', label(8), DI); f.addSpacer(); t(f, '할 일 ' + left.length, label(8), DS) }
       else {
         w.addSpacer(16); dbl(); w.addSpacer(4)
-        // 차례: D-day · 공부 시간 · 일정(지금·다음) · 오늘 할 일 위에서 3개 (순서는 앱에서 정한 대로)
-        const nx = PAIRNX, top3 = left.slice(0, 3)
+        // 차례: D-day · 공부 시간 · 일정(지금·다음) · 오늘의 Top 3 (앱 '오늘'에서 정한 3개 · 끝낸 건 채운 칸)
+        const nx = PAIRNX, top3 = (data.extra && data.extra.top3) || []
         const TOC = [['D-DAY', dd ? ddTxt + '  ' + dd.title : '—', 'study.progress'], ['STUDY', hm(mins) + ' / ' + hm(goal) + '   ' + pct + '%', 'study.records'], ['SCHEDULE', nx ? nx.w + '  ' + nx.t : '남은 일정 없음', 'planner.week'],
-          ...[0, 1, 2].map((i) => [i ? '' : 'TO DO', top3[i] ? top3[i].title : i ? '' : '오늘 할 일 모두 끝', top3[i] && top3[i].id ? taskUrl(top3[i].id) : 'tasks', !!top3[i]])]
+          ...[0, 1, 2].map((i) => [i ? '' : 'TOP 3', top3[i] ? top3[i].t : i ? '' : '앱 오늘에서 3가지를 정해 보세요', top3[i] ? taskUrl(top3[i].id) : 'planner.today', top3[i] ? (top3[i].d ? 2 : 1) : 0])]
         const rh = Math.round(22 * SCALE), nT = Math.max(3, Math.min(TOC.length, Math.floor((innerH - 170 * SCALE) / (rh + 0.5))))
         TOC.slice(0, nT).forEach(([k, v, u, tk], i) => {
           if (i) { const r0 = w.addStack(); r0.size = new Size(inner, 0.5); r0.backgroundColor = new Color(VL, 0.15) }
           const r = w.addStack(); r.size = new Size(inner, rh); r.centerAlignContent(); r.url = link(u)
           const n0 = r.addStack(); n0.size = new Size(24, 0); t(n0, v ? pad(i + 1) : '', MN(8.5), DS); n0.addSpacer() // 빈 줄은 번호 없이
           const k0 = r.addStack(); k0.size = new Size(54, 0); t(k0, k, label(7), DS).minimumScaleFactor = 0.7; k0.addSpacer()
-          if (tk) { const bx = r.addStack(); bx.size = new Size(7, 7); bx.borderWidth = 0.8; bx.borderColor = DS; r.addSpacer(6) } // 할 일은 빈 네모 칸
-          t(r, v, tw(11.5), DI).minimumScaleFactor = 0.75; r.addSpacer()
+          if (tk) { const bx = r.addStack(); bx.size = new Size(7, 7); bx.borderWidth = 0.8; bx.borderColor = DS; if (tk === 2) bx.backgroundColor = DS; r.addSpacer(6) } // 할 일 칸 (끝낸 건 채움)
+          t(r, v, tw(11.5), tk === 2 ? DS : DI).minimumScaleFactor = 0.75; r.addSpacer()
         })
         w.addSpacer()
       }
