@@ -101,14 +101,14 @@ export function mdToBlocks(text) {
       if (rows) out.push({ id: id(), type: 'table', rows })
       i = e; continue
     }
-    // 수식 $$ … $$ → 코드 (math)
+    // 수식 $$ … $$ → 수식 블록
     if (/^\$\$/.test(ln)) {
       flush()
-      if (/^\$\$.+\$\$$/.test(ln)) { out.push(nb('code', ln.slice(2, -2).trim(), { lang: 'math' })); continue }
+      if (/^\$\$.+\$\$$/.test(ln)) { out.push(nb('math', ln.slice(2, -2).trim())); continue }
       const body = [ln.slice(2)]
       for (i++; i < lines.length && !/\$\$\s*$/.test(lines[i].trim()); i++) body.push(lines[i])
       if (i < lines.length) body.push(lines[i].trim().replace(/\$\$\s*$/, ''))
-      out.push(nb('code', body.join('\n').trim(), { lang: 'math' }))
+      out.push(nb('math', body.join('\n').trim()))
       continue
     }
     // 코드 (목록 안에서 들여 쓴 코드도: 들여쓴 만큼 걷어 냄)

@@ -9,6 +9,7 @@ import { longPress } from '../lib/drag.js'
 import { dayRec, setDay, toggleTask } from '../store/actions.js'
 import { today } from '../engine/date.js'
 import { openPlanDay } from '../components/PlanDay.jsx'
+import { openCloseDay } from '../components/CloseDay.jsx'
 
 // 위젯 배치: 모든 기기에서 같은 4칸 격자 (아이폰·아이패드 배치가 같게)
 const COLS = [[1, '1/4'], [2, '2/4'], [3, '3/4'], [4, '한 줄']]
@@ -91,9 +92,10 @@ export default function Home() {
     <div className="col">
       {!hide.greet && <Greeting />}
       {!hide.plan && <PlanBanner />}
+      {!hide.close && <CloseBanner />}
       {!hide.one && <TodayOne />}
       {editing && <div className="row wrap no-print" style={{ gap: 6 }}><span className="tiny muted">위쪽 카드</span>
-        {[['greet', '인사·날짜'], ['plan', '계획 안내'], ['one', '오늘 하나']].map(([k, l]) => <button key={k} className={'chip' + (!hide[k] ? ' on' : '')} onClick={() => setSettings({ homeHide: { ...hide, [k]: !hide[k] } })}>{l}</button>)}
+        {[['greet', '인사·날짜'], ['plan', '계획 안내'], ['close', '하루 마감'], ['one', '오늘 하나']].map(([k, l]) => <button key={k} className={'chip' + (!hide[k] ? ' on' : '')} onClick={() => setSettings({ homeHide: { ...hide, [k]: !hide[k] } })}>{l}</button>)}
         <span className="tiny muted">· 위젯은 길게 끌거나 ‹ › 로 순서 바꾸기</span></div>}
       <div className="row no-print" style={{ gap: 6 }}>
         <div className="scroll-x grow"><div className="row" style={{ gap: 6 }}>
@@ -185,13 +187,28 @@ function Greeting() {
 function PlanBanner() {
   useColl('days'); const tasks = useColl('tasks')
   const d = today()
-  if (dayRec(d).planned) return null
+  if (dayRec(d).planned || isEvening()) return null // 저녁엔 하루 마감 안내로
   const overdue = tasks.filter((t) => !t.done && !t.archived && t.due && t.due < d).length
   const inbox = tasks.filter((t) => !t.done && !t.archived && t.inbox).length
   return (
     <button className="plan-banner no-print" onClick={openPlanDay}>
       <span>☀</span><span className="grow" style={{ textAlign: 'left' }}><b>오늘 계획 세우기</b><span className="tiny muted">{[overdue && `밀린 일 ${overdue}`, inbox && `받은 편지함 ${inbox}`].filter(Boolean).join(' · ') || '오늘 할 일과 오늘의 하나 정하기'}</span></span>
       <span className="tiny muted" onClick={(e) => { e.stopPropagation(); setDay(d, { planned: true }) }}>건너뛰기</span>
+    </button>
+  )
+}
+
+// 하루 마감 배너: 저녁(20시~)에 오늘 돌아보기 · 남은 일 · 내일 Top 3 · 마감하면 사라짐
+const isEvening = () => new Date().getHours() >= 20
+function CloseBanner() {
+  useColl('days'); const tasks = useColl('tasks'); useNow(60000)
+  const d = today()
+  if (!isEvening() || dayRec(d).closed) return null
+  const left = tasks.filter((t) => !t.done && !t.archived && t.due && t.due <= d).length
+  return (
+    <button className="plan-banner close-banner no-print" onClick={openCloseDay}>
+      <span>☾</span><span className="grow" style={{ textAlign: 'left' }}><b>오늘 마감하기</b><span className="tiny muted">{left ? `남은 일 ${left} · ` : ''}오늘 돌아보고 내일 Top 3 고르기</span></span>
+      <span className="tiny muted" onClick={(e) => { e.stopPropagation(); setDay(d, { closed: true }) }}>건너뛰기</span>
     </button>
   )
 }

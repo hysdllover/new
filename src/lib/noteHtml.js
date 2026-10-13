@@ -3,6 +3,7 @@
 import { list, find } from '../store/store.js'
 import { getBlob, blobToDataUrl } from './files.js'
 import { norm } from './table.js'
+import { loadKatex, texHtml, KATEX_CSS } from './katex.js'
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const TONE = { key: '핵심', warn: '주의', ex: '예시', rose: '메모', olive: '정리', sand: '참고' }
@@ -70,7 +71,8 @@ async function blocksHtml(blocks, ctx) {
       case 'todo': { const done = ctx.tasks.find((x) => x.id === b.taskId)?.done; out.push(`<div class="li todo${done ? ' done' : ''}"${pad}><span class="ck">${done ? '✓' : ''}</span><div>${t}</div></div>`); break }
       case 'callout': out.push(`<aside class="co co-${b.tone || 'key'}"><span class="co-t">${TONE[b.tone || 'key'] || '핵심'}</span><div>${t}</div></aside>`); break
       case 'quote': out.push(`<blockquote>${t}</blockquote>`); break
-      case 'code': out.push(`<pre${b.lang ? ` data-lang="${esc(b.lang)}"` : ''}><code>${esc(b.text)}</code></pre>`); break
+      case 'math': case 'code': if (b.type === 'math' || b.lang === 'math') { await loadKatex().catch(() => {}); const h = texHtml(b.text, true); out.push(h ? `<div class="math">${h}</div>` : `<pre><code>${esc(b.text)}</code></pre>`); break }
+        out.push(`<pre${b.lang ? ` data-lang="${esc(b.lang)}"` : ''}><code>${esc(b.text)}</code></pre>`); break
       case 'divider': out.push(b.text ? `<div class="hrt ds-${b.ds || 'thin'}"><span>${t}</span></div>` : `<hr class="ds-${b.ds || 'thin'}">`); break
       case 'table': out.push(tableHtml(b, ctx)); break
       case 'toggle': out.push(`<details open><summary>${t || '접는 글'}</summary>${await blocksHtml(b.children, ctx)}</details>`); break
@@ -197,7 +199,7 @@ export async function notesToHtml(roots, { withSubs = true, title = '노트', on
   const art = pages.map((p, i) => `<article class="page" id="p-${p.n.id}">${p.head}${i || bundle ? '' : toc}${p.body}</article>`).join('\n')
   const cover = bundle ? `<section class="cover"><h1>${esc(title)}</h1><div class="meta"><span>노트 ${pages.length}개</span><span>${new Date().toLocaleDateString('ko-KR')}</span></div>${toc}</section>` : ''
   return `<!doctype html>
-<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title || '노트')}</title><style>${CSS}</style></head>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title || '노트')}</title>${art.includes('class="katex') ? `<link rel="stylesheet" href="${KATEX_CSS}">` : ''}<style>${CSS}</style></head>
 <body><main>
 ${cover}
 ${art}

@@ -15,15 +15,18 @@ import { useTimerState, useTick, elapsed, startStopwatch, pause, resume, stop } 
 import { applyFilter } from '../views/tasks/filter.js'
 import { startDrag } from '../lib/drag.js'
 import { applyMark, activeMarks, markRuns, plainText } from '../lib/marks.js'
+import MathTex from './MathTex.jsx'
 
-const TYPES = [['text', '텍스트'], ['h1', '제목 1'], ['h2', '제목 2'], ['bullet', '글머리'], ['todo', '체크박스 (할 일)'], ['callout', '강조 상자'], ['quote', '인용'], ['code', '코드'], ['divider', '구분선']]
+const TYPES = [['text', '텍스트'], ['h1', '제목 1'], ['h2', '제목 2'], ['bullet', '글머리'], ['todo', '체크박스 (할 일)'], ['callout', '강조 상자'], ['quote', '인용'], ['code', '코드'], ['math', '수식'], ['divider', '구분선']]
 const TONES = [['key', '핵심'], ['warn', '주의'], ['ex', '예시'], ['rose', '메모'], ['olive', '정리'], ['sand', '참고']]
 // 블록 바탕색 (옅게)
 const BGC = [['', '없음'], ['rose', '로즈'], ['olive', '올리브'], ['navy', '네이비'], ['violet', '바이올렛'], ['sand', '모래'], ['gray', '회색']]
 // 구분선 모양 ('' = 설정 › 디자인의 기본 모양)
 const DIVS = [['', '기본'], ['thin', '얇은 실선'], ['bold', '굵은 선'], ['dash', '점선'], ['double', '두 줄'], ['short', '가운데 짧게'], ['dots', '점 세 개'], ['space', '여백만']]
+// 수식 블록: type 'math' (예전 마크다운 가져오기의 code+lang math 도 같이)
+const isMath = (b) => b.type === 'math' || (b.type === 'code' && b.lang === 'math')
 const SOLID = ['divider', 'embed', 'sync', 'file', 'table', 'page', 'cols', 'link', 'board'] // 글자를 직접 쓰지 않는 블록
-const INLINE_RE = /(\*\*[^*\n]+\*\*|==[^=\n]+==|__[^_\n]+__|\{\{[rgbvmD]:[^{}\n]+\}\}|\^[^\s^]{1,24}\^|(?<!~)~[^\s~]{1,24}~(?!~)|\[\[[^\]]+\]\]|@(?:오늘|내일|모레|\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2})(?:\s+\d{1,2}:\d{2})?|https?:\/\/[^\s]+)/g
+const INLINE_RE = /(\$(?=\S)[^$\n]+?(?<=\S)\$(?!\d)|\*\*[^*\n]+\*\*|==[^=\n]+==|__[^_\n]+__|\{\{[rgbvmD]:[^{}\n]+\}\}|\^[^\s^]{1,24}\^|(?<!~)~[^\s~]{1,24}~(?!~)|\[\[[^\]]+\]\]|@(?:오늘|내일|모레|\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2})(?:\s+\d{1,2}:\d{2})?|https?:\/\/[^\s]+)/g
 
 // 이 앱의 노트·줄 링크 (?open=노트id&b=줄id)
 const ownLink = (u) => { try { const x = new URL(u); if (x.origin !== location.origin || !x.pathname.startsWith(import.meta.env.BASE_URL)) return null; const id = x.searchParams.get('open'); return id ? { id, b: x.searchParams.get('b') } : null } catch { return null } }
@@ -43,6 +46,8 @@ export function Inline({ text }) {
   const parts = text.split(INLINE_RE)
   return parts.map((p, i) => {
     if (i % 2 === 0) return <Fragment key={i}>{p}</Fragment>
+    // 인라인 수식 $x^2$
+    if (p.length > 2 && p[0] === '$' && p[p.length - 1] === '$') return <MathTex key={i} tex={p.slice(1, -1)} />
     // 글자 꾸미기: **굵게** · ==형광펜== · __밑줄__
     if (p.startsWith('**')) return <b key={i} className="mk-b"><Inline text={p.slice(2, -2)} /></b>
     if (p.startsWith('==')) { const m = /^([rgby]):/.exec(p.slice(2)); return <mark key={i} className={'mk-hl' + (m ? ' hl-' + m[1] : '')}><Inline text={p.slice(m ? 4 : 2, -2)} /></mark> }
@@ -174,7 +179,7 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
     if (e.nativeEvent.isComposing || e.keyCode === 229) return
     const el = e.target
     if (e.key === 'Tab' && ['text', 'bullet', 'todo', 'quote'].includes(b.type)) { e.preventDefault(); const lv = Math.max(0, Math.min(3, (b.indent || 0) + (e.shiftKey ? -1 : 1))); return upd(b.id, { indent: lv || undefined }) }
-    if (e.key === 'Enter' && !e.shiftKey && b.type === 'code') return // 코드: 줄바꿈 그대로
+    if (e.key === 'Enter' && !e.shiftKey && (b.type === 'code' || b.type === 'math')) return // 코드·수식: 줄바꿈 그대로
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       skipBlur(b.id)
@@ -252,10 +257,11 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
                 b.type === 'sync' ? <SyncBlock b={b} note={note} /> :
                 editing && !readOnly ? (
                   <><EditArea b={b} pos={edit.pos} onChange={(t) => onText(b, t)} onKeyDown={(e) => onKey(e, b)}
-                    onBlur={(t) => { if (skip.current !== b.id) commit({ ...b, text: t }); setEdit((x) => (x?.id === b.id ? null : x)) }} /></>
+                    onBlur={(t) => { if (skip.current !== b.id) commit({ ...b, text: t }); setEdit((x) => (x?.id === b.id ? null : x)) }} />
+                    {isMath(b) && <div className="math-prev">{b.text ? <MathTex tex={b.text} block /> : <span className="tiny muted">예: \frac{a}{b} · x^2 · \sqrt{x} · \sum_{k=1}^{n} k · \int_0^1 f(x)\,dx</span>}</div>}</>
                 ) : (
                   <div className={'blk-v' + (task?.done ? ' done' : '')} onClick={() => !readOnly && setEdit({ id: b.id, pos: (b.text || '').length })}>{b.type === 'callout' && <span className="co-tag">{(TONES.find(([t]) => t === (b.tone || 'key')) || TONES[0])[1]}</span>}
-                    {b.type === 'code' ? (b.text ? <code className="blk-code-t">{b.text}</code> : <span className="muted">코드</span>) : b.text ? <Inline text={b.text} /> : <span className="muted">{list.length === 1 && nested ? '입력…' : list.length === 1 ? '입력하세요… (# 제목, - 목록, [] 체크, [[링크]], @내일 15:00)' : ' '}</span>}
+                    {isMath(b) ? (b.text ? <MathTex tex={b.text} block /> : <span className="muted">수식 (LaTeX)</span>) : b.type === 'code' ? (b.text ? <code className="blk-code-t">{b.text}</code> : <span className="muted">코드</span>) : b.text ? <Inline text={b.text} /> : <span className="muted">{list.length === 1 && nested ? '입력…' : list.length === 1 ? '입력하세요… (# 제목, - 목록, [] 체크, [[링크]], @내일 15:00)' : ' '}</span>}
                     {b.ref && <button className="ref-chip" onClick={(e) => { e.stopPropagation(); openDetail(b.ref.type, b.ref.id, { occ: b.ref.date }) }}>→ {refLabel(b.ref)}</button>}
                     {task && task.due && !b.ref && <span className="ref-chip">{task.due.slice(5).replace('-', '/')}</span>}
                   </div>
@@ -281,6 +287,7 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
           <button className="chip" onClick={() => addEnd({ ...newBlock('callout'), tone: 'key' })}>강조</button>
           <button className="chip" onClick={() => { const d = newBlock('divider'), t = newBlock(); set([...list.filter((x, i) => !(i === list.length - 1 && x.type === 'text' && !x.text)), d, t]); setEdit({ id: t.id, pos: 0 }) }}>― 구분선</button>
           <button className="chip" onClick={() => addEnd({ id: newBlock().id, type: 'table', rows: [['', ''], ['', '']] })}>표</button>
+          <button className="chip" onClick={() => addEnd(newBlock('math'))}>∑ 수식</button>
           <button className="chip" onClick={() => { let u = (prompt('링크 주소') || '').trim(); if (!u) return; if (!/^https?:\/\//.test(u)) u = 'https://' + u; addEnd({ id: newBlock().id, type: 'link', url: u, title: '' }) }}><Icon name="link" size={14} />링크</button>
           <button className="chip" onClick={() => addEnd({ id: newBlock().id, type: 'cols', cols: [[newBlock()], [newBlock()]] })}>두 단</button>
           <button className="chip" onClick={() => addEnd(newBoard())}>보드</button>
