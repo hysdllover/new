@@ -959,7 +959,10 @@ html[data-bar="thick"] { --bar-w: 14px; --bar-h: 5px; }
 .notes-split.folded { grid-template-columns: minmax(0, 1fr); }
 html.page-full .sidebar, html.page-full .topbar, html.page-full .segbar, html.page-full .tabbar, html.page-full .fab { display: none !important; }
 html.page-full .content { padding-top: calc(var(--sat) + 12px); padding-bottom: calc(32px + var(--sab)); }
-html.page-full .content-inner { max-width: 920px; }
+html.page-full .content-inner { max-width: 1100px; } /* 노트 760 + 오른쪽 목차 칸이 들어가는 폭 */
+/* 전체 화면: 왼쪽 노트 목록도 접어 노트만 (목록이 남아 노트가 오히려 좁아지던 것) */
+html.page-full .notes-split { grid-template-columns: minmax(0, 1fr); }
+html.page-full .ns-list { display: none; }
 html.page-full .content-inner:has(.nw-wide) { max-width: 1280px; }
 .icon-btn.on-acc { color: var(--accent-t); }
 
@@ -977,14 +980,16 @@ html.page-full .content-inner:has(.nw-wide) { max-width: 1280px; }
 
 /* 노트 오른쪽 패널: 노트 영역이 넉넉할 때만 (컨테이너 쿼리) — 목차 · 체크 진행 · 백링크 */
 .note-wrap { container-type: inline-size; }
+/* 노트 한 장 감싸기: 좁을 땐 그냥 블록 (노트 목록 카드 격자 .note-grid 와 따로 — 같이 쓰다 아이패드에서 페이지가 250px 로 좁아졌었음) */
+.nwp-grid { display: block; }
 .note-aside { display: none; }
 @container (min-width: 1040px) {
-  .note-grid { --npw: 760px; display: grid; grid-template-columns: minmax(0, var(--npw)) 210px; justify-content: center; gap: 36px; align-items: start; }
-  .note-grid:has(> .nw-narrow) { --npw: 680px; }
-  .note-grid:has(> .nw-wide) { --npw: 1fr; grid-template-columns: minmax(0, 1fr) 210px; }
-  .note-grid > .note-page { margin: 0; max-width: none; }
+  .nwp-grid { --npw: 760px; display: grid; grid-template-columns: minmax(0, var(--npw)) 210px; justify-content: center; gap: 36px; align-items: start; }
+  .nwp-grid:has(> .nw-narrow) { --npw: 680px; }
+  .nwp-grid:has(> .nw-wide) { --npw: 1fr; grid-template-columns: minmax(0, 1fr) 210px; }
+  .nwp-grid > .note-page { margin: 0; max-width: none; }
   .note-aside { display: flex; flex-direction: column; gap: 16px; position: sticky; top: 8px; padding-top: 52px; font-size: .86em; }
-  .note-grid > .note-page > .backlinks { display: none; }
+  .nwp-grid > .note-page > .backlinks { display: none; }
 }
 .na-h { color: var(--muted); font-size: .82em; letter-spacing: .04em; margin-bottom: 4px; }
 .na-toc { display: block; width: 100%; text-align: left; padding: 4px 0; color: var(--text); border-radius: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
