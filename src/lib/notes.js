@@ -118,7 +118,8 @@ export function toMarkdown(note, { fileRef, pageRef } = {}) {
       case 'h2': lines.push(`### ${t}`); break
       case 'bullet': lines.push(`${pad}${b.num ? b.num + '.' : '-'} ${t}`); break
       case 'todo': lines.push(`${pad}- [${tasks.find((x) => x.id === b.taskId)?.done ? 'x' : ' '}] ${t}`); break
-      case 'code': lines.push('```' + (b.lang || ''), b.text || '', '```'); break
+      case 'code': if (b.lang === 'math') lines.push('$$', b.text || '', '$$'); else lines.push('```' + (b.lang || ''), b.text || '', '```'); break
+      case 'math': lines.push('$$', b.text || '', '$$'); break
       case 'quote': lines.push(t.split('\n').map((x) => `> ${x}`).join('\n')); break
       case 'divider': lines.push(b.text ? `--- ${b.text} ---` : '---'); break
       case 'file': lines.push(fileRef ? fileRef(b) : `[첨부: ${find('files', b.fileId)?.name || '파일'}]`); break

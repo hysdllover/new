@@ -4,7 +4,7 @@ import { holiday } from '../engine/holidays.js'
 import { Icon } from '../components/ui.jsx'
 import Today from './planner/Today.jsx'
 import Week from './planner/Week.jsx'
-import Month from './planner/Month.jsx'
+import Month, { PrintBtn } from './planner/Month.jsx'
 import Circle from './planner/Circle.jsx'
 import Grid from './planner/Grid.jsx'
 import Timetable from './planner/Timetable.jsx'
@@ -29,7 +29,10 @@ export default function Planner({ seg, params }) {
             </label>
             <button className="icon-btn" onClick={() => setDate(addDays(date, step))} aria-label="다음"><Icon name="next" /></button>
           </div>
-          {date !== today() && <button className="btn sm" onClick={() => setDate(today())}>오늘</button>}
+          <div className="row" style={{ gap: 6 }}>
+            {date !== today() && <button className="btn sm" onClick={() => setDate(today())}>오늘</button>}
+            {seg === 'week' && <PrintBtn kind="week" date={date} />}
+          </div>
         </div>
       )}
       <V date={date} setDate={setDate} params={params} />

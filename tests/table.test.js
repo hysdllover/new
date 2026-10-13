@@ -37,7 +37,7 @@ test('시트 붙여넣기 · 복사 · 마크다운', () => {
 
 test('가져오기: details · aside · HTML 표 · 수식 · csv · 제목 3단계', () => {
   const bs = mdToBlocks('<details><summary>열기</summary>\n\n- [x] 끝\n\n</details>\n\n<aside>\n💡 팁\n</aside>\n\n<table><tr><td>1</td><td>2</td></tr></table>\n\n$$\nx^2\n$$\n\n# A\n## B\n### C')
-  assert.deepEqual(bs.map((x) => x.type), ['toggle', 'callout', 'table', 'code', 'h1', 'h2', 'text'])
+  assert.deepEqual(bs.map((x) => x.type), ['toggle', 'callout', 'table', 'math', 'h1', 'h2', 'text'])
   assert.equal(bs[0].children[0].type, 'todo'); assert.equal(bs[0].children[0].done, true)
   assert.equal(bs[6].text, '**C**')
   const n = mdToNote('이름,점수\n"가, 나",10\n', '성적 0123456789abcdef0123456789abcdef.csv')

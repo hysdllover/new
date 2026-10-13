@@ -9,6 +9,13 @@ import { Icon, openDetail, Check, openSheet } from '../../components/ui.jsx'
 import { dayRec } from '../../store/actions.js'
 import { toggleTask } from '../../store/actions.js'
 import { go, setParams } from '../../nav.js'
+import { openMenu } from '../../components/ui.jsx'
+
+// A4 플래너 인쇄: 내 일정 채우기 · 빈 양식
+export function PrintBtn({ kind, date }) {
+  const run = (blank) => import('../../lib/plannerPrint.js').then((m) => m.printPlanner(kind, date, { blank }))
+  return <button className="btn sm no-print" onClick={(e) => openMenu(e, [{ label: (kind === 'month' ? '월간' : '주간') + ' 플래너 · 내 일정 채우기', icon: 'print', onClick: () => run(false) }, { label: '빈 양식', icon: 'print', onClick: () => run(true) }])}><Icon name="print" size={14} />A4</button>
+}
 
 // 레이어별 색 농도 (설정에 저장 · 기기 공통)
 export const layerAlpha = (st, e) => (e.layer === 'academy' ? st.layerAlpha?.academy ?? 0.55 : st.layerAlpha?.events ?? 1)
@@ -51,6 +58,7 @@ export default function Month({ date, setDate }) {
         <div className="row" style={{ gap: 8 }}>
           {ddW && <span className="tiny muted">{ddW.title}까지 {Math.floor(diffDays(ddW.date, today()) / 7)}주 {diffDays(ddW.date, today()) % 7}일</span>}
           {ms !== monthStart(today()) && <button className="btn sm" onClick={() => setDate(today())}>오늘</button>}
+          <PrintBtn kind="month" date={ms} />
         </div>
       </div>
       <div className="scroll-x no-print"><div className="row" style={{ gap: 6 }}>
