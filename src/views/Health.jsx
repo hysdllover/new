@@ -51,7 +51,7 @@ function Condition() {
       <div className="divider" />
       <div className="tiny muted">최근 14일 · 수면(선) · 기분(점선) · 공부시간(막대 대신 연한 선)</div>
       <LineChart height={120} yMax={12} series={[
-        { points: pts((x) => conds.find((y) => y.id === x)?.sleep ?? null), color: 'var(--accent)' },
+        { points: pts((x) => conds.find((y) => y.id === x)?.sleep ?? null), color: 'var(--accent-t)' },
         { points: pts((x) => { const m = conds.find((y) => y.id === x)?.mood; return m ? m * 2.4 : null }), color: 'var(--c4)', dash: '3 3' },
         { points: pts((x) => (byDay[x] || 0) / 60), color: 'var(--c2)', dash: '1 2' },
       ]} labels={[[0, fmtShort(days[0])], [1, '오늘']]} />

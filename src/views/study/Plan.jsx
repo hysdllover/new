@@ -63,8 +63,8 @@ export function DdayCard() {
           <div key={d.id} className={'item dd-row' + (d.date < t0 ? ' past' : '')} onClick={() => openDday(d.id)}>
             <span className="dd-dot" style={{ background: d.color || 'var(--accent)' }} />
             <div className="t"><div className="ellipsis">{d.title}</div><div className="meta">{fmtDate(d.date, { year: true })}</div></div>
-            <span className="dday-n" style={{ color: d.color || 'var(--accent)' }}>{dday(d.date)}</span>
-            <button className="icon-btn" style={d.pinned ? { color: d.color || 'var(--accent)' } : null} onClick={(e) => { e.stopPropagation(); patch('ddays', d.id, { pinned: !d.pinned }) }} title="별표 (홈·리포트)" aria-label="별표"><Icon name="star" size={16} fill={d.pinned ? 'currentColor' : 'none'} /></button>
+            <span className="dday-n" style={{ color: d.color || 'var(--accent-t)' }}>{dday(d.date)}</span>
+            <button className="icon-btn" style={d.pinned ? { color: d.color || 'var(--accent-t)' } : null} onClick={(e) => { e.stopPropagation(); patch('ddays', d.id, { pinned: !d.pinned }) }} title="별표 (홈·리포트)" aria-label="별표"><Icon name="star" size={16} fill={d.pinned ? 'currentColor' : 'none'} /></button>
           </div>
         ))}
         {!ddays.length && <Empty hint="시험·발표 날짜를 넣으면 남은 날을 세어 줘요" action={{ label: 'D-day 추가', fn: () => openDday(null) }}>D-day 가 없어요</Empty>}

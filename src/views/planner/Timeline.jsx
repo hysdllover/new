@@ -46,7 +46,7 @@ export default function Timeline({ date, showActual = true, dropTarget = true, h
   useSettings(); const classes = classesOn(date)
   const items = lanes([
     ...classes.map((c) => ({ id: c.id, type: 'class', s: c.start, e: c.end, title: c.title, color: c.color || 'var(--muted)', rec: { location: c.room } })),
-    ...evs.filter((e) => e.start != null).map((e) => ({ id: e.id, type: 'event', s: e.start, e: e.end ?? e.start + 60, title: e.title, color: e.color || 'var(--accent)', rec: e, bb: e.bufferBefore || 0, ba: e.bufferAfter || 0 })),
+    ...evs.filter((e) => e.start != null).map((e) => ({ id: e.id, type: 'event', s: e.start, e: e.end ?? e.start + 60, title: e.title, color: e.color || 'var(--accent-t)', rec: e, bb: e.bufferBefore || 0, ba: e.bufferAfter || 0 })),
     ...blocks.filter((b) => b.date === date && !(b.carriedTo && b.carriedTo !== 'done')).map((b) => {
       const t = b.taskId && tasks.find((x) => x.id === b.taskId)
       const sub = subjects.find((s) => s.id === (b.subjectId || t?.subjectId))
@@ -106,7 +106,7 @@ export default function Timeline({ date, showActual = true, dropTarget = true, h
     <div>
       {allDay.length > 0 && (
         <div className="row wrap allday" style={{ gap: 6, marginBottom: 8 }}>
-          {allDay.map((e) => <button key={e.id} className="tag" style={{ background: (e.color || '#4a5a78') + '26', color: e.color || 'var(--accent)', padding: '2px 8px' }} onClick={() => openDetail('event', e.id, { occ: date })}>{e.kind === 'anniv' ? '🎂 ' : ''}{e.title}</button>)}
+          {allDay.map((e) => <button key={e.id} className="tag" style={{ background: (e.color || '#4a5a78') + '26', color: e.color || 'var(--accent-t)', padding: '2px 8px' }} onClick={() => openDetail('event', e.id, { occ: date })}>{e.kind === 'anniv' ? '🎂 ' : ''}{e.title}</button>)}
         </div>
       )}
       <div className="timeline" style={{ height: H }} ref={ref}>

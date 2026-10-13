@@ -18,11 +18,12 @@ export const wCols = (w) => w.cols || { s: 2, m: 4, l: 4, t: 2 }[w.size || 's'] 
 export const wRows = (w) => w.rows || (w.size === 't' ? 2 : 1)
 // 벤토: 작은 위젯이 이어지면 [큰 칸(반 폭·2배 높이), 작은 칸, 작은 칸] 묶음으로 · 넓은 위젯은 한 줄
 const bento = (ws) => { let run = 0; return ws.map((w) => { const z = WIDGETS[w.type]?.size || 's'; if (z === 'm' || z === 'l') { run = 0; return { ...w, cols: 4, rows: 1, size: 'l' } } const big = run % 3 === 0; run++; const [cols, rows] = big ? [2, 2] : [2, 1]; return { ...w, cols, rows, size: sizeOf(cols, rows) } }) }
-// 편집 중 오른쪽 아래 손잡이를 끌어 크기 바꾸기 (4칸 격자 · 높이 1~3배)
+// 편집 중 오른쪽 아래 손잡이를 끌어 크기 바꾸기 (4칸 격자 · 넓은 화면은 8칸 격자의 반까지 · 높이 1~3배)
 function startResize(e, w, done) {
   e.preventDefault(); e.stopPropagation()
   const card = e.currentTarget.closest('.wf'), grid = card?.parentElement; if (!card || !grid) return
-  const gap = parseFloat(getComputedStyle(grid).columnGap) || 12, colW = (grid.clientWidth - gap * 3) / 4, rowH = 120 + gap
+  // 아이패드 가로처럼 넓으면 격자가 8칸 (위젯이 반 폭씩 두 줄로) — 실제 칸 수로 계산
+  const cs = getComputedStyle(grid), gap = parseFloat(cs.columnGap) || 12, tracks = cs.gridTemplateColumns.split(' ').length || 4, colW = (grid.clientWidth - gap * (tracks - 1)) / tracks, rowH = 120 + gap
   const r = card.getBoundingClientRect(), x0 = e.clientX, y0 = e.clientY
   let cols = wCols(w), rows = wRows(w)
   const mv = (ev) => {
