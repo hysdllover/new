@@ -1431,7 +1431,7 @@ export default () => `  } else if (KIND === 'study') {
     if (!sm) row('', '', 'TOTAL', hm(wkT), MN(fs), DI)
     w.url = link('study.records')
   } else if (KIND === 'mag') {
-    // ── 매거진: 제호 · 큰 날짜 숫자 · 이번 호 머리기사(다짐) · 차례 ──
+    // ── 매거진: 큰 날짜 숫자 · 이번 호 머리기사(다짐) · 차례(D-day · 공부 · 일정 · 할 일 3개) ──
     const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large
     dbg('mag2', (c, K) => paperFill(c, K, W2, H2))
     const sm = fam === 'small', big2 = fam === 'large' || fam === 'extraLarge', left = items.filter((x) => !x.done)
@@ -1448,9 +1448,19 @@ export default () => `  } else if (KIND === 'study') {
       if (!big2) { w.addSpacer(); rule(w, inner); w.addSpacer(5); const f = w.addStack(); f.size = new Size(inner, 0); t(f, '공부 ' + hm(mins), label(8), DI); f.addSpacer(); t(f, dd ? ddTxt : '', label(8), DI); f.addSpacer(); t(f, '할 일 ' + left.length, label(8), DS) }
       else {
         w.addSpacer(16); dbl(); w.addSpacer(4)
-        const nx = PAIRNX, TOC = [['STUDY', hm(mins) + ' / ' + hm(goal)], ['D-DAY', dd ? ddTxt + '  ' + dd.title : '—'], ['NEXT', nx ? nx.w + '  ' + nx.t : '—'], ['TO DO', left.length ? left[0].title + (left.length > 1 ? '  외 ' + (left.length - 1) : '') : '모두 끝'], ['NOTE', NOTES()[0] ? NOTES()[0].t : '—'], ['WEEK', hm(weekTot) + ' · 하루 ' + hm(weekAvg)]]
+        // 차례: D-day · 공부 시간 · 일정(지금·다음) · 오늘 할 일 위에서 3개 (순서는 앱에서 정한 대로)
+        const nx = PAIRNX, top3 = left.slice(0, 3)
+        const TOC = [['D-DAY', dd ? ddTxt + '  ' + dd.title : '—', 'study.progress'], ['STUDY', hm(mins) + ' / ' + hm(goal) + '   ' + pct + '%', 'study.records'], ['SCHEDULE', nx ? nx.w + '  ' + nx.t : '남은 일정 없음', 'planner.week'],
+          ...[0, 1, 2].map((i) => [i ? '' : 'TO DO', top3[i] ? top3[i].title : i ? '' : '오늘 할 일 모두 끝', top3[i] && top3[i].id ? taskUrl(top3[i].id) : 'tasks', !!top3[i]])]
         const rh = Math.round(22 * SCALE), nT = Math.max(3, Math.min(TOC.length, Math.floor((innerH - 170 * SCALE) / (rh + 0.5))))
-        TOC.slice(0, nT).forEach(([k, v], i) => { if (i) { const r0 = w.addStack(); r0.size = new Size(inner, 0.5); r0.backgroundColor = new Color(VL, 0.15) } const r = w.addStack(); r.size = new Size(inner, rh); r.centerAlignContent(); const n0 = r.addStack(); n0.size = new Size(24, 0); t(n0, pad(i + 1), MN(8.5), DS); n0.addSpacer(); const k0 = r.addStack(); k0.size = new Size(54, 0); t(k0, k, label(7), DS); k0.addSpacer(); t(r, v, tw(11.5), DI).minimumScaleFactor = 0.75; r.addSpacer() })
+        TOC.slice(0, nT).forEach(([k, v, u, tk], i) => {
+          if (i) { const r0 = w.addStack(); r0.size = new Size(inner, 0.5); r0.backgroundColor = new Color(VL, 0.15) }
+          const r = w.addStack(); r.size = new Size(inner, rh); r.centerAlignContent(); r.url = link(u)
+          const n0 = r.addStack(); n0.size = new Size(24, 0); t(n0, v ? pad(i + 1) : '', MN(8.5), DS); n0.addSpacer() // 빈 줄은 번호 없이
+          const k0 = r.addStack(); k0.size = new Size(54, 0); t(k0, k, label(7), DS).minimumScaleFactor = 0.7; k0.addSpacer()
+          if (tk) { const bx = r.addStack(); bx.size = new Size(7, 7); bx.borderWidth = 0.8; bx.borderColor = DS; r.addSpacer(6) } // 할 일은 빈 네모 칸
+          t(r, v, tw(11.5), DI).minimumScaleFactor = 0.75; r.addSpacer()
+        })
         w.addSpacer()
       }
     }
