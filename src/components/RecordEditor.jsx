@@ -34,7 +34,7 @@ export default function RecordEditor({ rec, date, subjectId, onDone, compact }) 
       <div className="row wrap" style={{ gap: 6 }}>
         {subjects.map((s) => (
           <button key={s.id} type="button" className={'chip subj' + (f.subjectId === s.id ? ' on' : '')}
-            style={f.subjectId === s.id ? { borderColor: s.color, color: s.color, background: s.color + '1a' } : null}
+            style={f.subjectId === s.id ? { borderColor: s.color, color: `color-mix(in srgb, ${s.color} 60%, var(--text))`, background: s.color + '1a' } : null}
             onClick={() => set({ subjectId: s.id })}><span className="dot" style={{ background: s.color }} />{s.name}</button>
         ))}
       </div>

@@ -39,7 +39,7 @@ export default function Progress() {
               <ProgressInput tb={tb} />
               <PdfRow tb={tb} />
               {plan ? <div style={{ marginTop: 8 }}><div className="tiny muted">번다운 · {plan.title}</div><Burndown plan={plan} textbook={tb} /></div>
-                : hist.length > 1 && <LineChart height={100} yMax={tb.total} series={[{ points: hist.map((h) => [diffDays(h.date, first) / span, h.value]), color: 'var(--accent)' }]} labels={[[0, fmtShort(first)], [1, '오늘']]} />}
+                : hist.length > 1 && <LineChart height={100} yMax={tb.total} series={[{ points: hist.map((h) => [diffDays(h.date, first) / span, h.value]), color: 'var(--accent-t)' }]} labels={[[0, fmtShort(first)], [1, '오늘']]} />}
             </Card>
           )
         })}

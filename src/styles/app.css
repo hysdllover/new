@@ -1,5 +1,6 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body, #root { height: 100%; }
+html { background: var(--bg); }
 body {
   margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); font-size: var(--fs);
   font-weight: var(--fw); line-height: 1.5; -webkit-font-smoothing: antialiased; overscroll-behavior-y: none;
@@ -10,7 +11,7 @@ h1 { font-size: 1.5em; margin: 0; letter-spacing: -.01em; font-family: var(--fon
 h2 { font-size: 1.2em; margin: 0; }
 h3 { font-size: 1.05em; margin: 0; }
 h4 { font-size: .92em; margin: 0; color: var(--muted); letter-spacing: .02em; }
-a { color: var(--accent); text-decoration: none; }
+a { color: var(--accent-t); text-decoration: none; }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
 input, textarea, select { font: inherit; color: inherit; font-size: 16px; }
 @media (min-width: 768px) { input, textarea, select { font-size: max(var(--fs), 14px); } }
@@ -51,7 +52,7 @@ svg { display: block; }
   border-top: 1px solid var(--line); padding: 4px var(--sar) calc(var(--sab) + 2px) var(--sal);
 }
 .tabbar button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0; min-height: 50px; color: var(--muted); font-size: 10.5px; }
-.tabbar button.on { color: var(--accent); }
+.tabbar button.on { color: var(--accent-t); }
 .fab {
   position: fixed; right: calc(18px + var(--sar)); bottom: calc(72px + var(--sab)); z-index: 31;
   width: 50px; height: 50px; border-radius: 25px; background: var(--accent); color: #fff;
@@ -68,7 +69,7 @@ svg { display: block; }
   }
   .sidebar .nav { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; color: var(--muted); min-height: 40px; }
   .sidebar .nav span { display: none; }
-  .sidebar .nav.on { background: var(--surface); color: var(--accent); box-shadow: var(--shadow); }
+  .sidebar .nav.on { background: var(--surface); color: var(--accent-t); box-shadow: var(--shadow); }
   .sidebar .sec { display: none; margin: 14px 10px 4px; font-size: .78em; color: var(--muted); }
   .sidebar .sub { display: none; }
   .content { padding-bottom: calc(40px + var(--sab)); }
@@ -159,12 +160,12 @@ svg { display: block; }
   display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; font-size: .86em;
   background: var(--surface-2); border: 1px solid transparent; white-space: nowrap; min-height: 28px;
 }
-.chip.on { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) var(--tint-a, 8%), var(--surface)); }
+.chip.on { border-color: var(--accent); color: var(--accent-t); background: color-mix(in srgb, var(--accent) var(--tint-a, 8%), var(--surface)); }
 .tag { display: inline-flex; align-items: center; gap: 4px; font-size: .8em; padding: 0 7px; border-radius: 5px; line-height: 1.7; white-space: nowrap; }
 .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
 .badge { font-size: .76em; padding: 0 6px; border-radius: 5px; background: var(--surface-2); color: var(--muted); white-space: nowrap; line-height: 1.8; }
 .badge.warn { background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger); }
-.badge.acc { background: color-mix(in srgb, var(--accent) calc(var(--tint-a, 8%) * 1.5), transparent); color: var(--accent); }
+.badge.acc { background: color-mix(in srgb, var(--accent) calc(var(--tint-a, 8%) * 1.5), transparent); color: var(--accent-t); }
 
 .seg { display: inline-flex; background: var(--surface-2); border-radius: 9px; padding: 3px; gap: 2px; }
 .seg button { padding: 5px 13px; border-radius: 7px; color: var(--muted); white-space: nowrap; min-height: 30px; font-size: .95em; }
@@ -185,7 +186,7 @@ input[type="checkbox"].sw::after { content: ''; position: absolute; top: 2px; le
 input[type="checkbox"].sw:checked { background: var(--accent); }
 input[type="checkbox"].sw:checked::after { left: 18px; }
 /* iOS 18+ Safari: 기본 스위치로 (누를 때 가벼운 진동) */
-html.has-switch input[type="checkbox"].sw[switch] { appearance: auto; width: auto; height: auto; background: none; border-radius: 0; accent-color: var(--accent); color: var(--accent); transition: none; }
+html.has-switch input[type="checkbox"].sw[switch] { appearance: auto; width: auto; height: auto; background: none; border-radius: 0; accent-color: var(--accent); color: var(--accent-t); transition: none; }
 html.has-switch input[type="checkbox"].sw[switch]::after { content: none; }
 input[type="range"] { accent-color: var(--accent); width: 100%; }
 input[type="color"] { width: 36px; height: 30px; border: 1px solid var(--line); border-radius: 6px; padding: 2px; background: var(--surface); }
@@ -248,6 +249,9 @@ input[type="color"] { width: 36px; height: 30px; border: 1px solid var(--line); 
 
 /* 대시보드 위젯 */
 .widgets { display: grid; gap: var(--gap); grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-flow: row dense; }
+/* 아이패드 가로 등 넓은 화면: 8칸 격자 → 넓은 위젯은 반 폭씩 나란히, 작은 위젯은 4개씩 (빈 공간 줄이기) */
+.wpage { container-type: inline-size; }
+@container (min-width: 1040px) { .widgets { grid-template-columns: repeat(8, minmax(0, 1fr)); } }
 .widgets > * { min-width: 0; }
 .widgets > .wf > .wf-body { height: 100%; }
 .w-edit { position: relative; outline: 1.5px dashed var(--line); outline-offset: 2px; }
@@ -398,7 +402,7 @@ html[data-tone="dark"][data-theme="dark"] { --text: #f1f2f5; }
 html[data-tone="pencil"][data-theme="dark"] { --text: #c3c6cd; }
 /* 버튼 모양: 테두리 · 옅은 바탕 · 글자만 */
 html[data-btn="soft"] .btn:not(.primary):not(.ghost) { border-color: transparent; background: var(--surface-2); }
-html[data-btn="text"] .btn:not(.primary) { border-color: transparent; background: transparent; color: var(--accent); }
+html[data-btn="text"] .btn:not(.primary) { border-color: transparent; background: transparent; color: var(--accent-t); }
 html[data-btn="text"] .btn.danger { color: var(--danger); }
 /* 세그먼트 모양: 알약 · 밑줄 탭 */
 html[data-seg="under"] .seg { background: transparent; padding: 0; gap: 4px; border-radius: 0; border-bottom: 1px solid var(--line); }
@@ -409,7 +413,24 @@ html[data-seg="under"] .seg button.on { border-bottom-color: var(--accent); colo
 .err-box { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border: 1px dashed var(--line); border-radius: var(--r-card, 12px); }
 .err-box.big { margin-top: 40px; }
 
-/* 눌림 영역 넓히기 (보이는 크기 그대로) — 체크박스 · 카드 머리 작은 링크 · 아이콘 버튼 */
+/* 주말 색: 파스텔 그대로 쓰면 글자가 흐려서 글자색 쪽으로 섞음 */
+:root { --sun-c: color-mix(in srgb, var(--c4) 62%, var(--text)); --sat-c: color-mix(in srgb, var(--c3) 62%, var(--text)); }
+
+/* 작은 글씨 하한: 배지 · 태그 · 아주 작은 글은 9.5px 아래로 내려가지 않게 (작고 얇은 느낌은 유지) */
+.badge { font-size: max(.76em, 9.5px); }
+.tag { font-size: max(.8em, 9.5px); }
+.tiny { font-size: max(.8em, 9.5px); }
+
+/* 버튼 · 탭 · 칩: 길게 눌러도 글자 선택·확대 메뉴가 뜨지 않게 (앱처럼) */
+button, .seg, .tabbar, .chip, .badge, .tag { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+/* 매직 키보드 · 펜슬: 키보드로 옮길 때만 포커스 테두리 */
+:focus { outline: none; }
+:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 70%, transparent); outline-offset: 2px; border-radius: 6px; }
+.input:focus-visible, textarea:focus-visible, select:focus-visible { outline: none; }
+
+/* 눌림 영역 넓히기 (보이는 크기 그대로) — 체크박스 · 카드 머리 작은 링크 · 아이콘 버튼 · 칩 · 탭 · 작은 버튼 (애플 권장 44pt 가까이) */
+.chip, .seg button, .btn.sm { position: relative; }
+.chip::before, .seg button::before, .btn.sm::before { content: ''; position: absolute; inset: -6px -1px; }
 .check::before { content: ''; position: absolute; inset: -12px; }
 .card-h > button, .card-h > a { position: relative; }
 .card-h > button::before, .card-h > a::before { content: ''; position: absolute; inset: -12px -8px; }

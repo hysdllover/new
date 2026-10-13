@@ -54,7 +54,7 @@ export default function TaskQuickInput({ defaults = {}, defaultDate = '', fixedD
         <button type="button" className={'chip' + (star ? ' on' : '')} onClick={() => setStar(!star)}>★ 중요</button>
         <span className="tqi-sep" />
         {subjects.map((s) => (
-          <button key={s.id} type="button" className={'chip' + (sub === s.id ? ' on' : '')} style={sub === s.id ? { borderColor: s.color, color: s.color } : null}
+          <button key={s.id} type="button" className={'chip' + (sub === s.id ? ' on' : '')} style={sub === s.id ? { borderColor: s.color, color: `color-mix(in srgb, ${s.color} 60%, var(--text))` } : null}
             onClick={() => setSub(sub === s.id ? null : s.id)}><span className="dot" style={{ background: s.color }} />{s.name}</button>
         ))}
       </div>

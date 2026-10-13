@@ -44,7 +44,7 @@ export function Burndown({ plan, textbook }) {
     <div>
       <LineChart height={130} yMax={total} series={[
         { points: [[0, total], [1, 0]], color: 'var(--muted)', dash: '4 3' },
-        { points: actual, color: 'var(--accent)' },
+        { points: actual, color: 'var(--accent-t)' },
       ]} labels={[[0, fmtShort(start)], [X(today()), '오늘'], [1, fmtShort(end)]]} />
       <div className="small" style={{ color: onTrack ? 'var(--ok)' : 'var(--danger)' }}>
         {last[1] === 0 ? '범위 완료 🎉' : eta ? (onTrack ? `지금 속도면 ${fmtShort(eta)} 완료 — 여유 있어요` : `지금 속도면 ${fmtShort(eta)} 완료 — 시험 전 복습일보다 늦어요`) : '아직 진도 기록이 없어요'}
@@ -109,7 +109,7 @@ export function MonthHeat({ values, goal = 240, weekStartDow = 1, color = 'var(-
         {days.map((d, i) => {
           const v = vals[i], r = Math.min(1, v / goal)
           return (
-            <button key={d} className={'mheat-cell' + (d === t ? ' today' : '') + (r >= .6 ? ' dark' : '') + (v ? '' : ' empty')} disabled={d > t} onClick={() => onPick?.(d)}
+            <button key={d} className={'mheat-cell' + (d === t ? ' today' : '') + (r >= .9 ? ' dark' : '') + (v ? '' : ' empty')} disabled={d > t} onClick={() => onPick?.(d)}
               style={v ? { background: `color-mix(in srgb, ${color} ${Math.round(16 + 70 * r)}%, var(--surface))` } : null}>
               <span className="mheat-d">{i + 1}</span>
               {!compact && v > 0 && <span className="mheat-v">{Math.floor(v / 60)}:{String(v % 60).padStart(2, '0')}</span>}

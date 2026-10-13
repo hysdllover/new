@@ -132,7 +132,7 @@ function Dday() {
       {main ? (
         <div className="col" style={{ gap: 2 }}>
           <span className="tiny muted ellipsis">{main.title}</span>
-          <span className="dday-big" style={{ color: main.color || 'var(--accent)' }}>{dday(main.date)}</span>
+          <span className="dday-big" style={{ color: main.color || 'var(--accent-t)' }}>{dday(main.date)}</span>
           {ddays.slice(1, 3).map((d) => <span key={d.id} className="tiny ellipsis">{dday(d.date)} {d.title}</span>)}
         </div>
       ) : <div className="small muted">D-day 추가 →</div>}
@@ -285,7 +285,7 @@ function Links() {
       <form className="row" style={{ marginTop: 6 }} onSubmit={(e) => { e.preventDefault(); let u = e.target.u.value.trim(); if (!u) return; if (!/^https?:/.test(u)) u = 'https://' + u; put('links', { url: u, title: e.target.t.value.trim() }); e.target.reset() }}>
         <input name="t" className="input" placeholder="이름" style={{ flex: 1 }} />
         <input name="u" className="input" placeholder="주소" style={{ flex: 2 }} />
-        <button className="btn" type="submit"><Icon name="plus" size={14} /></button>
+        <button className="btn" type="submit" aria-label="추가"><Icon name="plus" size={14} /></button>
       </form>
     </Card>
   )
@@ -457,7 +457,7 @@ function BigDday() {
   const dd = useColl('ddays').filter((d) => d.date >= today()).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || a.date.localeCompare(b.date))[0]
   return (
     <Card className="center" onClick={goto('study', 'records')} style={{ cursor: 'pointer' }}>
-      {dd ? <><div className="small muted ellipsis">{dd.title}</div><div className="big-num" style={{ color: dd.color || 'var(--accent)' }}><Roll value={dday(dd.date)} /></div><div className="tiny muted">{fmtShort(dd.date)}</div></> : <div className="small muted">통계에서 D-day 추가</div>}
+      {dd ? <><div className="small muted ellipsis">{dd.title}</div><div className="big-num" style={{ color: dd.color || 'var(--accent-t)' }}><Roll value={dday(dd.date)} /></div><div className="tiny muted">{fmtShort(dd.date)}</div></> : <div className="small muted">통계에서 D-day 추가</div>}
     </Card>
   )
 }
@@ -647,7 +647,7 @@ function DdayList() {
   return (
     <Card title="D-day">
       <div className="col" style={{ gap: 6 }}>
-        {dd.slice(0, 5).map((d) => <div key={d.id} className="row small"><span className="grow ellipsis">{d.title}</span><span className="tiny muted">{fmtShort(d.date)}</span><b style={{ color: d.color || 'var(--accent)', width: 52, textAlign: 'right' }}>{dday(d.date)}</b></div>)}
+        {dd.slice(0, 5).map((d) => <div key={d.id} className="row small"><span className="grow ellipsis">{d.title}</span><span className="tiny muted">{fmtShort(d.date)}</span><b style={{ color: d.color || 'var(--accent-t)', width: 52, textAlign: 'right' }}>{dday(d.date)}</b></div>)}
         {!dd.length && <Empty>D-day가 없어요</Empty>}
       </div>
     </Card>

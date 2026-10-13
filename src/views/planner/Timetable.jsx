@@ -54,7 +54,7 @@ function TTGrid({ t, live, save, wk }) {
           const c = t.cells[`${d}-${i + 1}`], s = sub(c)
           const now = d === wd && i === cur
           return (
-            <button key={d + '-' + i} className={'tt-c' + (c ? ' has' : '') + (d === wd && live ? ' today' : '') + (now ? ' now' : '')} style={{ '--c': s?.color || 'var(--accent)' }}
+            <button key={d + '-' + i} aria-label={`${WD[d]}요일 ${i + 1}교시 ${c ? c.title || s?.name || '' : '비어 있음'}`} className={'tt-c' + (c ? ' has' : '') + (d === wd && live ? ' today' : '') + (now ? ' now' : '')} style={{ '--c': s?.color || 'var(--accent)' }}
               onClick={() => openSheet((close) => <CellEdit d={d} i={i} close={close} save={save} wk={wk} />, { title: `${wk ? '주말 ' : ''}${WD[d]}요일 ${i + 1}교시 · ${fmtTime(p.start)}–${fmtTime(p.end)}` })}>
               {c && <span className="ellipsis">{c.title || s?.name}</span>}
               {c?.room && <span className="tiny muted ellipsis">{c.room}</span>}
