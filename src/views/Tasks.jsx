@@ -114,7 +114,7 @@ function TaskList({ params }) {
             <div key={t.id} data-drop={'task:' + t.id}><TaskItem t={t} subjects={subjects} projects={projects} drag={dragFor(t)} sel={sel.of(t)}
               extra={f.smart === 'inbox' && <span className="inbox-acts" data-nodrag onClick={(e) => e.stopPropagation()}>{[['today', '오늘'], ['tomorrow', '내일'], ['weekend', '주말']].map(([k, l]) => <button key={k} className="chip sm" onClick={() => moveTasks([t.id], k)}>{l}</button>)}<button className="chip sm" onClick={() => patch('tasks', t.id, { inbox: false })}>정리됨</button></span>} /></div>
           ))}
-          {!items.length && <Empty>{f.smart === 'inbox' ? '받은 편지함이 비었어요' : '할 일이 없어요'}</Empty>}
+          {!items.length && <Empty hint={f.smart === 'inbox' || tasks.length ? null : '위 칸에 적고 엔터 — 여러 줄을 붙여 넣으면 한 번에 여러 개가 들어가요'}>{f.smart === 'inbox' ? '받은 편지함이 비었어요' : '할 일이 없어요'}</Empty>}
         </div>
       </div>)}
       {manual && items.length > 1 && !sel.mode && <div className="tiny muted center">길게 눌러 순서를 바꿀 수 있어요</div>}
@@ -224,7 +224,7 @@ function DayView({ params }) {
         <div className="row between" style={{ padding: '8px 0 2px' }}><span className="small muted">{rel(date) || fmtDate(date)} 할 일 {all.length ? `${all.filter((t) => t.done).length}/${all.length}` : ''}{tidy && all.length > items.length ? ` · 완료 ${all.length - items.length}개 접음` : ''}</span></div>
         <div className="list">
           {items.map(row)}
-          {!items.length && <Empty>{all.length ? '모두 끝냈어요' : isToday ? '오늘 할 일이 없어요' : '이날 할 일이 없어요'}</Empty>}
+          {!items.length && <Empty hint={!all.length && isToday ? '위 칸에 적고 엔터 · 날짜를 왼쪽·오른쪽으로 밀어 다른 날도 볼 수 있어요' : null}>{all.length ? '모두 끝냈어요' : isToday ? '오늘 할 일이 없어요' : '이날 할 일이 없어요'}</Empty>}
         </div>
       </div>
       {left > 0 && !sel.mode && <BulkMove ids={items.filter((t) => !t.done).map((t) => t.id)} />}

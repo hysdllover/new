@@ -156,7 +156,7 @@ export function DayRecords({ date }) {
             {(x.files || []).map((id) => files.find((f) => f.id === id)).filter(Boolean).slice(0, 2).map((f) => <FileThumb key={f.id} file={f} size={34} />)}
           </div>
         ) })}
-        {!sessions.length && <Empty>기록이 없어요</Empty>}
+        {!sessions.length && <Empty hint="타이머를 쓰거나 ‘기록 입력’으로 공부 시간을 남기면 여기 쌓여요">기록이 없어요</Empty>}
       </div>
     </div>
   )
