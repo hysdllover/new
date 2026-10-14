@@ -5,16 +5,35 @@ import { Sticker, TAPES } from '../../components/Stickers.jsx'
 import { eventsOn } from '../../engine/scheduler.js'
 import { monthStart, weekStart, addDays, addMonths, parseYmd, WD, today, fmtDate, fmtTime, fmtDur, diffDays } from '../../engine/date.js'
 import { holiday } from '../../engine/holidays.js'
-import { Icon, openDetail, Check, openSheet } from '../../components/ui.jsx'
+import { Icon, openDetail, Check, openSheet, toast } from '../../components/ui.jsx'
 import { dayRec } from '../../store/actions.js'
 import { toggleTask } from '../../store/actions.js'
 import { go, setParams } from '../../nav.js'
-import { openMenu } from '../../components/ui.jsx'
 
-// A4 플래너 인쇄: 내 일정 채우기 · 빈 양식
+// A4 플래너: 내 일정 채우기 · 빈 양식 → 인쇄 · 이미지 · HTML
 export function PrintBtn({ kind, date }) {
-  const run = (blank) => import('../../lib/plannerPrint.js').then((m) => m.printPlanner(kind, date, { blank }))
-  return <button className="btn sm no-print" onClick={(e) => openMenu(e, [{ label: (kind === 'month' ? '월간' : '주간') + ' 플래너 · 내 일정 채우기', icon: 'print', onClick: () => run(false) }, { label: '빈 양식', icon: 'print', onClick: () => run(true) }])}><Icon name="print" size={14} />A4</button>
+  return <button className="btn sm no-print" onClick={() => openSheet((close) => <PlannerOut kind={kind} date={date} close={close} />, { title: (kind === 'month' ? '월간' : '주간') + ' 플래너 · A4' })}><Icon name="print" size={14} />A4</button>
+}
+function PlannerOut({ kind, date, close }) {
+  const [blank, setBlank] = useState(false), [busy, setBusy] = useState('')
+  const run = async (how) => {
+    setBusy(how)
+    try {
+      const m = await import('../../lib/plannerPrint.js')
+      if (how === 'print') { close(); m.printPlanner(kind, date, { blank }); return }
+      const r = await m.savePlanner(how, kind, date, { blank })
+      if (r === 'saved') toast(how === 'html' ? 'HTML 파일을 저장했어요' : '이미지를 저장했어요')
+      if (r !== 'cancel') close()
+    } catch { toast('만들지 못했어요 · 다시 시도해 주세요') } finally { setBusy('') }
+  }
+  const OUT = [['print', 'print', '인쇄'], ['image', 'image', '이미지'], ['html', 'file', 'HTML']]
+  return (
+    <div className="col">
+      <div className="row" style={{ gap: 6 }}>{[[false, '내 일정 채우기'], [true, '빈 양식']].map(([b, l]) => <button key={l} className={'chip' + (blank === b ? ' on' : '')} onClick={() => setBlank(b)}>{l}</button>)}</div>
+      <div className="row" style={{ gap: 8 }}>{OUT.map(([how, ic, l]) => <button key={how} className="btn grow" disabled={!!busy} onClick={() => run(how)}><Icon name={ic} size={15} />{busy === how ? '만드는 중…' : l}</button>)}</div>
+      <div className="tiny muted">{kind === 'month' ? 'A4 가로' : 'A4 세로'} · 이미지는 PNG, HTML 은 브라우저에서 열어 인쇄할 수 있어요</div>
+    </div>
+  )
 }
 
 // 레이어별 색 농도 (설정에 저장 · 기기 공통)
