@@ -58,7 +58,7 @@ export async function drawShareCard({ date, mins, goal, subjects, week, yesterda
 }
 
 export async function shareBlob(blob, name) {
-  const file = new File([blob], name, { type: 'image/png' })
+  const file = new File([blob], name, { type: blob.type || 'image/png' })
   if (navigator.canShare?.({ files: [file] })) {
     try { await navigator.share({ files: [file] }); return 'shared' } catch (e) { if (e.name === 'AbortError') return 'cancel' }
   }
