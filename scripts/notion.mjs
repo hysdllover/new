@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto'
 import { buildDay, notionProps, notionBlocks } from '../src/lib/notionDay.js'
 
 const { GIST_TOKEN, NOTION_TOKEN } = process.env
-let DS = process.env.NOTION_DS || '3f96255d-22c8-4606-86a5-fd480c1ade04'
+let DS = process.env.NOTION_DS || '6b967313-e04e-8379-918f-8766e3a69e58' // monologue. 워크스페이스의 monologue
 const DAYS = +process.env.DAYS || 3
 const FULL = process.env.FULL === 'true'
 const DESC = 'study-dashboard-sync'
@@ -60,7 +60,11 @@ const dates = FULL
 
 // 데이터 소스 확인 — 다른 데이터베이스를 덮어쓰지 않게, 지정한 것만 사용 (NOTION_DS 로 바꿀 수 있음)
 async function resolveDS() {
-  try { await nt(`/data_sources/${DS}`); return } catch (e) { if (!/ 404 /.test(e.message)) throw e }
+  try {
+    const d = await nt(`/data_sources/${DS}`)
+    if (!d.properties?.['to-do']) await nt(`/data_sources/${DS}`, 'PATCH', { properties: { 'to-do': { rich_text: {} } } }) // 완료/전체 칸
+    return
+  } catch (e) { if (!/ 404 /.test(e.message)) throw e }
   const any = await nt('/search', 'POST', { page_size: 10 })
   const names = (any.results || []).map((x) => (x.title || x.properties?.title?.title || Object.values(x.properties || {}).find((p) => p.type === 'title')?.title || []).map((t) => t.plain_text).join('') || '(제목 없음)')
   throw new Error(`통합이 monologue 에 접근할 수 없어요. 지금 볼 수 있는 것 ${names.length}개: ${names.join(', ') || '없음'} — monologue 페이지 ··· → 연결 → study-log 추가`)
