@@ -1,7 +1,7 @@
 // GitHub Actions 에서 하루 한 번: 동기화 Gist 의 공부 기록을 노션 monologue 데이터베이스에 하루 한 페이지로 올림
 // 최근 DAYS 일만 확인하고, 내용이 바뀐 날만 고침 (보낸 내용 요약은 gist 의 notion-sent.json)
 import { createHash } from 'node:crypto'
-import { buildDay, notionProps, notionBlocks, habitDay, habitProps, habitSchema } from '../src/lib/notionDay.js'
+import { buildDay, notionProps, notionBlocks, habitDay, habitProps } from '../src/lib/notionDay.js'
 
 const { GIST_TOKEN, NOTION_TOKEN } = process.env
 let DS = process.env.NOTION_DS || '6b967313-e04e-8379-918f-8766e3a69e58' // monologue. 워크스페이스의 monologue
@@ -62,36 +62,35 @@ const dates = FULL
 // 데이터 소스 확인 — 다른 데이터베이스를 덮어쓰지 않게, 지정한 것만 사용 (NOTION_DS 로 바꿀 수 있음)
 async function resolveDS() {
   try {
-    const d = await nt(`/data_sources/${DS}`)
-    if (!d.properties?.['to-do']) await nt(`/data_sources/${DS}`, 'PATCH', { properties: { 'to-do': { rich_text: {} } } }) // 완료/전체 칸
-    return
+    return await nt(`/data_sources/${DS}`)
   } catch (e) { if (!/ 404 /.test(e.message)) throw e }
   const any = await nt('/search', 'POST', { page_size: 10 })
   const names = (any.results || []).map((x) => (x.title || x.properties?.title?.title || Object.values(x.properties || {}).find((p) => p.type === 'title')?.title || []).map((t) => t.plain_text).join('') || '(제목 없음)')
   throw new Error(`통합이 monologue 에 접근할 수 없어요. 지금 볼 수 있는 것 ${names.length}개: ${names.join(', ') || '없음'} — monologue 페이지 ··· → 연결 → study-log 추가`)
 }
-await resolveDS()
+const mds = await resolveDS()
+
+// 노션의 칸 구성·순서·보기·필터는 건드리지 않음: 이미 있는(같은 종류) 칸만 채움
+const only = (props, schema) => Object.fromEntries(Object.entries(props).filter(([k, v]) => { const t = schema?.[k]?.type; return t && t in v }))
+// 이 스크립트가 쓰는 부분: 페이지 맨 위의 한 줄 메모 · total 줄 · 회색 과목 상자. 그 아래 직접 넣은 사진·글은 그대로 둠
+const mine = (b) => b.type === 'quote' || (b.type === 'paragraph' && /^total /.test((b.paragraph.rich_text || []).map((t) => t.plain_text).join(''))) || (b.type === 'callout' && b.callout.color === 'gray_background')
 
 let changed = 0
 for (const date of dates) {
   const day = buildDay(state, date)
   if (!day) continue
-  const props = notionProps(day), blocks = notionBlocks(day)
+  const props = only(notionProps(day), mds.properties), blocks = notionBlocks(day)
   const hash = createHash('sha1').update(JSON.stringify([props, blocks])).digest('hex').slice(0, 12)
   if (sent[date] === hash && !FULL) continue
   const found = await nt(`/data_sources/${DS}/query`, 'POST', { filter: { property: 'date', date: { equals: date } }, page_size: 5 })
   let page = found.results?.[0]?.id
   if (page) {
     await nt(`/pages/${page}`, 'PATCH', { properties: props })
-    // 새 내용을 먼저 붙이고 옛 내용을 지움 (중간에 실패해도 페이지가 비지 않게)
+    // 맨 위의 이전 기록만 새 기록으로 바꿈: 새 내용을 그 자리 바로 뒤에 붙이고 옛 내용을 지움 (실패해도 페이지가 비지 않게)
+    const kids = await nt(`/blocks/${page}/children?page_size=100`)
     const old = []
-    let cur = null
-    do {
-      const kids = await nt(`/blocks/${page}/children?page_size=100${cur ? '&start_cursor=' + cur : ''}`)
-      old.push(...kids.results.map((b) => b.id))
-      cur = kids.has_more ? kids.next_cursor : null
-    } while (cur)
-    await nt(`/blocks/${page}/children`, 'PATCH', { children: blocks })
+    for (const b of kids.results) { if (!mine(b)) break; old.push(b.id) }
+    await nt(`/blocks/${page}/children`, 'PATCH', old.length ? { children: blocks, after: old[old.length - 1] } : { children: blocks })
     for (const b of old) await nt(`/blocks/${b}`, 'DELETE')
   } else {
     page = (await nt('/pages', 'POST', { parent: { type: 'data_source_id', data_source_id: DS }, properties: props, children: blocks })).id
@@ -101,13 +100,10 @@ for (const date of dates) {
   console.log(`${date} ${day.title} · ${day.done}/${day.count} · ${day.total}분`)
 }
 
-// 해빗 트래커: 날짜별 한 줄의 체크 칸·공부 시간 (없는 습관 칸은 체크 칸으로 추가)
+// 해빗 트래커: 날짜별 한 줄의 체크 칸·공부 시간 (노션에 있는 칸만)
 const hds = await nt(`/data_sources/${HDS}`).catch((e) => { console.log('::warning::habits 데이터베이스에 접근할 수 없어 건너뜀 ' + e.message.slice(0, 200)); return null })
 if (hds && Object.keys(state.habits || {}).length) {
   const hdates = FULL ? [...new Set([...dates, ...Object.values(state.habits).flatMap((h) => Object.keys(h.days || {}))])].filter((d) => d <= today).sort() : dates
-  const first = habitDay(state, today)
-  const fix = habitSchema(hds.properties, Object.keys(first.checks))
-  if (Object.keys(fix).length) { await nt(`/data_sources/${HDS}`, 'PATCH', { properties: fix }); console.log('habits 칸 정리:', Object.keys(fix).join(', ')) }
   for (const date of hdates) {
     const h = habitDay(state, date)
     if (!Object.values(h.checks).some(Boolean) && h.hours == null) continue
@@ -115,11 +111,11 @@ if (hds && Object.keys(state.habits || {}).length) {
     if (sent['h:' + date] === hash && !FULL) continue
     const found = await nt(`/data_sources/${HDS}/query`, 'POST', { filter: { property: 'date', date: { equals: date } }, page_size: 1 })
     const page = found.results?.[0]?.id
-    if (page) await nt(`/pages/${page}`, 'PATCH', { properties: habitProps(h) })
+    if (page) await nt(`/pages/${page}`, 'PATCH', { properties: only(habitProps(h), hds.properties) })
     else {
       const [y, m, d] = date.split('-').map(Number)
       const title = `${date.slice(5).replace('-', '.')} ${['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][new Date(Date.UTC(y, m - 1, d)).getUTCDay()]}`
-      await nt('/pages', 'POST', { parent: { type: 'data_source_id', data_source_id: HDS }, properties: habitProps(h, title) })
+      await nt('/pages', 'POST', { parent: { type: 'data_source_id', data_source_id: HDS }, properties: only(habitProps(h, title), hds.properties) })
     }
     sent['h:' + date] = hash
     changed++
