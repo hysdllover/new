@@ -82,13 +82,16 @@ for (const date of dates) {
   let page = found.results?.[0]?.id
   if (page) {
     await nt(`/pages/${page}`, 'PATCH', { properties: props })
+    // 새 내용을 먼저 붙이고 옛 내용을 지움 (중간에 실패해도 페이지가 비지 않게)
+    const old = []
     let cur = null
     do {
       const kids = await nt(`/blocks/${page}/children?page_size=100${cur ? '&start_cursor=' + cur : ''}`)
-      for (const b of kids.results) await nt(`/blocks/${b.id}`, 'DELETE')
+      old.push(...kids.results.map((b) => b.id))
       cur = kids.has_more ? kids.next_cursor : null
     } while (cur)
     await nt(`/blocks/${page}/children`, 'PATCH', { children: blocks })
+    for (const b of old) await nt(`/blocks/${b}`, 'DELETE')
   } else {
     page = (await nt('/pages', 'POST', { parent: { type: 'data_source_id', data_source_id: DS }, properties: props, children: blocks })).id
   }
