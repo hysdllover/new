@@ -51,3 +51,14 @@ test('해빗 트래커', () => {
   assert.equal(habitCol('포르투갈어 (duolingo)'), '포르투갈어 (duolingo)')
   assert.equal(habitProps(h)['wake up'].checkbox, true)
 })
+
+import { habitSchema } from '../src/lib/notionDay.js'
+test('habits 칸 정리', () => {
+  const props = { 'wake up': { type: 'checkbox' }, review: { type: 'checkbox' }, vocab: { type: 'checkbox' }, done: { type: 'formula', formula: { expression: 'x' } }, 'time heat': { type: 'formula', formula: { expression: 'y' } }, heat: { type: 'formula' }, hours: { type: 'number' } }
+  const p = habitSchema(props, ['wake up', '국어 실모'])
+  assert.equal(p.review, null); assert.equal(p.vocab, null); assert.equal(p.heat, null)
+  assert.deepEqual(p['국어 실모'], { checkbox: {} })
+  assert.equal(p['time heat'].name, 'habit heat')
+  assert.match(p.done.formula.expression, /prop\("국어 실모"\)/)
+  assert.equal(p['wake up'], undefined); assert.equal(p.hours, undefined)
+})

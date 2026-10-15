@@ -123,3 +123,26 @@ export function habitProps(h, title) {
   if (title) { p.day = { title: [txt(title)] }; p.date = { date: { start: h.date } }; p.week = { select: { name: weekLabel(h.date) } } }
   return p
 }
+
+// habits 칸 정리: 앱 습관 체크 칸만 남기고, 완료 수·진행·습관 히트맵 수식을 그 칸들로 다시 만듦
+export function habitSchema(props, cols) {
+  const p = {}
+  for (const [k, v] of Object.entries(props || {})) if (v.type === 'checkbox' && !cols.includes(k)) p[k] = null // 앱에 없는 습관 칸 지움
+  for (const c of cols) if (props?.[c]?.type !== 'checkbox') p[c] = { checkbox: {} }
+  const q = (c) => `prop("${c.replace(/"/g, '\\"')}")`
+  const n = cols.length
+  const done = cols.map((c) => `if(${q(c)}, 1, 0)`).join(' + ') || '0'
+  const f = {
+    done,
+    progress: `substring("${'●'.repeat(n)}", 0, prop("done")) + substring("${'○'.repeat(n)}", 0, ${n} - prop("done")) + "  " + format(prop("done")) + "/${n}"`,
+    'habit heat': `if(prop("done") == 0, style("░░░░░░", "gray"), style(if(prop("done") / ${n} <= 0.34, "▒▒▒▒▒▒", if(prop("done") / ${n} < 1, "▓▓▓▓▓▓", "██████")), "green") + "  " + format(prop("done")) + "/${n}")`,
+  }
+  for (const [name, expression] of Object.entries(f)) {
+    const cur = props?.[name] || (name === 'habit heat' ? props?.['time heat'] : null)
+    if (cur?.formula?.expression?.replace(/\s/g, '') === expression.replace(/\s/g, '') && props?.[name]) continue
+    if (name === 'habit heat' && !props?.[name] && props?.['time heat']) p['time heat'] = { name, formula: { expression } } // 공부 시간과 겹치던 칸을 습관 히트맵으로
+    else p[name] = { formula: { expression } }
+  }
+  if (props?.heat) p.heat = null // 옛 습관 히트맵(5칸 기준) 지움
+  return p
+}

@@ -1,7 +1,7 @@
 // GitHub Actions 에서 하루 한 번: 동기화 Gist 의 공부 기록을 노션 monologue 데이터베이스에 하루 한 페이지로 올림
 // 최근 DAYS 일만 확인하고, 내용이 바뀐 날만 고침 (보낸 내용 요약은 gist 의 notion-sent.json)
 import { createHash } from 'node:crypto'
-import { buildDay, notionProps, notionBlocks, habitDay, habitProps } from '../src/lib/notionDay.js'
+import { buildDay, notionProps, notionBlocks, habitDay, habitProps, habitSchema } from '../src/lib/notionDay.js'
 
 const { GIST_TOKEN, NOTION_TOKEN } = process.env
 let DS = process.env.NOTION_DS || '6b967313-e04e-8379-918f-8766e3a69e58' // monologue. 워크스페이스의 monologue
@@ -106,8 +106,8 @@ const hds = await nt(`/data_sources/${HDS}`).catch((e) => { console.log('::warni
 if (hds && Object.keys(state.habits || {}).length) {
   const hdates = FULL ? [...new Set([...dates, ...Object.values(state.habits).flatMap((h) => Object.keys(h.days || {}))])].filter((d) => d <= today).sort() : dates
   const first = habitDay(state, today)
-  const missing = Object.keys(first.checks).filter((c) => !hds.properties?.[c])
-  if (missing.length) await nt(`/data_sources/${HDS}`, 'PATCH', { properties: Object.fromEntries(missing.map((c) => [c, { checkbox: {} }])) })
+  const fix = habitSchema(hds.properties, Object.keys(first.checks))
+  if (Object.keys(fix).length) { await nt(`/data_sources/${HDS}`, 'PATCH', { properties: fix }); console.log('habits 칸 정리:', Object.keys(fix).join(', ')) }
   for (const date of hdates) {
     const h = habitDay(state, date)
     if (!Object.values(h.checks).some(Boolean) && h.hours == null) continue
