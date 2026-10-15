@@ -87,6 +87,7 @@ export function notionBlocks(day) {
       type: 'callout',
       callout: {
         rich_text: [txt(g.name, { bold: true }), ...(g.min ? [gray('  ' + hm(g.min))] : [])],
+        icon: null, // 아이콘(느낌표) 없음
         color: 'gray_background',
         children: [
           { type: 'divider', divider: {} },
