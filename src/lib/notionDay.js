@@ -1,5 +1,6 @@
 // 노션 monologue 용 하루 공부 기록 만들기 (scripts/notion.mjs 에서 사용)
 // 그날 할 일(마감일·그날 공부한 할 일) 기준 · 과목별로 묶고 완료 표시 · 시간은 공부 기록 그대로
+export const BLANK = 'https://hysdllover.github.io/new/blank.png'
 const ORDER = ['국어', '영어', '생윤', '공부']
 const DOW = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 export const hm = (m) => (m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`)
@@ -87,7 +88,7 @@ export function notionBlocks(day) {
       type: 'callout',
       callout: {
         rich_text: [txt(g.name, { bold: true }), ...(g.min ? [gray('  ' + hm(g.min))] : [])],
-        icon: null, // 아이콘(느낌표) 없음
+        icon: { type: 'external', external: { url: BLANK } }, // 아이콘 자리를 투명 그림으로 (노션 API 는 아이콘 없는 상자를 못 만듦)
         color: 'gray_background',
         children: [
           { type: 'divider', divider: {} },
