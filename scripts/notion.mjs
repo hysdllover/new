@@ -8,7 +8,7 @@ const DS = process.env.NOTION_DS || '3f96255d-22c8-4606-86a5-fd480c1ade04'
 const DAYS = +process.env.DAYS || 3
 const FULL = process.env.FULL === 'true'
 const DESC = 'study-dashboard-sync'
-if (!GIST_TOKEN || !NOTION_TOKEN) { console.log('GIST_TOKEN · NOTION_TOKEN 시크릿이 필요해 건너뜀'); process.exit(0) }
+if (!GIST_TOKEN || !NOTION_TOKEN) { console.log(`::error::시크릿 없음: ${!GIST_TOKEN ? 'GIST_TOKEN ' : ''}${!NOTION_TOKEN ? 'NOTION_TOKEN' : ''}`); process.exit(1) }
 
 const gh = async (path, opt = {}) => {
   const r = await fetch('https://api.github.com' + path, { ...opt, headers: { Authorization: `Bearer ${GIST_TOKEN}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' } })
@@ -21,7 +21,7 @@ async function nt(path, method = 'GET', body) {
     await sleep(350) // 노션 API: 초당 3회
     const r = await fetch('https://api.notion.com/v1' + path, { method, body: body && JSON.stringify(body), headers: { Authorization: `Bearer ${NOTION_TOKEN}`, 'Notion-Version': '2025-09-03', 'Content-Type': 'application/json' } })
     if (r.status === 429 && i < 5) { await sleep((+r.headers.get('retry-after') || 1) * 1000); continue }
-    if (!r.ok) throw new Error(`Notion ${r.status} ${path} ${await r.text()}`)
+    if (!r.ok) throw new Error(`노션 ${r.status} ${path.split('?')[0]} ${(await r.text()).slice(0, 400)}`)
     return r.json()
   }
 }
@@ -43,6 +43,7 @@ async function fileJson(g, name) {
   try { return JSON.parse(text) } catch { return null }
 }
 
+async function main() {
 const id = await findGist()
 if (!id) { console.log('동기화 Gist 없음'); process.exit(0) }
 const g = await gh(`/gists/${id}`)
@@ -87,3 +88,6 @@ for (const date of dates) {
 for (const d of Object.keys(sent)) if (d < back(30)) delete sent[d]
 if (changed) await gh(`/gists/${id}`, { method: 'PATCH', body: JSON.stringify({ files: { 'notion-sent.json': { content: JSON.stringify(sent) } } }) })
 console.log(changed ? `${changed}일 올림` : '바뀐 날 없음')
+}
+// 실패 이유를 Actions 요약(Annotations)에 바로 보이게
+main().catch((e) => { console.log(`::error::${String(e?.cause?.message || e?.message || e).slice(0, 900).replace(/\n/g, ' ')}`); process.exit(1) })
