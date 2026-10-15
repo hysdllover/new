@@ -58,12 +58,9 @@ const dates = FULL
   ? [...new Set(Object.values(state.sessions || {}).filter((s) => !s.deleted).map((s) => s.date))].filter((d) => d <= today).sort()
   : Array.from({ length: DAYS }, (_, i) => back(DAYS - 1 - i))
 
-// 데이터 소스 확인 — 못 찾으면 통합이 볼 수 있는 'monologue' 를 찾아 씀
+// 데이터 소스 확인 — 다른 데이터베이스를 덮어쓰지 않게, 지정한 것만 사용 (NOTION_DS 로 바꿀 수 있음)
 async function resolveDS() {
   try { await nt(`/data_sources/${DS}`); return } catch (e) { if (!/ 404 /.test(e.message)) throw e }
-  const r = await nt('/search', 'POST', { query: 'monologue', filter: { property: 'object', value: 'data_source' }, page_size: 10 })
-  const hit = r.results?.find((x) => (x.title || []).map((t) => t.plain_text).join('').trim().toLowerCase() === 'monologue') || r.results?.[0]
-  if (hit) { DS = hit.id; console.log('monologue 데이터 소스:', DS); return }
   const any = await nt('/search', 'POST', { page_size: 10 })
   const names = (any.results || []).map((x) => (x.title || x.properties?.title?.title || Object.values(x.properties || {}).find((p) => p.type === 'title')?.title || []).map((t) => t.plain_text).join('') || '(제목 없음)')
   throw new Error(`통합이 monologue 에 접근할 수 없어요. 지금 볼 수 있는 것 ${names.length}개: ${names.join(', ') || '없음'} — monologue 페이지 ··· → 연결 → study-log 추가`)
