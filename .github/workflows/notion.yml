@@ -1,0 +1,33 @@
+name: Notion study log
+
+on:
+  schedule:
+    - cron: '50 14 * * *' # 매일 23:50 (한국 시간)
+  workflow_dispatch:
+    inputs:
+      full:
+        description: '기록이 있는 모든 날 다시 올리기'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: notion
+  cancel-in-progress: false
+
+jobs:
+  notion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/notion.mjs
+        env:
+          GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          FULL: ${{ inputs.full }}

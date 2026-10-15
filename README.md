@@ -32,6 +32,12 @@
 2. 홈 화면에 설치한 앱에서 **설정 → 알림 → 이 기기에서 알림 켜기** (iOS 16.4+)
 3. `Push notifications` 워크플로가 5분마다 할 일 시간·일정·약·아침 요약·저녁 목표 알림을 보냅니다 (수 분 지연 가능)
 
+## 노션 공부 기록 (monologue)
+1. https://www.notion.so/my-integrations → 새 내부 통합 만들기 → 토큰 복사
+2. 노션 monologue 페이지 `···` → 연결 → 만든 통합 추가
+3. 저장소 Secrets 에 `NOTION_TOKEN` 추가 (`GIST_TOKEN` 은 알림과 같이 사용)
+4. `Notion study log` 워크플로가 매일 23:50 최근 3일을 하루 한 페이지로 올림 (바뀐 날만 · Actions 에서 바로 실행 가능)
+
 ## 개발
 ```bash
 npm install
