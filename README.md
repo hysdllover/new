@@ -36,7 +36,7 @@
 1. https://www.notion.so/my-integrations → 새 내부 통합 만들기 → 토큰 복사
 2. 노션 monologue 페이지 `···` → 연결 → 만든 통합 추가
 3. 저장소 Secrets 에 `NOTION_TOKEN` 추가 (`GIST_TOKEN` 은 알림과 같이 사용)
-4. `Notion study log` 워크플로가 매일 23:50 최근 3일을 하루 한 페이지로 올림 (바뀐 날만 · Actions 에서 바로 실행 가능)
+4. `Notion study log` 워크플로가 매일 23:50 최근 3일을 monologue(하루 한 페이지)와 habits(습관 체크·공부 시간)에 올림 (바뀐 날만 · Actions 에서 바로 실행 가능)
 
 ## 개발
 ```bash

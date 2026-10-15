@@ -39,3 +39,15 @@ test('노션 형식', () => {
   assert.equal(b[2].callout.children.filter((c) => c.type === 'to_do').length, 2)
   assert.equal(buildDay(data, '2026-10-01'), null)
 })
+
+import { habitDay, habitProps, weekLabel, habitCol } from '../src/lib/notionDay.js'
+test('해빗 트래커', () => {
+  const st = { habits: { a: { title: '6:30 기상', days: { [D]: true } }, b: { title: '5-hour-study', days: {} }, c: { title: '국어 실모', days: { [D]: true } } }, sessions: data.sessions }
+  const h = habitDay(st, D)
+  assert.deepEqual(h.checks, { 'wake up': true, study: false, '국어 실모': true })
+  assert.equal(h.hours, 1.7)
+  assert.equal(weekLabel('2026-10-15'), '10.12 – 10.18')
+  assert.equal(weekLabel('2026-10-18'), '10.12 – 10.18')
+  assert.equal(habitCol('포르투갈어 (duolingo)'), '포르투갈어 (duolingo)')
+  assert.equal(habitProps(h)['wake up'].checkbox, true)
+})

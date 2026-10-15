@@ -1,10 +1,11 @@
 // GitHub Actions 에서 하루 한 번: 동기화 Gist 의 공부 기록을 노션 monologue 데이터베이스에 하루 한 페이지로 올림
 // 최근 DAYS 일만 확인하고, 내용이 바뀐 날만 고침 (보낸 내용 요약은 gist 의 notion-sent.json)
 import { createHash } from 'node:crypto'
-import { buildDay, notionProps, notionBlocks } from '../src/lib/notionDay.js'
+import { buildDay, notionProps, notionBlocks, habitDay, habitProps } from '../src/lib/notionDay.js'
 
 const { GIST_TOKEN, NOTION_TOKEN } = process.env
 let DS = process.env.NOTION_DS || '6b967313-e04e-8379-918f-8766e3a69e58' // monologue. 워크스페이스의 monologue
+const HDS = process.env.NOTION_HABITS_DS || 'd7967313-e04e-832e-b5a8-073643e09547' // habits
 const DAYS = +process.env.DAYS || 3
 const FULL = process.env.FULL === 'true'
 const DESC = 'study-dashboard-sync'
@@ -48,7 +49,7 @@ const id = await findGist()
 if (!id) { console.log('동기화 Gist 없음'); process.exit(0) }
 const g = await gh(`/gists/${id}`)
 const [T, E, S] = await Promise.all(['tasks', 'events', 'study'].map((n) => fileJson(g, n + '.json')))
-const state = { tasks: T?.tasks, days: E?.days, sessions: S?.sessions, subjects: S?.subjects }
+const state = { tasks: T?.tasks, days: E?.days, sessions: S?.sessions, subjects: S?.subjects, habits: S?.habits }
 const sent = (await fileJson(g, 'notion-sent.json')) || {}
 
 // 대상 날짜 (한국 시간 기준 오늘부터 DAYS 일 전까지 · FULL 이면 기록이 있는 모든 날)
@@ -100,8 +101,34 @@ for (const date of dates) {
   console.log(`${date} ${day.title} · ${day.done}/${day.count} · ${day.total}분`)
 }
 
+// 해빗 트래커: 날짜별 한 줄의 체크 칸·공부 시간 (없는 습관 칸은 체크 칸으로 추가)
+const hds = await nt(`/data_sources/${HDS}`).catch((e) => { console.log('::warning::habits 데이터베이스에 접근할 수 없어 건너뜀 ' + e.message.slice(0, 200)); return null })
+if (hds && Object.keys(state.habits || {}).length) {
+  const hdates = FULL ? [...new Set([...dates, ...Object.values(state.habits).flatMap((h) => Object.keys(h.days || {}))])].filter((d) => d <= today).sort() : dates
+  const first = habitDay(state, today)
+  const missing = Object.keys(first.checks).filter((c) => !hds.properties?.[c])
+  if (missing.length) await nt(`/data_sources/${HDS}`, 'PATCH', { properties: Object.fromEntries(missing.map((c) => [c, { checkbox: {} }])) })
+  for (const date of hdates) {
+    const h = habitDay(state, date)
+    if (!Object.values(h.checks).some(Boolean) && h.hours == null) continue
+    const hash = createHash('sha1').update(JSON.stringify(h)).digest('hex').slice(0, 12)
+    if (sent['h:' + date] === hash && !FULL) continue
+    const found = await nt(`/data_sources/${HDS}/query`, 'POST', { filter: { property: 'date', date: { equals: date } }, page_size: 1 })
+    const page = found.results?.[0]?.id
+    if (page) await nt(`/pages/${page}`, 'PATCH', { properties: habitProps(h) })
+    else {
+      const [y, m, d] = date.split('-').map(Number)
+      const title = `${date.slice(5).replace('-', '.')} ${['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][new Date(Date.UTC(y, m - 1, d)).getUTCDay()]}`
+      await nt('/pages', 'POST', { parent: { type: 'data_source_id', data_source_id: HDS }, properties: habitProps(h, title) })
+    }
+    sent['h:' + date] = hash
+    changed++
+    console.log(`habits ${date} ${JSON.stringify(h.checks)} ${h.hours ?? '-'}h`)
+  }
+}
+
 // 30일 지난 기록 정리 후 저장
-for (const d of Object.keys(sent)) if (d < back(30)) delete sent[d]
+for (const d of Object.keys(sent)) if (d.replace('h:', '') < back(30)) delete sent[d]
 if (changed) await gh(`/gists/${id}`, { method: 'PATCH', body: JSON.stringify({ files: { 'notion-sent.json': { content: JSON.stringify(sent) } } }) })
 console.log(changed ? `${changed}일 올림` : '바뀐 날 없음')
 }

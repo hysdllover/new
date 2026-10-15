@@ -99,3 +99,27 @@ export function notionBlocks(day) {
   }
   return b
 }
+
+// 노션 habits (하루 한 줄) — 앱 습관 체크와 공부 시간
+// 앱 습관 → 노션 칸: 이름이 맞는 기본 칸에 넣고, 나머지는 습관 이름 그대로의 체크 칸
+export const HABIT_COLS = [['wake up', /기상|wake/i], ['study', /5.?hour|5시간|study/i], ['vocab', /단어|어휘|vocab/i], ['review', /복습|review/i], ['workout', /운동|workout/i]]
+export const habitCol = (title) => (HABIT_COLS.find(([, re]) => re.test(title)) || [title.trim()])[0]
+const md = (d) => d.slice(5).replace('-', '.')
+export function weekLabel(date) {
+  const t = Date.parse(date), dow = (new Date(t).getUTCDay() + 6) % 7
+  const iso = (x) => new Date(x).toISOString().slice(0, 10)
+  return `${md(iso(t - dow * 86400000))} – ${md(iso(t + (6 - dow) * 86400000))}`
+}
+export function habitDay({ habits = {}, sessions = {} }, date) {
+  const hs = Object.values(live(habits)).filter((h) => (h.title || '').trim())
+  const min = Object.values(live(sessions)).filter((s) => s.date === date).reduce((a, s) => a + (s.dur || 0), 0)
+  const checks = {}
+  for (const h of hs) { const c = habitCol(h.title); checks[c] = checks[c] || !!h.days?.[date] }
+  return { date, checks, hours: min ? Math.round(min / 6) / 10 : null }
+}
+export function habitProps(h, title) {
+  const p = { hours: { number: h.hours } }
+  for (const [c, v] of Object.entries(h.checks)) p[c] = { checkbox: v }
+  if (title) { p.day = { title: [txt(title)] }; p.date = { date: { start: h.date } }; p.week = { select: { name: weekLabel(h.date) } } }
+  return p
+}
