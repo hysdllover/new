@@ -216,7 +216,7 @@ function Habits() {
       <div className="row wrap" style={{ gap: 6 }}>
         {habits.map((h) => {
           const on = h.days?.[d]
-          return <button key={h.id} className={'chip' + (on ? ' on' : '')} style={on ? { borderColor: h.color, color: h.color } : null} onClick={() => patch('habits', h.id, { days: { ...h.days, [d]: !on } })}>{on ? '✓' : '○'} {h.title}</button>
+          return <button key={h.id} className={'chip' + (on ? ' on' : '')} style={on ? { borderColor: h.color, color: h.color } : null} onClick={() => patch('habits', h.id, { days: { ...h.days, [d]: !on } })}>{on ? '✓' : <span className="dot" style={{ background: h.color }} />} {h.title}</button>
         })}
         {!habits.length && <span className="small muted">공부 › 기록에서 습관을 추가하세요</span>}
       </div>

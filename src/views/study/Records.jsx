@@ -3,11 +3,11 @@ import { goalFor } from '../../engine/goal.js'
 import { drawShareCard, shareBlob } from '../../lib/shareCard.js'
 import { pickQuote } from '../../lib/quote.js'
 import { useColl, useSettings, put, patch, remove } from '../../store/store.js'
-import { Card, Icon, Empty, AddInput, openSheet, Field, toast } from '../../components/ui.jsx'
-import { SubjectSelect } from '../../components/common.jsx'
+import { Card, Icon, Empty, AddInput, openSheet, Field, toast, confirmSheet } from '../../components/ui.jsx'
+import { SubjectSelect, ColorPick } from '../../components/common.jsx'
 import { Heatmap, Bars, WeekBars, LineChart, MonthHeat } from '../../components/charts.jsx'
 import { today, addDays, weekStart, fmtDur, fmtShort, fmtDate, fmtTime, tsToMin, diffDays } from '../../engine/date.js'
-import { PALETTE } from '../../store/schema.js'
+import { PALETTE, SOFT_PALETTE } from '../../store/schema.js'
 import { DdayCard } from './Plan.jsx'
 import { FileThumb } from '../../components/Attach.jsx'
 
@@ -177,9 +177,9 @@ function Habits() {
             <div key={h.id}>
               <div className="row" style={{ marginBottom: 4 }}>
                 <button className={'check' + (days[d] ? ' on' : '')} style={{ borderColor: h.color, background: days[d] ? h.color : null }} onClick={() => patch('habits', h.id, { days: { ...days, [d]: !days[d] } })} aria-label="오늘 체크" />
-                <span className="grow">{h.title}</span>
+                <button className="grow ellipsis" style={{ textAlign: 'left' }} onClick={() => openHabit(h.id)}>{h.title}</button>
                 <span className="tiny muted">최근 7일 {wk}/7</span>
-                <button className="icon-btn" onClick={() => remove('habits', h.id)} aria-label="삭제"><Icon name="close" size={14} /></button>
+                <button className="icon-btn" onClick={() => openHabit(h.id)} aria-label="습관 수정"><Icon name="edit" size={14} /></button>
               </div>
               <Heatmap values={Object.fromEntries(Object.entries(days).filter(([, v]) => v).map(([k]) => [k, 1]))} max={1} color={h.color} weeks={15} onPick={(day) => patch('habits', h.id, { days: { ...days, [day]: !days[day] } })} />
             </div>
@@ -189,6 +189,27 @@ function Habits() {
         <AddInput placeholder="습관 추가 (예: 아침 영단어)" onAdd={(title) => put('habits', { title, color: PALETTE[habits.length % PALETTE.length], days: {} })} />
       </div>
     </Card>
+  )
+}
+
+// 습관 수정: 이름 · 색 · 삭제
+export const openHabit = (id) => openSheet((close) => <HabitEdit id={id} close={close} />, { title: '습관 수정' })
+function HabitEdit({ id, close }) {
+  const h = useColl('habits').find((x) => x.id === id)
+  const [title, setTitle] = useState(h?.title || '')
+  if (!h) return null
+  const save = () => { const t = title.trim(); if (t && t !== h.title) patch('habits', id, { title: t }) }
+  const colors = SOFT_PALETTE.includes(h.color) ? SOFT_PALETTE : [h.color, ...SOFT_PALETTE]
+  return (
+    <div className="col">
+      <Field label="이름"><input className="input" value={title} onChange={(e) => setTitle(e.target.value)} onBlur={save} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()} /></Field>
+      <Field label="색상"><ColorPick value={h.color} onChange={(c) => patch('habits', id, { color: c })} colors={colors} /></Field>
+      <div className="row">
+        <button className="btn" style={{ color: 'var(--danger)' }} onClick={() => confirmSheet('습관 삭제', `‘${h.title}’ 와 체크 기록이 지워져요 (할 일 › 보관함 › 휴지통에서 되살릴 수 있어요)`, () => { remove('habits', id); close() }, '삭제')}>삭제</button>
+        <span className="grow" />
+        <button className="btn primary" onClick={() => { save(); close() }}>완료</button>
+      </div>
+    </div>
   )
 }
 
