@@ -1314,7 +1314,7 @@ html[data-done="fade"] .task-item .title .ttl::after, html[data-done="keep"] .ta
 .rc-bc i { display: block; background: var(--rc-ink); }
 .rc-bcn { text-align: center; font-size: 9.5px; letter-spacing: .5em; padding-left: .5em; color: var(--rc-soft); margin-top: 3px; }
 .rc-memo-in { width: 100%; max-width: 310px; font-size: .9em; }
-.rc-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; width: 100%; max-width: 310px; }
+.rc-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; width: 100%; max-width: 310px; }
 .rc-actions .btn { justify-content: center; }
 /* A4: 가운데에 80mm 영수증 한 장 */
 .rc-print { width: 80mm; margin: 0 auto; --rc-paper: #fff; --rc-ink: #2b2e35; --rc-soft: #8b9099; --rc-ok: #7a8660; --rc-x: #c9a0a8; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
