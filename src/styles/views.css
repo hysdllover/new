@@ -1293,7 +1293,7 @@ html[data-done="fade"] .task-item .title .ttl::after, html[data-done="keep"] .ta
 .rc-slot.feed .rc-paper { animation: rc-feed 1.4s steps(22, end) both; }
 @keyframes rc-feed { from { transform: translateY(-100%); } to { transform: none; } }
 @media (prefers-reduced-motion: reduce) { .rc-slot.feed .rc-paper { animation: none; } }
-.rc-paper { position: relative; background: var(--rc-paper); color: var(--rc-ink); padding: 20px 18px 16px; font: 300 12px/1.7 "Courier New", Courier, ui-monospace, monospace; font-variant-numeric: tabular-nums; filter: drop-shadow(0 4px 8px rgba(40, 44, 52, .07)); }
+.rc-paper { position: relative; background: var(--rc-paper); color: var(--rc-ink); padding: 20px 18px 16px; font: 300 12px/1.7 "Courier New", Courier, "Noto Serif KR Variable", "Noto Serif KR", serif; font-variant-numeric: tabular-nums; filter: drop-shadow(0 4px 8px rgba(40, 44, 52, .07)); }
 .rc-paper::before, .rc-paper::after { content: ""; position: absolute; left: 0; right: 0; height: 7px; background: linear-gradient(135deg, transparent 50%, var(--rc-paper) 50%) 0 0 / 12px 7px repeat-x, linear-gradient(225deg, transparent 50%, var(--rc-paper) 50%) 6px 0 / 12px 7px repeat-x; }
 .rc-paper::before { top: -7px; }
 .rc-paper::after { bottom: -7px; transform: rotate(180deg); }
@@ -1313,10 +1313,8 @@ html[data-done="fade"] .task-item .title .ttl::after, html[data-done="keep"] .ta
 .rc-bc { display: flex; justify-content: center; height: 32px; }
 .rc-bc i { display: block; background: var(--rc-ink); }
 .rc-bcn { text-align: center; font-size: 9.5px; letter-spacing: .5em; padding-left: .5em; color: var(--rc-soft); margin-top: 3px; }
-.rc-stamp { position: absolute; right: 14px; top: 104px; width: 72px; height: 72px; display: grid; place-items: center; border: 1.5px solid var(--rc-ok); border-radius: 50%; color: var(--rc-ok); font-size: 9.5px; letter-spacing: .14em; transform: rotate(-12deg); opacity: .85; }
-.rc-stamp::before { content: ""; position: absolute; inset: 4px; border: 1px solid var(--rc-ok); border-radius: 50%; }
 .rc-memo-in { width: 100%; max-width: 310px; font-size: .9em; }
-.rc-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; width: 100%; max-width: 310px; }
+.rc-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; width: 100%; max-width: 310px; }
 .rc-actions .btn { justify-content: center; }
 /* A4: 가운데에 80mm 영수증 한 장 */
 .rc-print { width: 80mm; margin: 0 auto; --rc-paper: #fff; --rc-ink: #2b2e35; --rc-soft: #8b9099; --rc-ok: #7a8660; --rc-x: #c9a0a8; -webkit-print-color-adjust: exact; print-color-adjust: exact; }

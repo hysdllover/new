@@ -1,5 +1,8 @@
 // 영수증 리포트: 하루를 타자기 영수증 한 장으로 — No.YYMMDD 요일 · D-DAY · STUDY · TO-DO · TAX(못 끝낸 일) · MEMO
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { FONTS } from '../theme/theme.js'
+import { drawReceipt } from '../lib/receiptImage.js'
+import { shareBlob } from '../lib/shareCard.js'
 import { setDay, dayRec } from '../store/actions.js'
 import { toast, Icon } from './ui.jsx'
 
@@ -25,6 +28,20 @@ function bars(no) {
 
 const L = ({ a, b, cls }) => <div className={'rc-l' + (cls ? ' ' + cls : '')}><span>{a}</span><span>{b}</span></div>
 
+// 이미지용 줄 목록 (화면 영수증과 같은 순서)
+export function receiptRows(d) {
+  const r = receiptData(d), dash = ['dash']
+  return [
+    ['c', '✦ DAILY RECEIPT ✦'], ['no', `No.${r.no}  ${r.dow}`], dash,
+    ...(d.ddays.length ? [['h', '[D-DAY]'], ...d.ddays.map((x) => ['l', x.t, dd(x.n)]), dash] : []),
+    ['h', '[STUDY]'], ...(d.subs.length ? d.subs.map((x) => ['l', x.sub?.name || '과목 없음', hm(x.m)]) : [['soft', 'NO ITEMS']]), ['sm'], ['l', 'SUBTOTAL', hm(d.mins)], dash,
+    ['l', '[TO-DO]', `${r.done} / ${r.todo.length} COMPLETE`], ...(r.todo.length ? r.todo.map((t) => (t.done ? ['i', '✓ ' + t.title] : ['x', t.title])) : [['soft', 'NO ITEMS']]), dash,
+    ...(r.tax.length ? [['h', '[TAX]'], ...r.tax.map((t) => ['i', '+ ' + t.title]), dash] : []),
+    ['h', '[MEMO]'], ...(d.comment ? d.comment.split('\n').map((x) => ['i', x]) : [['blank']]),
+    ['dbl'], ['bc', bars(r.no)],
+  ]
+}
+
 export function receiptText(d) {
   const r = receiptData(d)
   return [
@@ -40,8 +57,11 @@ export function receiptText(d) {
 export default function Receipt({ d, step, nextOff }) {
   const r = receiptData(d), paper = useRef(null)
   const [feed, setFeed] = useState(0)
-  const all = r.todo.length > 0 && r.done === r.todo.length
+  useEffect(() => { FONTS.notoserif.load().catch(() => {}) }, []) // 한글: 얇은 명조 (타자기 글씨와 어울리게)
   const share = async () => { const text = receiptText(d); try { if (navigator.share) await navigator.share({ text }); else { await navigator.clipboard.writeText(text); toast('복사했어요') } } catch {} }
+  const saveImg = async () => {
+    try { const blob = await drawReceipt(receiptRows(d), r.no); const res = await shareBlob(blob, `영수증-${r.no}.png`); if (res === 'saved') toast('이미지를 저장했어요') } catch { toast('이미지를 만들지 못했어요') }
+  }
   const printA4 = () => {
     const el = document.createElement('div'); el.id = 'print-area'
     el.innerHTML = `<div class="rc-print">${paper.current.outerHTML}</div>`
@@ -86,12 +106,12 @@ export default function Receipt({ d, step, nextOff }) {
           <div className="rc-dbl" />
           <div className="rc-bc">{bars(r.no).map((w, i) => <i key={i} style={{ width: w, opacity: i % 2 ? 0 : 0.8 }} />)}</div>
           <div className="rc-bcn">{r.no}</div>
-          {all && <div className="rc-stamp">COMPLETE</div>}
         </div>
       </div>
       <textarea key={d.date} className="input rc-memo-in" rows={2} defaultValue={memo} placeholder="MEMO · 오늘 마감하기의 '오늘 한 줄'과 같아요" onBlur={(e) => { const v = e.target.value.trim(); if (v !== memo) setDay(d.date, { comment: v }) }} />
       <div className="rc-actions">
         <button className="btn ghost sm" onClick={share}><Icon name="share" size={14} />텍스트</button>
+        <button className="btn ghost sm" onClick={saveImg}><Icon name="image" size={14} />이미지</button>
         <button className="btn ghost sm" onClick={printA4}><Icon name="print" size={14} />A4</button>
       </div>
     </div>
