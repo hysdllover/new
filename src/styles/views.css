@@ -1313,7 +1313,6 @@ html[data-done="fade"] .task-item .title .ttl::after, html[data-done="keep"] .ta
 .rc-bc { display: flex; justify-content: center; height: 32px; }
 .rc-bc i { display: block; background: var(--rc-ink); }
 .rc-bcn { text-align: center; font-size: 9.5px; letter-spacing: .5em; padding-left: .5em; color: var(--rc-soft); margin-top: 3px; }
-.rc-memo-in { width: 100%; max-width: 310px; font-size: .9em; }
 .rc-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; width: 100%; max-width: 310px; }
 .rc-actions .btn { justify-content: center; }
 /* A4: 가운데에 80mm 영수증 한 장 */

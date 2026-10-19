@@ -3,12 +3,12 @@ import { useEffect, useRef, useState } from 'react'
 import { FONTS } from '../theme/theme.js'
 import { drawReceipt } from '../lib/receiptImage.js'
 import { shareBlob } from '../lib/shareCard.js'
-import { setDay, dayRec } from '../store/actions.js'
 import { toast, Icon } from './ui.jsx'
 
 const DOW = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
 const hm = (m) => `${Math.floor((m || 0) / 60)}h ${String((m || 0) % 60).padStart(2, '0')}m`
 const noOf = (date) => date.slice(2, 4) + date.slice(5, 7) + date.slice(8, 10)
+const MEMO = 'Vamos estudar muito.' // 메모는 늘 같은 다짐
 const dd = (n) => (n === 0 ? 'D-DAY' : 'D-' + n)
 
 export function receiptData(d) {
@@ -37,7 +37,7 @@ export function receiptRows(d) {
     ['h', '[STUDY]'], ...(d.subs.length ? d.subs.map((x) => ['l', x.sub?.name || '과목 없음', hm(x.m)]) : [['soft', 'NO ITEMS']]), ['sm'], ['l', 'SUBTOTAL', hm(d.mins)], dash,
     ['l', '[TO-DO]', `${r.done} / ${r.todo.length} COMPLETE`], ...(r.todo.length ? r.todo.map((t) => (t.done ? ['i', '✓ ' + t.title] : ['x', t.title])) : [['soft', 'NO ITEMS']]), dash,
     ...(r.tax.length ? [['h', '[TAX]'], ...r.tax.map((t) => ['i', '+ ' + t.title]), dash] : []),
-    ['h', '[MEMO]'], ...(d.comment ? d.comment.split('\n').map((x) => ['i', x]) : [['blank']]),
+    ['h', '[MEMO]'], ['i', MEMO],
     ['dbl'], ['bc', bars(r.no)],
   ]
 }
@@ -50,7 +50,7 @@ export function receiptText(d) {
     '', '[STUDY]', ...d.subs.map((x) => `${x.sub?.name || '과목 없음'}  ${hm(x.m)}`), `SUBTOTAL  ${hm(d.mins)}`,
     '', `[TO-DO]  ${r.done} / ${r.todo.length} COMPLETE`, ...r.todo.map((t) => (t.done ? '✓ ' : '✗ ') + t.title),
     ...(r.tax.length ? ['', '[TAX]', ...r.tax.map((t) => '+ ' + t.title)] : []),
-    ...(d.comment ? ['', '[MEMO]', d.comment] : []),
+    '', '[MEMO]', MEMO,
   ].join('\n')
 }
 
@@ -70,7 +70,6 @@ export default function Receipt({ d, step, nextOff }) {
     window.addEventListener('afterprint', done)
     setTimeout(() => { window.print(); setTimeout(done, 1500) }, 80)
   }
-  const memo = dayRec(d.date).comment || ''
   return (
     <div className="col rc">
       <div className="rc-top">
@@ -102,13 +101,12 @@ export default function Receipt({ d, step, nextOff }) {
             <div className="rc-dash" />
           </>}
           <div>[MEMO]</div>
-          {d.comment ? <div className="rc-memo">{d.comment}</div> : <div className="rc-blank" />}
+          <div className="rc-memo">{MEMO}</div>
           <div className="rc-dbl" />
           <div className="rc-bc">{bars(r.no).map((w, i) => <i key={i} style={{ width: w, opacity: i % 2 ? 0 : 0.8 }} />)}</div>
           <div className="rc-bcn">{r.no}</div>
         </div>
       </div>
-      <textarea key={d.date} className="input rc-memo-in" rows={2} defaultValue={memo} placeholder="MEMO · 오늘 마감하기의 '오늘 한 줄'과 같아요" onBlur={(e) => { const v = e.target.value.trim(); if (v !== memo) setDay(d.date, { comment: v }) }} />
       <div className="rc-actions">
         <button className="btn ghost sm" onClick={share}><Icon name="share" size={14} />텍스트</button>
         <button className="btn ghost sm" onClick={saveImg}><Icon name="image" size={14} />이미지</button>
