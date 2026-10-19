@@ -1,5 +1,6 @@
 // 영수증 리포트: 하루를 타자기 영수증 한 장으로 — No.YYMMDD 요일 · D-DAY · STUDY · TO-DO · TAX(못 끝낸 일) · MEMO
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { FONTS } from '../theme/theme.js'
 import { setDay, dayRec } from '../store/actions.js'
 import { toast, Icon } from './ui.jsx'
 
@@ -40,7 +41,7 @@ export function receiptText(d) {
 export default function Receipt({ d, step, nextOff }) {
   const r = receiptData(d), paper = useRef(null)
   const [feed, setFeed] = useState(0)
-  const all = r.todo.length > 0 && r.done === r.todo.length
+  useEffect(() => { FONTS.notoserif.load().catch(() => {}) }, []) // 한글: 얇은 명조 (타자기 글씨와 어울리게)
   const share = async () => { const text = receiptText(d); try { if (navigator.share) await navigator.share({ text }); else { await navigator.clipboard.writeText(text); toast('복사했어요') } } catch {} }
   const printA4 = () => {
     const el = document.createElement('div'); el.id = 'print-area'
@@ -86,7 +87,6 @@ export default function Receipt({ d, step, nextOff }) {
           <div className="rc-dbl" />
           <div className="rc-bc">{bars(r.no).map((w, i) => <i key={i} style={{ width: w, opacity: i % 2 ? 0 : 0.8 }} />)}</div>
           <div className="rc-bcn">{r.no}</div>
-          {all && <div className="rc-stamp">COMPLETE</div>}
         </div>
       </div>
       <textarea key={d.date} className="input rc-memo-in" rows={2} defaultValue={memo} placeholder="MEMO · 오늘 마감하기의 '오늘 한 줄'과 같아요" onBlur={(e) => { const v = e.target.value.trim(); if (v !== memo) setDay(d.date, { comment: v }) }} />
