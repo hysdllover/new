@@ -14,6 +14,7 @@ import { today, addDays, addMonths, fmtDate, fmtShort, fmtDur, fmtTime, tsToMin,
 import { dayRec } from '../store/actions.js'
 import { toast, Seg, Icon } from './ui.jsx'
 import { focusLabel } from './StudyWrap.jsx'
+import Receipt from './Receipt.jsx'
 
 export const SECTIONS = [
   ['study', '공부 시간'], ['subjects', '과목별·메모'], ['sessions', '공부 기록'], ['hours', '시간대'], ['focus', '집중'], ['week', '이번 주'],
@@ -25,7 +26,7 @@ export const PSECTIONS = [
   ['study', '공부 시간'], ['days', '날짜별'], ['cal', '공부 달력'], ['subjects', '과목별'], ['hours', '시간대'], ['focus', '집중'], ['best', '가장 많이 한 날'],
   ['done', '끝낸 일'], ['left', '남은 할 일'], ['habits', '습관'], ['progress', '진도'], ['dday', 'D-day'], ['comments', '한 줄 코멘트'],
 ]
-const MODES = [['day', '하루'], ['week', '주간'], ['month', '월간']]
+const MODES = [['day', '하루'], ['week', '주간'], ['month', '월간'], ['receipt', '영수증']]
 const KEY = { day: 'reportSections', week: 'reportSectionsW', month: 'reportSectionsM' }
 const DEF = { day: ['study', 'subjects', 'done', 'events'], week: ['study', 'days', 'subjects', 'done'], month: ['study', 'cal', 'subjects', 'done'] }
 const allOf = (mode) => (mode === 'day' ? SECTIONS : PSECTIONS.filter(([k]) => k !== 'cal' || mode === 'month'))
@@ -254,16 +255,17 @@ export default function DaySummary({ initial = today(), initialMode = 'day' }) {
   const [date, setDate] = useState(initial), [edit, setEdit] = useState(false), [mode, setMode] = useState(initialMode)
   const tasks = useColl('tasks'), sessions = useColl('sessions'), subjects = useColl('subjects'), st = useSettings()
   useColl('days'); useColl('conditions')
-  const secs = secsOf(st, mode)
+  const pm = mode === 'receipt' ? 'day' : mode // 영수증은 하루 데이터로
+  const secs = secsOf(st, pm)
   const fontKey = st.reportFont || ''
   useMyFonts()
   useEffect(() => { loadReportFont(fontKey).catch(() => {}) }, [fontKey]) // 날짜·큰 숫자·소제목 글꼴
   useColl('habits'); useColl('reviews'); useColl('lectures'); useColl('textbooks'); useColl('ddays'); useColl('quotes')
   const opt = { tasks, sessions, subjects, goal: goalFor(st, date), goalOf: (k) => goalFor(st, k), weekStart: st.weekStart ?? 1 }
   const from = mode === 'week' ? weekStart(date, opt.weekStart) : monthStart(date)
-  const d = mode === 'day' ? daySummary(date, opt) : periodSummary(mode, from, mode === 'week' ? addDays(from, 6) : addDays(from, daysInMonth(+from.slice(0, 4), +from.slice(5, 7) - 1) - 1), opt)
-  const step = (n) => setDate(mode === 'day' ? addDays(date, n) : mode === 'week' ? addDays(date, 7 * n) : addMonths(monthStart(date), n))
-  const nextOff = mode === 'day' ? date >= today() : d.to >= today()
+  const d = pm === 'day' ? daySummary(date, opt) : periodSummary(mode, from, mode === 'week' ? addDays(from, 6) : addDays(from, daysInMonth(+from.slice(0, 4), +from.slice(5, 7) - 1) - 1), opt)
+  const step = (n) => setDate(pm === 'day' ? addDays(date, n) : mode === 'week' ? addDays(date, 7 * n) : addMonths(monthStart(date), n))
+  const nextOff = pm === 'day' ? date >= today() : d.to >= today()
   const theme = st.reportTheme || 'app'
   const setSecs = (v) => setSettings({ [KEY[mode]]: v })
   const move = (i, dir) => { const a = [...secs], j = i + dir; if (j < 0 || j >= a.length) return; [a[i], a[j]] = [a[j], a[i]]; setSecs(a) }
@@ -289,6 +291,7 @@ export default function DaySummary({ initial = today(), initialMode = 'day' }) {
     if (k === 'hours') return d.hours.some(Boolean) ? <div className="rp-chart"><div className="rp-plot" style={{ gap: 3, height: 56 }}>{d.hours.map((m, i) => <div key={i} className="rp-col" title={`${i + 6}시 ${m}분`}><i className="wbar-b" style={{ width: '100%', maxWidth: 10, height: Math.max(m ? 3 : 0, (m / mx) * 100) + '%', opacity: 0.45 + 0.55 * (m / mx) }} /></div>)}</div><div className="row between tiny muted" style={{ marginTop: 4 }}><span>6시</span><span>12시</span><span>18시</span><span>24시</span></div></div> : null
     return null
   }
+  if (mode === 'receipt') return <div className="col rp"><Seg value={mode} onChange={setMode} options={MODES} /><Receipt d={d} step={step} nextOff={nextOff} /></div>
   return (
     <div className="col rp" style={{ '--rp-hand': reportFamily(fontKey), '--rp-hs': reportScale(fontKey) }}>
       <Seg value={mode} onChange={setMode} options={MODES} />
