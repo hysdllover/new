@@ -250,7 +250,7 @@ function QuoteEditor() {
   const quotes = useColl('quotes')
   return (
     <div className="form">
-      <div className="small muted">홈 맨 위와 위젯에 3시간마다 무작위로 바뀌어 보여요</div>
+      <div className="small muted">홈 맨 위와 위젯에 1시간마다 무작위로 바뀌어 보여요</div>
       <div className="list">
         {quotes.map((x) => (
           <div key={x.id} className="row" style={{ padding: '4px 0' }}>

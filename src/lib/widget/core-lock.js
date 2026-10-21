@@ -134,7 +134,7 @@ if (!data) {
   if (st.widgetDdColor !== false && !MONO && !lock && ddAll[0] && ddAll[0].pinned && ddAll[0].color) DDHEX = ddAll[0].color
   const DDC = DDHEX ? new Color(DDHEX) : null
   const quotes = Object.keys(data.settings.quotes || {}).sort().map((k) => data.settings.quotes[k]).filter((q) => !q.deleted)
-  const quote = pickQuote(quotes)?.text ?? null // 3시간마다 무작위 (앱과 같은 문구)
+  const quote = pickQuote(quotes)?.text ?? null // 1시간마다 무작위 (앱과 같은 문구)
   const dateStr = DAY[d0.getDay()] + ' · ' + d0.getDate() + ' ' + MON[d0.getMonth()] + (STALE ? ' · ' + pad(STALE.getHours()) + ':' + pad(STALE.getMinutes()) : '') + (data.sv && data.sv > VER ? ' · 스크립트 업데이트' : '')
   const pct = Math.round(Math.min(1, mins / goal) * 100)
   // 진행 중 타이머 (앱에서 시작·정지할 때 올라옴) — 끝났거나 오래된 건 무시
