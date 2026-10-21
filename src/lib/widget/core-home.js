@@ -1448,11 +1448,12 @@ export default () => `  } else if (KIND === 'study') {
       w.addSpacer(); numCol(w, 64); w.addSpacer()
       t(w, dd ? ddTxt + '  ' + dd.title : headline, tw(10), DI, 2).minimumScaleFactor = 0.8
     } else {
-      const row = w.addStack(); row.size = new Size(inner, 0); row.topAlignContent()
-      const cw = Math.round(inner * 0.46)
-      numCol(row, big2 ? 96 : 76, cw); row.addSpacer(14); vrule(row, big2 ? 120 : Math.round(innerH * 0.66)); row.addSpacer(14)
-      const rw = Math.max(60, inner - cw - 28 - (RW || 0.1)), R = row.addStack(); R.layoutVertically(); R.size = new Size(rw, 0); R.addSpacer(4)
-      const hl = R.addStack(); hl.size = new Size(rw, 0); t(hl, headline, F(big2 ? 16 : 13, 'Light'), DI, big2 ? 4 : 3).minimumScaleFactor = 0.8; hl.addSpacer(); R.addSpacer()
+      // 날짜 칸(가운데) | 세로선 | 다짐(세로 가운데 · 왼쪽 정렬) — 다짐이 짧아도 숫자와 같은 높이에 나란히
+      const row = w.addStack(); row.size = new Size(inner, 0); row.centerAlignContent()
+      const cw = Math.round(inner * 0.44), gap = big2 ? 16 : 14
+      numCol(row, big2 ? 96 : 76, cw); row.addSpacer(gap); vrule(row, big2 ? 120 : Math.round(innerH * 0.62)); row.addSpacer(gap)
+      const rw = Math.max(60, inner - cw - gap * 2 - (RW || 0.1)), hl = row.addStack(); hl.size = new Size(rw, 0)
+      t(hl, headline, F(big2 ? 16 : 14, 'Light'), DI, big2 ? 4 : 3).minimumScaleFactor = 0.8; hl.addSpacer()
       if (!big2) { w.addSpacer(); rule(w, inner); w.addSpacer(5); const f = w.addStack(); f.size = new Size(inner, 0); t(f, '공부 ' + hm(mins), label(8), DI); f.addSpacer(); t(f, dd ? ddTxt : '', label(8), DI); f.addSpacer(); t(f, '할 일 ' + left.length, label(8), DS) }
       else {
         w.addSpacer(16); dbl(); w.addSpacer(4)
