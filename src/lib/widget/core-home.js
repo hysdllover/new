@@ -1437,14 +1437,16 @@ export default () => `  } else if (KIND === 'study') {
     const sm = fam === 'small', big2 = fam === 'large' || fam === 'extraLarge', left = items.filter((x) => !x.done)
     const dbl = () => { const a = w.addStack(); a.size = new Size(inner, 0.9); a.backgroundColor = DI; w.addSpacer(1.5); const b = w.addStack(); b.size = new Size(inner, 0.4); b.backgroundColor = DI }
     const headline = quote || (dd ? dd.title + '까지 ' + ddTxt : '오늘을 기록하다')
-    const numCol = (parent, sz) => { const a = parent.addStack(); a.layoutVertically(); t(a, String(d0.getDate()), thin(sz), DI); t(a, MON[d0.getMonth()] + '  ·  ' + DAY[d0.getDay()], label(7.5), DS) }
+    // 날짜 칸: 폭을 정해 두고 숫자 · 월요일을 가운데로 (머리기사가 짧아도 한쪽으로 쏠리지 않게)
+    const numCol = (parent, sz, cw) => { const a = parent.addStack(); a.layoutVertically(); if (cw) { a.size = new Size(cw, 0); a.centerAlignContent() } t(a, String(d0.getDate()), thin(sz), DI); t(a, MON[d0.getMonth()] + '  ·  ' + DAY[d0.getDay()], label(7.5), DS) }
     if (sm) {
       w.addSpacer(); numCol(w, 64); w.addSpacer()
       t(w, dd ? ddTxt + '  ' + dd.title : headline, tw(10), DI, 2).minimumScaleFactor = 0.8
     } else {
       const row = w.addStack(); row.size = new Size(inner, 0); row.topAlignContent()
-      numCol(row, big2 ? 96 : 76); row.addSpacer(14); vrule(row, big2 ? 120 : Math.round(innerH * 0.66)); row.addSpacer(14)
-      const R = row.addStack(); R.layoutVertically(); R.addSpacer(4); t(R, headline, F(big2 ? 16 : 13, 'Light'), DI, big2 ? 4 : 3).minimumScaleFactor = 0.8; R.addSpacer()
+      const cw = Math.round(inner * 0.46)
+      numCol(row, big2 ? 96 : 76, cw); row.addSpacer(14); vrule(row, big2 ? 120 : Math.round(innerH * 0.66)); row.addSpacer(14)
+      const R = row.addStack(); R.layoutVertically(); R.size = new Size(Math.max(60, inner - cw - 28 - (RW || 0.1)), 0); R.topAlignContent(); R.addSpacer(4); t(R, headline, F(big2 ? 16 : 13, 'Light'), DI, big2 ? 4 : 3).minimumScaleFactor = 0.8; R.addSpacer()
       if (!big2) { w.addSpacer(); rule(w, inner); w.addSpacer(5); const f = w.addStack(); f.size = new Size(inner, 0); t(f, '공부 ' + hm(mins), label(8), DI); f.addSpacer(); t(f, dd ? ddTxt : '', label(8), DI); f.addSpacer(); t(f, '할 일 ' + left.length, label(8), DS) }
       else {
         w.addSpacer(16); dbl(); w.addSpacer(4)
