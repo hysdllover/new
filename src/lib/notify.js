@@ -1,7 +1,7 @@
 import { list, settings, find } from '../store/store.js'
 import { today, nowMin, fmtTime, parseTime } from '../engine/date.js'
 import { eventsOn } from '../engine/scheduler.js'
-import { reminderTimes, reminderBody, absMinutes, digestDue, digestText, isQuiet } from '../engine/reminders.js'
+import { reminderTimes, reminderBody, absMinutes, digestDue, digestText, isQuiet, kindOn, eventKind, eventRemind, notifyLink } from '../engine/reminders.js'
 import { toast } from '../components/ui.jsx'
 import { carryOver, autoTemplate } from '../store/actions.js'
 
@@ -13,14 +13,14 @@ export async function requestPermission() {
 }
 
 const fired = new Set(JSON.parse(sessionStorage.getItem('fired') || '[]'))
-function fire(key, title, body) {
+function fire(key, title, body, url = './') {
   if (fired.has(key)) return
   fired.add(key)
   sessionStorage.setItem('fired', JSON.stringify([...fired].slice(-300)))
   toast(`🔔 ${title}${body ? ' · ' + body : ''}`)
   try {
     if ('Notification' in window && Notification.permission === 'granted') {
-      navigator.serviceWorker?.ready.then((r) => r.showNotification(title, { body, icon: './icon-192.png', tag: key })).catch(() => new Notification(title, { body }))
+      navigator.serviceWorker?.ready.then((r) => r.showNotification(title, { body, icon: './icon-192.png', tag: key, data: { url } })).catch(() => new Notification(title, { body }))
     }
   } catch {}
 }
@@ -31,23 +31,24 @@ export function checkReminders() {
   const st = settings()
   if (st.quietNight !== false && isQuiet(m, st.dayStart ?? 420, st.dayEnd ?? 1440)) return // 자는 시간
   for (const e of eventsOn(d)) {
-    if (e.start == null || e.remind == null) continue
-    const at = e.start - e.remind - (e.bufferBefore || 0)
-    if (m >= at && m < e.start) fire(`ev:${e.id}:${d}`, e.title, `${fmtTime(e.start)} 시작${e.location ? ' · ' + e.location : ''}`)
+    const rm = eventRemind(e, st)
+    if (e.start == null || rm == null || !kindOn(st, eventKind(e))) continue
+    const at = e.start - rm - (e.bufferBefore || 0)
+    if (m >= at && m < e.start) fire(`ev:${e.id}:${d}`, e.title, `${fmtTime(e.start)} 시작${e.location ? ' · ' + e.location : ''}`, notifyLink.event(e.id, d))
   }
   const nowAbs = absMinutes(d, m)
   const dg = settings().digest
-  if (dg?.on) {
+  if (!kindOn(st, 'task')) { /* 할 일 알림 끔 */ } else if (dg?.on) {
     const x = digestDue(list('tasks'), d, m, dg.times, 30)
-    if (x?.items.length) { const tx = digestText(x.items); fire(x.key, tx.title, tx.body) }
+    if (x?.items.length) { const tx = digestText(x.items); fire(x.key, tx.title, tx.body, notifyLink.tasks()) }
   } else for (const t of list('tasks')) {
-    for (const r of reminderTimes(t)) if (nowAbs >= r.at && nowAbs < r.at + 30) fire(`task:${t.id}:${t.due}:${r.off}`, t.title, reminderBody(t, r.off))
+    for (const r of reminderTimes(t)) if (nowAbs >= r.at && nowAbs < r.at + 30) fire(`task:${t.id}:${t.due}:${r.off}`, t.title, reminderBody(t, r.off), notifyLink.task(t.id))
   }
-  for (const med of list('meds')) {
+  for (const med of kindOn(st, 'med') ? list('meds') : []) {
     if (!med.active) continue
     for (const tm of med.times || []) {
       const at = parseTime(tm)
-      if (m >= at && m < at + 60 && !find('medLogs', `${med.id}_${d}_${tm}`)?.taken) fire(`med:${med.id}:${d}:${tm}`, `${med.name} 복용`, tm)
+      if (m >= at && m < at + 60 && !find('medLogs', `${med.id}_${d}_${tm}`)?.taken) fire(`med:${med.id}:${d}:${tm}`, `${med.name} 복용`, tm, notifyLink.med())
     }
   }
 }

@@ -67,7 +67,7 @@ export function applyTheme(t0) {
   root.toggleAttribute('data-note', t.card === 'note')
   // 아이콘 선 굵기·끝 모양
   // 아이콘 선 굵기: '글자 따라'(기본)면 글자 굵기에 맞춤
-  root.style.setProperty('--icon-sw', { thin: 1.15, normal: 1.5, bold: 2 }[t.iconWeight] || ({ 300: 1.25, 400: 1.5, 500: 1.75 }[t.fontWeight] || 1.4))
+  root.style.setProperty('--icon-sw', { thin: 1, normal: 1.3, bold: 1.75 }[t.iconWeight] || ({ 300: 1.15, 400: 1.3, 500: 1.55 }[t.fontWeight] || 1.25))
   root.dataset.icons = t.iconShape === 'square' ? 'square' : 'round'
   // 디자인 세부 (설정 › 디자인 세부)
   const paper = t.card === 'paper' || t.card === 'note'

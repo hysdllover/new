@@ -85,3 +85,41 @@ export function morningBrief({ date, tasks = [], events = [], days = [], ddays =
   ].filter(Boolean)
   return { title: `${mo}월 ${d}일 ${wd}요일 · 오늘`, body: lines.join('\n') }
 }
+
+// 알림 종류별 켜고 끄기 (settings.notifyOff[종류] === true 면 끔)
+export const NOTIFY_KINDS = [['task', '할 일'], ['event', '일정'], ['academy', '학원'], ['med', '약'], ['am', '아침 브리핑'], ['pm', '저녁 마감']]
+export const kindOn = (st, k) => st?.notifyOff?.[k] !== true
+export const eventKind = (e) => (e.layer === 'academy' ? 'academy' : 'event')
+// 일정 알림(분 전): 일정에 직접 정했으면 그 값(없음 = null), 안 정했으면 기본값 (학원 · 일정 따로)
+export const eventRemind = (e, st) => (e.remind !== undefined ? e.remind : (eventKind(e) === 'academy' ? st?.academyRemind : st?.eventRemind) ?? null)
+// 알림을 누르면 열 화면
+export const notifyLink = {
+  task: (id) => `./?task=${encodeURIComponent(id)}`,
+  event: (id, date) => `./?ev=${encodeURIComponent(id)}&occ=${date}`,
+  tasks: () => './?go=tasks.day',
+  med: () => './?go=health',
+  home: () => './?go=home',
+  close: () => './?close=1',
+}
+
+// 저녁 마감: 오늘 공부 · 목표 · 남은 할 일 → 누르면 하루 마감하기
+export function eveningBrief({ date, studied = 0, goal = 240, tasks = [] }) {
+  const dur = (m) => (m >= 60 ? `${Math.floor(m / 60)}시간${m % 60 ? ' ' + (m % 60) + '분' : ''}` : `${m}분`)
+  const left = tasks.filter((t) => !t.done && !t.archived && t.due && t.due <= date).length
+  const pct = goal ? Math.round((studied / goal) * 100) : 0
+  const l1 = studied ? `공부 ${dur(studied)} · 목표의 ${pct}%` : '아직 공부 기록이 없어요'
+  const l2 = (left ? `남은 할 일 ${left}개` : '남은 할 일 없음') + ' · 눌러서 하루 마감하기'
+  return { title: studied >= goal ? '오늘 목표 달성 · 마감할 시간' : '오늘 마감할 시간', body: l1 + '\n' + l2 }
+}
+
+// 늦게 도착한 알림 처리: bundle(30분 넘게 늦은 건 하나로 묶기) · skip(30분 넘게 늦은 건 보내지 않기) · each(늦어도 하나씩)
+export const LATE_MODES = [['bundle', '하나로 묶기'], ['skip', '보내지 않기'], ['each', '하나씩 모두']]
+export function handleLate(out, mode = 'bundle', key = 'miss', limit = 30) {
+  const late = out.filter((n) => (n.late || 0) > limit)
+  const keep = out.filter((n) => !late.includes(n))
+  if (mode === 'each' || !late.length) return { send: out, drop: [] }
+  if (mode === 'skip') return { send: keep, drop: late }
+  if (late.length === 1) return { send: out, drop: [] }
+  const body = late.slice(0, 5).map((n) => `· ${n.title}${n.body ? ' — ' + n.body.split('\n')[0] : ''}`).join('\n') + (late.length > 5 ? '\n그리고 몇 가지 더' : '')
+  return { send: [...keep, { key, title: '놓친 알림', body, url: notifyLink.home() }], drop: late }
+}
