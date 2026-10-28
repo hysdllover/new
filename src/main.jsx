@@ -98,7 +98,7 @@ Promise.all([loadState(), initFonts(), restoreSync()]).then(async () => {
   }
   if (newIn && ['task', 'event', 'record', 'memo'].includes(newIn)) {
     const [{ default: QuickAdd }, { openSheet }] = await Promise.all([import('./components/QuickAdd.jsx'), import('./components/ui.jsx')])
-    setTimeout(() => openSheet((c) => <QuickAdd close={c} initial={newIn} />, { title: '빠른 추가' }), 300)
+    setTimeout(() => openSheet((c) => <QuickAdd close={c} initial={newIn} />, { title: '빠른 추가', top: true }), 300)
   }
   // 공유 시트 사진: ?photo=1 → 붙여넣기 시트 (단축어가 사진을 클립보드에 복사해 둠)
   const photoIn = q.get('photo') != null

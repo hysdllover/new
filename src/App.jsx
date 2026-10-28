@@ -205,7 +205,7 @@ export default function App() {
   )
 }
 
-function openQuick(initial) { openSheet((close) => <QuickAdd close={close} initial={initial} />, { title: '빠른 추가' }) }
+function openQuick(initial) { openSheet((close) => <QuickAdd close={close} initial={initial} />, { title: '빠른 추가', top: true }) }
 
 // + 버튼: 탭 = 빠른 추가, 길게 누르기 = 공부 기록 입력
 let pressTimer = null, longFired = false

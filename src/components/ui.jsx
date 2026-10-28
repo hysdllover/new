@@ -133,7 +133,7 @@ export function UiLayer() {
       {u.sheets.map((s) => (
         <div key={s.key}>
           <div className="sheet-bg" onClick={() => closeSheet(s.key)} />
-          <div className={'sheet' + (s.full ? ' full' : '')} role="dialog">
+          <div className={'sheet' + (s.full ? ' full' : '') + (s.top ? ' top' : '')} role="dialog">
             <div className="sheet-grab" />
             {s.title != null && (
               <div className="sheet-h"><h2>{s.title}</h2><button className="icon-btn" onClick={() => closeSheet(s.key)} aria-label="닫기"><Icon name="close" /></button></div>
