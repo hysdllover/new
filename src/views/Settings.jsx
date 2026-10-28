@@ -21,7 +21,7 @@ import { useMyFonts, addFont, removeFont, fontFamily, loadAllFonts, SYNC_FONT_MA
 import { requestPermission } from '../lib/notify.js'
 import { fmtTime, fmtClock, today, WD, weekStart } from '../engine/date.js'
 import { weekGoals, goalProgress } from '../store/actions.js'
-import { DIGEST_TIMES } from '../engine/reminders.js'
+import { DIGEST_TIMES, NOTIFY_KINDS, LATE_MODES, kindOn } from '../engine/reminders.js'
 import { APP_ICONS, iconSrc, getAppIcon, setAppIcon } from '../lib/appIcon.js'
 import { WidgetFontField, DashTilesField, CustomWidgetsField, WidgetPreview, dashKeys } from './settings/WidgetSettings.jsx'
 
@@ -212,7 +212,7 @@ const SET_SECS = [
   ['design', '디자인', 'edit', '색, 글꼴, 카드, 세부 모양'],
   ['layout', '화면 구성', 'grid', '하단 탭, 사이드바, 기능 켜기·끄기'],
   ['study', '공부·플래너', 'clock', '과목, 프로젝트, 하루 시간, 템플릿'],
-  ['info', '정보·진단', 'more', '문제 신고, 진단, 설치 방법'],
+  ['info', '정보·진단', 'info', '문제 신고, 진단, 설치 방법'],
 ]
 
 // 문제 신고 · 진단: 기기·버전·저장 공간·최근 오류를 한 번에 복사 (토큰·내용 없음)
@@ -539,6 +539,53 @@ function TemplateEditor({ id }) {
   )
 }
 
+const REMIND_OPTS = [[null, '없음'], [0, '정시'], [5, '5분 전'], [10, '10분 전'], [15, '15분 전'], [30, '30분 전'], [60, '1시간 전']]
+function RemindSel({ value, onChange }) {
+  return <select className="input" value={value == null ? '' : value} onChange={(e) => onChange(e.target.value === '' ? null : +e.target.value)}>{REMIND_OPTS.map(([v, l]) => <option key={l} value={v == null ? '' : v}>{l}</option>)}</select>
+}
+
+// 알림 서버를 1분마다 깨우기: cron-job.org 가 GitHub Actions 의 알림 확인을 실행 (GitHub 예약 실행은 몇 시간씩 밀림)
+const WAKE_URL = 'https://api.github.com/repos/hysdllover/new/actions/workflows/notify.yml/dispatches'
+function PreciseWake() {
+  const [tok, setTok] = useState(''), [res, setRes] = useState(null)
+  const copy = async (v) => { try { await navigator.clipboard.writeText(v); toast('복사했어요') } catch { toast('길게 눌러 복사해 주세요') } }
+  // 입력한 토큰으로 한 번 깨워 보기 (토큰은 저장하지 않음)
+  const test = async () => {
+    setRes('…')
+    try {
+      const r = await fetch(WAKE_URL, { method: 'POST', headers: { Authorization: 'Bearer ' + tok.trim(), Accept: 'application/vnd.github+json' }, body: '{"ref":"main"}' })
+      setRes(r.status === 204 ? 'ok' : r.status === 401 ? '토큰이 맞지 않아요' : r.status === 403 || r.status === 404 ? '권한이 부족해요 · 저장소 hysdllover/new · Actions: Read and write' : '실패 (' + r.status + ')')
+    } catch { setRes('연결하지 못했어요') }
+  }
+  const rows = [['URL', WAKE_URL], ['방식', 'POST'], ['헤더 1', 'Accept: application/vnd.github+json'], ['헤더 2', 'Authorization: Bearer (토큰)'], ['본문', '{"ref":"main"}']]
+  return (
+    <div className="col" style={{ gap: 8, marginTop: 6 }}>
+      <div className="small" style={{ lineHeight: 1.7 }}>
+        GitHub 의 무료 예약 실행은 수십 분 ~ 몇 시간 밀려요. 무료 서비스 <b>cron-job.org</b> 가 <b>1분마다</b> 알림 확인을 깨우면 제시간(1~2분 안)에 와요.
+      </div>
+      <ol className="small steps" style={{ margin: 0, paddingLeft: 18, lineHeight: 1.75 }}>
+        <li>github.com › Settings › Developer settings › <b>Fine-grained tokens</b> › Generate · 저장소 <b>hysdllover/new</b> 만 · 권한 <b>Actions: Read and write</b> · 만료 1년</li>
+        <li>아래 칸에 토큰을 붙여 <b>깨워 보기</b> → '잘 돼요' 가 나오면 토큰 확인 끝 (앱에 저장하지 않아요)</li>
+        <li>cron-job.org 가입 › <b>CREATE CRONJOB</b> › 아래 값 복사 · 실행 간격 <b>Every 1 minute</b> · ADVANCED 에 방식 · 헤더 · 본문</li>
+        <li>몇 분 뒤 위 '알림 서버 마지막 확인' 이 '방금' 이면 완료</li>
+      </ol>
+      <div className="row" style={{ gap: 6 }}>
+        <input className="input grow" type="password" autoComplete="off" placeholder="github_pat_… (확인용 · 저장 안 함)" value={tok} onChange={(e) => { setTok(e.target.value); setRes(null) }} />
+        <button className="btn" disabled={!tok.trim() || res === '…'} onClick={test}>깨워 보기</button>
+      </div>
+      {res && res !== '…' && <div className="small" style={{ color: res === 'ok' ? 'var(--ok, var(--accent-t))' : 'var(--danger)' }}>{res === 'ok' ? '잘 돼요 · 1~2분 안에 마지막 확인이 바뀌어요' : res}</div>}
+      {rows.map(([k, v]) => (
+        <div key={k} className="row" style={{ gap: 6 }}>
+          <span className="tiny muted nowrap" style={{ width: 40 }}>{k}</span>
+          <input className="input grow" readOnly value={v} onFocus={(e) => e.target.select()} />
+          <button className="btn" onClick={() => copy(k === '헤더 2' && tok.trim() ? 'Bearer ' + tok.trim() : v.replace(/^(Accept|Authorization): /, ''))} aria-label={k + ' 복사'}>복사</button>
+        </div>
+      ))}
+      <div className="tiny muted">토큰은 이 저장소의 Actions 실행 권한만 있어 안전해요. 앱이 열려 있을 때는 앱이 직접 알림을 띄워요.</div>
+    </div>
+  )
+}
+
 function PushCard() {
   const st = useSettings()
   const sync = useSyncStatus()
@@ -556,7 +603,7 @@ function PushCard() {
     <Card title="알림" action={<span className="small">{on ? '● 켜짐' : '꺼짐'}</span>}>
       <div className="form">
         <div className="small muted">
-          할 일 시간 · 일정 알림 · 약 · 아침 요약 · 저녁 공부 목표를 푸시로 보내요. GitHub Actions 가 5분마다 확인해 보내므로 몇 분 늦을 수 있어요.
+          할 일 · 일정 · 학원 · 약 · 아침 브리핑 · 저녁 마감을 푸시로 보내요. 누르면 그 할 일 · 일정 · 하루 마감 화면이 바로 열려요. 제시간에 받으려면 아래 ‘정확한 시간에 받기’를 설정하세요.
         </div>
         {!isStandalone() && <div className="small" style={{ color: 'var(--danger)' }}>iPhone·iPad 는 Safari › 공유 › 홈 화면에 추가 후, 설치된 앱에서 켜야 해요 (iOS 16.4+)</div>}
         {!connected && <div className="small" style={{ color: 'var(--danger)' }}>먼저 위의 동기화를 연결하세요</div>}
@@ -573,9 +620,20 @@ function PushCard() {
         )}
         <div className="row">
           <Field label="아침 브리핑"><TimeInput value={t2m(st.notifyMorning === undefined ? '07:30' : st.notifyMorning)} onChange={(v) => setSettings({ notifyMorning: m2t(v) })} defaultValue={450} /></Field>
-          <Field label="저녁 목표 알림"><TimeInput value={t2m(st.notifyEvening === undefined ? '21:00' : st.notifyEvening)} onChange={(v) => setSettings({ notifyEvening: m2t(v) })} defaultValue={1260} /></Field>
+          <Field label="저녁 마감 알림"><TimeInput value={t2m(st.notifyEvening === undefined ? '21:00' : st.notifyEvening)} onChange={(v) => setSettings({ notifyEvening: m2t(v) })} defaultValue={1260} /></Field>
         </div>
-        <div className="tiny muted">아침 브리핑: 오늘 일정(학원 포함) · 오늘의 Top 3 · D-day 를 알림 하나로 · 시간을 비우면 안 받아요</div>
+        <div className="tiny muted">아침 브리핑: 오늘 일정(학원 포함) · Top 3 · D-day · 저녁 마감: 오늘 공부 · 남은 할 일, 누르면 하루 마감하기 · 시각을 비우면 안 받아요</div>
+        <Field label="받을 알림">
+          <div className="row wrap" style={{ gap: 6 }}>
+            {NOTIFY_KINDS.map(([k, l]) => <button key={k} className={'chip' + (kindOn(st, k) ? ' on' : '')} aria-pressed={kindOn(st, k)} onClick={() => setSettings({ notifyOff: { ...(st.notifyOff || {}), [k]: kindOn(st, k) } })}>{l}</button>)}
+          </div>
+        </Field>
+        <div className="row">
+          <Field label="새 일정 기본 알림"><RemindSel value={st.eventRemind} onChange={(v) => setSettings({ eventRemind: v })} /></Field>
+          <Field label="학원 기본 알림"><RemindSel value={st.academyRemind} onChange={(v) => setSettings({ academyRemind: v })} /></Field>
+        </div>
+        <div className="tiny muted">일정에 알림을 따로 정하지 않았으면 이 시간 전에 알려요 (일정에서 '없음'으로 정한 건 제외)</div>
+        <Field label="늦게 도착한 알림 (30분 넘게)"><Seg value={st.lateMode || 'bundle'} onChange={(v) => setSettings({ lateMode: v })} options={LATE_MODES} /></Field>
         <Toggle label="할 일 알림 요약해서 받기" checked={!!st.digest?.on} onChange={(v) => setSettings({ digest: { times: DIGEST_TIMES, ...(st.digest || {}), on: v } })} />
         {st.digest?.on && (
           <div className="col" style={{ gap: 6 }}>
@@ -591,23 +649,9 @@ function PushCard() {
             </div>
           </div>
         )}
-        <details className="more">
-          <summary>정확한 시간에 받기 (5분마다 깨우기 · 권장)</summary>
-          <div className="small" style={{ marginTop: 6, lineHeight: 1.75 }}>
-            GitHub 의 예약 실행은 무료라서 몇 시간씩 밀리기도 해요. 무료 서비스 <b>cron-job.org</b> 가 5분마다 알림 확인을 실행하게 하면 제시간에 와요.<br />
-            1. github.com › Settings › Developer settings › <b>Fine-grained tokens</b> › 새 토큰: 저장소 <b>hysdllover/new</b> 만 · 권한 <b>Actions: Read and write</b><br />
-            2. cron-job.org 가입 › <b>CREATE CRONJOB</b> · URL 은 아래 주소 · 실행 간격 <b>5분</b><br />
-            3. <b>ADVANCED</b> › 요청 방식 <b>POST</b> · 헤더 <code>Authorization</code> = <code>Bearer 토큰</code>, <code>Accept</code> = <code>application/vnd.github+json</code> · 본문 <code>{'{"ref":"main"}'}</code><br />
-            4. 저장 후 몇 분 뒤 위 ‘마지막 확인’ 이 몇 분 전으로 바뀌면 완료
-          </div>
-          {[['주소', 'https://api.github.com/repos/hysdllover/new/actions/workflows/notify.yml/dispatches'], ['본문', '{"ref":"main"}']].map(([k, v]) => (
-            <div key={k} className="row" style={{ marginTop: 6 }}>
-              <span className="tiny muted nowrap" style={{ width: 28 }}>{k}</span>
-              <input className="input grow" readOnly value={v} onFocus={(e) => e.target.select()} />
-              <button className="btn" onClick={async () => { try { await navigator.clipboard.writeText(v); toast('복사했어요') } catch { toast('길게 눌러 복사해 주세요') } }}>복사</button>
-            </div>
-          ))}
-          <div className="tiny muted" style={{ marginTop: 6 }}>토큰은 이 저장소의 Actions 실행 권한만 있어 안전해요. 앱이 열려 있을 때는 앱이 직접 알림을 띄워요.</div>
+        <details className="more" open={ago == null || ago > 30}>
+          <summary>정확한 시간에 받기 (1분마다 깨우기 · 권장)</summary>
+          <PreciseWake />
         </details>
         <details className="more">
           <summary>처음 한 번만: GitHub 설정</summary>

@@ -1,4 +1,5 @@
-import { useRec, patch, remove, restore, put, list } from '../store/store.js'
+import { eventRemind } from '../engine/reminders.js'
+import { useRec, patch, remove, restore, put, list, settings } from '../store/store.js'
 import { Icon, Field, AutoText, closeDetail, openDetail, toast, Toggle } from './ui.jsx'
 import { RepeatEditor, TimeInput, ColorPick, SubjectSelect, ProjectSelect } from './common.jsx'
 import { PALETTE } from '../store/schema.js'
@@ -73,7 +74,7 @@ export default function EventEditor({ id, occ }) {
         )}
         <div className="row">
           <Field label="장소"><input className="input" value={e.location || ''} onChange={(ev) => up({ location: ev.target.value })} /></Field>
-          <Field label="알림(분 전)"><input className="input" type="number" min="0" step="5" value={e.remind ?? ''} placeholder="없음" onChange={(ev) => up({ remind: ev.target.value === '' ? null : +ev.target.value })} /></Field>
+          <Field label="알림(분 전)"><input className="input" type="number" min="0" step="5" value={e.remind ?? ''} placeholder={e.remind === undefined && eventRemind(e, settings()) != null ? `기본 ${eventRemind(e, settings())}` : '없음'} onChange={(ev) => up({ remind: ev.target.value === '' ? null : +ev.target.value })} /></Field>
         </div>
         <Field label="종류">
           <select className="input" value={e.kind || 'event'} onChange={(ev) => up({ kind: ev.target.value, ...(ev.target.value === 'anniv' ? { repeat: { freq: 'yearly', interval: 1 }, start: null, end: null } : null) })}>

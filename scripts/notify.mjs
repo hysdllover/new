@@ -1,7 +1,8 @@
 // GitHub Actions 에서 5분마다 실행: 동기화 Gist 를 읽어 알림 시각이 된 항목을 Web Push 로 발송
 import webpush from 'web-push'
 import { matches } from '../src/engine/recurrence.js'
-import { reminderTimes, reminderBody, absMinutes, digestDue, digestText, isQuiet, nightMissed, morningBrief } from '../src/engine/reminders.js'
+import { reminderTimes, reminderBody, absMinutes, digestDue, digestText, isQuiet, nightMissed, morningBrief, eveningBrief, kindOn, eventKind, eventRemind, notifyLink, handleLate } from '../src/engine/reminders.js'
+import { goalFor } from '../src/engine/goal.js'
 
 const TOKEN = process.env.GIST_TOKEN
 const DESC = 'study-dashboard-sync'
@@ -79,44 +80,48 @@ async function finish(files = {}) {
 
 // 할 일 알림: 정시·N분 전·하루 전·당일 아침 (날짜를 넘는 알림도 계산)
 const nowAbs = absMinutes(date, now)
-const digest = settings.digest?.on
+const digest = settings.digest?.on && kindOn(settings, 'task')
 if (digest) {
   // 알림 요약: 요약 시각에만, 다음 요약 전까지의 할 일 알림을 한 번에
   const dg = digestDue(alive(T?.tasks), date, now, settings.digest.times, win)
-  if (dg?.items.length && !sentFile[dg.key]) { const x = digestText(dg.items); out.push({ key: dg.key, title: x.title, body: x.body, url: './' }) }
+  if (dg?.items.length && !sentFile[dg.key]) { const x = digestText(dg.items); out.push({ key: dg.key, title: x.title, body: x.body, url: notifyLink.tasks() }) }
 }
-for (const t of digest ? [] : alive(T?.tasks)) {
+for (const t of digest || !kindOn(settings, 'task') ? [] : alive(T?.tasks)) {
   for (const r of reminderTimes(t)) {
     const key = `t:${t.id}:${t.due}:${r.off}`
-    if (r.at <= nowAbs && r.at > nowAbs - win && !sentFile[key]) out.push({ key, title: t.title, body: reminderBody(t, r.off), url: './', late: nowAbs - r.at })
+    if (r.at <= nowAbs && r.at > nowAbs - win && !sentFile[key]) out.push({ key, title: t.title, body: reminderBody(t, r.off), url: notifyLink.task(t.id), late: nowAbs - r.at })
   }
 }
 for (const e of alive(E?.events)) {
-  if (e.start == null || e.remind == null) continue
+  const rm = eventRemind(e, settings)
+  if (e.start == null || rm == null || !kindOn(settings, eventKind(e))) continue
   const on = e.repeat ? matches(e.repeat, e.date, date) : (e.date === date || (e.endDate && date >= e.date && date <= e.endDate))
   if (!on) continue
-  add(`e:${e.id}:${date}`, e.start - e.remind - (e.bufferBefore || 0), e.title, `${hm(e.start)} 시작${e.location ? ' · ' + e.location : ''}`)
+  add(`e:${e.id}:${date}`, e.start - rm - (e.bufferBefore || 0), e.title, `${hm(e.start)} 시작${e.location ? ' · ' + e.location : ''}`, notifyLink.event(e.id, date))
 }
 const logs = alive(H?.medLogs)
-for (const m of alive(H?.meds)) {
+for (const m of kindOn(settings, 'med') ? alive(H?.meds) : []) {
   if (!m.active) continue
   for (const tm of m.times || []) {
     if (logs.some((l) => l.id === `${m.id}_${date}_${tm}` && l.taken)) continue
-    add(`m:${m.id}:${date}:${tm}`, parseT(tm), `${m.name} 복용`, tm)
+    add(`m:${m.id}:${date}:${tm}`, parseT(tm), `${m.name} 복용`, tm, notifyLink.med())
   }
 }
 // 아침 요약 · 저녁 목표 알림
 const sessions = alive(S?.sessions).filter((s) => s.date === date)
 const studied = sessions.reduce((a, s) => a + (s.dur || 0), 0)
 const morning = parseT(settings.notifyMorning === undefined ? '07:30' : settings.notifyMorning)
-if (morning != null) {
+if (morning != null && kindOn(settings, 'am')) {
   const evToday = alive(E?.events).filter((e) => e.repeat ? matches(e.repeat, e.date, date) : (e.date === date || (e.endDate && date >= e.date && date <= e.endDate)))
   const x = morningBrief({ date, tasks: alive(T?.tasks), events: evToday, days: alive(E?.days), ddays: alive(S?.ddays) })
-  add(`am:${date}`, morning, x.title, x.body)
+  add(`am:${date}`, morning, x.title, x.body, notifyLink.home())
 }
 const evening = parseT(settings.notifyEvening === undefined ? '21:00' : settings.notifyEvening)
-const goal = settings.goalDaily || 240
-if (evening != null && studied < goal) add(`pm:${date}`, evening, '오늘 하루', studied ? `오늘 ${Math.floor(studied / 60) ? Math.floor(studied / 60) + '시간 ' : ''}${studied % 60 ? (studied % 60) + '분' : ''} 공부했어요` : '오늘 공부를 기록해 둘까요', './')
+const closed = alive(E?.days).find((x) => x.id === date)?.closed
+if (evening != null && kindOn(settings, 'pm') && !closed) {
+  const x = eveningBrief({ date, studied, goal: goalFor(settings, date), tasks: alive(T?.tasks) })
+  add(`pm:${date}`, evening, x.title, x.body, notifyLink.close())
+}
 
 // 자는 시간(취침~기상)엔 보내지 않음 · 기상 때 밤사이 할 일 알림을 한 번에
 const wake = settings.dayStart ?? 7 * 60, sleep = settings.dayEnd ?? 1440
@@ -124,15 +129,16 @@ if (settings.quietNight !== false) {
   if (isQuiet(now, wake, sleep)) { console.log(`${date} ${hm(now)} 자는 시간 · 보류`); for (const n of out) sentFile[n.key] = date; await finish(); process.exit(0) }
   if (now >= wake && now < wake + win && !sentFile[`night:${date}`]) {
     const miss = nightMissed(alive(T?.tasks), date, wake, sleep)
-    if (miss.length) { const x = digestText(miss); out.push({ key: `night:${date}`, title: '밤사이 할 일', body: x.body, url: './' }) }
+    if (miss.length) { const x = digestText(miss); out.push({ key: `night:${date}`, title: '밤사이 할 일', body: x.body, url: notifyLink.tasks() }) }
   }
 }
 if (!out.length) { console.log(`${date} ${hm(now)} 보낼 알림 없음 (확인 범위 ${win}분)`); await finish(); process.exit(0) }
-// 30분 넘게 늦은 알림은 하나로 묶어서 (한꺼번에 여러 개 울리지 않게)
-const lateOnes = out.filter((n) => (n.late || 0) > 30)
-if (lateOnes.length > 1) {
-  for (const n of lateOnes) { sentFile[n.key] = date; out.splice(out.indexOf(n), 1) }
-  out.push({ key: `miss:${date}:${now}`, title: '놓친 알림', body: lateOnes.slice(0, 5).map((n) => `· ${n.title}${n.body ? ' — ' + n.body : ''}`).join('\n') + (lateOnes.length > 5 ? '\n그리고 몇 가지 더' : ''), url: './' })
+// 늦게 도착한 알림: 설정에 따라 묶기 · 건너뛰기 · 하나씩 (건너뛴 것도 보낸 것으로 표시해 다시 안 보냄)
+{
+  const r = handleLate(out, settings.lateMode || 'bundle', `miss:${date}:${now}`)
+  for (const n of r.drop) sentFile[n.key] = date
+  out.splice(0, out.length, ...r.send)
+  if (!out.length) { console.log(`${date} ${hm(now)} 늦은 알림 ${r.drop.length}개 건너뜀`); await finish(); process.exit(0) }
 }
 
 // 선언형 웹 푸시 (iOS 18.4+): 서비스 워커가 깨어나지 않아도 iOS 가 바로 표시 · 앱 아이콘 배지도 함께

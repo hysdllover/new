@@ -45,8 +45,9 @@ self.addEventListener('push', (e) => {
 self.addEventListener('notificationclick', (e) => {
   e.notification.close()
   const url = new URL(e.notification.data?.url || './', self.registration.scope).href
+  // 열린 앱이 있으면 앞으로 가져와 그 화면을 열게 하고, 없으면 링크로 새로 엶
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
-    for (const c of list) if ('focus' in c) return c.focus()
+    for (const c of list) if ('focus' in c) { c.postMessage({ type: 'open-link', url }); return c.focus() }
     return self.clients.openWindow(url)
   }))
 })

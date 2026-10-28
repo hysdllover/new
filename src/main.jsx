@@ -49,6 +49,11 @@ Promise.all([loadState(), initFonts(), restoreSync()]).then(async () => {
     const [tab, seg] = start.split('.')
     if ([...TABS, ...EXTRA].some((t) => t.id === tab)) go(tab, seg)
   }
+  // 알림에서 연 링크: ?ev=일정id&occ=날짜 · ?close=1(하루 마감) — 할 일(?task=)은 아래 위젯 링크와 같이
+  const evIn = /[?&](ev|close)=/.test(location.search)
+  if (evIn) { const qs = location.search; import('./lib/links.js').then((m) => m.openLink(qs.replace(/[?&]task=[^&]*/, ''))) }
+  // 이미 열린 앱에서 알림을 누르면 서비스 워커가 링크를 보내 줌
+  navigator.serviceWorker?.addEventListener('message', (e) => { if (e.data?.type === 'open-link' && e.data.url) import('./lib/links.js').then((m) => m.openLink(new URL(e.data.url, location.href).search)) })
   // 공유(단축어)로 들어온 할 일: ?add=내용&url=링크 → 받은 편지함
   const q = new URLSearchParams(location.search)
   const added = q.get('add')?.trim(), link = q.get('url')?.trim()
@@ -122,7 +127,7 @@ Promise.all([loadState(), initFonts(), restoreSync()]).then(async () => {
   const taskIn = q.get('task')
   if (taskIn) setTimeout(() => import('./components/ui.jsx').then((m) => m.openDetail('task', taskIn)), 500)
   if (openIn) { const blk = q.get('b'); if (blk) import('./components/BlockEditor.jsx').then((m) => setTimeout(() => m.goBlock(openIn, blk), 400)); else { const { openNote } = await import('./nav.js'); openNote(openIn) } }
-  if (taskIn || openIn || target || added || link || noteIn != null || healthIn || aiIn != null || doneIn || timerIn != null || newIn || photoIn) history.replaceState(null, '', location.pathname + location.hash)
+  if (evIn || taskIn || openIn || target || added || link || noteIn != null || healthIn || aiIn != null || doneIn || timerIn != null || newIn || photoIn) history.replaceState(null, '', location.pathname + location.hash)
   createRoot(document.getElementById('root')).render(<StrictMode><Root /></StrictMode>)
   startServices()
   startNoteVersions()
