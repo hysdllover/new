@@ -49,8 +49,8 @@ test('일정 기본 알림 · 종류 끄기', () => {
 })
 
 import { plainNote } from '../src/engine/reminders.js'
-test('알림 제목 없이 내용만', () => {
-  assert.deepEqual(plainNote('수학 학원', '15:00 시작'), { title: '', body: '수학 학원 · 15:00 시작' })
-  assert.deepEqual(plainNote('10월 28일 · 오늘', '일정 없음\n할 일 2개'), { title: '', body: '10월 28일 · 오늘\n일정 없음\n할 일 2개' })
-  assert.deepEqual(plainNote('제목만', ''), { title: '', body: '제목만' })
+test('알림 한 줄', () => {
+  assert.deepEqual(plainNote('수학 학원', '15:00 시작'), { title: '수학 학원 · 15:00 시작', body: '' })
+  assert.deepEqual(plainNote('10월 28일 · 오늘', '일정 없음\n할 일 2개'), { title: '10월 28일 · 오늘', body: '일정 없음\n할 일 2개' })
+  assert.deepEqual(plainNote('제목만', ''), { title: '제목만', body: '' })
 })
