@@ -51,5 +51,5 @@ export async function pushState() {
 export async function testLocal() {
   const reg = await navigator.serviceWorker.ready
   // 실제 알림과 같이 제목 없이 내용만
-  await reg.showNotification('“dar notícias”', { body: '알림 테스트 · 이렇게 표시돼요', icon: './icon-192.png', tag: 'test' })
+  await reg.showNotification('- notificação', { body: '알림 테스트 · 이렇게 표시돼요', icon: './icon-192.png', tag: 'test' })
 }
