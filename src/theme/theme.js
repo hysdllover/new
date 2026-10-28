@@ -77,6 +77,8 @@ export function applyTheme(t0) {
   root.toggleAttribute('data-fold', t.card === 'note' && t.fold !== false)
   Object.assign(D, { bullet: t.bulletStyle || 'dot', link: t.linkStyle || 'under', hlc: t.hlCorner || 'square', shadow: t.shadowDepth || 'normal', tabsel: t.tabSel || 'color', thc: t.thColor || 'gray' })
   for (const k of ['bullet', 'link', 'hlc', 'shadow', 'tabsel', 'thc']) root.dataset[k] = D[k]
+  // 상태 막대 색을 실제 바탕색과 같게 (iOS 가 위쪽을 다른 색 · 흐림으로 칠하지 않게)
+  requestAnimationFrame(() => { try { const bg = getComputedStyle(document.body).backgroundColor || getComputedStyle(root).getPropertyValue('--bg').trim(); document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute('content', bg)) } catch {} })
   root.toggleAttribute('data-margin', !!t.noteMargin)
   Object.assign(root.dataset, { tone: t.textTone || 'ink', btn: t.btnStyle || 'line', seg: t.segStyle || 'pill', nalign: t.noteAlign || 'left', nimg: t.noteImg || 'round', calnum: t.calNum || 'body', caltoday: t.calToday || 'circle', bar: t.chartBar || 'normal' })
   root.toggleAttribute('data-titleline', !!t.titleLine)
