@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="gmono" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1f2023"/><stop offset="1" stop-color="#141517"/></linearGradient></defs><rect width="512" height="512" fill="url(#gmono)"/><g fill="none" stroke-linecap="round" stroke-linejoin="round">
-  <circle cx="256" cy="256" r="132" stroke="rgba(242,242,240,.12)" stroke-width="12"/>
-  <path d="M256 124A132 132 0 1 1 124 256" stroke="#f2f2f0" stroke-width="12"/>
-  <circle cx="124" cy="256" r="15" fill="#f2f2f0" stroke="none"/>
-  <path d="M206 258l34 33 68-72" stroke="#f2f2f0" stroke-width="12"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="gmono" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2f3744"/><stop offset="1" stop-color="#222831"/></linearGradient></defs><rect width="512" height="512" fill="url(#gmono)"/><g fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <circle cx="256" cy="256" r="132" stroke="rgba(227,233,241,.14)" stroke-width="12"/>
+  <path d="M256 124A132 132 0 1 1 124 256" stroke="#e3e9f1" stroke-width="12"/>
+  <circle cx="124" cy="256" r="15" fill="#e3e9f1" stroke="none"/>
+  <path d="M206 258l34 33 68-72" stroke="#e3e9f1" stroke-width="12"/>
 </g></svg>
