@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { goalFor } from '../../engine/goal.js'
 import { useColl, useSettings, put, patch, remove } from '../../store/store.js'
-import { useTimerState, useTick, elapsed, remaining, startStopwatch, startCountdown, pause, resume, stop, setTimerTask } from '../../lib/timer.js'
+import { useTimerState, useTick, elapsed, remaining, startStopwatch, startCountdown, pause, resume, stop, setTimerTask, parkThought, unpark } from '../../lib/timer.js'
 import { today, fmtClock, fmtDur, fmtTime, tsToMin } from '../../engine/date.js'
 import { openRecord } from './Log.jsx'
 import { Card, Icon, Ring, Field, Seg, openSheet } from '../../components/ui.jsx'
@@ -48,6 +48,7 @@ export default function Timer() {
                 {t.paused ? <button className="btn primary" onClick={resume}><Icon name="play" size={16} />계속</button> : <button className="btn" onClick={pause}><Icon name="pause" size={16} />일시정지</button>}
                 <button className="btn danger" onClick={stop}><Icon name="stop" size={16} />종료·기록</button>
               </div>
+              <Park park={t.park || []} />
             </div>
           ) : (
             <div className="col" style={{ alignItems: 'center', gap: 12, padding: '10px 0' }}>
@@ -82,6 +83,22 @@ export default function Timer() {
         {st.modules.mock !== false && <MockExam />}
         <WakeCard />
       </div>
+    </div>
+  )
+}
+
+// 생각 주차장: 떠오른 생각을 적어 두고 공부로 돌아가기 · 끝내면 받은 편지함으로
+function Park({ park }) {
+  const [v, setV] = useState('')
+  const add = () => { parkThought(v); setV('') }
+  return (
+    <div className="park">
+      <div className="row" style={{ gap: 6 }}>
+        <input className="input" value={v} onChange={(e) => setV(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && add()} placeholder="떠오른 생각 · 할 일 적어 두기" aria-label="생각 주차장" />
+        <button className="btn" disabled={!v.trim()} onClick={add}>두기</button>
+      </div>
+      {park.map((x, i) => <div key={i} className="park-it"><span className="grow ellipsis">{x}</span><button className="icon-btn" onClick={() => unpark(i)} aria-label="지우기"><Icon name="close" size={13} /></button></div>)}
+      <div className="tiny muted">{park.length ? `${park.length}개 · 공부를 끝내면 받은 편지함으로 옮겨요` : '생각 주차장 · 공부를 끝내면 받은 편지함으로 옮겨요'}</div>
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { createElement, useEffect, useState, useSyncExternalStore } from 'react'
-import { addSession, markLecture } from '../store/actions.js'
+import { addSession, markLecture, addTask } from '../store/actions.js'
 import { settings, put, find, subscribe, deviceId, list } from '../store/store.js'
 import { toast } from '../components/ui.jsx'
 import { keepAwake } from './notify.js'
@@ -74,12 +74,27 @@ export function resume() {
   if (!t?.paused) return
   set({ ...t, paused: false, segStart: Date.now() })
 }
+// 생각 주차장: 공부 중 떠오른 생각 · 할 일을 한 줄씩 적어 두고, 끝낼 때 받은 편지함으로 (타이머와 같이 기기 간 연동)
+export function parkThought(text) {
+  const s = String(text || '').trim()
+  if (!t || !s) return
+  set({ ...t, park: [...(t.park || []), s.slice(0, 200)] })
+}
+export const unpark = (i) => t && set({ ...t, park: (t.park || []).filter((_, k) => k !== i) })
+function releasePark(was) {
+  const p = was?.park || []
+  if (!p.length) return
+  for (const title of p) addTask({ title, inbox: true, subjectId: was.subjectId || null })
+  toast(`적어 둔 생각 ${p.length}개를 받은 편지함에 넣었어요`)
+}
+
 export function stop() {
   if (!t) return
   const last = flush(t), was = t
   const total = Math.round(elapsed(t) / 60000)
   set(null)
   keepAwake(false)
+  releasePark(was)
   const lec = was.lectureId
   // 인강 듣기로 시작했으면 바로 다음 강 완료 표시
   if (lec) toast(total >= 1 ? `${total}분 기록했어요` : '인강 듣기를 마쳤어요', { label: '＋1강', fn: () => { const n = markLecture(lec); if (n) toast(`${n}강 완료`) } })
@@ -97,7 +112,8 @@ export function widgetTimer(act, at, sid) {
   } else if (act === 'resume' && t.paused) set({ ...t, paused: false, segStart: at })
   else if (act === 'stop') {
     if (!t.paused) addSession({ id: 'tm-' + t.segStart, subjectId: t.subjectId, taskId: t.taskId, lectureId: t.lectureId, start: t.segStart, end: at, kind: t.mode })
-    set(null); keepAwake(false)
+    const was = t
+    set(null); keepAwake(false); releasePark(was)
   }
 }
 // 끝낸 시각을 골라 멈추기 (켜 두고 잊었을 때): 그 시각까지만 기록
@@ -105,7 +121,7 @@ export function stopAt(at) {
   if (!t) return
   const was = t, end = Math.max(t.segStart, Math.min(at, Date.now()))
   if (!t.paused) addSession({ id: 'tm-' + t.segStart, subjectId: t.subjectId, taskId: t.taskId, lectureId: t.lectureId, start: t.segStart, end, kind: t.mode })
-  set(null); keepAwake(false)
+  set(null); keepAwake(false); releasePark(was)
   const total = Math.round(((was.acc || 0) + (was.paused ? 0 : end - was.segStart)) / 60000)
   if (total >= 1) askWrap(was, total, null)
 }
@@ -132,7 +148,7 @@ function countdownTick() {
   const end = t.segStart + (t.target - (t.acc || 0))
   addSession({ id: 'tm-' + t.segStart, subjectId: t.subjectId, taskId: t.taskId, lectureId: t.lectureId, start: t.segStart, end, kind: 'countdown' })
   const was = t
-  set(null); keepAwake(false)
+  set(null); keepAwake(false); releasePark(was)
   notify('타이머 끝', `${min}분 공부를 기록했어요`)
   if (document.visibilityState === 'visible') askWrap(was, min, null)
 }

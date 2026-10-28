@@ -6,6 +6,7 @@ import { commitBlock, noteTitle } from '../../lib/notes.js'
 import { openNote } from '../../nav.js'
 import { Check, Empty } from '../../components/ui.jsx'
 import { SubjectTag } from '../../components/common.jsx'
+import { DueBtn } from '../../components/BlockEditor.jsx'
 
 export default function Todos() {
   const notes = useColl('notes'), tasks = useColl('tasks'), subjects = useColl('subjects')
@@ -41,7 +42,8 @@ export default function Todos() {
             {items.map(({ b, t }) => (
               <div key={b.id} className={'item task-item' + (t?.done ? ' done' : '')} style={{ alignItems: 'center' }}>
                 <Check on={!!t?.done} onClick={() => check(n, b, t)} color={subjects.find((s) => s.id === n.subjectId)?.color} />
-                <div className="t"><div className="title"><span className="ttl">{b.text.trim()}</span></div>{t?.due && <div className="meta"><span className="tiny muted">{t.due.slice(5).replace('-', '/')}</span></div>}</div>
+                <div className="t"><div className="title"><span className="ttl">{b.text.trim()}</span></div></div>
+                {!b.ref && <DueBtn b={b} task={t} note={n} upd={(id, nb) => patch('notes', n.id, { blocks: (n.blocks || []).map((x) => (x.id === id ? nb : x)) })} />}
               </div>
             ))}
           </div>
