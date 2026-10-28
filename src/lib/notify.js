@@ -1,7 +1,7 @@
 import { list, settings, find } from '../store/store.js'
 import { today, nowMin, fmtTime, parseTime } from '../engine/date.js'
 import { eventsOn } from '../engine/scheduler.js'
-import { reminderTimes, reminderBody, absMinutes, digestDue, digestText, isQuiet, kindOn, eventKind, eventRemind, notifyLink } from '../engine/reminders.js'
+import { plainNote, reminderTimes, reminderBody, absMinutes, digestDue, digestText, isQuiet, kindOn, eventKind, eventRemind, notifyLink } from '../engine/reminders.js'
 import { toast } from '../components/ui.jsx'
 import { carryOver, autoTemplate } from '../store/actions.js'
 
@@ -20,7 +20,8 @@ function fire(key, title, body, url = './') {
   toast(`🔔 ${title}${body ? ' · ' + body : ''}`)
   try {
     if ('Notification' in window && Notification.permission === 'granted') {
-      navigator.serviceWorker?.ready.then((r) => r.showNotification(title, { body, icon: './icon-192.png', tag: key, data: { url } })).catch(() => new Notification(title, { body }))
+      const p = plainNote(title, body)
+      navigator.serviceWorker?.ready.then((r) => r.showNotification(p.title, { body: p.body, icon: './icon-192.png', tag: key, data: { url } })).catch(() => new Notification(p.title, { body: p.body }))
     }
   } catch {}
 }

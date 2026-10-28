@@ -1,7 +1,7 @@
 // GitHub Actions 에서 5분마다 실행: 동기화 Gist 를 읽어 알림 시각이 된 항목을 Web Push 로 발송
 import webpush from 'web-push'
 import { matches } from '../src/engine/recurrence.js'
-import { reminderTimes, reminderBody, absMinutes, digestDue, digestText, isQuiet, nightMissed, morningBrief, eveningBrief, kindOn, eventKind, eventRemind, notifyLink, handleLate } from '../src/engine/reminders.js'
+import { plainNote, reminderTimes, reminderBody, absMinutes, digestDue, digestText, isQuiet, nightMissed, morningBrief, eveningBrief, kindOn, eventKind, eventRemind, notifyLink, handleLate } from '../src/engine/reminders.js'
 import { goalFor } from '../src/engine/goal.js'
 
 const TOKEN = process.env.GIST_TOKEN
@@ -153,11 +153,11 @@ if (!out.length) { console.log(`${date} ${hm(now)} 보낼 알림 없음 (확인 
 // 예전 방식 필드(title·body·url)도 같이 넣어 서비스 워커 처리와 호환
 const APP_URL = process.env.APP_URL || settings.appUrl || 'https://hysdllover.github.io/new/'
 const badgeN = alive(T?.tasks).filter((t) => !t.done && !t.archived && t.due && t.due <= date).length
-const payload = (n) => JSON.stringify({
+const payload = (n0) => { const n = { ...n0, ...plainNote(n0.title, n0.body) }; return JSON.stringify({
   web_push: 8030,
   notification: { title: n.title, body: n.body || '', tag: n.key, navigate: new URL(n.url || './', APP_URL).href, silent: false, ...(settings.appBadge !== false ? { app_badge: String(badgeN) } : null) },
   title: n.title, body: n.body, tag: n.key, url: n.url,
-})
+}) }
 webpush.setVapidDetails('mailto:study-dashboard@users.noreply.github.com', push.vapid.publicKey, push.vapid.privateKey)
 const dead = new Set()
 // 앞으로 올 알림이 있으면 보낼 때마다 기록을 저장 (기다리는 중 실행이 끊겨도 두 번 가지 않게)
