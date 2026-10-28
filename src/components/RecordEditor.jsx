@@ -1,11 +1,19 @@
 import { FOCUS, focusLabel } from './StudyWrap.jsx'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useColl, remove, restore } from '../store/store.js'
 import { saveRecord } from '../store/actions.js'
 import { Field, Icon, toast, AutoText } from './ui.jsx'
 import { TimeInput } from './common.jsx'
 import { FilesEditor } from './Attach.jsx'
 import { today, tsToMin, fmtDur } from '../engine/date.js'
+
+// −/＋ 1분씩 · 누르고 있으면 계속 (0.4초 뒤부터 빠르게)
+function Step({ d, on, label, children }) {
+  const tm = useRef(null)
+  const stop = () => { clearTimeout(tm.current); clearInterval(tm.current) }
+  const start = (e) => { e.preventDefault(); on(d); stop(); tm.current = setTimeout(() => { tm.current = setInterval(() => on(d), 70) }, 400) }
+  return <button type="button" className="dur-step" onPointerDown={start} onPointerUp={stop} onPointerLeave={stop} onPointerCancel={stop} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), on(d))} aria-label={label}>{children}</button>
+}
 
 // 공부 기록 직접 입력·수정 (타이머 기록도 같은 폼으로 수정)
 export default function RecordEditor({ rec, date, subjectId, onDone, compact }) {
@@ -40,15 +48,15 @@ export default function RecordEditor({ rec, date, subjectId, onDone, compact }) 
       </div>
 
       <div className="dur-box">
-        <button type="button" className="dur-step" onClick={() => set({ dur: Math.max(0, f.dur - 10) })} aria-label="10분 빼기">−</button>
+        <Step d={-1} on={(d) => setF((x) => ({ ...x, dur: Math.max(0, x.dur + d) }))} label="1분 빼기">−</Step>
         <div className="dur-val">
           <input inputMode="numeric" className="dur-in" value={h} onChange={(e) => set({ dur: (parseInt(e.target.value) || 0) * 60 + m })} aria-label="시간" /><span>시간</span>
           <input inputMode="numeric" className="dur-in" value={m} onChange={(e) => set({ dur: h * 60 + Math.min(59, parseInt(e.target.value) || 0) })} aria-label="분" /><span>분</span>
         </div>
-        <button type="button" className="dur-step" onClick={() => set({ dur: f.dur + 10 })} aria-label="10분 더하기">＋</button>
+        <Step d={1} on={(d) => setF((x) => ({ ...x, dur: x.dur + d }))} label="1분 더하기">＋</Step>
       </div>
       <div className="row" style={{ gap: 6, justifyContent: 'center' }}>
-        {[10, 30, 60, 90].map((x) => <button key={x} type="button" className="chip" onClick={() => set({ dur: f.dur + x })}>+{x < 60 ? x + '분' : x / 60 + '시간'}</button>)}
+        {[5, 10, 30, 60].map((x) => <button key={x} type="button" className="chip" onClick={() => set({ dur: f.dur + x })}>+{x < 60 ? x + '분' : x / 60 + '시간'}</button>)}
         <button type="button" className="chip" onClick={() => set({ dur: 0 })}>0</button>
       </div>
 
