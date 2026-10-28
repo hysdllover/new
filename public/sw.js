@@ -40,7 +40,7 @@ self.addEventListener('push', (e) => {
   const url = n.navigate || d.url || './'
   const badge = n.app_badge != null ? +n.app_badge : null
   if (badge != null && self.navigator.setAppBadge) e.waitUntil(badge ? self.navigator.setAppBadge(badge).catch(() => {}) : self.navigator.clearAppBadge().catch(() => {}))
-  e.waitUntil(self.registration.showNotification(n.title || n.body || '알림', { body: n.body || '', icon: './icon-192.png', badge: './icon-192.png', tag: n.tag, data: { url } }))
+  e.waitUntil(self.registration.showNotification(n.title || 'info.', { body: n.body || '', icon: './icon-192.png', badge: './icon-192.png', tag: n.tag, data: { url } }))
 })
 self.addEventListener('notificationclick', (e) => {
   e.notification.close()

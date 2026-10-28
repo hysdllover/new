@@ -124,11 +124,10 @@ export function handleLate(out, mode = 'bundle', key = 'miss', limit = 30) {
   return { send: [...keep, { key, title: '놓친 알림', body, url: notifyLink.home() }], drop: late }
 }
 
-// 알림을 내용 한 줄로: '제목 · 내용' 을 제목 줄에 (본문 없음 · 여러 줄이면 첫 줄만 제목, 나머지는 본문)
-// 제목을 비우면 iOS 가 앱 이름을 제목으로 넣어 'from 앱 이름' 과 겹쳐 보여서, 제목 줄은 꼭 채움
+// 알림 모양: 굵은 제목 줄은 'info.' 로 고정, 내용('제목 · 내용')은 보통 굵기 본문으로
+// (iOS 제목 줄은 늘 굵고, 비우면 앱 이름이 들어가 'from 앱 이름' 과 겹쳐서 짧은 글자로 채움)
+export const NOTE_HEAD = 'info.'
 export function plainNote(title, body) {
   const t = String(title || '').trim(), b = String(body || '').trim()
-  const all = !b ? t : !t ? b : b.includes('\n') ? `${t}\n${b}` : `${t} · ${b}`
-  const [first, ...rest] = all.split('\n')
-  return { title: first, body: rest.join('\n') }
+  return { title: NOTE_HEAD, body: !b ? t : !t ? b : b.includes('\n') ? `${t}\n${b}` : `${t} · ${b}` }
 }
