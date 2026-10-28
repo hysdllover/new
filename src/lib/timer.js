@@ -166,7 +166,7 @@ function askWrap(was, total, last) {
 function notify(title, body) {
   toast(`⏱ ${title} · ${body}`)
   try { navigator.vibrate?.([200, 100, 200]) } catch {}
-  try { if (Notification.permission === 'granted') navigator.serviceWorker?.ready.then((r) => r.showNotification('dar notícias', { body: body ? `${title} · ${body}` : title })) } catch {}
+  try { if (Notification.permission === 'granted') navigator.serviceWorker?.ready.then((r) => r.showNotification('“dar notícias”', { body: body ? `${title} · ${body}` : title })) } catch {}
 }
 
 setInterval(countdownTick, 1000)
