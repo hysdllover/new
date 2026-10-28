@@ -1,4 +1,4 @@
-// 3일 보기: 오늘·내일·모레를 시간축으로 나란히 (아이패드는 한 화면, 아이폰은 옆으로 밀어 보기)
+// 3일 보기: 오늘·내일·모레를 시간축으로 나란히 (아이폰 · 아이패드 모두 한 화면 · 시각 눈금은 첫 칸에만)
 import { addDays, fmtDate, today, parseYmd, WD } from '../../engine/date.js'
 import { holiday } from '../../engine/holidays.js'
 import Timeline from './Timeline.jsx'
