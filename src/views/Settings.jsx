@@ -859,7 +859,7 @@ function AppIconPick() {
           </button>
         ))}
       </div>
-      <div className="tiny muted" style={{ marginTop: 4 }}>모노는 iOS 아이콘 ‘색조’ 모드에서 깔끔하게 보여요.</div>
+      <div className="tiny muted" style={{ marginTop: 4 }}>틴트용 · 다크 그림은 iOS 아이콘 ‘색조’ 모드에서 깔끔하게 보여요.</div>
     </Field>
   )
 }
