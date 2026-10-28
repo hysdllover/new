@@ -66,6 +66,33 @@ export default function App() {
     return () => { el.removeEventListener('scroll', on); root.classList.remove('sc-away', 'sc-down') }
   }, [tab])
 
+  // 위쪽(제목 · 탭 줄 · 알림 줄)을 위아래로 끌어도 아래 내용이 스크롤되게 · 손을 떼면 관성으로 조금 더
+  useEffect(() => {
+    const main = document.querySelector('.main'), el = document.getElementById('content')
+    if (!main || !el) return
+    let y0 = null, x0 = 0, last = 0, lt = 0, v = 0, axis = null, raf = 0
+    const start = (e) => { if (el.contains(e.target) || e.touches.length !== 1) return; cancelAnimationFrame(raf); const t = e.touches[0]; y0 = last = t.clientY; x0 = t.clientX; lt = performance.now(); v = 0; axis = null }
+    const move = (e) => {
+      if (y0 == null) return
+      const t = e.touches[0]
+      if (!axis) { const dx = Math.abs(t.clientX - x0), dy = Math.abs(t.clientY - y0); if (dx < 6 && dy < 6) return; axis = dy > dx ? 'y' : 'x' }
+      if (axis !== 'y') return
+      const now = performance.now(), d = t.clientY - last
+      el.scrollTop -= d; v = d / Math.max(1, now - lt); last = t.clientY; lt = now
+    }
+    const end = () => {
+      if (y0 == null) return
+      y0 = null
+      if (axis !== 'y') return
+      let vel = v * 16
+      const step = () => { if (Math.abs(vel) < 0.4) return; el.scrollTop -= vel; vel *= 0.95; raf = requestAnimationFrame(step) }
+      raf = requestAnimationFrame(step)
+    }
+    main.addEventListener('touchstart', start, { passive: true }); main.addEventListener('touchmove', move, { passive: true })
+    main.addEventListener('touchend', end); main.addEventListener('touchcancel', end)
+    return () => { cancelAnimationFrame(raf); main.removeEventListener('touchstart', start); main.removeEventListener('touchmove', move); main.removeEventListener('touchend', end); main.removeEventListener('touchcancel', end) }
+  }, [tab])
+
   // 처음 실행이면 짧은 환영 (한 번만)
   useEffect(() => { const t = setTimeout(maybeWelcome, 700); return () => clearTimeout(t) }, [])
 
