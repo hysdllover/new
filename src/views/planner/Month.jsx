@@ -108,7 +108,7 @@ export default function Month({ date, setDate }) {
                 {hol && <div className="mhol ellipsis">{hol}</div>}
                 {(() => { const k = (find('days', d)?.deco || []).find((x) => !TAPES[x.k]); return k ? <span className="mcell-stk"><Sticker k={k.k} color={k.c} size={16} /></span> : null })()}
                 <div className="mitems">
-                  {evs.slice(0, 3).map((e) => <div key={e.id} className="mev ellipsis" style={{ '--c': e.color || 'var(--accent)', opacity: layerAlpha(st, e) }}>{e.title}</div>)}
+                  {evs.slice(0, 3).map((e) => <div key={e.id} className="mev ellipsis" style={{ '--c': e.color || 'var(--accent)', '--a': layerAlpha(st, e) }}>{e.title}</div>)}
                   {evs.length > 3 && <div className="tiny muted">+{evs.length - 3}</div>}
                   {due.length > 0 && (st.theme?.calTaskDots ? <div className="mtdots">{due.slice(0, 8).map((t) => <i key={t.id} className={t.done ? 'on' : ''} />)}</div> : <div className="mtask tiny">☐ {due.filter((t) => !t.done).length}/{due.length}</div>)}
                 </div>
