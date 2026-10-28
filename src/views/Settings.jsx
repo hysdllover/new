@@ -572,9 +572,10 @@ function PushCard() {
           </div>
         )}
         <div className="row">
-          <Field label="아침 요약"><TimeInput value={t2m(st.notifyMorning ?? '07:30')} onChange={(v) => setSettings({ notifyMorning: m2t(v) })} defaultValue={450} /></Field>
-          <Field label="저녁 목표 알림"><TimeInput value={t2m(st.notifyEvening ?? '21:00')} onChange={(v) => setSettings({ notifyEvening: m2t(v) })} defaultValue={1260} /></Field>
+          <Field label="아침 브리핑"><TimeInput value={t2m(st.notifyMorning === undefined ? '07:30' : st.notifyMorning)} onChange={(v) => setSettings({ notifyMorning: m2t(v) })} defaultValue={450} /></Field>
+          <Field label="저녁 목표 알림"><TimeInput value={t2m(st.notifyEvening === undefined ? '21:00' : st.notifyEvening)} onChange={(v) => setSettings({ notifyEvening: m2t(v) })} defaultValue={1260} /></Field>
         </div>
+        <div className="tiny muted">아침 브리핑: 오늘 일정(학원 포함) · 오늘의 Top 3 · D-day 를 알림 하나로 · 시간을 비우면 안 받아요</div>
         <Toggle label="할 일 알림 요약해서 받기" checked={!!st.digest?.on} onChange={(v) => setSettings({ digest: { times: DIGEST_TIMES, ...(st.digest || {}), on: v } })} />
         {st.digest?.on && (
           <div className="col" style={{ gap: 6 }}>

@@ -1,7 +1,7 @@
 // GitHub Actions 에서 5분마다 실행: 동기화 Gist 를 읽어 알림 시각이 된 항목을 Web Push 로 발송
 import webpush from 'web-push'
 import { matches } from '../src/engine/recurrence.js'
-import { reminderTimes, reminderBody, absMinutes, digestDue, digestText, isQuiet, nightMissed } from '../src/engine/reminders.js'
+import { reminderTimes, reminderBody, absMinutes, digestDue, digestText, isQuiet, nightMissed, morningBrief } from '../src/engine/reminders.js'
 
 const TOKEN = process.env.GIST_TOKEN
 const DESC = 'study-dashboard-sync'
@@ -108,15 +108,13 @@ for (const m of alive(H?.meds)) {
 // 아침 요약 · 저녁 목표 알림
 const sessions = alive(S?.sessions).filter((s) => s.date === date)
 const studied = sessions.reduce((a, s) => a + (s.dur || 0), 0)
-const morning = parseT(settings.notifyMorning ?? '07:30')
+const morning = parseT(settings.notifyMorning === undefined ? '07:30' : settings.notifyMorning)
 if (morning != null) {
-  const todo = alive(T?.tasks).filter((t) => !t.done && !t.archived && t.due && t.due <= date).length
-  const reviews = alive(S?.reviews).filter((r) => !r.done && r.next && r.next <= date).length
-  const dd = alive(S?.ddays).filter((d) => d.date >= date).sort((a, b) => a.date.localeCompare(b.date))[0]
-  const ddTxt = dd ? ` · ${dd.title} D-${Math.round((new Date(dd.date) - new Date(date)) / 86400000)}` : ''
-  add(`am:${date}`, morning, '좋은 아침', `${todo ? '오늘 할 일을 한 번 훑어볼까요' : '오늘은 여유 있는 하루예요'}${reviews ? ' · 복습도 있어요' : ''}${ddTxt}`)
+  const evToday = alive(E?.events).filter((e) => e.repeat ? matches(e.repeat, e.date, date) : (e.date === date || (e.endDate && date >= e.date && date <= e.endDate)))
+  const x = morningBrief({ date, tasks: alive(T?.tasks), events: evToday, days: alive(E?.days), ddays: alive(S?.ddays) })
+  add(`am:${date}`, morning, x.title, x.body)
 }
-const evening = parseT(settings.notifyEvening ?? '21:00')
+const evening = parseT(settings.notifyEvening === undefined ? '21:00' : settings.notifyEvening)
 const goal = settings.goalDaily || 240
 if (evening != null && studied < goal) add(`pm:${date}`, evening, '오늘 하루', studied ? `오늘 ${Math.floor(studied / 60) ? Math.floor(studied / 60) + '시간 ' : ''}${studied % 60 ? (studied % 60) + '분' : ''} 공부했어요` : '오늘 공부를 기록해 둘까요', './')
 

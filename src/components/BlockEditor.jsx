@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, Fragment } from 'react'
 import { useColl, put, patch, remove, restore, find } from '../store/store.js'
-import { toggleTask, addReview, addTask } from '../store/actions.js'
+import { toggleTask, addReview, addTask, updateTask } from '../store/actions.js'
 import { Icon, Check, openMenu, openSheet, openDetail, toast } from './ui.jsx'
 import { FileThumb, previewFile, FileSync, LinkPreview } from './Attach.jsx'
 import BoardBlock, { newBoard } from './BoardBlock.jsx'
@@ -77,6 +77,22 @@ function DdayChip({ q }) {
   if (!dd) return <span className="dd-chip muted">{q}</span>
   const n = Math.round((new Date(dd.date + 'T00:00') - new Date(today() + 'T00:00')) / 864e5)
   return <span className="dd-chip" title={dd.date}>{dd.title && <span>{dd.title}</span>}<b>{n === 0 ? 'D-DAY' : n > 0 ? 'D-' + n : 'D+' + -n}</b><span className="dd-d">{+dd.date.slice(5, 7)}/{+dd.date.slice(8)}</span></span>
+}
+
+// 체크 줄 날짜: 고르면 연결된 할 일의 마감이 돼 그날 할 일 목록 · 캘린더 · 위젯에 같이 떠요
+export function DueBtn({ b, task, note, upd }) {
+  const pick = (v) => {
+    const nb = commitBlock(b, note)
+    if (nb !== b) upd(b.id, nb)
+    if (nb.taskId) updateTask(nb.taskId, v ? { due: v } : { due: null, dueTime: null })
+  }
+  const due = task?.due || ''
+  return (
+    <label className={'ref-chip due-pick' + (due ? '' : ' empty')} onClick={(e) => e.stopPropagation()} aria-label={due ? '날짜 바꾸기' : '날짜 정하기'}>
+      {due ? due.slice(5).replace('-', '/') : <Icon name="calendar" size={12} />}
+      <input type="date" value={due} onChange={(e) => pick(e.target.value)} />
+    </label>
+  )
 }
 
 export default function BlockEditor({ blocks = [], onChange, note, nested, readOnly }) {
@@ -263,7 +279,7 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
                   <div className={'blk-v' + (task?.done ? ' done' : '')} onClick={() => !readOnly && setEdit({ id: b.id, pos: (b.text || '').length })}>{b.type === 'callout' && <span className="co-tag">{(TONES.find(([t]) => t === (b.tone || 'key')) || TONES[0])[1]}</span>}
                     {isMath(b) ? (b.text ? <MathTex tex={b.text} block /> : <span className="muted">수식 (LaTeX)</span>) : b.type === 'code' ? (b.text ? <code className="blk-code-t">{b.text}</code> : <span className="muted">코드</span>) : b.text ? <Inline text={b.text} /> : <span className="muted">{list.length === 1 && nested ? '입력…' : list.length === 1 ? '입력하세요… (# 제목, - 목록, [] 체크, [[링크]], @내일 15:00)' : ' '}</span>}
                     {b.ref && <button className="ref-chip" onClick={(e) => { e.stopPropagation(); openDetail(b.ref.type, b.ref.id, { occ: b.ref.date }) }}>→ {refLabel(b.ref)}</button>}
-                    {task && task.due && !b.ref && <span className="ref-chip">{task.due.slice(5).replace('-', '/')}</span>}
+                    {b.type === 'todo' && !b.ref && (readOnly ? task?.due && <span className="ref-chip">{task.due.slice(5).replace('-', '/')}</span> : (b.text || '').trim() && <DueBtn b={b} task={task} note={note} upd={upd} />)}
                   </div>
                 )}
             </div>

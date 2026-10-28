@@ -119,6 +119,10 @@
 /* ── 공부 ── */
 .big-clock { font-family: var(--font-head, inherit); font-size: 2.2em; font-weight: var(--fw); letter-spacing: .02em; font-variant-numeric: tabular-nums; }
 .big-clock.xl { font-size: 3.4em; line-height: 1.2; }
+/* 생각 주차장 */
+.park { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 4px; margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--line); }
+.park .input { flex: 1; min-width: 0; }
+.park-it { display: flex; align-items: center; gap: 6px; font-size: .9em; padding: 2px 0 2px 2px; border-bottom: 1px solid var(--line); }
 .play-btn { width: 34px; height: 34px; border-radius: 17px; display: grid; place-items: center; color: var(--c); border: 1.5px solid var(--c); flex-shrink: 0; }
 .play-btn.on { background: var(--c); color: #fff; }
 .mock-steps { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
@@ -206,6 +210,10 @@
 .wikilink { color: var(--accent-t); border-bottom: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); }
 .mention { color: var(--c2); background: color-mix(in srgb, var(--c2) 12%, transparent); border-radius: 4px; padding: 0 3px; }
 .ref-chip { font-size: .76em; color: var(--muted); border: 1px solid var(--line); border-radius: 5px; padding: 0 5px; margin-left: 6px; white-space: nowrap; }
+.due-pick { position: relative; display: inline-flex; align-items: center; vertical-align: middle; cursor: pointer; }
+.due-pick.empty { border-color: transparent; opacity: .45; }
+.blk:hover .due-pick.empty, .due-pick.empty:focus-within { opacity: .8; }
+.due-pick input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 16px; }
 .file-blk { cursor: pointer; padding: 4px 0; }
 .sync-blk { border: 1px dashed var(--c3); border-radius: 8px; padding: 4px 6px 4px 0; margin: 2px 0; }
 .sync-label { color: var(--c3); padding-left: 26px; }

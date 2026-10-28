@@ -65,3 +65,23 @@ export function nightMissed(tasks, date, wake, sleep) {
   for (const t of tasks) for (const r of reminderTimes(t)) if (r.at >= from && r.at < to && !seen.has(t.id)) { seen.add(t.id); items.push({ t, off: r.off, at: r.at }) }
   return items.sort((a, b) => a.at - b.at)
 }
+
+// 아침 브리핑: 오늘 일정(학원 포함) · 오늘의 Top 3(없으면 할 일 수) · D-day 를 알림 한 개로
+// events 는 오늘 열리는 일정만 넘김 (반복·여러 날 일정은 부르는 쪽에서 판단)
+const WD = ['일', '월', '화', '수', '목', '금', '토']
+export function morningBrief({ date, tasks = [], events = [], days = [], ddays = [] }) {
+  const [y, mo, d] = date.split('-').map(Number), wd = WD[new Date(Date.UTC(y, mo - 1, d)).getUTCDay()]
+  const ev = [...events].sort((a, b) => (a.start ?? -1) - (b.start ?? -1))
+  const evTxt = ev.slice(0, 3).map((e) => (e.start != null ? hm(e.start) + ' ' : '') + e.title).join(' · ') + (ev.length > 3 ? ` 외 ${ev.length - 3}개` : '')
+  const live = tasks.filter((t) => !t.done && !t.archived)
+  const top = (days.find((x) => x.id === date)?.top3 || []).map((id) => live.find((t) => t.id === id)).filter(Boolean)
+  const todo = live.filter((t) => t.due && t.due <= date).length
+  const up = ddays.filter((x) => x.date >= date).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || a.date.localeCompare(b.date))[0]
+  const ddN = up ? dayIdx(up.date) - dayIdx(date) : 0
+  const lines = [
+    ev.length ? '일정 · ' + evTxt : '일정 없음',
+    top.length ? 'Top 3 · ' + top.map((t) => t.title).join(' · ') : todo ? `할 일 ${todo}개` : '오늘 할 일 없음',
+    up ? `${up.title} ${ddN ? 'D-' + ddN : 'D-DAY'}` : null,
+  ].filter(Boolean)
+  return { title: `${mo}월 ${d}일 ${wd}요일 · 오늘`, body: lines.join('\n') }
+}
