@@ -70,6 +70,8 @@ export function startServices() {
   checkReminders()
   setTimeout(evStudy, 3000) // 동기화로 받은 기록을 먼저 보고 판단
   setInterval(() => { dayTick(); checkReminders(); evStudy() }, 30000)
+  // 알림은 매 분 0초에 맞춰 한 번 더 확인 (앱이 열려 있을 때 제시각에)
+  setTimeout(() => { checkReminders(); setInterval(checkReminders, 60000) }, 60000 - (Date.now() % 60000) + 200)
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { dayTick(); checkReminders() } })
 }
 

@@ -46,9 +46,15 @@ if (settings.notify === false) { console.log('알림 꺼짐'); process.exit(0) }
 
 // 사용자 시간대의 현재 날짜·분
 const tz = push.tz || 'Asia/Seoul'
-const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date()).map((p) => [p.type, p.value]))
+const T0 = Date.now()
+const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(T0)).map((p) => [p.type, p.value]))
 const date = `${parts.year}-${parts.month}-${parts.day}`
 const now = +parts.hour * 60 + +parts.minute
+const nowF = now + +parts.second / 60 // 초까지
+// 미리 보기: 이 실행이 앞으로 몇 분 안에 올 알림까지 맡아, 그 시각까지 기다렸다가 정확히 보냄
+// (GitHub 예약 실행은 5분 간격 → 5분, 외부에서 1분마다 깨우면 1분) · 다음 실행은 이 실행이 끝난 뒤 이어서
+const AHEAD = Math.max(0, Math.min(6, +(process.env.NOTIFY_AHEAD ?? (process.env.GITHUB_EVENT_NAME === 'schedule' ? 5 : 1))))
+const atMs = (at) => T0 + (at - nowF) * 60000
 // GitHub 예약 실행은 몇 시간씩 늦어질 수 있음 → 지난 실행 이후 놓친 시간까지 (최대 6시간) 한 번에 확인
 // 지난 실행 시각은 Actions 기록에서 (gist 에는 1시간에 한 번만 남김 · 보낼 게 없을 때 gist 를 매번 고치지 않게)
 const meta = sentFile._meta || {}
@@ -64,10 +70,10 @@ async function prevRun() {
 const last = Math.max((await prevRun()) || 0, meta.lastRun || 0)
 const since = last ? Math.ceil((Date.now() - last) / 60000) + 1 : WINDOW
 const win = Math.min(360, Math.max(WINDOW, since))
-const due = (at) => at != null && at <= now && at > now - win
+const due = (at) => at != null && at <= now + AHEAD && at > now - win
 
 const out = []
-const add = (key, at, title, body, url = './') => { if (due(at) && !sentFile[key]) out.push({ key, title, body, url, late: now - at }) }
+const add = (key, at, title, body, url = './') => { if (due(at) && !sentFile[key]) out.push({ key, title, body, url, late: now - at, at }) }
 // 실행 기록 저장 — 보낸 알림이 있거나 1시간이 지났을 때만 (앱 설정 ‘마지막 확인’)
 const before = JSON.stringify(sentFile)
 async function finish(files = {}) {
@@ -89,7 +95,7 @@ if (digest) {
 for (const t of digest || !kindOn(settings, 'task') ? [] : alive(T?.tasks)) {
   for (const r of reminderTimes(t)) {
     const key = `t:${t.id}:${t.due}:${r.off}`
-    if (r.at <= nowAbs && r.at > nowAbs - win && !sentFile[key]) out.push({ key, title: t.title, body: reminderBody(t, r.off), url: notifyLink.task(t.id), late: nowAbs - r.at })
+    if (r.at <= nowAbs + AHEAD && r.at > nowAbs - win && !sentFile[key]) out.push({ key, title: t.title, body: reminderBody(t, r.off), url: notifyLink.task(t.id), late: nowAbs - r.at, at: now - (nowAbs - r.at) })
   }
 }
 for (const e of alive(E?.events)) {
@@ -126,7 +132,9 @@ if (evening != null && kindOn(settings, 'pm') && !closed) {
 // 자는 시간(취침~기상)엔 보내지 않음 · 기상 때 밤사이 할 일 알림을 한 번에
 const wake = settings.dayStart ?? 7 * 60, sleep = settings.dayEnd ?? 1440
 if (settings.quietNight !== false) {
-  if (isQuiet(now, wake, sleep)) { console.log(`${date} ${hm(now)} 자는 시간 · 보류`); for (const n of out) sentFile[n.key] = date; await finish(); process.exit(0) }
+  // 자는 시간에 걸린 알림은 보내지 않음 (앞으로 몇 분 안의 것도 그 시각 기준)
+  for (let i = out.length - 1; i >= 0; i--) { const n = out[i], m = ((Math.round(n.at ?? now) % 1440) + 1440) % 1440; if (isQuiet(m, wake, sleep)) { sentFile[n.key] = date; out.splice(i, 1) } }
+  if (isQuiet(now, wake, sleep) && !out.length) { console.log(`${date} ${hm(now)} 자는 시간 · 보류`); await finish(); process.exit(0) }
   if (now >= wake && now < wake + win && !sentFile[`night:${date}`]) {
     const miss = nightMissed(alive(T?.tasks), date, wake, sleep)
     if (miss.length) { const x = digestText(miss); out.push({ key: `night:${date}`, title: '밤사이 할 일', body: x.body, url: notifyLink.tasks() }) }
@@ -152,12 +160,20 @@ const payload = (n) => JSON.stringify({
 })
 webpush.setVapidDetails('mailto:study-dashboard@users.noreply.github.com', push.vapid.publicKey, push.vapid.privateKey)
 const dead = new Set()
+// 앞으로 올 알림이 있으면 보낼 때마다 기록을 저장 (기다리는 중 실행이 끊겨도 두 번 가지 않게)
+const saveSent = () => gh(`/gists/${id}`, { method: 'PATCH', body: JSON.stringify({ files: { 'push-sent.json': { content: JSON.stringify(sentFile) } } }) }).catch((e) => console.error('save', e.message))
+const waiting = out.some((n) => (n.at ?? now) > nowF)
+out.sort((a, b) => (a.at ?? -1e9) - (b.at ?? -1e9))
 for (const n of out) {
+  const wait = n.at != null ? atMs(n.at) - Date.now() : 0
+  if (wait > 0) { console.log('wait', Math.round(wait / 1000) + 's', n.key); await new Promise((r) => setTimeout(r, wait)) }
   for (const s of push.subs) {
-    try { await webpush.sendNotification({ endpoint: s.endpoint, keys: s.keys }, payload(n), { TTL: 3600 }) }
+    // urgency high: 휴대폰이 절전 중이어도 바로 깨워 전달 (Apple · 구글 푸시 서버 우선 처리)
+    try { await webpush.sendNotification({ endpoint: s.endpoint, keys: s.keys }, payload(n), { TTL: 3600, urgency: 'high' }) }
     catch (err) { if (err.statusCode === 404 || err.statusCode === 410) dead.add(s.endpoint); else console.error(err.statusCode, err.body) }
   }
   sentFile[n.key] = date
-  console.log('sent', n.key, n.title)
+  console.log('sent', n.key, n.title, `(${Math.round((Date.now() - atMs(n.at ?? nowF)) / 1000)}s)`)
+  if (waiting) await saveSent()
 }
 await finish(dead.size ? { 'push.json': { content: JSON.stringify({ ...push, subs: push.subs.filter((s) => !dead.has(s.endpoint)) }, null, 1) } } : {})

@@ -561,7 +561,7 @@ function PreciseWake() {
   return (
     <div className="col" style={{ gap: 8, marginTop: 6 }}>
       <div className="small" style={{ lineHeight: 1.7 }}>
-        GitHub 의 무료 예약 실행은 수십 분 ~ 몇 시간 밀려요. 무료 서비스 <b>cron-job.org</b> 가 <b>1분마다</b> 알림 확인을 깨우면 제시간(1~2분 안)에 와요.
+        알림 서버는 깨어날 때마다 몇 분 앞의 알림까지 맡아 그 시각에 맞춰 보내요. 그런데 GitHub 의 무료 예약 실행은 가끔 수십 분 ~ 몇 시간 밀려요. 무료 서비스 <b>cron-job.org</b> 가 <b>1분마다</b> 깨우면 늘 제시각에 와요.
       </div>
       <ol className="small steps" style={{ margin: 0, paddingLeft: 18, lineHeight: 1.75 }}>
         <li>github.com › Settings › Developer settings › <b>Fine-grained tokens</b> › Generate · 저장소 <b>hysdllover/new</b> 만 · 권한 <b>Actions: Read and write</b> · 만료 1년</li>
