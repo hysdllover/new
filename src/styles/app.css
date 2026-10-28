@@ -227,6 +227,10 @@ input[type="color"] { width: 36px; height: 30px; border: 1px solid var(--line); 
   max-height: 92%; display: flex; flex-direction: column; animation: up .25s ease; padding-bottom: var(--sab);
 }
 .sheet.full { height: 92%; }
+/* 위에서 내려오는 시트 (빠른 추가): 손이 닿기 쉽고 키보드에 가리지 않게 */
+.sheet.top { top: calc(var(--sat) + 10px); bottom: auto; left: 8px; right: 8px; border-radius: 16px; max-height: calc(100% - var(--sat) - 20px); padding-bottom: 0; animation: down .25s ease; box-shadow: 0 10px 40px rgba(20, 22, 28, .18); }
+.sheet.top .sheet-grab { display: none; }
+@keyframes down { from { transform: translateY(-30px); opacity: 0; } }
 .sheet-grab { width: 36px; height: 4px; border-radius: 2px; background: var(--line); margin: 8px auto 2px; flex-shrink: 0; }
 .sheet-h { display: flex; align-items: center; gap: 8px; padding: 6px 16px 10px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
 .sheet-h h2 { flex: 1; font-size: 1.05em; }
@@ -234,6 +238,7 @@ input[type="color"] { width: 36px; height: 30px; border: 1px solid var(--line); 
 @media (min-width: 768px) {
   .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: min(560px, 92vw); border-radius: 14px; max-height: 86vh; animation: fade .2s; }
   .sheet.full { height: 86vh; }
+  .sheet.top { left: 50%; right: auto; top: calc(var(--sat) + 8vh); transform: translateX(-50%); animation: fade .2s; }
   .sheet-grab { display: none; }
 }
 @keyframes up { from { transform: translateY(40px); opacity: 0; } }
