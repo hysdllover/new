@@ -397,13 +397,24 @@ function WeekBoard() {
       </div>
     )
   }
-  const col = (key, head, list, cls = '') => (
-    <div key={key} className={'wkb-col' + cls} data-drop={'wd:' + key}>
-      <div className="wkb-h">{head}<span className="tiny muted">{list.filter((t) => !t.done).length || ''}</span></div>
-      {list.map((t) => <Card key={t.id} t={t} />)}
-      {!list.length && <div className="wkb-empty">여기로 끌어 놓기</div>}
-    </div>
-  )
+  // 칸에 바로 추가 (그날 마감 · 날짜 없음은 받은 편지함)
+  const addTo = (key) => openSheet(() => <AddInput placeholder={key ? `${fmtDate(key)} 할 일` : '날짜 없는 할 일'} onAdd={(title) => { addTask(key ? { title, due: key } : { title, inbox: true }); toast('추가했어요') }} autoFocus />, { title: key ? fmtDate(key) + ' 할 일 추가' : '날짜 없는 할 일 추가' })
+  const col = (key, head, list, cls = '') => {
+    const left = list.filter((t) => !t.done), est = left.reduce((a, t) => a + (t.estimate || 0), 0)
+    return (
+      <div key={key} className={'wkb-col' + cls} data-drop={'wd:' + key}>
+        <div className="wkb-h">
+          {head}
+          <span className="wkb-meta">{est ? <span className="tiny muted">{fmtDur(est)}</span> : null}{left.length ? <span className="tiny muted">{left.length}</span> : null}</span>
+          <button className="wkb-add" onClick={() => addTo(key)} aria-label="이 칸에 할 일 추가"><Icon name="plus" size={13} /></button>
+        </div>
+        <div className="wkb-list">
+          {list.map((t) => <Card key={t.id} t={t} />)}
+          {!list.length && <div className="wkb-empty">여기로 끌어 놓기</div>}
+        </div>
+      </div>
+    )
+  }
   return (
     <div className="col">
       <div className="row between">
@@ -420,7 +431,7 @@ function WeekBoard() {
       <div className="tiny muted">할 일을 길게 눌러 원하는 날 칸으로 끌어다 놓으세요</div>
       <div className="wkb">
         {col('', '날짜 없음', loose, ' loose')}
-        {days.map((d) => col(d, <span>{WD[parseYmd(d).getDay()]} <b>{parseYmd(d).getDate()}</b></span>, tasks.filter((t) => t.due === d).sort(ord), d === t0 ? ' now' : d < t0 ? ' past' : ''))}
+        {days.map((d) => { const wd = parseYmd(d).getDay(); return col(d, <span className={'wkb-d' + (wd === 0 ? ' sun' : wd === 6 ? ' sat' : '')}>{WD[wd]} <b>{parseYmd(d).getDate()}</b>{d === t0 && <i className="wkb-today">오늘</i>}</span>, tasks.filter((t) => t.due === d).sort(ord), d === t0 ? ' now' : d < t0 ? ' past' : '') })}
       </div>
       <AddInput placeholder="+ 날짜 없는 할 일 추가" onAdd={(title) => addTask({ title, inbox: true })} />
     </div>
