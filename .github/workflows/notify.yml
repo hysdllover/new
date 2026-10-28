@@ -9,6 +9,7 @@ permissions:
   contents: read
   actions: read
 
+# 한 번에 하나씩 (앞 실행이 다음 알림 시각까지 기다리는 동안 다음 실행은 줄 서서 이어 받음)
 concurrency:
   group: notify
   cancel-in-progress: false
@@ -16,14 +17,19 @@ concurrency:
 jobs:
   notify:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 9
     steps:
+      # 알림 스크립트와 계산 코드만 받아 빠르게 시작 (전체 설치 대신 web-push 하나만)
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts
+            src/engine
+          sparse-checkout-cone-mode: true
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-      - run: npm ci --ignore-scripts
+      - run: npm i --prefix "$RUNNER_TEMP/wp" --no-audit --no-fund --ignore-scripts --no-save web-push@3.6.7 && ln -s "$RUNNER_TEMP/wp/node_modules" node_modules
       - run: node scripts/notify.mjs
         env:
           GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
