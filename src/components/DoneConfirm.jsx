@@ -16,7 +16,7 @@ export default function DoneConfirm({ id, close }) {
       </div>
       <div className="row" style={{ gap: 6 }}><DueBadge task={t} />{sub && <span className="badge">{sub.name}</span>}</div>
       <div className="row" style={{ gap: 6, marginTop: 4 }}>
-        <button className="btn primary grow" onClick={() => { toggleTask(t.id); toast(t.done ? '완료를 취소했어요' : '완료했어요', { label: '되돌리기', fn: () => toggleTask(t.id) }); close() }}>{t.done ? '완료 취소' : '완료'}</button>
+        <button className="btn primary grow" onClick={() => { toggleTask(t.id, { quiet: true }); toast(t.done ? '완료를 취소했어요' : '완료했어요', { label: '되돌리기', fn: () => toggleTask(t.id, { quiet: true }) }); close() }}>{t.done ? '완료 취소' : '완료'}</button>
         <button className="btn" onClick={() => { close(); openDetail('task', t.id) }}>열기</button>
       </div>
     </div>

@@ -62,7 +62,7 @@ export default function Timer() {
         </Card>
         <Card title="과목별 스톱워치" action={<span className="small muted">오늘 {fmtDur(total)}</span>}>
           <div className="list">
-            {subjects.map((s) => {
+            {subjects.filter((s) => !s.hidden || t?.subjectId === s.id).map((s) => {
               const running = t?.subjectId === s.id && !t.paused
               const m = (bySub[s.id] || 0) + (t?.subjectId === s.id ? live : 0)
               return (

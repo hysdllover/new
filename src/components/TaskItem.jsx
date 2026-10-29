@@ -23,6 +23,7 @@ export default function TaskItem({ t, subjects, projects, drag, compact, extra, 
       <Check on={t.done} onClick={() => toggleTask(t.id)} color={subjects?.find((s) => s.id === t.subjectId)?.color} />
       <div className="t">
         <div className="title">{t.priority >= 2 && <span style={{ color: `color-mix(in srgb, ${PRI_COLOR[t.priority]} 62%, var(--text))`, marginRight: 4 }}>{t.priority === 3 ? '!!' : '!'}</span>}<span className="ttl">{t.title || '제목 없음'}</span></div>
+        {!compact && t.note?.trim() && <div className="task-note ellipsis">{t.note.trim().split('\n')[0]}</div>}
         {!compact && (
           <div className="meta">
             <DueBadge task={t} />

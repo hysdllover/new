@@ -7,6 +7,7 @@ import { isStandalone } from './lib/push.js'
 import { fmtDate, today, fmtClock } from './engine/date.js'
 import { useTimerState, useTick, elapsed, remaining } from './lib/timer.js'
 import QuickAdd from './components/QuickAdd.jsx'
+import SyncSheet from './components/SyncSheet.jsx'
 import { useResume } from './lib/resume.js'
 import CommandPalette from './components/CommandPalette.jsx'
 import TaskEditor from './components/TaskEditor.jsx'
@@ -157,7 +158,7 @@ export default function App() {
         <div className="sb-cap no-print" aria-hidden="true" />
         <header className="topbar no-print">
           <div className={'title ellipsis' + (TITLES[tab] ? '' : ' is-date')}>{TITLES[tab] || fmtDate(today())}</div>
-          <button className="icon-btn" onClick={() => syncNow()} title={sync.error || '동기화'} aria-label="동기화 상태">
+          <button className="icon-btn" onClick={() => openSheet(() => <SyncSheet />, { title: '동기화' })} title={sync.error || '동기화'} aria-label="동기화 상태">
             <span className={'sync-dot ' + sync.state} />
           </button>
           <button className="icon-btn" onClick={openSearch} aria-label="검색"><Icon name="search" /></button>

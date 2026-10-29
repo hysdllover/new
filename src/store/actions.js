@@ -1,4 +1,4 @@
-import { put, patch, remove, restore, find, list, batch, settings, uid } from './store.js'
+import { put, patch, remove, restore, find, list, batch, settings, uid, recordChanges, undoChanges } from './store.js'
 import { today, addDays, diffDays, nowMin, tsToYmd, weekStart } from '../engine/date.js'
 import { nextOccurrence } from '../engine/recurrence.js'
 import { findSlot, planSessions } from '../engine/scheduler.js'
@@ -53,9 +53,11 @@ export function quickDate(kind) {
 export const QUICK_DATES = [['today', '오늘'], ['tomorrow', '내일'], ['weekend', '이번 주말'], ['nextweek', '다음 주 월'], ['none', '날짜 없음']]
 
 // 여러 할 일을 한 번에 옮기기 (미룬 횟수 +1)
-export function moveTasks(ids, kind) {
+// 바꾼 뒤 3초 '되돌리기' 알림 (opt.quiet 면 알림 없이)
+export function undoToast(text, changes) { if (changes?.length) toast(text, { label: '되돌리기', fn: () => undoChanges(changes) }) }
+export function moveTasks(ids, kind, opt = {}) {
   const date = quickDate(kind)
-  batch(() => {
+  const ch = recordChanges(() => batch(() => {
     for (const id of ids) {
       const t = find('tasks', id)
       if (!t || t.done) continue
@@ -63,7 +65,8 @@ export function moveTasks(ids, kind) {
       updateTask(id, { due: date, ...(date ? null : { dueTime: null }), ...(later ? { carry: (t.carry || 0) + 1 } : null) }, { silentLog: true })
       if (later) log(id, 'carry', `${t.due.slice(5)} → ${date.slice(5)} 미룸`)
     }
-  })
+  }))
+  if (!opt.quiet) { const n = ids.length, l = (QUICK_DATES.find(([k]) => k === kind) || [])[1] || '그 날'; undoToast(n > 1 ? `${n}개를 ${l}(으)로 옮겼어요` : `${l}(으)로 옮겼어요`, ch) }
   return date
 }
 
@@ -80,10 +83,10 @@ function pushDependents(task, depth = 0) {
   }
 }
 
-export function toggleTask(id) {
+export function toggleTask(id, opt = {}) {
   const t = find('tasks', id)
   if (!t) return
-  batch(() => {
+  const ch = recordChanges(() => batch(() => {
     const done = !t.done
     patch('tasks', id, { done, doneAt: done ? Date.now() : null, status: done ? 'done' : t.status === 'done' ? 'todo' : t.status })
     log(id, done ? 'done' : 'undone', done ? '완료' : '완료 취소')
@@ -101,7 +104,8 @@ export function toggleTask(id) {
       const tb = plan && find('textbooks', plan.textbookId)
       if (tb && t.range[1] > (tb.current || 0)) setTextbookProgress(tb.id, t.range[1])
     }
-  })
+  }))
+  if (!t.done && !opt.quiet) undoToast(`완료 · ${t.title}`, ch)
 }
 
 export function deleteTask(id) {

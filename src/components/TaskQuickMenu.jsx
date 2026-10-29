@@ -19,7 +19,7 @@ function TaskQuickMenu({ id, close }) {
   return (
     <div className="form qmenu">
       <div className="qm-row"><span className="tiny muted">날짜</span>
-        <div className="row wrap" style={{ gap: 6 }}>{QUICK_DATES.map(([k, l]) => <button key={k} className="chip" onClick={act(() => moveTasks([id], k), `${l}(으)로 옮겼어요`)}>{l}</button>)}</div></div>
+        <div className="row wrap" style={{ gap: 6 }}>{QUICK_DATES.map(([k, l]) => <button key={k} className="chip" onClick={act(() => moveTasks([id], k))}>{l}</button>)}</div></div>
       <div className="qm-row"><span className="tiny muted">중요도</span>
         <div className="row wrap" style={{ gap: 6 }}>{[[0, '없음'], [2, '!'], [3, '!!']].map(([v, l]) => <button key={v} className={'chip' + ((t.priority || 0) === v || (v === 2 && t.priority === 1) ? ' on' : '')} onClick={act(() => updateTask(id, { priority: v }))}>{l}</button>)}</div></div>
       {subjects.length > 0 && <div className="qm-row"><span className="tiny muted">과목</span>

@@ -712,6 +712,7 @@ export function WidgetPreview() {
         {WIDGET_KINDS.map(([k, l]) => <button key={k} className={'chip' + (kind === k ? ' on' : '')} onClick={() => setKind(k)}>{l}</button>)}
       </div></div>
       <div className="tiny muted">{kind ? <>위젯 편집 › Parameter 에 <b>{kind}</b> 입력</> : '위젯 편집 › Parameter 를 비워 두면 기본 형태'}</div>
+      <div className="tiny muted">누르면 열 화면: Parameter 뒤에 <b>&gt;홈</b> · <b>&gt;타이머</b> · <b>&gt;할일</b> (예: 공부&gt;타이머)</div>
       <div className="dw-row">
         <div className={'dw dw-s' + (FULLP.has(kind) ? ' dw-full' : '')} style={{ ...ff, ...WTH }}><div className="dw-in">{vs}</div></div>
         <div className={'dw dw-m' + (FULLP.has(kind) ? ' dw-full' : '')} style={{ ...ff, ...WTH }}><div className="dw-in">{vm}</div></div>
