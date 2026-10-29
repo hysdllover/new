@@ -1349,3 +1349,5 @@ html[data-done="fade"] .task-item .title .ttl::after, html[data-done="keep"] .ta
 .task-item.done .task-note { opacity: .7; }
 .subj-row.hid .input { opacity: .5; }
 .subj-row .icon-btn.on { color: var(--accent-t); }
+.sub-grip { touch-action: none; cursor: grab; color: var(--muted); font-size: 11px; letter-spacing: -2px; padding: 8px 4px 8px 0; user-select: none; -webkit-user-select: none; }
+.sub-row.lifting { position: relative; z-index: 2; background: var(--surface); box-shadow: 0 2px 8px rgb(0 0 0 / .08); border-radius: 8px; }
