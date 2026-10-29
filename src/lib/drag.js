@@ -98,3 +98,19 @@ export function longPress(getOpts, delay = 320) {
 // 드래그 중에는 스크롤 막기 (iOS 는 미리 등록된 non-passive 리스너가 필요)
 if (typeof document !== 'undefined') document.addEventListener('touchmove', (e) => { if (active) e.preventDefault() }, { passive: false })
 export const lockScroll = (on) => { active = on ? { lock: true } : null }
+
+// 손잡이를 끌어 목록 순서 바꾸기 — 행(.reorder-row) 하나를 따라 움직이다 놓으면 onMove(from, to)
+export function dragReorder(e, i, onMove) {
+  e.preventDefault()
+  const row = e.currentTarget.closest('.reorder-row'), rows = [...row.parentNode.querySelectorAll(':scope > .reorder-row')], y0 = e.clientY
+  const mids = rows.map((r) => { const b = r.getBoundingClientRect(); return b.top + b.height / 2 })
+  row.classList.add('lifting')
+  const mv = (ev) => { row.style.transform = `translateY(${ev.clientY - y0}px)` }
+  const up = (ev) => {
+    window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up)
+    row.style.transform = ''; row.classList.remove('lifting')
+    const y = mids[i] + ev.clientY - y0, j = mids.filter((m, k) => k !== i && m < y).length
+    if (j !== i) onMove(i, j)
+  }
+  window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up)
+}

@@ -1,3 +1,4 @@
+import { dragReorder } from '../../lib/drag.js'
 import { useColl, useRec, useSettings } from '../../store/store.js'
 import TaskQuickInput from '../../components/TaskQuickInput.jsx'
 import { dayRec, setDay, scheduleTask, applyTemplate, toggleTask } from '../../store/actions.js'
@@ -85,8 +86,8 @@ function DayCard({ date, tasks }) {
         {[0, 1, 2].map((i) => {
           const t = top[i]
           return t ? (
-            <div key={i} className={'item' + (t.done ? ' done' : '')} style={{ minHeight: 40, padding: '6px 0' }}>
-              <span className="top-n">{i + 1}</span>
+            <div key={t.id} className={'item reorder-row' + (t.done ? ' done' : '')} style={{ minHeight: 40, padding: '6px 0' }}>
+              <span className="top-n top-grip" onPointerDown={(e) => dragReorder(e, i, (from, to) => { const a = top.map((x) => x.id); a.splice(to, 0, a.splice(from, 1)[0]); setDay(date, { top3: a }) })} title="끌어서 순서 바꾸기">{i + 1}</span>
               <Check on={t.done} onClick={() => toggleTask(t.id)} />
               <button className="t title ellipsis" style={{ textAlign: 'left' }} onClick={() => openDetail('task', t.id)}>{t.title}</button>
               <button className="icon-btn" onClick={() => setDay(date, { top3: day.top3.filter((x) => x !== t.id) })} aria-label="빼기"><Icon name="close" size={14} /></button>

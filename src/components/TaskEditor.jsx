@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { dragReorder } from '../lib/drag.js'
 import { weekGoals } from '../store/actions.js'
 import { REMINDER_OPTS, taskReminders } from '../engine/reminders.js'
 import { useRec, useColl, useSettings, patch, uid, list, find, settings } from '../store/store.js'
@@ -25,21 +26,7 @@ export default function TaskEditor({ id }) {
   const up = (p) => updateTask(id, p)
   const subs = t.subtasks || []
   const setSubs = (s) => patch('tasks', id, { subtasks: s })
-  // 하위 항목 왼쪽 손잡이를 끌어 순서 바꾸기
-  const dragSub = (e, i) => {
-    e.preventDefault()
-    const row = e.currentTarget.closest('.sub-row'), rows = [...row.parentNode.children], y0 = e.clientY
-    const mids = rows.map((r) => { const b = r.getBoundingClientRect(); return b.top + b.height / 2 })
-    row.classList.add('lifting')
-    const mv = (ev) => { row.style.transform = `translateY(${ev.clientY - y0}px)` }
-    const up = (ev) => {
-      window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up)
-      row.style.transform = ''; row.classList.remove('lifting')
-      const y = mids[i] + ev.clientY - y0, j = Math.max(0, Math.min(subs.length - 1, mids.filter((m, k) => k !== i && m < y).length))
-      if (j !== i) { const a = [...subs]; a.splice(j, 0, a.splice(i, 1)[0]); setSubs(a) }
-    }
-    window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up)
-  }
+  const dragSub = (e, i) => dragReorder(e, i, (from, to) => { const a = [...subs]; a.splice(to, 0, a.splice(from, 1)[0]); setSubs(a) })
   const spent = taskSpent(id, sessions)
   const myLogs = logs.filter((l) => l.taskId === id).sort((a, b) => b.at - a.at)
   const others = list('tasks').filter((x) => x.id !== id && !x.done)
@@ -98,7 +85,7 @@ export default function TaskEditor({ id }) {
           {subs.length > 0 && <Prog value={subs.filter((s) => s.done).length / subs.length} />}
           <div className="list">
             {subs.map((s, i) => (
-              <div key={s.id} className="row sub-row" style={{ minHeight: 38 }}>
+              <div key={s.id} className="row sub-row reorder-row" style={{ minHeight: 38 }}>
                 <span className="sub-grip" onPointerDown={(e) => dragSub(e, i)} aria-label="끌어서 순서 바꾸기">⋮⋮</span>
                 <Check on={s.done} round onClick={() => setSubs(subs.map((x) => x.id === s.id ? { ...x, done: !x.done } : x))} />
                 <input className="input bare grow" value={s.title} onChange={(e) => setSubs(subs.map((x) => x.id === s.id ? { ...x, title: e.target.value } : x))} />
