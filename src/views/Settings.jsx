@@ -1,6 +1,6 @@
 import { useTimerState, useTick, elapsed, remaining } from '../lib/timer.js'
 import { Fragment, useEffect, useRef, useState } from 'react'
-import { useSettings, setSettings, useColl, put, remove, patch, exportJSON, importJSON, uid, getState, deviceId as myDevice } from '../store/store.js'
+import { useSettings, setSettings, useColl, put, remove, patch, batch, exportJSON, importJSON, uid, getState, deviceId as myDevice } from '../store/store.js'
 import { seriesSummary } from '../lib/series.js'
 import { diagText, recentErrors, clearErrors, persistStorage, updateBadge } from '../lib/diag.js'
 import { notesForWidget } from '../lib/notePreview.js'
@@ -441,6 +441,9 @@ function SyncCard() {
   )
 }
 
+// 과목 순서 바꾸기: 모두에게 0,1,2… 순서를 매겨 저장
+const moveSubject = (subjects, i, d) => { const arr = [...subjects]; const [x] = arr.splice(i, 1); arr.splice(i + d, 0, x); batch(() => arr.forEach((s, k) => s.order !== k && patch('subjects', s.id, { order: k }))) }
+
 function SubjectsCard() {
   const subjects = useColl('subjects')
   return (
@@ -449,13 +452,17 @@ function SubjectsCard() {
       <button className="btn sm" onClick={() => put('subjects', { name: '새 과목', color: pickColor(subjects.map((s) => s.color)) })}><Icon name="plus" size={14} />추가</button>
     </div>}>
       <div className="list">
-        {subjects.map((s) => (
-          <div key={s.id} className="row" style={{ padding: '6px 0' }}>
+        {subjects.map((s, i) => (
+          <div key={s.id} className={'row subj-row' + (s.hidden ? ' hid' : '')} style={{ padding: '6px 0', gap: 4 }}>
             <input type="color" value={s.color} onChange={(e) => patch('subjects', s.id, { color: e.target.value })} />
             <input className="input" value={s.name} onChange={(e) => patch('subjects', s.id, { name: e.target.value })} />
+            <button className="icon-btn" disabled={i === 0} onClick={() => moveSubject(subjects, i, -1)} aria-label="위로"><Icon name="up" size={15} /></button>
+            <button className="icon-btn" disabled={i === subjects.length - 1} onClick={() => moveSubject(subjects, i, 1)} aria-label="아래로"><Icon name="down" size={15} /></button>
+            <button className={'icon-btn' + (s.hidden ? ' on' : '')} onClick={() => { patch('subjects', s.id, { hidden: !s.hidden }); toast(s.hidden ? `'${s.name}' 다시 보여요` : `'${s.name}' 숨김 · 기록은 그대로`) }} aria-label={s.hidden ? '보이기' : '숨기기'} title={s.hidden ? '보이기' : '숨기기'}><Icon name="eye" size={16} /></button>
             <button className="icon-btn" onClick={() => confirmSheet('과목 삭제', `'${s.name}' 과목을 삭제할까요?`, () => remove('subjects', s.id), '삭제')} aria-label="삭제"><Icon name="trash" size={16} /></button>
           </div>
         ))}
+        {subjects.some((s) => s.hidden) && <div className="tiny muted">숨긴 과목은 과목 고르기 · 타이머 · 빠른 기록에서 빠지고, 지난 기록과 통계에는 그대로 남아요</div>}
       </div>
     </Card>
   )

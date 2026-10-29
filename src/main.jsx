@@ -82,8 +82,8 @@ Promise.all([loadState(), initFonts(), restoreSync()]).then(async () => {
     if (q.get('quick') && tk && !tk.deleted) {
       // 위젯에서 바로 완료 (확인 창 없이) — 잘못 눌렀으면 되돌리기
       const { toggleTask } = await import('./store/actions.js')
-      if (!tk.done) toggleTask(doneIn)
-      setTimeout(() => toast(`완료 · ${tk.title}`, { label: '되돌리기', fn: () => toggleTask(doneIn) }), 500)
+      if (!tk.done) toggleTask(doneIn, { quiet: true })
+      setTimeout(() => toast(`완료 · ${tk.title}`, { label: '되돌리기', fn: () => toggleTask(doneIn, { quiet: true }) }), 500)
     } else {
       const [{ default: DoneConfirm }, { openSheet }] = await Promise.all([import('./components/DoneConfirm.jsx'), import('./components/ui.jsx')])
       setTimeout(() => openSheet((c) => <DoneConfirm id={doneIn} close={c} />, { title: '할 일' }), 300)

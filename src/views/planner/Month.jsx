@@ -38,8 +38,8 @@ function PlannerOut({ kind, date, close }) {
 
 // 레이어별 색 농도 (설정에 저장 · 기기 공통)
 export const layerAlpha = (st, e) => (e.layer === 'academy' ? st.layerAlpha?.academy ?? 0.55 : st.layerAlpha?.events ?? 1)
-const LAYERS = [['events', '일정'], ['academy', '학원'], ['tasks', '할 일'], ['study', '공부기록'], ['habits', '습관'], ['meds', '약']]
-const loadLayers = () => { try { const v = JSON.parse(localStorage.getItem('layers')) || { events: 1, tasks: 1, study: 1 }; return { academy: 1, ...v } } catch { return { events: 1, academy: 1, tasks: 1, study: 1 } } }
+const LAYERS = [['events', '일정'], ['academy', '학원'], ['tasks', '할 일'], ['study', '공부기록'], ['studyNum', '공부시간'], ['habits', '습관'], ['meds', '약']]
+const loadLayers = () => { try { const v = JSON.parse(localStorage.getItem('layers')) || { events: 1, tasks: 1, study: 1 }; return { academy: 1, studyNum: 1, ...v } } catch { return { events: 1, academy: 1, tasks: 1, study: 1 } } }
 
 export default function Month({ date, setDate }) {
   const st = useSettings()
@@ -116,7 +116,7 @@ export default function Month({ date, setDate }) {
                 {ci % 7 === 0 && ddW && d <= ddW.date && <span className="mwk">{Math.ceil(diffDays(ddW.date, d) / 7)}주</span>}
                 {ddW && d === ddW.date && <span className="mdd" />}
                 <div className="mfoot">
-                  {layers.study && mins > 0 && <span className="tiny">{Math.round(mins / 6) / 10}h</span>}
+                  {layers.studyNum && mins > 0 && <span className="tiny">{Math.round(mins / 6) / 10}h</span>}
                   {hDone > 0 && <span className="tiny" style={{ color: 'var(--c2)' }}>●{hDone}</span>}
                   {medDone > 0 && <span className="tiny" style={{ color: medDone >= medTotal ? 'var(--ok)' : 'var(--muted)' }}>💊{medDone >= medTotal ? '✓' : medDone}</span>}
                 </div>

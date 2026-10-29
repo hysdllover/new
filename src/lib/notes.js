@@ -188,6 +188,6 @@ export const linkTodos = (blocks, note) => blocks.map((b) => {
   if (b.type !== 'todo') return b
   const { done, ...rest } = b
   const nb = commitBlock(rest, note)
-  if (done && nb.taskId) toggleTask(nb.taskId)
+  if (done && nb.taskId) toggleTask(nb.taskId, { quiet: true })
   return nb
 })

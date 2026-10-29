@@ -308,7 +308,7 @@ function Stopwatch() {
         </div>
       ) : (
         <div className="row wrap" style={{ gap: 6 }}>
-          {subjects.map((s) => <button key={s.id} className="chip" onClick={() => startStopwatch(s.id)}><span className="dot" style={{ background: s.color }} />{s.name}</button>)}
+          {subjects.filter((s) => !s.hidden).map((s) => <button key={s.id} className="chip" onClick={() => startStopwatch(s.id)}><span className="dot" style={{ background: s.color }} />{s.name}</button>)}
         </div>
       )}
     </Card>
@@ -332,7 +332,7 @@ function QuickRec() {
   return (
     <Card title="빠른 공부 기록" action={<button className="tiny muted" onClick={goto('study', 'log')}>기록 →</button>}>
       <div className="qr-grid">
-        {subjects.map((s) => (
+        {subjects.filter((s) => !s.hidden).map((s) => (
           <button key={s.id} className="qr-btn" style={{ '--c': s.color }} onClick={() => openRecord(null, { subjectId: s.id })}>
             <span className="dot" style={{ background: s.color }} />{s.name}
           </button>

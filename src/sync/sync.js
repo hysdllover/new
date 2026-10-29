@@ -500,7 +500,7 @@ async function takeCmds(cmds) {
   for (const { name, c } of list2) {
     try {
       const at = +c.at || Date.now()
-      if (c.act === 'done') { const tk = findRec('tasks', c.id); if (tk && !tk.done) { toggleTask(c.id); patch('tasks', c.id, { doneAt: at }) } }
+      if (c.act === 'done') { const tk = findRec('tasks', c.id); if (tk && !tk.done) { toggleTask(c.id, { quiet: true }); patch('tasks', c.id, { doneAt: at }) } }
       else if (['start', 'pause', 'resume', 'stop'].includes(c.act)) widgetTimer(c.act, at, c.sid)
       else if (c.act === 'habit') { const h = findRec('habits', c.id); if (h) { const dd = new Date(at), k = `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, '0')}-${String(dd.getDate()).padStart(2, '0')}`; patch('habits', c.id, { days: { ...(h.days || {}), [k]: !!c.on } }) } }
       else if (c.act === 'addtask' && c.title) addTask({ title: String(c.title).slice(0, 200), due: c.due || null })
@@ -624,7 +624,7 @@ export async function syncNow({ flush = false } = {}) {
       ls.set('gist_last', String(now))
       const sent = Object.keys(patchFiles).filter((k) => isDataFile(k) && patchFiles[k]).length
       if (got || sent || clash) addLog({ at: now, got, sent, clash })
-      setStatus({ state: 'ok', last: now })
+      setStatus({ state: 'ok', last: now, pendingN: 0 })
       markDevice(now)
       // 하루 한 번: 어디에서도 쓰지 않는 첨부 정리 (동기화를 마친 뒤에만 — 다른 기기 내용까지 받은 상태로 판단)
       if (now - (+ls.get('sweep_at') || 0) > 86400000) { ls.set('sweep_at', String(now)); import('../lib/cleanup.js').then((m) => m.sweepFiles()).catch(() => {}) }
@@ -662,7 +662,7 @@ export function syncSoon() {
 export function startSync() {
   onChange((coll) => {
     if (!token()) return
-    if (status.state !== 'syncing') setStatus({ state: 'pending' })
+    setStatus({ pendingN: (status.pendingN || 0) + 1, ...(status.state !== 'syncing' && { state: 'pending' }) })
     clearTimeout(timer)
     if (NOTE_COLLS.has(coll)) lastNoteEdit = Date.now()
     if (!pendingSince) pendingSince = Date.now()

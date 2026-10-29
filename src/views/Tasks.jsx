@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import { useColl, patch, put, remove, batch } from '../store/store.js'
-import { addTask, toggleTask, moveTasks, updateTask, QUICK_DATES } from '../store/actions.js'
+import { useColl, patch, put, remove, batch, recordChanges } from '../store/store.js'
+import { addTask, toggleTask, moveTasks, updateTask, QUICK_DATES, undoToast } from '../store/actions.js'
 import TaskQuickInput from '../components/TaskQuickInput.jsx'
 import { AddInput, Empty, Icon, openSheet, openMenu, toast, openDetail, Check } from '../components/ui.jsx'
 import TaskItem from '../components/TaskItem.jsx'
@@ -38,6 +38,10 @@ function TaskList({ params }) {
   const f = view ? { ...view.filter, ...(params.q != null ? { q: params.q } : null) } : params
   const set = (p) => setParams('tasks', { ...p, viewId: null })
   const items = useMemo(() => applyFilter(tasks, { smart: 'all', sort: 'manual', ...f }), [tasks, f])
+  // 하루 넘게 지난 완료 항목은 '끝낸 일 n개' 로 접기
+  const [showOld, setShowOld] = useState(false)
+  const isOld = (t) => t.done && (t.doneAt || 0) < Date.now() - 864e5
+  const oldN = items.filter(isOld).length
   const manual = (f.sort || 'manual') === 'manual'
   const sel = useSel()
   const nFilter = [f.subjectId, f.projectId, f.sort && f.sort !== 'manual'].filter(Boolean).length
@@ -110,10 +114,11 @@ function TaskList({ params }) {
       {f.smart === 'done' ? <DoneTimeline items={items} subjects={subjects} /> : (
       <div className="card" style={{ padding: '2px 12px' }}>
         <div className="list">
-          {items.map((t) => (
+          {items.filter((t) => showOld || !isOld(t)).map((t) => (
             <div key={t.id} data-drop={'task:' + t.id}><TaskItem t={t} subjects={subjects} projects={projects} drag={dragFor(t)} sel={sel.of(t)}
               extra={f.smart === 'inbox' && <span className="inbox-acts" data-nodrag onClick={(e) => e.stopPropagation()}>{[['today', '오늘'], ['tomorrow', '내일'], ['weekend', '주말']].map(([k, l]) => <button key={k} className="chip sm" onClick={() => moveTasks([t.id], k)}>{l}</button>)}<button className="chip sm" onClick={() => patch('tasks', t.id, { inbox: false })}>정리됨</button></span>} /></div>
           ))}
+          {oldN > 0 && <button className="btn ghost sm" style={{ width: '100%' }} onClick={() => setShowOld(!showOld)}>{showOld ? '끝낸 일 접기' : `끝낸 일 ${oldN}개`}</button>}
           {!items.length && <Empty hint={f.smart === 'inbox' || tasks.length ? null : '위 칸에 적고 엔터 — 여러 줄을 붙여 넣으면 한 번에 여러 개가 들어가요'}>{f.smart === 'inbox' ? '받은 편지함이 비었어요' : '할 일이 없어요'}</Empty>}
         </div>
       </div>)}
@@ -205,7 +210,7 @@ function DayView({ params }) {
       {overdue.length > 0 && (
         <div className="card" style={{ padding: '6px 12px' }}>
           <div className="row between" style={{ padding: '4px 0' }}><span className="small muted">지난 할 일 <span className="cnt">{overdue.filter((t) => !t.done).length}</span></span>
-            {overdue.some((t) => !t.done) && <button className="chip sm" onClick={() => { const ids = overdue.filter((t) => !t.done).map((t) => t.id); moveTasks(ids, 'today'); toast(`${ids.length}개를 오늘로 옮겼어요`) }}>모두 오늘로</button>}
+            {overdue.some((t) => !t.done) && <button className="chip sm" onClick={() => { const ids = overdue.filter((t) => !t.done).map((t) => t.id); moveTasks(ids, 'today') }}>모두 오늘로</button>}
           </div>
           <div className="list">{overdue.map((t) => <div key={t.id}><TaskItem t={t} subjects={subjects} projects={projects} sel={sel.of(t)} /></div>)}</div>
         </div>
@@ -247,8 +252,8 @@ function useSel() {
 function SelBar({ sel, all }) {
   const ids = [...sel.ids].filter((id) => all.some((t) => t.id === id)), n = ids.length
   const allOn = n > 0 && n === all.length
-  const done = () => { const open = ids.filter((id) => !all.find((t) => t.id === id)?.done); batch(() => open.forEach((id) => toggleTask(id))); toast(`${open.length}개 완료`); sel.off() }
-  const move = (k, l) => { moveTasks(ids, k); toast(`${n}개를 ${l}(으)로 옮겼어요`); sel.off() }
+  const done = () => { const open = ids.filter((id) => !all.find((t) => t.id === id)?.done); const ch = recordChanges(() => batch(() => open.forEach((id) => toggleTask(id, { quiet: true })))); undoToast(`${open.length}개 완료`, ch); sel.off() }
+  const move = (k, l) => { moveTasks(ids, k); sel.off() }
   const del = () => { if (!confirm(`${n}개를 삭제할까요?`)) return; batch(() => ids.forEach((id) => remove('tasks', id))); toast(`${n}개 삭제`); sel.off() }
   return (
     <div className="sel-bar">
@@ -269,7 +274,7 @@ function BulkMove({ ids }) {
   return (
     <div className="row wrap bulk-move" style={{ gap: 6 }}>
       <span className="small muted">남은 {ids.length}개 옮기기</span>
-      {QUICK_DATES.filter(([k]) => k !== 'today').map(([k, l]) => <button key={k} className="chip" onClick={() => { const d = moveTasks(ids, k); toast(`${ids.length}개를 ${d ? l : '날짜 없음'}으로 옮겼어요`) }}>{l}</button>)}
+      {QUICK_DATES.filter(([k]) => k !== 'today').map(([k, l]) => <button key={k} className="chip" onClick={() => moveTasks(ids, k)}>{l}</button>)}
     </div>
   )
 }
@@ -385,7 +390,7 @@ function WeekBoard() {
   const days = Array.from({ length: 7 }, (_, i) => addDays(ws, i)), t0 = today()
   const ord = (a, b) => (a.done - b.done) || (a.dueTime == null) - (b.dueTime == null) || (a.dueTime ?? 0) - (b.dueTime ?? 0) || (a.order ?? 0) - (b.order ?? 0)
   const loose = tasks.filter((t) => !t.done && !t.due).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).slice(0, 40)
-  const drop = (t) => (z) => { const k = z.dataset.drop; if (!k?.startsWith('wd:')) return; const due = k.slice(3) || null; if ((t.due || null) === due) return; updateTask(t.id, due ? { due } : { due: null, dueTime: null }); toast(due ? `${fmtDate(due)}로 옮겼어요` : '날짜를 뺐어요') }
+  const drop = (t) => (z) => { const k = z.dataset.drop; if (!k?.startsWith('wd:')) return; const due = k.slice(3) || null; if ((t.due || null) === due) return; const ch = recordChanges(() => updateTask(t.id, due ? { due } : { due: null, dueTime: null })); undoToast(due ? `${fmtDate(due)}로 옮겼어요` : '날짜를 뺐어요', ch) }
   const Card = ({ t }) => {
     const sb = subjects.find((x) => x.id === t.subjectId)
     return (

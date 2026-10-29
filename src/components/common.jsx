@@ -16,7 +16,7 @@ export function SubjectSelect({ value, onChange, allowEmpty = true, className = 
   return (
     <select className={className} value={value || ''} onChange={(e) => onChange(e.target.value || null)}>
       {allowEmpty && <option value="">과목 없음</option>}
-      {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+      {subjects.filter((s) => !s.hidden || s.id === value).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
     </select>
   )
 }

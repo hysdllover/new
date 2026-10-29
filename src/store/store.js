@@ -49,7 +49,25 @@ export function batch(fn) {
   }
 }
 
+// 되돌리기용 기록: recordChanges(fn) 안에서 바뀐 레코드의 이전 모습을 모아 둠
+let journal = null
+export function recordChanges(fn) {
+  if (journal) { fn(); return [] }
+  journal = new Map()
+  try { fn() } catch (e) { journal = null; throw e }
+  const out = [...journal.values()]; journal = null
+  return out
+}
+export function undoChanges(changes) {
+  batch(() => {
+    for (const { coll, id, prev } of [...changes].reverse()) {
+      if (prev) write(coll, stamp({ ...prev }), state[coll][id])
+      else remove(coll, id)
+    }
+  })
+}
 function write(coll, rec, prev, silent) {
+  if (journal && !journal.has(coll + ':' + rec.id)) journal.set(coll + ':' + rec.id, { coll, id: rec.id, prev })
   state = { ...state, [coll]: { ...state[coll], [rec.id]: rec } }
   dirty.add(coll)
   if (!silent) changeHooks.forEach((h) => { try { h(coll, rec, prev) } catch (e) { console.error(e) } })
@@ -96,12 +114,16 @@ export function replaceAll(next) {
 
 export const alive = (obj) => Object.values(obj).filter((r) => !r.deleted)
 export const find = (coll, id) => { const r = state[coll][id]; return r && !r.deleted ? r : null }
-export const list = (coll) => alive(state[coll])
+// 과목은 정한 순서대로 (order · 없으면 만든 순서)
+const ordered = (coll, arr) => (coll === 'subjects' ? arr.sort((a, b) => (a.order ?? 1e15) - (b.order ?? 1e15) || (a.createdAt || 0) - (b.createdAt || 0)) : arr)
+export const list = (coll) => ordered(coll, alive(state[coll]))
+// 고르는 곳(과목 선택 · 타이머 · 빠른 기록)엔 숨긴 과목을 빼고
+export const shown = (subjects) => subjects.filter((s) => !s.hidden)
 
 // React hooks
 export function useColl(coll) {
   const raw = useSyncExternalStore(subscribe, () => state[coll])
-  return useMemo(() => alive(raw), [raw])
+  return useMemo(() => ordered(coll, alive(raw)), [raw])
 }
 export function useRaw(coll) { return useSyncExternalStore(subscribe, () => state[coll]) }
 export function useRec(coll, id) {
@@ -115,8 +137,9 @@ export function useSettings() {
 export const settings = () => state.settings.main || DEFAULT_SETTINGS
 export const setSettings = (partial) => put('settings', { ...settings(), ...(typeof partial === 'function' ? partial(settings()) : partial), id: 'main' })
 
-// 휴지통 정리: 30일 지난 삭제 항목은 내용 비우고 표식만, 90일 지나면 완전 제거
+// 휴지통 정리: 정한 날(기본 30일 · 설정 trashDays) 지난 삭제 항목은 내용 비우고 표식만, 그 뒤 60일 지나면 완전 제거
 export const TRASH_DAYS = 30
+export const trashDays = () => +state.settings.main?.trashDays || TRASH_DAYS
 function purge() {
   // 첨부 항목은 보관함 주소(raw)를 남겨 나중에 보관함에서도 지움
   const now = Date.now(), D = 86400000
@@ -127,8 +150,8 @@ function purge() {
     for (const r of Object.values(state[c])) {
       if (!r.deleted) continue
       const age = now - (r.deletedAt || r.updatedAt)
-      if (age > 90 * D) { coll = coll || { ...state[c] }; delete coll[r.id] }
-      else if (age > TRASH_DAYS * D && !r.purged) { coll = coll || { ...state[c] }; coll[r.id] = { id: r.id, deleted: true, purged: true, deletedAt: r.deletedAt, updatedAt: r.updatedAt, deviceId: r.deviceId, ...(r.raw ? { raw: r.raw, rm: r.rm } : null) } }
+      if (age > (trashDays() + 60) * D) { coll = coll || { ...state[c] }; delete coll[r.id] }
+      else if (age > trashDays() * D && !r.purged) { coll = coll || { ...state[c] }; coll[r.id] = { id: r.id, deleted: true, purged: true, deletedAt: r.deletedAt, updatedAt: r.updatedAt, deviceId: r.deviceId, ...(r.raw ? { raw: r.raw, rm: r.rm } : null) } }
     }
     if (coll) { next[c] = coll; changed = true; dirty.add(c) }
   }

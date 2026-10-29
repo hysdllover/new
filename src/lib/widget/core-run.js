@@ -68,6 +68,7 @@ try {
     }
   }
 } catch (e) {}
+if (TAP) w.url = link(TAP)
 if (config.runsInWidget) Script.setWidget(w)
 else {
   const m = new Alert(); m.title = '스터디 위젯'
