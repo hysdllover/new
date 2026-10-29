@@ -6,7 +6,7 @@ import { updateTask, toggleTask, deleteTask, scheduleTask, splitTask, addReview,
 import { Icon, Check, Field, AutoText, closeDetail, openSheet, toast, Prog, openDetail } from './ui.jsx'
 import { PRI, SubjectSelect, ProjectSelect, RepeatEditor, TimeInput } from './common.jsx'
 import { LinksEditor, FilesEditor } from './Attach.jsx'
-import { fmtDur, today, fmtShort, addDays } from '../engine/date.js'
+import { fmtDur, today, fmtShort, addDays, LOOSE, looseDue } from '../engine/date.js'
 import RecordEditor from './RecordEditor.jsx'
 import { openNote } from '../nav.js'
 import { startStopwatch } from '../lib/timer.js'
@@ -25,6 +25,21 @@ export default function TaskEditor({ id }) {
   const up = (p) => updateTask(id, p)
   const subs = t.subtasks || []
   const setSubs = (s) => patch('tasks', id, { subtasks: s })
+  // 하위 항목 왼쪽 손잡이를 끌어 순서 바꾸기
+  const dragSub = (e, i) => {
+    e.preventDefault()
+    const row = e.currentTarget.closest('.sub-row'), rows = [...row.parentNode.children], y0 = e.clientY
+    const mids = rows.map((r) => { const b = r.getBoundingClientRect(); return b.top + b.height / 2 })
+    row.classList.add('lifting')
+    const mv = (ev) => { row.style.transform = `translateY(${ev.clientY - y0}px)` }
+    const up = (ev) => {
+      window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up)
+      row.style.transform = ''; row.classList.remove('lifting')
+      const y = mids[i] + ev.clientY - y0, j = Math.max(0, Math.min(subs.length - 1, mids.filter((m, k) => k !== i && m < y).length))
+      if (j !== i) { const a = [...subs]; a.splice(j, 0, a.splice(i, 1)[0]); setSubs(a) }
+    }
+    window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up)
+  }
   const spent = taskSpent(id, sessions)
   const myLogs = logs.filter((l) => l.taskId === id).sort((a, b) => b.at - a.at)
   const others = list('tasks').filter((x) => x.id !== id && !x.done)
@@ -59,8 +74,9 @@ export default function TaskEditor({ id }) {
 
         <Field label="날짜">
           <div className="row wrap" style={{ gap: 6 }}>
-            {[[null, '없음'], [today(), '오늘'], [addDays(today(), 1), '내일']].map(([d, l]) => <button key={l} className={'chip' + ((t.due || null) === d ? ' on' : '')} onClick={() => up({ due: d, ...(d ? null : { dueTime: null }) })}>{l}</button>)}
-            <input className="input" type="date" style={{ width: 'auto', flex: 1, minWidth: 140 }} value={t.due || ''} onChange={(e) => up({ due: e.target.value || null })} />
+            {[[null, '없음'], [today(), '오늘'], [addDays(today(), 1), '내일']].map(([d, l]) => <button key={l} className={'chip' + ((t.due || null) === d ? ' on' : '')} onClick={() => up({ due: d, loose: null, ...(d ? null : { dueTime: null }) })}>{l}</button>)}
+            {Object.entries(LOOSE).map(([k, l]) => <button key={k} className={'chip' + (t.loose === k ? ' on' : '')} onClick={() => up(t.loose === k ? { loose: null } : { loose: k, due: looseDue(k), dueTime: null })}>{l}</button>)}
+            <input className="input" type="date" style={{ width: 'auto', flex: 1, minWidth: 140 }} value={t.due || ''} onChange={(e) => up({ due: e.target.value || null, loose: null })} />
           </div>
         </Field>
         {t.due && <Field label="시간 (선택)"><TimeInput value={t.dueTime} onChange={(v) => up({ dueTime: v })} /></Field>}
@@ -82,10 +98,10 @@ export default function TaskEditor({ id }) {
           {subs.length > 0 && <Prog value={subs.filter((s) => s.done).length / subs.length} />}
           <div className="list">
             {subs.map((s, i) => (
-              <div key={s.id} className="row" style={{ minHeight: 38 }}>
+              <div key={s.id} className="row sub-row" style={{ minHeight: 38 }}>
+                <span className="sub-grip" onPointerDown={(e) => dragSub(e, i)} aria-label="끌어서 순서 바꾸기">⋮⋮</span>
                 <Check on={s.done} round onClick={() => setSubs(subs.map((x) => x.id === s.id ? { ...x, done: !x.done } : x))} />
                 <input className="input bare grow" value={s.title} onChange={(e) => setSubs(subs.map((x) => x.id === s.id ? { ...x, title: e.target.value } : x))} />
-                {i > 0 && <button className="icon-btn" onClick={() => { const a = [...subs];[a[i - 1], a[i]] = [a[i], a[i - 1]]; setSubs(a) }} aria-label="위로">↑</button>}
                 <button className="icon-btn" onClick={() => setSubs(subs.filter((x) => x.id !== s.id))} aria-label="삭제"><Icon name="close" size={14} /></button>
               </div>
             ))}

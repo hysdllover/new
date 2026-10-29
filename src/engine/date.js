@@ -57,3 +57,7 @@ export function parseMention(text, base = today()) {
   } else { const [y, mo, d] = m[1].split('-').map(Number); date = `${y}-${pad(mo)}-${pad(d)}` }
   return { date, time: m[2] ? parseTime(m[2]) : null, match: m[0], rest: text.replace(m[0], '').replace(/\s+/g, ' ').trim() }
 }
+
+// 느슨한 기한: 이번 주 안 · 주말 중 · 이번 달 안 → 마지막 날을 기한으로
+export const LOOSE = { week: '이번 주 안', weekend: '주말 중', month: '이번 달 안' }
+export const looseDue = (k, d = today()) => k === 'month' ? addDays(monthStart(addDays(monthStart(d), 31)), -1) : addDays(weekStart(d), 6)

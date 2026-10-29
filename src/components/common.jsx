@@ -1,5 +1,5 @@
 import { useColl } from '../store/store.js'
-import { dday, fmtShort, fmtTime, today, diffDays } from '../engine/date.js'
+import { dday, fmtShort, fmtTime, today, diffDays, LOOSE } from '../engine/date.js'
 import { describeRule } from '../engine/recurrence.js'
 
 export const PRI = [['0', '없음'], ['1', '낮음'], ['2', '보통'], ['3', '높음']]
@@ -35,7 +35,7 @@ export function DueBadge({ task }) {
   if (!task.due) return null
   const n = diffDays(task.due, today())
   const cls = !task.done && n < 0 ? 'badge warn' : n <= 1 && !task.done ? 'badge acc' : 'badge'
-  const label = n === 0 ? '오늘' : n === 1 ? '내일' : n === -1 ? '어제' : fmtShort(task.due)
+  const label = task.loose && LOOSE[task.loose] && n >= 0 && !task.done ? LOOSE[task.loose] + (n <= 1 ? (n ? ' · 내일까지' : ' · 오늘까지') : '') : n === 0 ? '오늘' : n === 1 ? '내일' : n === -1 ? '어제' : fmtShort(task.due)
   return <span className={cls}>{label}{task.dueTime != null ? ' ' + fmtTime(task.dueTime) : ''}{Math.abs(n) > 1 && !task.done ? ' · ' + dday(task.due) : ''}</span>
 }
 
