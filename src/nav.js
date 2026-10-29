@@ -5,6 +5,8 @@ import { flushSync } from 'react-dom'
 const load = () => { try { return JSON.parse(localStorage.getItem('nav')) || null } catch { return null } }
 let nav = load() || { tab: 'home', seg: {}, params: {} }
 // 할 일 기본 보기를 '일별'로 (한 번만 전환, 이후엔 마지막 선택 유지)
+// 캘린더는 앱을 열 때마다 오늘부터
+if (nav.params?.planner?.date) nav.params = { ...nav.params, planner: { ...nav.params.planner, date: undefined } }
 try { if (!localStorage.getItem('navDay')) { nav.seg = { ...(nav.seg || {}), tasks: 'day' }; localStorage.setItem('navDay', '1') } } catch {}
 const L = new Set()
 const save = () => { try { localStorage.setItem('nav', JSON.stringify(nav)) } catch {} }
@@ -54,6 +56,8 @@ export const getNav = () => nav
 export const onNav = (f) => { L.add(f); return () => L.delete(f) }
 export function go(tab, seg, params) {
   const prev = nav
+  // 다른 탭에서 캘린더로 들어오면 오늘로 (날짜를 지정해 들어온 경우는 그대로)
+  if (tab === 'planner' && prev.tab !== 'planner' && !params?.date && nav.params.planner?.date) nav = { ...nav, params: { ...nav.params, planner: { ...nav.params.planner, date: undefined } } }
   nav = { ...nav, tab, seg: seg ? { ...nav.seg, [tab]: seg } : nav.seg, params: params !== undefined ? { ...nav.params, [tab]: params } : nav.params }
   save()
   // 탭·화면이 바뀔 때만 부드럽게 이어지는 전환 (검색 입력 같은 작은 변화엔 안 씀 · 움직임 줄이기 존중)
