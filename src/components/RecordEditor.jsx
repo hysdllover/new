@@ -5,7 +5,7 @@ import { saveRecord } from '../store/actions.js'
 import { Field, Icon, toast, AutoText } from './ui.jsx'
 import { TimeInput } from './common.jsx'
 import { FilesEditor } from './Attach.jsx'
-import { today, tsToMin, fmtDur } from '../engine/date.js'
+import { today, tsToMin, fmtDur, fmtTime } from '../engine/date.js'
 
 // −/＋ 1분씩 · 누르고 있으면 계속 (0.4초 뒤부터 빠르게)
 function Step({ d, on, label, children }) {
@@ -64,6 +64,7 @@ export default function RecordEditor({ rec, date, subjectId, onDone, compact }) 
         <Field label="날짜"><input className="input" type="date" value={f.date} onChange={(e) => e.target.value && set({ date: e.target.value })} /></Field>
         <Field label="시작 시각 (선택)"><TimeInput value={f.startMin} onChange={(v) => set({ startMin: v })} defaultValue={new Date().getHours() * 60} /></Field>
       </div>
+      <div className="tiny muted rec-end">{f.startMin != null ? <>완료 시각 <b>{fmtTime((f.startMin + f.dur) % 1440)}</b>{f.startMin + f.dur >= 1440 ? ' (다음 날)' : ''} 으로 기록돼요</> : '시작 시각을 넣으면 완료 시각도 함께 기록돼요'}</div>
 
       {!compact || more ? (
         <>
