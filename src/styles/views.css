@@ -66,8 +66,8 @@
 .tl-wrap { position: absolute; display: flex; flex-direction: column; pointer-events: none; }
 .tl-wrap > * { pointer-events: auto; }
 .tl-buffer { background: repeating-linear-gradient(135deg, transparent 0 4px, color-mix(in srgb, var(--muted) 18%, transparent) 4px 6px); border-radius: 4px; flex-shrink: 0; }
-.tl-item { position: relative; border-radius: 6px; padding: 3px 7px; overflow: hidden; background: color-mix(in srgb, var(--c) 16%, var(--surface)); border-left: 3px solid var(--c); cursor: pointer; flex-shrink: 0; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
-.tl-item.event { background: color-mix(in srgb, var(--c) 26%, var(--surface)); }
+.tl-item { position: relative; border-radius: 6px; padding: 3px 7px; overflow: hidden; background: color-mix(in srgb, var(--c) 24%, var(--surface)); border-left: 3px solid var(--c); cursor: pointer; flex-shrink: 0; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.tl-item.event { background: color-mix(in srgb, var(--c) 34%, var(--surface)); }
 .tl-item.done .tl-title { text-decoration: line-through; color: var(--muted); }
 .tl-item.lifting { box-shadow: 0 6px 18px rgba(0, 0, 0, .18); z-index: 5; opacity: .92; }
 .tl-title { font-size: .9em; line-height: 1.3; }
@@ -222,7 +222,7 @@
 .embed-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
 .mini-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
 .mc-d { position: relative; font-size: .82em; padding: 4px 0; border-radius: 6px; min-height: 28px; }
-.mc-d.out { opacity: .35; }
+.mc-d.out { opacity: .55; }
 .mc-d.is-today { background: var(--accent); color: #fff; }
 .mc-d i { position: absolute; bottom: 2px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 2px; background: var(--c4); }
 .backlinks { margin-top: 28px; padding-top: 12px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
@@ -437,7 +437,7 @@ button.greet { display: block; width: 100%; text-align: left; }
 .plan-goals { padding: 8px 10px; border-radius: var(--radius); background: var(--surface-2); display: flex; flex-direction: column; gap: 6px; }
 
 /* 시간표 */
-.tl-item.class { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--c) 12%, var(--surface)) 0 6px, color-mix(in srgb, var(--c) 6%, var(--surface)) 6px 12px); border-left-style: dashed; opacity: .9; }
+.tl-item.class { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--c) 18%, var(--surface)) 0 6px, color-mix(in srgb, var(--c) 10%, var(--surface)) 6px 12px); border-left-style: dashed; }
 .wev.cls { --c: var(--muted); background: transparent; border-left-style: dashed; color: var(--muted); }
 .tt-grid { display: grid; gap: 3px; }
 .tt-h { text-align: center; font-size: .8em; color: var(--muted); padding: 2px 0 4px; }
@@ -459,7 +459,7 @@ button.greet { display: block; width: 100%; text-align: left; }
 }
 .tt-row { gap: 8px; padding: 3px 6px; border-left: 2.5px solid var(--c); border-radius: 4px; }
 .tt-row.now { background: color-mix(in srgb, var(--c) 16%, transparent); }
-.tt-row.past { opacity: .45; }
+.tt-row.past { opacity: .65; }
 
 /* 인강 */
 .lec-late { color: color-mix(in srgb, var(--c4) 65%, var(--text)); }
@@ -538,7 +538,7 @@ button.greet { display: block; width: 100%; text-align: left; }
 /* 조용한 완료 효과: 체크하면 줄이 천천히 그어지고 흐려짐 */
 .task-item .title .ttl { background: linear-gradient(currentColor, currentColor) no-repeat 0 56% / 0% 1px; transition: background-size .5s ease, color .5s ease, opacity .5s ease; }
 .item.task-item.done .title { text-decoration: none; }
-.item.task-item.done .title .ttl { background-size: 100% 1px; color: var(--muted); opacity: .75; }
+.item.task-item.done .title .ttl { background-size: 100% 1px; color: var(--muted); }
 .task-item .check { transition: transform .25s ease, background-color .25s ease, border-color .25s ease; }
 .task-item .check.on { animation: chk-pop .35s ease; }
 @keyframes chk-pop { 0% { transform: scale(.85); } 60% { transform: scale(1.06); } 100% { transform: scale(1); } }
@@ -1082,7 +1082,7 @@ textarea.bb-edit { width: 100%; font: inherit; color: inherit; resize: none; out
 /* D-day 목록 · 고치기 */
 .dd-row { align-items: center; cursor: pointer; gap: 10px; }
 .dd-row .t { flex: 1; min-width: 0; }
-.dd-row.past { opacity: .55; }
+.dd-row.past { opacity: .7; }
 .dd-row .dday-n { min-width: 0; text-align: right; white-space: nowrap; }
 .dd-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 .dd-custom { position: relative; width: 26px; height: 26px; border-radius: 13px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); border: 1px dashed var(--line); overflow: hidden; cursor: pointer; }
