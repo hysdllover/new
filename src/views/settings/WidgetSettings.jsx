@@ -49,7 +49,6 @@ export function WidgetFontField() {
       <Field label="위젯 할 일 앞 표시"><Seg value={st.widgetMark || 'dash'} onChange={(v) => setSettings({ widgetMark: v })} options={[['dash', '선 –'], ['dot', '점 •'], ['box', '네모 □']]} /></Field>
       <Field label="위젯 글자 정렬"><Seg value={st.widgetAlign || 'left'} onChange={(v) => setSettings({ widgetAlign: v })} options={[['left', '왼쪽'], ['center', '가운데']]} /></Field>
       <Field label="위젯 글자색"><Seg value={st.widgetInk || 'normal'} onChange={(v) => setSettings({ widgetInk: v })} options={[['normal', '기본'], ['dark', '한 단계 진하게']]} /></Field>
-      <Toggle label="위젯 새로 고침 버튼 (오른쪽 아래 ↻)" checked={!!st.widgetRefresh} onChange={(v) => setSettings({ widgetRefresh: v })} />
       <div className="tiny muted">위젯마다: Parameter 뒤에 <b>*5</b> → 목록 5개, <b>#제목</b> → 위쪽 제목 바꾸기 (예: 할일*5#오늘 할 것)</div>
       <Field label="위젯 구분선"><Seg value={st.widgetRule || 'normal'} onChange={(v) => setSettings({ widgetRule: v })} options={[['none', '없음'], ['thin', '가늘게'], ['normal', '기본'], ['bold', '굵게']]} /></Field>
       <Field label="위젯 테마"><Seg value={st.widgetTheme || 'auto'} onChange={(v) => setSettings({ widgetTheme: v })} options={[['auto', '자동'], ['white', '흰 글씨'], ['black', '검은 글씨'], ['paper', '종이'], ['night', '다크'], ['mono', '단색']]} /></Field>
