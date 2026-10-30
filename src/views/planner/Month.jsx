@@ -114,7 +114,7 @@ export default function Month({ date, setDate }) {
                 </div>
                 {layers.study && mins > 0 && <span className="mstudy" style={{ width: Math.min(100, (mins / goalFor(st, d)) * 100) + '%' }}>{Object.entries(subBy[d] || {}).sort((a, b) => b[1] - a[1]).map(([sid, m]) => <i key={sid} style={{ flex: m, background: subjects.find((x) => x.id === sid)?.color || 'var(--c2)' }} />)}</span>}
                 {ci % 7 === 0 && ddW && d <= ddW.date && <span className="mwk">{Math.ceil(diffDays(ddW.date, d) / 7)}주</span>}
-                {ddW && d === ddW.date && <span className="mdd" />}
+                {ddW && d === ddW.date && <span className="mdd">D-day</span>}
                 <div className="mfoot">
                   {layers.studyNum && mins > 0 && <span className="tiny">{Math.round(mins / 6) / 10}h</span>}
                   {hDone > 0 && <span className="tiny" style={{ color: 'var(--c2)' }}>●{hDone}</span>}
