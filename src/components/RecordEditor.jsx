@@ -18,7 +18,8 @@ function Step({ d, on, label, children }) {
 // 공부 기록 직접 입력·수정 (타이머 기록도 같은 폼으로 수정)
 export default function RecordEditor({ rec, date, subjectId, onDone, compact }) {
   const subjects = useColl('subjects')
-  const tasks = useColl('tasks').filter((t) => !t.done && !t.archived)
+  // 나중에 연결할 수 있게 최근 2주 안에 끝낸 할 일도 (지금 연결된 것은 늘)
+  const tasks = useColl('tasks').filter((t) => !t.archived && (!t.done || t.id === rec?.taskId || Date.now() - (t.doneAt || 0) < 14 * 864e5)).sort((a, b) => a.done - b.done)
   const init = rec ? {
     subjectId: rec.subjectId, dur: rec.dur, date: rec.date, startMin: rec.start != null ? tsToMin(rec.start) : null,
     note: rec.note || '', taskId: rec.taskId || '', files: rec.files || [], focus: rec.focus || 0,
@@ -77,7 +78,7 @@ export default function RecordEditor({ rec, date, subjectId, onDone, compact }) 
           <Field label="연결할 할 일">
             <select className="input" value={f.taskId} onChange={(e) => set({ taskId: e.target.value })}>
               <option value="">없음</option>
-              {tasks.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
+              {tasks.map((t) => <option key={t.id} value={t.id}>{t.done ? '✓ ' : ''}{t.title}</option>)}
             </select>
           </Field>
           <Field label="사진 · 파일"><FilesEditor ids={f.files} onChange={(v) => set({ files: v })} meta={{ subjectId: f.subjectId, date: f.date }} /></Field>

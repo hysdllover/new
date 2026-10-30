@@ -447,3 +447,34 @@ button, .seg, .tabbar, .chip, .badge, .tag { -webkit-user-select: none; user-sel
 
 /* 창 크기 단계: 아이패드 프로 13 가로(1376)처럼 아주 넓은 창은 내용 폭을 넓힘 */
 html[data-win="xwide"] .content-inner { max-width: 1240px; }
+/* 체크박스 '선' 모양 · 번짐 끄기 */
+html[data-check="line"] .check { border: 0; border-bottom: 1.5px solid color-mix(in srgb, var(--text) 45%, transparent); border-radius: 0; background: none !important; }
+html[data-check="line"] .check.on { border-bottom-color: var(--ck, var(--accent)); }
+html[data-check="line"] .check.on::after { border-color: var(--ck, var(--accent)); }
+html[data-noburst] .burst { display: none; }
+/* 홈 카드 간격 */
+html[data-hgap="tight"] .widgets { gap: calc(var(--gap) * .5); }
+html[data-hgap="loose"] .widgets { gap: calc(var(--gap) * 1.6); }
+/* 할 일 글자 · 줄 간격 · 두 줄 */
+html[data-tfs="s"] .task-item .title { font-size: .92em; }
+html[data-tfs="l"] .task-item .title { font-size: 1.1em; }
+html[data-tdens="tight"] .item.task-item { padding-top: 6px; padding-bottom: 6px; min-height: 36px; }
+html[data-tlines="1"] .task-item .title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html[data-tlines="2"] .task-item .title { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+/* 과목 표시: 점 + 글자 */
+html[data-subj="dot"] .subj-tag { background: none !important; padding: 0; color: color-mix(in srgb, var(--sc) 45%, var(--text)) !important; display: inline-flex; align-items: center; gap: 4px; }
+html[data-subj="dot"] .subj-tag::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--sc); }
+/* 완료 줄 천천히 */
+html[data-strike="slow"] .task-item .title .ttl, html[data-strike="slow"] .np-row .ttl { transition-duration: 1.1s, .9s, .9s; }
+/* 달력 일정 글자 보통 */
+html[data-evchip="m"] .mev { font-size: .8em; line-height: 1.55; }
+@media (max-width: 767px) { html[data-evchip="m"] .mev { font-size: .72em; } }
+/* 시트: 살짝 늦게 따라와 부드럽게 멈춤 */
+.sheet:not(.top) { animation: up .42s cubic-bezier(.22, 1.12, .36, 1); }
+@media (prefers-reduced-motion: reduce) { .sheet:not(.top) { animation: none; } }
+/* 숫자 바뀔 때 부드럽게 올라오기 */
+.num-roll { display: inline-block; animation: num-roll .35s cubic-bezier(.2, .8, .2, 1); }
+@keyframes num-roll { from { transform: translateY(.45em); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .num-roll { animation: none; } }
+/* 끌어서 순서 바꿀 때 다른 항목 비켜나기 */
+.reorder-shift { transition: transform .18s ease; }

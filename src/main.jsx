@@ -21,11 +21,14 @@ applyAppIcon()
 import { TABS, EXTRA, go } from './nav.js'
 import { addTask } from './store/actions.js'
 import { toast } from './components/ui.jsx'
+import { setPrefs } from './engine/date.js'
+import { setHaptics } from './lib/haptic.js'
 import { startServices } from './lib/notify.js'
 import { startSync, restoreSync, readConnectLink, connect } from './sync/sync.js'
 
 function Root() {
   const st = useSettings()
+  setPrefs({ ws: st.weekStart, date: st.dateFmt, dur: st.durFmt }); setHaptics(st.haptics)
   useEffect(() => { applyTheme(st.theme) }, [st.theme])
   // 조용한 모드: 숫자·지연 강조·이월 표시 숨김
   useEffect(() => { document.documentElement.toggleAttribute('data-calm', !!st.calm) }, [st.calm])

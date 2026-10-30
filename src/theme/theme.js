@@ -82,6 +82,10 @@ export function applyTheme(t0) {
   root.toggleAttribute('data-margin', !!t.noteMargin)
   Object.assign(root.dataset, { tone: t.textTone || 'ink', btn: t.btnStyle || 'line', seg: t.segStyle || 'pill', nalign: t.noteAlign || 'left', nimg: t.noteImg || 'round', calnum: t.calNum || 'body', caltoday: t.calToday || 'circle', bar: t.chartBar || 'normal' })
   root.toggleAttribute('data-titleline', !!t.titleLine)
+  // 목록·달력 표시 (설정 › 디자인 세부)
+  Object.assign(root.dataset, { evchip: t.evChip || 's', hgap: t.homeGap || 'normal', tfs: t.taskFs || 'm', tdens: t.taskDens || 'normal', subj: t.subjTag || 'tag', strike: t.strikeSpeed || 'normal' })
+  root.dataset.tlines = t.taskLines || 'all'
+  root.toggleAttribute('data-noburst', t.checkBurst === false)
   root.toggleAttribute('data-pastdim', !!t.calPastDim)
   root.style.setProperty('--font-note', (t.noteFont && familyOf(t.noteFont)) || 'inherit')
   root.dataset.mdens = t.monthDensity || 'normal'

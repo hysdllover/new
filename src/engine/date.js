@@ -9,7 +9,10 @@ export const addMonths = (s, n) => { const d = parseYmd(s); const day = d.getDat
 export const daysInMonth = (y, m) => new Date(y, m + 1, 0).getDate()
 export const diffDays = (a, b) => Math.round((parseYmd(a) - parseYmd(b)) / 86400000) // a - b
 export const dow = (s) => parseYmd(s).getDay()
-export const weekStart = (s, startDow = 1) => { const d = dow(s); return addDays(s, -((d - startDow + 7) % 7)) }
+// 기기 공통 표시 설정 (설정 › 일반) — 주 시작 · 날짜 · 시간 표기
+export const PREF = { ws: 1, date: 'kr', dur: 'kr' }
+export const setPrefs = (p) => { PREF.ws = p.ws ?? 1; PREF.date = p.date || 'kr'; PREF.dur = p.dur || 'kr' }
+export const weekStart = (s, startDow = PREF.ws) => { const d = dow(s); return addDays(s, -((d - startDow + 7) % 7)) }
 export const monthStart = (s) => s.slice(0, 8) + '01'
 export const range = (from, to) => { const out = []; for (let d = from; d <= to; d = addDays(d, 1)) out.push(d); return out }
 export const nowMin = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes() }
@@ -18,7 +21,9 @@ export const WD = ['일', '월', '화', '수', '목', '금', '토']
 export const fmtDate = (s, opt = {}) => {
   if (!s) return ''
   const d = parseYmd(s)
+  if (PREF.date === 'dot' && !opt.year) return `${d.getMonth() + 1}.${d.getDate()}` + (opt.wd === false ? '' : ` (${WD[d.getDay()]})`)
   const md = `${d.getMonth() + 1}월 ${d.getDate()}일`
+  if (PREF.date === 'long' && !opt.year && opt.wd !== false) return `${md} ${WD[d.getDay()]}요일`
   return opt.year ? `${d.getFullYear()}년 ${md}` : opt.wd === false ? md : `${md} (${WD[d.getDay()]})`
 }
 export const fmtShort = (s) => { if (!s) return ''; const d = parseYmd(s); return `${d.getMonth() + 1}/${d.getDate()}` }
@@ -26,6 +31,7 @@ export const fmtTime = (m) => m == null ? '' : `${pad(Math.floor(m / 60) % 24)}:
 export const parseTime = (t) => { if (!t) return null; const [h, m] = t.split(':').map(Number); return h * 60 + (m || 0) }
 export const fmtDur = (min) => {
   min = Math.round(min || 0)
+  if (PREF.dur === 'colon') return `${Math.floor(min / 60)}:${pad(min % 60)}`
   if (min < 60) return `${min}분`
   const h = Math.floor(min / 60), m = min % 60
   return m ? `${h}시간 ${m}분` : `${h}시간`

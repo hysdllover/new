@@ -8,7 +8,7 @@ export const PRI_COLOR = ['var(--muted)', 'var(--c2)', 'var(--c3)', 'var(--c4)']
 export function SubjectTag({ id, subjects }) {
   const s = subjects?.find((x) => x.id === id)
   if (!s) return null
-  return <span className="tag" style={{ background: s.color + '22', color: `color-mix(in srgb, ${s.color} 58%, var(--text))` }}>{s.name}</span>
+  return <span className="tag subj-tag" style={{ '--sc': s.color, background: s.color + '22', color: `color-mix(in srgb, ${s.color} 58%, var(--text))` }}>{s.name}</span>
 }
 
 export function SubjectSelect({ value, onChange, allowEmpty = true, className = 'input' }) {

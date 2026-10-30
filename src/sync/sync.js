@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react'
 import { notesForWidget, tablesForWidget, boardsForWidget, photoPicks } from '../lib/notePreview.js'
 import { seriesSummary } from '../lib/series.js'
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval'
+import { PRESETS } from '../theme/theme.js'
 import { getState, replaceColl, onChange, patch, settings, list, put, find, remove, deviceId } from '../store/store.js'
 import { COLLECTIONS, GIST_FILES } from '../store/schema.js'
 import { mergeColl, stableFile, shardOf, NOTE_SHARDS, isDataFile, mergeNote } from './merge.js'
@@ -261,10 +262,13 @@ function calPayload() {
   if (excluded().has('events')) return {}
   const ymd = (x) => x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0')
   const d = new Date(); d.setDate(1); d.setDate(d.getDate() - 7)
-  const out = {}
+  const out = {}, ddays = list('ddays'), th = settings().theme || {}, pr = PRESETS[th.preset] || PRESETS.default, EVC = th.accent || pr.accent, DDC = th.c4 || pr.c4
   for (let i = 0; i < 90; i++, d.setDate(d.getDate() + 1)) {
-    const evs = eventsOn(ymd(d))
-    if (evs.length) out[ymd(d)] = evs.map((e) => ({ t: e.title || '', s: e.start ?? null, e: e.end ?? null, c: e.color || null, l: e.location || null }))
+    // D-day 도 그날 일정처럼 (같은 이름 일정은 한 번만) · 색 없는 일정은 앱 기본 일정색
+    const k = ymd(d), dds = ddays.filter((x) => x.date === k)
+    const evs = eventsOn(k).filter((e) => !dds.some((x) => x.title === e.title))
+    const all = [...dds.map((x) => ({ t: x.title || '', s: null, e: null, c: x.color || DDC, l: null, dd: 1 })), ...evs.map((e) => ({ t: e.title || '', s: e.start ?? null, e: e.end ?? null, c: e.color || EVC, l: e.location || null }))]
+    if (all.length) out[k] = all
   }
   return out
 }
@@ -343,7 +347,7 @@ function widgetPayload() {
     series: seriesSummary(list('tasks'), list('subjects'), settings().seriesColors || {}).slice(0, 6).map((x) => ({ t: x.t, d: x.d, n: x.n, x: x.next?.title || '', c: x.color })),
     sv: SCRIPT_VER,
     gid: gistId(), // 위젯에서 바로 처리할 때 명령을 남길 곳 (토큰은 위젯 쪽 보관함에만)
-    settings: { settings: { main: { goalDaily: main.goalDaily, goalByDay: main.goalByDay || {}, goalWeekly: main.goalWeekly, weekStart: main.weekStart, widgetFont: main.widgetFont, widgetScale: main.widgetScale, widgetWeight: main.widgetWeight, widgetClear: main.widgetClear, widgetTheme: main.widgetTheme, widgetPad: main.widgetPad, widgetRule: main.widgetRule, widgetPattern: main.widgetPattern, dashTiles: main.dashTiles, customWidgets: main.customWidgets, dayStart: main.dayStart, dayEnd: main.dayEnd, widgetDoodle: main.widgetDoodle, widgetDdColor: main.widgetDdColor } }, quotes: keep('quotes') },
+    settings: { settings: { main: { goalDaily: main.goalDaily, goalByDay: main.goalByDay || {}, goalWeekly: main.goalWeekly, weekStart: main.weekStart, widgetFont: main.widgetFont, widgetScale: main.widgetScale, widgetWeight: main.widgetWeight, widgetClear: main.widgetClear, widgetTheme: main.widgetTheme, widgetPad: main.widgetPad, widgetRule: main.widgetRule, widgetPattern: main.widgetPattern, dashTiles: main.dashTiles, customWidgets: main.customWidgets, dayStart: main.dayStart, dayEnd: main.dayEnd, widgetDoodle: main.widgetDoodle, widgetDdColor: main.widgetDdColor, widgetMark: main.widgetMark, widgetInk: main.widgetInk, widgetDate: main.widgetDate, widgetNoDate: main.widgetNoDate, widgetClock: main.widgetClock, widgetAlign: main.widgetAlign, widgetRefresh: main.widgetRefresh } }, quotes: keep('quotes') },
   })
 }
 const ATT_MAX = 7 * 1024 * 1024 // gist 한 파일로 올릴 수 있는 첨부 크기 (base64 로 늘어나는 걸 고려)

@@ -276,7 +276,7 @@ export default () => `  } else if (KIND === 'study') {
           if (k === today) { c.borderWidth = 1; c.borderColor = INK; c.cornerRadius = Math.min(cell, cellH) / 2 }
           const a = c.addStack(); a.addSpacer(); t(a, day, k === today ? F(numSize, 'SemiBold') : label(numSize), k === today || has ? INK : SOFT); a.addSpacer()
           // 일정 없는 날은 빈 칸만 (뷰 수를 줄여 큰 위젯 메모리 절약)
-          const b = c.addStack(); b.size = new Size(cell, Math.round((numSize - 2) * 1.25)); if (has) t(b, '•', label(numSize - 2), evs[0].c ? new Color(evs[0].c) : GOLD)
+          const b = c.addStack(); b.size = new Size(cell, Math.round((numSize - 2) * 1.25)); const dd1 = evs.find((e) => e.dd); if (dd1 && cell >= 30) { b.centerAlignContent(); const x = t(b, dd1.t, label(Math.max(6, numSize - 4)), new Color(dd1.c)); x.minimumScaleFactor = 0.6 } else if (has) t(b, '•', label(numSize - 2), evs[0].c ? new Color(evs[0].c) : GOLD)
         }
         parent.addSpacer(gap)
       }
@@ -342,7 +342,7 @@ export default () => `  } else if (KIND === 'study') {
     const h = w.addStack(); h.centerAlignContent(); cap(h, 'SUBJECTS'); h.addSpacer(); t(h, '이번 주 ' + hm(weekTot), label(8), SOFT)
     w.addSpacer(fam === 'small' ? 8 : 10)
     const n = fam === 'small' ? 3 : fam === 'medium' ? 3 : 8
-    for (const x of weekSub.slice(0, n)) {
+    for (const x of weekSub.slice(0, CNT || n)) {
       const r = w.addStack(); r.centerAlignContent(); const dot = r.addStack(); dot.size = new Size(6, 6); dot.cornerRadius = 3; dot.backgroundColor = x.s.color ? new Color(x.s.color) : GOLD; r.addSpacer(6)
       t(r, x.s.name, tw(fam === 'small' ? 12 : 13), INK).minimumScaleFactor = 0.8; r.addSpacer()
       if (fam !== 'small' && x.today) { t(r, '오늘 ' + hm(x.today), tw(10), SOFT); r.addSpacer(8) }
@@ -378,7 +378,7 @@ export default () => `  } else if (KIND === 'study') {
     const h = w.addStack(); h.centerAlignContent(); cap(h, 'PROGRESS'); h.addSpacer(); if (fam !== 'small') t(h, dateStr, label(8), SOFT)
     w.addSpacer(fam === 'small' ? 8 : 10)
     const n = fam === 'small' ? 3 : fam === 'medium' ? 3 : 8
-    for (const x of PROG.slice(0, n)) {
+    for (const x of PROG.slice(0, CNT || n)) {
       const r = w.addStack(); r.centerAlignContent(); t(r, x.t, tw(fam === 'small' ? 12 : 13), INK).minimumScaleFactor = 0.8; r.addSpacer(); t(r, fam === 'small' ? Math.round((x.n / x.of) * 100) + '%' : x.n + '/' + x.of + x.u, tw(10), SOFT)
       w.addSpacer(3); pbar(w, x.n / x.of, inner, x.c); w.addSpacer(fam === 'large' ? 10 : 7)
     }
@@ -503,7 +503,7 @@ export default () => `  } else if (KIND === 'study') {
     const nt0 = pickNote(), ntOth = NOTES().filter((x) => x !== nt0), EX = data.extra || {}
     const mDays = Object.entries(DM).filter(([k2, v]) => k2.startsWith(mPre) && v > 0).length
     const habs = Array.isArray(EX.habits) ? EX.habits : [], habOn = habs.filter((x) => x.on).length
-    const nLn = (b, n, wd) => { for (const l of (nt0 ? nt0.l : []).slice(0, n)) { noteRow(b, l, wd, LGd ? 11 : 9.5, 1); b.addSpacer(2) } }
+    const nLn = (b, n, wd) => { for (const l of (nt0 ? nt0.l : []).slice(0, CNT || n)) { noteRow(b, l, wd, LGd ? 11 : 9.5, 1); b.addSpacer(2) } }
     Object.assign(TL, {
       note: ['NOTE', (b, f, wd) => { b.addSpacer(2); t(b, nt0 ? nt0.t : '노트가 없어요', F(LGd ? 12.5 : 11, 'Regular'), INK, 1).minimumScaleFactor = 0.75; b.addSpacer(3); if (TILEH && nt0) noteFlow(b, nt0.l, wd, Math.max(20, TILEH - (LGd ? 34 : 30) * SCALE), LGd ? 11 : 9.5); else nLn(b, LGd ? 5 : fam === 'small' ? 2 : 3, wd) }, '', null, noteUrl(nt0), SOFT],
       notes: ['NOTES', (b, f, wd) => { b.addSpacer(3); for (const x of NOTES().slice(0, LGd ? 4 : 3)) { const r = b.addStack(); r.url = noteUrl(x); r.centerAlignContent(); t(r, x.t, tw(LGd ? 12 : 10), INK).minimumScaleFactor = 0.75; r.addSpacer(4); t(r, noteAgo(x.u), label(6), SOFT); b.addSpacer(2) } if (!NOTES().length) t(b, '노트 없음', tw(10), SOFT) }, '', null, 'notes.pages', SOFT],
@@ -534,7 +534,7 @@ export default () => `  } else if (KIND === 'study') {
     const cols = fam === 'medium' ? 4 : 2, gap = 12, wd = Math.floor((inner - gap * (cols - 1)) / cols), big = fam === 'small' ? 19 : fam === 'medium' ? 22 : 36
     const line = (P2, k, wd) => {
         const a = P2.addStack(); a.url = link(TL[k][4])
-        if (k === 'todo') { a.layoutVertically(); const hh = a.addStack(); cap(hh, 'TO DO'); hh.addSpacer(); a.addSpacer(4); const L3 = items.filter((x) => !x.done); for (const x of L3.slice(0, LGd ? 5 : 3)) { const r = a.addStack(); r.centerAlignContent(); r.spacing = 6; if (x.id) r.url = taskUrl(x.id); const imp = x.priority >= 3; const mk = t(r, imp ? '•' : '–', tw(11), imp ? GOLD : SOFT); if (x.id) mk.url = doneUrl(x.id); t(r, x.title, imp ? F(12, 'Medium') : tw(12), INK).minimumScaleFactor = 0.8; r.addSpacer(); a.addSpacer(2) } if (!L3.length) t(a, 'All clear.', tw(12), SOFT); return }
+        if (k === 'todo') { a.layoutVertically(); const hh = a.addStack(); cap(hh, 'TO DO'); hh.addSpacer(); a.addSpacer(4); const L3 = items.filter((x) => !x.done); for (const x of L3.slice(0, CNT || (LGd ? 5 : 3))) { const r = a.addStack(); r.centerAlignContent(); r.spacing = 6; if (x.id) r.url = taskUrl(x.id); const imp = x.priority >= 3; const mk = t(r, mkc(imp), tw(11), imp ? GOLD : SOFT); if (x.id) mk.url = doneUrl(x.id); t(r, x.title, imp ? F(12, 'Medium') : tw(12), INK).minimumScaleFactor = 0.8; r.addSpacer(); a.addSpacer(2) } if (!L3.length) t(a, 'All clear.', tw(12), SOFT); return }
         if (k === 'dday') { a.bottomAlignContent(); t(a, dd ? ddTxt : '—', thin(26), DDC || INK).minimumScaleFactor = 0.6; a.addSpacer(6); t(a, dd ? dd.title : 'No D-day', tw(11), GOLD).minimumScaleFactor = 0.7; a.addSpacer() }
         else if (k === 'next') { a.centerAlignContent(); t(a, c ? (nCur ? '지금 ' : '') + clk(c.s) : '—', tw(11), GOLD); a.addSpacer(6); t(a, c ? c.t : '남은 일정 없음', tw(12), c ? INK : SOFT).minimumScaleFactor = 0.75; a.addSpacer() }
         else if (k === 'study') {
@@ -573,7 +573,7 @@ export default () => `  } else if (KIND === 'study') {
         const rh = R.addStack(); cap(rh, 'TO DO'); rh.addSpacer(); t(rh, dateStr, label(8), SOFT); R.addSpacer(7)
         const fs = 13, rowH = (fs * 1.3 + 4) * SCALE
         const L2 = items.filter((x) => !x.done), n = Math.max(2, Math.floor((innerH - 18 * SCALE) / rowH))
-        for (const x of L2.slice(0, n)) { const r = R.addStack(); r.centerAlignContent(); r.spacing = 6; if (x.id) r.url = taskUrl(x.id); const imp = x.priority >= 3; const mk = t(r, imp ? '•' : '–', tw(fs - 1), imp ? GOLD : SOFT); if (x.id) mk.url = doneUrl(x.id); t(r, x.title, imp ? F(fs, 'Medium') : tw(fs), INK).minimumScaleFactor = 0.8; r.addSpacer(); R.addSpacer(4) }
+        for (const x of L2.slice(0, CNT || n)) { const r = R.addStack(); r.centerAlignContent(); r.spacing = 6; if (x.id) r.url = taskUrl(x.id); const imp = x.priority >= 3; const mk = t(r, mkc(imp), tw(fs - 1), imp ? GOLD : SOFT); if (x.id) mk.url = doneUrl(x.id); t(r, x.title, imp ? F(fs, 'Medium') : tw(fs), INK).minimumScaleFactor = 0.8; r.addSpacer(); R.addSpacer(4) }
         if (!L2.length) t(R, 'All clear.', tw(fs), SOFT)
         R.addSpacer()
       } else col(R, others.slice(2, 4), rw, innerH)
@@ -617,7 +617,7 @@ export default () => `  } else if (KIND === 'study') {
     w.addSpacer(fam === 'small' ? 8 : 10)
     const clLine = (parent) => { if (!TMR.cl.length) return; const r = parent.addStack(); r.centerAlignContent(); t(r, '수업 ' + TMR.cl.length + '교시', tw(10), SOFT); r.addSpacer(6); t(r, clk(TMR.cl[0].start) + '–' + clk(TMR.cl[TMR.cl.length - 1].end), tw(10), SOFT); r.addSpacer(); parent.addSpacer(6) }
     const evRows = (parent, n, size) => {
-      for (const e of TMR.ev.slice(0, n)) {
+      for (const e of TMR.ev.slice(0, CNT || n)) {
         const r = parent.addStack(); r.centerAlignContent(); r.spacing = 6
         const tm = r.addStack(); tm.size = new Size(34, 0); t(tm, e.s == null ? '종일' : clk(e.s % 1440), tw(10), SOFT); tm.addSpacer()
         const bar = r.addStack(); bar.size = new Size(2, 12); bar.cornerRadius = 1; bar.backgroundColor = e.c ? new Color(e.c) : RULE
@@ -626,9 +626,9 @@ export default () => `  } else if (KIND === 'study') {
       if (TMR.ev.length > n) t(parent, '+ ' + (TMR.ev.length - n) + ' more', tw(10), SOFT)
     }
     const tkRows = (parent, n, size) => {
-      for (const x of TMR.tk.slice(0, n)) {
+      for (const x of TMR.tk.slice(0, CNT || n)) {
         const r = parent.addStack(); r.centerAlignContent(); r.spacing = 6; if (x.id) r.url = taskUrl(x.id)
-        const imp = x.priority >= 3; const mk = t(r, imp ? '•' : '–', tw(size - 1), imp ? GOLD : SOFT); if (x.id) mk.url = doneUrl(x.id); t(r, x.title, imp ? F(size, 'Medium') : tw(size), INK).minimumScaleFactor = 0.85; r.addSpacer()
+        const imp = x.priority >= 3; const mk = t(r, mkc(imp), tw(size - 1), imp ? GOLD : SOFT); if (x.id) mk.url = doneUrl(x.id); t(r, x.title, imp ? F(size, 'Medium') : tw(size), INK).minimumScaleFactor = 0.85; r.addSpacer()
         if (x.dueTime != null) t(r, clk(x.dueTime), tw(10), SOFT)
         parent.addSpacer(5)
       }
@@ -654,7 +654,7 @@ export default () => `  } else if (KIND === 'study') {
     const h = w.addStack(); h.centerAlignContent(); cap(h, 'DUE'); h.addSpacer(); t(h, over ? over + '개 지남' : '2주 ' + DUE.length + '개', label(8), over ? GOLD : SOFT)
     w.addSpacer(10)
     const n0 = fam === 'small' ? 4 : fam === 'medium' ? 5 : 11, n = DUE.length === n0 + 1 ? n0 + 1 : n0
-    for (const x of DUE.slice(0, n)) {
+    for (const x of DUE.slice(0, CNT || n)) {
       const r = w.addStack(); r.centerAlignContent(); r.spacing = 8; if (x.id) r.url = doneUrl(x.id)
       const tg = r.addStack(); tg.size = new Size(fam === 'small' ? 36 : 42, 0); t(tg, dueTxt(x), tw(10), dueIn(x) <= 0 ? GOLD : SOFT).minimumScaleFactor = 0.7; tg.addSpacer()
       t(r, x.title, x.priority >= 3 ? F(TS, 'Medium') : tw(TS), INK).minimumScaleFactor = 0.85; r.addSpacer()
@@ -715,7 +715,7 @@ export default () => `  } else if (KIND === 'study') {
       R.addSpacer()
     } else {
       const n = fam === 'small' ? 4 : 10
-      for (const x of ddAll.slice(0, n)) { ddLine(w, x, fam === 'small' ? 12 : 14); w.addSpacer(fam === 'small' ? 6 : 10) }
+      for (const x of ddAll.slice(0, CNT || n)) { ddLine(w, x, fam === 'small' ? 12 : 14); w.addSpacer(fam === 'small' ? 6 : 10) }
     }
   } else if (KIND === 'quick') {
     // ── 바로 시작: 과목 누르면 스톱워치 시작 · 빠른 추가 (소형은 최근 과목 하나) ──
@@ -762,7 +762,7 @@ export default () => `  } else if (KIND === 'study') {
       f.addSpacer()
     }
     const subList = (P2, n, wd, size) => {
-      const xs = subMins.slice(0, n), mx = (xs[0] && xs[0].m) || 1
+      const xs = subMins.slice(0, CNT || n), mx = (xs[0] && xs[0].m) || 1
       for (const x of xs) {
         const r = P2.addStack(); r.centerAlignContent(); const d = r.addStack(); d.size = new Size(6, 6); d.cornerRadius = 3; d.backgroundColor = x.s.color ? new Color(x.s.color) : GOLD; r.addSpacer(6)
         t(r, x.s.name, tw(size), INK).minimumScaleFactor = 0.8; r.addSpacer(); t(r, hm(x.m), tw(size - 1), SOFT)
@@ -818,7 +818,7 @@ export default () => `  } else if (KIND === 'study') {
       const L = row.addStack(); L.layoutVertically(); L.size = new Size(cw, 0); for (const x of hs.slice(0, 4)) hRow(L, x, cw)
       row.addSpacer(12); vrule(row, Math.max(20, MH - 6)); row.addSpacer(12)
       const R = row.addStack(); R.layoutVertically(); R.size = new Size(cw, 0); for (const x of hs.slice(4, n)) hRow(R, x, cw)
-    } else for (const x of hs.slice(0, n)) hRow(w, x, inner)
+    } else for (const x of hs.slice(0, CNT || n)) hRow(w, x, inner)
   } else if (KIND === 'note') {
     // ── 노트: 내용 보기 위주 — 작은 제목 한 줄 + 본문을 높이만큼 (중형은 넘치면 두 단) ──
     const n = pickNote(), L0 = n ? n.l : []
@@ -1316,6 +1316,34 @@ export default () => `  } else if (KIND === 'study') {
       const B2 = row.addStack(); B2.layoutVertically(); B2.size = new Size(cw, innerH); todoCol(B2, cw, innerH); B2.addSpacer()
     }
     FILL = true
+  } else if (KIND === 'evsplit') {
+    // ── 일정 · 할 일 반반: 왼쪽 오늘 남은 일정 · 오른쪽 할 일 (소형은 위아래) ──
+    const nm2 = new Date().getHours() * 60 + new Date().getMinutes()
+    const EVT = ((data.cal || {})[today] || []).filter((e) => e.s == null || (e.e ?? e.s + 60) > nm2).sort((a, b) => (a.s ?? -1) - (b.s ?? -1))
+    const fsT = fam === 'small' ? 11.5 : 12.5, per = (hh) => Math.max(1, Math.floor((hh - 16 * SCALE) / ((fsT * 1.3 + 4) * SCALE)))
+    const evCol = (P2, wd, hh) => {
+      P2.url = link('planner.today')
+      const a = P2.addStack(); a.size = new Size(wd, 0); cap(a, 'PLAN'); a.addSpacer(); t(a, String(EVT.length), label(8), GOLD); P2.addSpacer(5)
+      for (const e of EVT.slice(0, CNT || per(hh))) { const r = P2.addStack(); r.centerAlignContent(); r.spacing = 5; const bar = r.addStack(); bar.size = new Size(2, 11); bar.cornerRadius = 1; bar.backgroundColor = e.c ? new Color(e.c) : RULE; t(r, e.s == null ? '종일' : clk(e.s % 1440), tw(fsT - 2.5), SOFT); t(r, e.t, tw(fsT), INK).minimumScaleFactor = 0.8; r.addSpacer(); P2.addSpacer(4) }
+      if (!EVT.length) t(P2, '남은 일정 없음', tw(fsT - 1), SOFT)
+    }
+    const todoCol = (P2, wd, hh) => {
+      P2.url = link('tasks')
+      const a = P2.addStack(); a.size = new Size(wd, 0); cap(a, 'TO DO'); a.addSpacer(); t(a, done + '/' + items.length, label(8), GOLD); P2.addSpacer(5)
+      taskRows(P2, wd, CNT || per(hh), fsT)
+    }
+    if (fam === 'small') {
+      const hA = Math.round(innerH * 0.5), hB = innerH - hA - 11
+      const A = w.addStack(); A.layoutVertically(); A.size = new Size(inner, hA); evCol(A, inner, hA); A.addSpacer()
+      w.addSpacer(5); rule(w, inner); w.addSpacer(5)
+      const B2 = w.addStack(); B2.layoutVertically(); B2.size = new Size(inner, hB); todoCol(B2, inner, hB); B2.addSpacer()
+    } else {
+      const cw = Math.floor((inner - 24.6) / 2), row = w.addStack(); row.size = new Size(inner, innerH); row.topAlignContent()
+      const A = row.addStack(); A.layoutVertically(); A.size = new Size(cw, innerH); evCol(A, cw, innerH); A.addSpacer()
+      row.addSpacer(12); vrule(row, innerH); row.addSpacer(12)
+      const B2 = row.addStack(); B2.layoutVertically(); B2.size = new Size(cw, innerH); todoCol(B2, cw, innerH); B2.addSpacer()
+    }
+    FILL = true
   } else if (KIND === 'hero') {
     // ── 위 큰 수 · 아래 목록: 오늘 공부 시간을 크게, 아래 남은 할 일 ──
     const bz = fam === 'small' ? 34 : fam === 'medium' ? 32 : 64
@@ -1559,6 +1587,8 @@ export default () => `  } else if (KIND === 'study') {
   t(w, '위젯 오류', label(lock ? 10 : 12), lock ? null : INK)
   t(w, lock ? msg.slice(0, 60) : msg + ' · 스크립트를 앱에서 다시 복사해 보세요', tw(lock ? 9 : 11), lock ? null : SOFT, lock ? 2 : 4)
 }
+// 새로 고침 버튼 (앱 설정 › 위젯): 오른쪽 아래 작은 ↻
+if (STM.widgetRefresh && !lock) { const rf = w.addStack(); rf.addSpacer(); t(rf, '↻', tw(9), SOFT); rf.url = 'scriptable:///run/' + encodeURIComponent(Script.name()) + '?act=refresh' }
 return w
 }
 

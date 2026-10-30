@@ -156,7 +156,10 @@ export default function Settings() {
               {[['last', '마지막으로 보던 화면'], ['home', '홈'], ['tasks.list', '할 일'], ['study.timer', '타이머'], ['study.log', '기록 입력'], ['study.records', '공부 통계'], ['planner.today', '캘린더 · 오늘'], ['planner.month', '캘린더 · 월'], ['notes.daily', '노트 · 데일리']].map(([k, l]) => <option key={k} value={k}>{l}</option>)}
             </select>
           </Field>
-          <Field label="주 시작"><Seg value={st.weekStart} onChange={(v) => setSettings({ weekStart: v })} options={[[1, '월요일'], [0, '일요일']]} /></Field>
+          <Field label="주 시작 (달력 · 주간 · 이번 주 · 통계 모두)"><Seg value={st.weekStart} onChange={(v) => setSettings({ weekStart: v })} options={[[1, '월요일'], [0, '일요일']]} /></Field>
+          <Field label="날짜 표기"><Seg value={st.dateFmt || 'kr'} onChange={(v) => setSettings({ dateFmt: v })} options={[['kr', '10월 30일 (금)'], ['dot', '10.30 (금)'], ['long', '10월 30일 금요일']]} /></Field>
+          <Field label="공부 시간 표기"><Seg value={st.durFmt || 'kr'} onChange={(v) => setSettings({ durFmt: v })} options={[['kr', '1시간 20분'], ['colon', '1:20']]} /></Field>
+          <Toggle label="진동 피드백" checked={st.haptics !== false} onChange={(v) => setSettings({ haptics: v })} />
           <div className="row">
             <Field label="하루 목표(분)"><input className="input" type="number" step="10" value={st.goalDaily} onChange={(e) => setSettings({ goalDaily: +e.target.value })} /></Field>
             <Field label="주간 목표(분)"><input className="input" type="number" step="30" value={st.goalWeekly} onChange={(e) => setSettings({ goalWeekly: +e.target.value })} /></Field>
@@ -910,7 +913,15 @@ function DesignDetail({ th, setTheme, st }) {
         {S('강조 상자', 'calloutStyle', [['tag', '이름표'], ['band', '색 띠만']], 'tag')}
         {S('완료한 줄', 'doneStyle', [['strike', '취소선'], ['fade', '흐리게'], ['keep', '그대로']], 'strike')}
         {S('구분선', 'divStyle', [['solid', '실선'], ['dot', '점선'], ['wave', '물결']], 'solid')}
-        {S('체크박스', 'checkShape', [['', '자동'], ['square', '네모'], ['round', '둥근'], ['pencil', '연필']], '')}
+        {S('체크박스', 'checkShape', [['', '자동'], ['square', '네모'], ['round', '원'], ['line', '선'], ['pencil', '연필']], '')}
+        <Toggle label="체크할 때 작은 번짐" checked={th.checkBurst !== false} onChange={(v) => setTheme({ checkBurst: v })} />
+        {S('완료 줄 긋기', 'strikeSpeed', [['normal', '보통'], ['slow', '천천히']], 'normal')}
+        {S('할 일 글자 크기', 'taskFs', [['s', '작게'], ['m', '보통'], ['l', '크게']], 'm')}
+        {S('할 일 줄 간격', 'taskDens', [['tight', '촘촘하게'], ['normal', '보통']], 'normal')}
+        {S('할 일 제목 줄 수', 'taskLines', [['1', '한 줄'], ['2', '두 줄까지'], ['all', '전부']], 'all')}
+        {S('과목 표시', 'subjTag', [['tag', '배지'], ['dot', '점 + 글자']], 'tag')}
+        {S('홈 카드 간격', 'homeGap', [['tight', '촘촘하게'], ['normal', '보통'], ['loose', '넉넉하게']], 'normal')}
+        {S('달력 일정 글자', 'evChip', [['s', '작게'], ['m', '보통']], 's')}
         {S('진행선', 'progStyle', [['', '자동'], ['solid', '실선'], ['dot', '점선'], ['pencil', '연필 빗금']], '')}
         {S('표 머리줄', 'thColor', [['gray', '회색'], ['none', '무색'], ['tint', '옅은 포인트색']], 'gray')}
         {S('칩·배지 색 농도', 'tint', [['light', '옅게'], ['normal', '보통'], ['strong', '진하게']], 'normal')}

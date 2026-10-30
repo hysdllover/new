@@ -43,6 +43,14 @@ export function WidgetFontField() {
       <Field label="위젯 배경 무늬"><Seg value={st.widgetPattern || 'plain'} onChange={(v) => setSettings({ widgetPattern: v })} options={[['plain', '무지'], ['grid', '모눈'], ['line', '줄']]} /></Field>
       <Toggle label="위젯 낙서 (물결 밑줄 · 별 · 체크)" checked={st.widgetDoodle !== false} onChange={(v) => setSettings({ widgetDoodle: v })} />
       <Toggle label="별표 D-day 색을 위젯 포인트로 (진행선 · D-day 숫자)" checked={st.widgetDdColor !== false} onChange={(v) => setSettings({ widgetDdColor: v })} />
+      <Field label="위젯 날짜 표기"><Seg value={st.widgetDate || 'def'} onChange={(v) => setSettings({ widgetDate: v === 'def' ? null : v })} options={[['def', 'FRI · 30 OCT'], ['num', '10.30 금'], ['en', 'Oct 30 Fri']]} /></Field>
+      <Toggle label="위젯 위쪽 날짜 줄 숨기기" checked={!!st.widgetNoDate} onChange={(v) => setSettings({ widgetNoDate: v })} />
+      <Field label="위젯 시간 표기"><Seg value={st.widgetClock || '24'} onChange={(v) => setSettings({ widgetClock: v })} options={[['24', '15:05'], ['12', '3:05p']]} /></Field>
+      <Field label="위젯 할 일 앞 표시"><Seg value={st.widgetMark || 'dash'} onChange={(v) => setSettings({ widgetMark: v })} options={[['dash', '선 –'], ['dot', '점 •'], ['box', '네모 □']]} /></Field>
+      <Field label="위젯 글자 정렬"><Seg value={st.widgetAlign || 'left'} onChange={(v) => setSettings({ widgetAlign: v })} options={[['left', '왼쪽'], ['center', '가운데']]} /></Field>
+      <Field label="위젯 글자색"><Seg value={st.widgetInk || 'normal'} onChange={(v) => setSettings({ widgetInk: v })} options={[['normal', '기본'], ['dark', '한 단계 진하게']]} /></Field>
+      <Toggle label="위젯 새로 고침 버튼 (오른쪽 아래 ↻)" checked={!!st.widgetRefresh} onChange={(v) => setSettings({ widgetRefresh: v })} />
+      <div className="tiny muted">위젯마다: Parameter 뒤에 <b>*5</b> → 목록 5개, <b>#제목</b> → 위쪽 제목 바꾸기 (예: 할일*5#오늘 할 것)</div>
       <Field label="위젯 구분선"><Seg value={st.widgetRule || 'normal'} onChange={(v) => setSettings({ widgetRule: v })} options={[['none', '없음'], ['thin', '가늘게'], ['normal', '기본'], ['bold', '굵게']]} /></Field>
       <Field label="위젯 테마"><Seg value={st.widgetTheme || 'auto'} onChange={(v) => setSettings({ widgetTheme: v })} options={[['auto', '자동'], ['white', '흰 글씨'], ['black', '검은 글씨'], ['paper', '종이'], ['night', '다크'], ['mono', '단색']]} /></Field>
       <div className="tiny muted" style={{ marginTop: -4 }}>흰·검은 글씨는 투명 배경(Scriptable 메뉴)과 함께, 종이·다크는 배경색까지 바꿔요. 자동은 Scriptable 메뉴의 글자색을 따라요.</div>
@@ -466,6 +474,11 @@ export function WidgetPreview() {
   const tdRows = (n, fs) => <>{items.slice(0, n).map((t) => <div key={t.id} className={'dw-todo' + (t.done ? ' dw-soft' : '')} style={{ fontSize: fs }}><span className={t.priority >= 3 ? 'dw-gold' : 'dw-soft'}>{t.done ? '✓' : t.priority >= 3 ? '•' : '–'}</span><span className="ellipsis" style={t.done ? { textDecoration: 'line-through' } : null}>{t.title}</span></div>)}{!items.length && <div className="dw-soft">All clear.</div>}</>
   const nColP = (k, fs) => <><div className="ellipsis" style={{ fontSize: fs + 1, marginBottom: 4 }}>{n0 ? n0.t : '노트가 없어요'}</div>{nLines(k, fs)}</>
   const halfP = (k, n) => <><div className="col" style={{ gap: 0, flex: 1, minWidth: 0, overflow: 'hidden' }}>{nColP(k, 11)}</div><div className="dw-vr" /><div className="col" style={{ gap: 0, flex: 1, minWidth: 0 }}>{hdr('TO DO', `${done}/${items.length}`)}{tdRows(n, 12.5)}</div></>
+  // 일정 · 할 일 반반: 왼쪽 오늘 남은 일정 · 오른쪽 할 일
+  const evColP = (n) => <>{hdr('PLAN', String(nowL.filter((x) => x.e > nmP).length))}{nowL.filter((x) => x.e > nmP).slice(0, n).map((x, k) => <div key={k} className="dw-todo" style={{ fontSize: 12 }}><span className="dw-soft" style={{ width: 34, flexShrink: 0 }}>{fmtTime(x.s)}</span><span className="ellipsis">{x.t}</span></div>)}{!nowL.some((x) => x.e > nmP) && <div className="dw-soft" style={{ fontSize: 11 }}>남은 일정 없음</div>}</>
+  const evHalf = (n) => <><div className="col" style={{ gap: 0, flex: 1, minWidth: 0, overflow: 'hidden' }}>{evColP(n)}</div><div className="dw-vr" /><div className="col" style={{ gap: 0, flex: 1, minWidth: 0 }}>{hdr('TO DO', `${done}/${items.length}`)}{tdRows(n, 12.5)}</div></>
+  V['일정할일'] = [M(<><div style={{ overflow: 'hidden', flex: '0 0 50%' }}>{evColP(2)}</div><div className="dw-hr" style={{ margin: '5px 0' }} />{hdr('TO DO', `${done}/${items.length}`)}{tdRows(2, 11.5)}</>), evHalf(4), evHalf(12)]
+  V['공부중'] = V['공부']
   V['반반'] = [M(<><div style={{ overflow: 'hidden', flex: '0 0 50%' }}>{nColP(2, 10)}</div><div className="dw-hr" style={{ margin: '5px 0' }} />{hdr('TO DO', `${done}/${items.length}`)}{tdRows(2, 11.5)}</>), halfP(5, 4), halfP(16, 12)]
   V['큰수'] = [[34, 2], [38, 2], [64, 7]].map(([sz, n]) => M(<>{hdr('TODAY', dateStr)}<div className="dw-big"><span style={{ fontSize: sz }}>{hm(mins)}</span><span className="grow" /><span className="dw-gold">{pct}%</span></div><div className="dw-line"><i style={{ width: pct + '%' }} /></div><div style={{ height: 10 }} />{list(n)}</>))
   const col3 = (k, right, body) => <div className="col" style={{ gap: 0, flex: 1, minWidth: 0, overflow: 'hidden' }}>{hdr(k, right)}{body}</div>
