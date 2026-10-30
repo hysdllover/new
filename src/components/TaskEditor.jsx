@@ -10,6 +10,7 @@ import { LinksEditor, FilesEditor } from './Attach.jsx'
 import { fmtDur, today, fmtShort, addDays, LOOSE, looseDue } from '../engine/date.js'
 import RecordEditor from './RecordEditor.jsx'
 import { openNote } from '../nav.js'
+import { newBlock } from '../lib/notes.js'
 import { startStopwatch } from '../lib/timer.js'
 import { go } from '../nav.js'
 
@@ -125,6 +126,12 @@ export default function TaskEditor({ id }) {
             {REMINDER_OPTS.map(([v, l]) => { const cur = taskReminders(t), on = cur.includes(v); return <button key={v} className={'chip' + (on ? ' on' : '')} onClick={() => up({ reminders: on ? cur.filter((x) => x !== v) : [...cur, v], remind: null })}>{l}</button> })}
           </div>
         </Field>
+        {!t.noteId && t.fromNote && find('notes', t.fromNote) && <div className="row small" style={{ gap: 6 }}><span className="muted">‘{find('notes', t.fromNote).title || '노트'}’에서 떼어 온 할 일</span><button className="chip" onClick={() => {
+          // 노트의 원래 자리 근처로 체크 줄을 다시 넣고 연결
+          const n = find('notes', t.fromNote), bs = [...(n.blocks || [])], i = Math.min(Math.max(0, t.fromIndex ?? bs.length), bs.length)
+          bs.splice(i, 0, { ...newBlock(), type: 'todo', text: t.title, taskId: id })
+          patch('notes', n.id, { blocks: bs }); patch('tasks', id, { noteId: n.id, fromNote: null, fromIndex: null }); toast('노트로 되돌렸어요')
+        }}>노트로 되돌리기</button></div>}
         {t.noteId && find('notes', t.noteId) && <div className="row small" style={{ gap: 6 }}><span className="muted">노트에서 만든 할 일 · 체크하면 노트에도 반영</span><button className="chip" onClick={() => { closeDetail(); openNote(t.noteId) }}>{find('notes', t.noteId).title || '노트'} 열기</button></div>}
         <Field label="링크"><LinksEditor links={t.links} onChange={(v) => up({ links: v })} /></Field>
         <Field label="첨부 (사진·PDF·HTML)"><FilesEditor ids={t.files} onChange={(v) => up({ files: v })} meta={{ subjectId: t.subjectId, taskId: id }} /></Field>

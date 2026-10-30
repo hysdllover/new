@@ -150,6 +150,8 @@ function DayView({ params }) {
     label: t.title,
     onDrop: (zone, pt) => {
       if (dropTaskOnTimeline(t, zone, pt)) return // 아이패드 2단 · 오늘 일정 타임라인으로
+      // 위쪽 날짜 칸에 놓으면 그날로
+      if (zone.dataset.drop?.startsWith('day:')) { const due = zone.dataset.drop.slice(4); if (t.due !== due) { const ch = recordChanges(() => updateTask(t.id, { due })); undoToast(`${fmtDate(due, { wd: false })}(으)로 옮겼어요`, ch) } return }
       if (t.dueTime != null) return
       const target = zone.dataset.drop
       if (!target?.startsWith('task:')) return
@@ -198,7 +200,7 @@ function DayView({ params }) {
           const n = ofDay(d).filter((t) => !t.done).length + (d === t0 ? live.filter((t) => t.due && t.due < t0 && !t.done).length : 0)
           const wd = parseYmd(d).getDay()
           return (
-            <button key={d} className={'day-cell' + (d === date ? ' on' : '') + (d === t0 ? ' today' : '')} onClick={() => go(d)}>
+            <button key={d} className={'day-cell' + (d === date ? ' on' : '') + (d === t0 ? ' today' : '')} data-drop={'day:' + d} onClick={() => go(d)}>
               <span className={'tiny' + (wd === 0 ? ' sun' : wd === 6 ? ' sat' : '')}>{WD[wd]}</span>
               <b>{parseYmd(d).getDate()}</b>
               <span className="day-n cnt">{n || ''}</span>
