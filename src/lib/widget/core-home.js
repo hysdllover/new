@@ -1587,8 +1587,6 @@ export default () => `  } else if (KIND === 'study') {
   t(w, '위젯 오류', label(lock ? 10 : 12), lock ? null : INK)
   t(w, lock ? msg.slice(0, 60) : msg + ' · 스크립트를 앱에서 다시 복사해 보세요', tw(lock ? 9 : 11), lock ? null : SOFT, lock ? 2 : 4)
 }
-// 새로 고침 버튼 (앱 설정 › 위젯): 오른쪽 아래 작은 ↻
-if (STM.widgetRefresh && !lock) { const rf = w.addStack(); rf.addSpacer(); t(rf, '↻', tw(9), SOFT); rf.url = 'scriptable:///run/' + encodeURIComponent(Script.name()) + '?act=refresh' }
 return w
 }
 

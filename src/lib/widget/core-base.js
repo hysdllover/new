@@ -319,8 +319,6 @@ const ACT = (() => {
 })()
 
 async function widgetAct(Q) {
-  // 새로 고침 버튼: 캐시 지우고 최신 데이터를 받아 둠 (위젯은 홈 화면으로 돌아가면 다시 그려짐)
-  if (Q.act === 'refresh') { try { const d = await fetchFresh(15); if (d && d.study) { d.at = Date.now(); CFM.writeString(cachePath, JSON.stringify(d)) } } catch (e) {} return }
   if (!ACT.tok() || !(data && data.gid)) return ACT.say('설정이 필요해요', 'Scriptable 에서 이 스크립트를 실행 › 메뉴 › 위젯에서 바로 처리 켜기')
   if (Q.act === 'view') { await miniApp(Q); await ACT.flush(); return }
   let msg = null
