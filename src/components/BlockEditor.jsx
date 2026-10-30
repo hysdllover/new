@@ -13,7 +13,7 @@ import { parseMention, today, monthStart, weekStart, addDays, parseYmd, fmtClock
 import { openNote, go, setParams } from '../nav.js'
 import { useTimerState, useTick, elapsed, startStopwatch, pause, resume, stop } from '../lib/timer.js'
 import { applyFilter } from '../views/tasks/filter.js'
-import { startDrag } from '../lib/drag.js'
+import { startDrag, longPress } from '../lib/drag.js'
 import { applyMark, activeMarks, markRuns, plainText } from '../lib/marks.js'
 import MathTex from './MathTex.jsx'
 
@@ -223,6 +223,24 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
     } else if (e.key === 'Escape') { el.blur() }
   }
 
+  // 체크 줄 길게 누르기: 날짜 빠르게 정하기 · 노트에서 떼어 할 일 목록으로
+  const todoMenu = (pt, b) => {
+    const at = { currentTarget: { getBoundingClientRect: () => ({ left: pt.x, right: pt.x, top: pt.y, bottom: pt.y, width: 0, height: 0 }) } }
+    const due = (v, extra) => { const nb = commitBlock(b, note); if (nb !== b) upd(b.id, nb); if (nb.taskId) updateTask(nb.taskId, v ? { due: v, loose: null, ...extra } : { due: null, dueTime: null, loose: null }) }
+    const t0 = today()
+    openMenu(at, [
+      { label: '오늘', icon: 'calendar', onClick: () => due(t0) },
+      { label: '내일', icon: 'calendar', onClick: () => due(addDays(t0, 1)) },
+      { label: '이번 주 안', icon: 'calendar', onClick: () => due(addDays(weekStart(t0), 6), { loose: 'week' }) },
+      { label: '날짜 고르기…', icon: 'calendar', onClick: () => openSheet((close) => <input className="input" type="date" autoFocus onChange={(e) => { if (e.target.value) { due(e.target.value); close() } }} />, { title: '날짜' }) },
+      { label: '날짜 없음', icon: 'close', onClick: () => due(null) },
+      b.taskId && { label: '노트에서 떼어 할 일로', icon: 'tasks', onClick: () => {
+        // 줄은 노트에서 빼고 할 일은 그대로 (할 일 상세에서 '노트로 되돌리기')
+        patch('tasks', b.taskId, { noteId: null, fromNote: note?.id || null, fromIndex: list.findIndex((x) => x.id === b.id) })
+        const a = list.filter((x) => x.id !== b.id); onChange(a.length ? a : [newBlock()]); toast('할 일 목록으로 보냈어요')
+      } },
+    ].filter(Boolean))
+  }
   const blockMenu = (e, b) => { const r = e.currentTarget.getBoundingClientRect(), at = { currentTarget: { getBoundingClientRect: () => r } }; return openMenu(e, [
     ...(b.type === 'callout' ? TONES.filter(([t]) => t !== (b.tone || 'key')).map(([t, l]) => ({ label: `색 → ${l}`, onClick: () => upd(b.id, { tone: t }) })) : []),
     ...TYPES.filter(([t]) => t !== b.type && !SOLID.includes(b.type)).slice(0, 7).map(([t, l]) => ({ label: `→ ${l}`, onClick: () => { upd(b.id, { type: t }); if (t === 'todo') setEdit({ id: b.id, pos: (b.text || '').length }) } })),
@@ -276,7 +294,7 @@ export default function BlockEditor({ blocks = [], onChange, note, nested, readO
                     onBlur={(t) => { if (skip.current !== b.id) commit({ ...b, text: t }); setEdit((x) => (x?.id === b.id ? null : x)) }} />
                     {isMath(b) && <div className="math-prev">{b.text ? <MathTex tex={b.text} block /> : <span className="tiny muted">예: \frac{a}{b} · x^2 · \sqrt{x} · \sum_{k=1}^{n} k · \int_0^1 f(x)\,dx</span>}</div>}</>
                 ) : (
-                  <div className={'blk-v' + (task?.done ? ' done' : '')} onClick={() => !readOnly && setEdit({ id: b.id, pos: (b.text || '').length })}>{b.type === 'callout' && <span className="co-tag">{(TONES.find(([t]) => t === (b.tone || 'key')) || TONES[0])[1]}</span>}
+                  <div className={'blk-v' + (task?.done ? ' done' : '')} {...(b.type === 'todo' && !readOnly && (b.text || '').trim() ? longPress(() => ({ onHold: (pt) => todoMenu(pt, b) })) : null)} onClick={() => !readOnly && setEdit({ id: b.id, pos: (b.text || '').length })}>{b.type === 'callout' && <span className="co-tag">{(TONES.find(([t]) => t === (b.tone || 'key')) || TONES[0])[1]}</span>}
                     {isMath(b) ? (b.text ? <MathTex tex={b.text} block /> : <span className="muted">수식 (LaTeX)</span>) : b.type === 'code' ? (b.text ? <code className="blk-code-t">{b.text}</code> : <span className="muted">코드</span>) : b.text ? <Inline text={b.text} /> : <span className="muted">{list.length === 1 && nested ? '입력…' : list.length === 1 ? '입력하세요… (# 제목, - 목록, [] 체크, [[링크]], @내일 15:00)' : ' '}</span>}
                     {b.ref && <button className="ref-chip" onClick={(e) => { e.stopPropagation(); openDetail(b.ref.type, b.ref.id, { occ: b.ref.date }) }}>→ {refLabel(b.ref)}</button>}
                     {b.type === 'todo' && !b.ref && (readOnly ? task?.due && <span className="ref-chip">{task.due.slice(5).replace('-', '/')}</span> : (b.text || '').trim() && <DueBtn b={b} task={task} note={note} upd={upd} />)}

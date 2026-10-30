@@ -16,10 +16,13 @@ export function startDrag(e, { label, onMove, onDrop, source }) {
   const frame = () => {
     raf = 0
     place(px, py)
-    const el = document.elementFromPoint(px, py)?.closest('[data-drop]') // 고스트는 pointer-events: none
-    if (el !== zone) { zone?.classList.remove('drop-on'); el?.classList.add('drop-on'); zone = el }
+    let el = document.elementFromPoint(px, py)?.closest('[data-drop]') // 고스트는 pointer-events: none
+    if (el && source && (el === source || el.contains(source) && el.dataset.drop?.startsWith('task:'))) el = null // 제자리
+    if (el !== zone) { zone?.classList.remove('drop-on', 'drop-before', 'drop-after'); el?.classList.add('drop-on'); zone = el }
+    // 줄 사이에 놓을 자리를 가는 선으로 (위 절반 = 앞, 아래 절반 = 뒤)
+    if (zone && LINE.test(zone.dataset.drop || '')) { const r = zone.getBoundingClientRect(), before = py < r.top + r.height / 2; zone.classList.toggle('drop-before', before); zone.classList.toggle('drop-after', !before) }
     onMove?.(zone, { x: px, y: py })
-    if (autoScroll(py)) raf = requestAnimationFrame(frame) // 가장자리에 있으면 계속 부드럽게 스크롤
+    if (autoScroll(py, px)) raf = requestAnimationFrame(frame) // 가장자리에 있으면 계속 부드럽게 스크롤
   }
   const move = (ev) => {
     ev.preventDefault()
@@ -31,9 +34,10 @@ export function startDrag(e, { label, onMove, onDrop, source }) {
     window.removeEventListener('pointermove', move)
     window.removeEventListener('pointerup', end)
     window.removeEventListener('pointercancel', cancel)
-    ghost.remove(); source?.classList.remove('dragging'); zone?.classList.remove('drop-on')
+    ghost.remove(); source?.classList.remove('dragging'); zone?.classList.remove('drop-on', 'drop-before', 'drop-after')
     active = null
-    if (zone) onDrop?.(zone, { x: ev.clientX, y: ev.clientY })
+    // 거의 안 움직이고 놓으면(제자리) 아무 변화 없이
+    if (zone && Math.hypot((ev.clientX ?? x0) - x0, (ev.clientY ?? y0) - y0) > 12) onDrop?.(zone, { x: ev.clientX, y: ev.clientY })
   }
   const cancel = () => { zone = null; end({}) }
   window.addEventListener('pointermove', move, { passive: false })
@@ -43,11 +47,19 @@ export function startDrag(e, { label, onMove, onDrop, source }) {
   try { navigator.vibrate?.(10) } catch {}
 }
 
+const LINE = /^(task:|blk:|bb:)/
+// 손가락 아래에서 세로로 스크롤되는 가장 가까운 칸 (시트 · 목록 상자) — 없으면 본문
+function scroller(x, y) {
+  for (let el = document.elementFromPoint(x, y); el && el !== document.body; el = el.parentElement) {
+    if (el.scrollHeight > el.clientHeight + 4 && /auto|scroll/.test(getComputedStyle(el).overflowY)) return el
+  }
+  return document.getElementById('content')
+}
 // 가장자리에 가까울수록 빠르게 (한 프레임 최대 14px) · 스크롤했으면 true
-function autoScroll(y) {
-  const c = document.getElementById('content')
+export function autoScroll(y, x = innerWidth / 2) {
+  const c = scroller(x, y)
   if (!c) return false
-  const r = c.getBoundingClientRect(), top = r.top + 60, bot = r.bottom - 70
+  const r = c.getBoundingClientRect(), m = Math.min(60, r.height / 5), top = r.top + m, bot = r.bottom - m - 10
   const v = y < top ? -Math.min(14, (top - y) / 4 + 2) : y > bot ? Math.min(14, (y - bot) / 4 + 2) : 0
   if (!v) return false
   const before = c.scrollTop; c.scrollTop += v
@@ -105,12 +117,14 @@ export function dragReorder(e, i, onMove) {
   const row = e.currentTarget.closest('.reorder-row'), rows = [...row.parentNode.querySelectorAll(':scope > .reorder-row')], y0 = e.clientY
   const mids = rows.map((r) => { const b = r.getBoundingClientRect(); return b.top + b.height / 2 })
   const h = row.getBoundingClientRect().height + 1
+  const sc = scroller(e.clientX, e.clientY), s0 = sc?.scrollTop || 0, dS = () => (sc?.scrollTop || 0) - s0
   row.classList.add('lifting')
   rows.forEach((r) => r !== row && r.classList.add('reorder-shift'))
-  const target = (cy) => { const y = mids[i] + cy - y0; return mids.filter((m, k) => k !== i && m < y).length }
-  // 끄는 동안 사이에 있는 항목이 한 칸씩 비켜남
+  const target = (cy) => { const y = mids[i] + cy - y0 + dS(); return mids.filter((m, k) => k !== i && m < y).length }
+  // 끄는 동안 사이에 있는 항목이 한 칸씩 비켜남 · 가장자리면 자동 스크롤
   const mv = (ev) => {
-    row.style.transform = `translateY(${ev.clientY - y0}px)`
+    autoScroll(ev.clientY, ev.clientX)
+    row.style.transform = `translateY(${ev.clientY - y0 + dS()}px)`
     const j = target(ev.clientY)
     rows.forEach((r, k) => { if (k !== i) r.style.transform = k > i && k <= j ? `translateY(${-h}px)` : k < i && k >= j ? `translateY(${h}px)` : '' })
   }

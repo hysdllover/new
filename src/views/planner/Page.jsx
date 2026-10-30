@@ -46,7 +46,7 @@ export default function Page({ date }) {
             {one && <section><div className="np-cap">오늘의 하나</div><div className="np-one">{one}</div></section>}
             <section>
               <div className="np-cap">할 일 {list.length ? `${list.filter((t) => t.done).length}/${list.length}` : ''}</div>
-              {list.map((t) => <div key={t.id} className={'np-row' + (t.done ? ' done' : '')}><Check on={t.done} onClick={() => toggleTask(t.id)} color={subjects.find((s) => s.id === t.subjectId)?.color} /><span className="ttl grow">{t.title}</span>{t.dueTime != null && <span className="tiny muted">{fmtTime(t.dueTime)}</span>}</div>)}
+              {list.map((t) => <div key={t.id} className={'np-row' + (t.done ? ' done' : '')}><Check on={t.done} onClick={() => toggleTask(t.id)} color={subjects.find((s) => s.id === t.subjectId)?.color} /><span className="grow np-tw"><span className="ttl">{t.title}</span></span>{t.dueTime != null && <span className="tiny muted">{fmtTime(t.dueTime)}</span>}</div>)}
               {!list.length && <div className="np-line" />}
             </section>
             {evs.length > 0 && <section><div className="np-cap">일정</div>{evs.map((e, i) => <div key={i} className="np-row"><span className="np-ev" style={{ background: e.color || 'var(--accent)' }} /><span className="grow">{e.title}</span><span className="tiny muted">{e.start != null ? fmtTime(e.start) : '종일'}</span></div>)}</section>}

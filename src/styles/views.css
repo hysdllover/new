@@ -1351,3 +1351,7 @@ html[data-done="fade"] .task-item .title .ttl::after, html[data-done="keep"] .ta
 .sub-grip { touch-action: none; cursor: grab; color: var(--muted); font-size: 11px; letter-spacing: -2px; padding: 8px 4px 8px 0; user-select: none; -webkit-user-select: none; }
 .reorder-row.lifting { position: relative; z-index: 2; background: var(--surface); box-shadow: 0 2px 8px rgb(0 0 0 / .08); border-radius: 8px; }
 .top-grip { touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+/* 오늘 페이지: 완료 줄은 글자 길이만큼 · 가늘고 옅게 */
+.np-tw { min-width: 0; }
+.np-row .ttl { background-image: linear-gradient(color-mix(in srgb, var(--muted) 60%, transparent), color-mix(in srgb, var(--muted) 60%, transparent)); }
+.np-row.done .ttl { background-size: 100% 1px; }
