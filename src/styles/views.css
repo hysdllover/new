@@ -1355,3 +1355,5 @@ html[data-done="fade"] .task-item .title .ttl::after, html[data-done="keep"] .ta
 .np-tw { min-width: 0; }
 .np-row .ttl { background-image: linear-gradient(color-mix(in srgb, var(--muted) 60%, transparent), color-mix(in srgb, var(--muted) 60%, transparent)); }
 .np-row.done .ttl { background-size: 100% 1px; }
+/* 할 일 완료 줄: 더 가늘고 옅게 */
+.task-item .title .ttl::after { height: 3.5px; opacity: .5; }
