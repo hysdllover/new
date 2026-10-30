@@ -285,7 +285,7 @@ function DoneTimeline({ items, subjects }) {
   const done = items.filter((t) => t.doneAt).sort((a, b) => b.doneAt - a.doneAt)
   const groups = []
   for (const t of done) { const d = tsToYmd(t.doneAt); let g = groups[groups.length - 1]; if (!g || g.d !== d) groups.push(g = { d, list: [] }); g.list.push(t) }
-  const ws = weekStart(today(), 1)
+  const ws = weekStart(today())
   const week = done.filter((t) => tsToYmd(t.doneAt) >= ws).length
   return (
     <div className="col">

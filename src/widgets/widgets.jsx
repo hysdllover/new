@@ -22,7 +22,7 @@ import { go, openNote, setParams } from '../nav.js'
 import { useTimerState, useTick, elapsed, startStopwatch, pause, resume, stop } from '../lib/timer.js'
 import { noteTitle, noteText } from '../lib/notes.js'
 
-const goto = (tab, seg) => () => go(tab, seg)
+const goto = (tab, seg, params) => () => go(tab, seg, params)
 
 function Now() {
   const events = useColl('events'), blocks = useColl('blocks'), tasks = useColl('tasks')
@@ -378,7 +378,7 @@ function WeekStudy() {
   const byDay = {}
   for (const x of sessions) byDay[x.date] = (byDay[x.date] || 0) + x.dur
   const week = Array.from({ length: 7 }, (_, i) => byDay[addDays(today(), i - 6)] || 0).reduce((a, b) => a + b, 0)
-  return <Card title="최근 7일" action={<span className="tiny muted">{fmtDur(week)}</span>}><WeekBars values={byDay} goal={goalFor(st, today())} /></Card>
+  return <Card title="최근 7일" action={<span className="tiny muted"><span key={week} className="num-roll">{fmtDur(week)}</span></span>}><WeekBars values={byDay} goal={goalFor(st, today())} /></Card>
 }
 
 function MonthHeatW({ w }) {
@@ -401,8 +401,8 @@ function Streak() {
   for (const x of sessions) { if (x.date === y) yd += x.dur || 0; if (x.date >= ws && x.date <= d) wk += x.dur || 0 }
   return (
     <Card>
-      <div className="row between"><span className="tiny muted">어제</span><b style={{ fontWeight: 300 }}>{fmtDur(yd) || '0분'}</b></div>
-      <div className="row between" style={{ marginTop: 8 }}><span className="tiny muted">이번 주</span><b style={{ fontWeight: 300 }}>{fmtDur(wk) || '0분'}</b></div>
+      <div className="row between"><span className="tiny muted">어제</span><b style={{ fontWeight: 300 }} key={yd} className="num-roll">{fmtDur(yd) || '0분'}</b></div>
+      <div className="row between" style={{ marginTop: 8 }}><span className="tiny muted">이번 주</span><b style={{ fontWeight: 300 }} key={wk} className="num-roll">{fmtDur(wk) || '0분'}</b></div>
     </Card>
   )
 }
@@ -503,7 +503,7 @@ function WeekGoal() {
     <Card className="center" onClick={goto('study', 'records')} style={{ cursor: 'pointer' }}>
       <div className="col" style={{ alignItems: 'center', gap: 4 }}>
         <Ring value={m / (st.goalWeekly || 1)} size={78} color="var(--c2)"><b className="small"><Roll value={Math.round((m / (st.goalWeekly || 1)) * 100) + '%'} /></b></Ring>
-        <span className="small">이번 주 {fmtDur(m)}</span><span className="tiny muted">목표 {fmtDur(st.goalWeekly)}</span>
+        <span className="small">이번 주 <span key={m} className="num-roll">{fmtDur(m)}</span></span><span className="tiny muted">목표 {fmtDur(st.goalWeekly)}</span>
       </div>
     </Card>
   )
@@ -675,7 +675,7 @@ function YearProgress() {
   useNow(60000)
   const n = new Date(), y = n.getFullYear()
   const frac = (a, b) => Math.min(1, Math.max(0, (n - a) / (b - a)))
-  const ws = parseYmd(weekStart(today(), 1))
+  const ws = parseYmd(weekStart(today()))
   const rows = [['올해', frac(new Date(y, 0, 1), new Date(y + 1, 0, 1))], ['이번 달', frac(new Date(y, n.getMonth(), 1), new Date(y, n.getMonth() + 1, 1))], ['이번 주', frac(ws, new Date(+ws + 7 * 86400000))], ['오늘', frac(new Date(y, n.getMonth(), n.getDate()), new Date(y, n.getMonth(), n.getDate() + 1))]]
   return (
     <Card title="시간은 흐른다">
@@ -690,7 +690,25 @@ function WeekGoalsW() {
   return <Card title="이번 주 목표" action={<button className="tiny muted" onClick={goto('tasks', 'list')}>편집 →</button>}><WeekGoals compact /></Card>
 }
 
+// 내일 미리보기: 저녁 6시부터 내일 일정·할 일 (그 전엔 한 줄 안내)
+function Tomorrow() {
+  const tasks = useColl('tasks'); useColl('events'); useNow(60000)
+  const tm = addDays(today(), 1)
+  if (nowMin() < 18 * 60) return <Card title="내일 미리보기"><div className="tiny muted">저녁 6시부터 내일 일정과 할 일이 보여요</div></Card>
+  const evs = eventsOn(tm), cls = classesOn(tm), tk = tasks.filter((t) => !t.done && !t.archived && t.due === tm)
+  return (
+    <Card title={'내일 · ' + fmtDate(tm)} action={<button className="tiny muted" onClick={goto('planner', 'today', { date: tm })}>열기 →</button>}>
+      <div className="col" style={{ gap: 3 }}>
+        {[...cls.map((c) => ({ s: c.start, t: c.title })), ...evs.map((e) => ({ s: e.start, t: e.title }))].sort((a, b) => (a.s ?? -1) - (b.s ?? -1)).slice(0, 5).map((x, i) => <div key={i} className="small row" style={{ gap: 8 }}><span className="tiny muted" style={{ width: 38 }}>{x.s == null ? '종일' : fmtTime(x.s)}</span><span className="ellipsis">{x.t}</span></div>)}
+        {tk.slice(0, 5).map((t) => <div key={t.id} className="small ellipsis">– {t.title}</div>)}
+        {!evs.length && !cls.length && !tk.length && <div className="tiny muted">내일은 아직 비어 있어요</div>}
+      </div>
+    </Card>
+  )
+}
+
 export const WIDGETS = {
+  tmrw: { label: '내일 미리보기 (저녁 6시부터)', C: Tomorrow, size: 'm' },
   now: { label: '지금 (현재·다음 일정)', C: Now, size: 'm' },
   top3: { label: '오늘의 Top 3', C: Top3, size: 'm' },
   goal: { label: '목표 공부시간', C: Goal, size: 's' },

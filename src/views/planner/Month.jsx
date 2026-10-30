@@ -41,6 +41,19 @@ export const layerAlpha = (st, e) => (e.layer === 'academy' ? st.layerAlpha?.aca
 const LAYERS = [['events', '일정'], ['academy', '학원'], ['tasks', '할 일'], ['study', '공부기록'], ['studyNum', '공부시간'], ['habits', '습관'], ['meds', '약']]
 const loadLayers = () => { try { const v = JSON.parse(localStorage.getItem('layers')) || { events: 1, tasks: 1, study: 1 }; return { academy: 1, studyNum: 1, ...v } } catch { return { events: 1, academy: 1, tasks: 1, study: 1 } } }
 
+// D-day 칩을 누르면: 남은 날 · 주 · 주말 횟수
+function ddPeek(x) {
+  const n = diffDays(x.date, today())
+  let we = 0; for (let d = addDays(today(), 1); d < x.date; d = addDays(d, 1)) if (parseYmd(d).getDay() === 6) we++
+  openSheet(() => (
+    <div className="col" style={{ gap: 6 }}>
+      <div style={{ fontSize: '2em', fontWeight: 200 }}>{n === 0 ? 'D-day' : 'D-' + n}</div>
+      <div className="small">{fmtDate(x.date)}</div>
+      <div className="small muted">{Math.floor(n / 7)}주 {n % 7}일 · 남은 주말 {we}번</div>
+    </div>
+  ), { title: x.title })
+}
+
 export default function Month({ date, setDate }) {
   const st = useSettings()
   const [layers, setLayers] = useState(loadLayers)
@@ -92,7 +105,7 @@ export default function Month({ date, setDate }) {
             const inM = parseYmd(d).getMonth() === month
             const hol = holiday(d)
             const wd = parseYmd(d).getDay()
-            const evs = eventsOn(d, events).filter((e) => (e.layer === 'academy' ? layers.academy : layers.events))
+            const evs = eventsOn(d, events).filter((e) => (e.layer === 'academy' ? layers.academy : layers.events) && !ddays.some((x) => x.date === d && x.title === e.title))
             const due = layers.tasks ? tasks.filter((t) => t.due === d && !t.archived) : []
             const mins = studyBy[d] || 0
             const heat = layers.study && mins ? Math.min(1, mins / goalFor(st, d)) : 0
@@ -109,7 +122,7 @@ export default function Month({ date, setDate }) {
                 {(() => { const k = (find('days', d)?.deco || []).find((x) => !TAPES[x.k]); return k ? <span className="mcell-stk"><Sticker k={k.k} color={k.c} size={16} /></span> : null })()}
                 <div className="mitems">
                   {evs.slice(0, 3).map((e) => <div key={e.id} className="mev ellipsis" style={{ '--c': e.color || 'var(--accent)', '--a': layerAlpha(st, e) }}>{e.title}</div>)}
-                  {ddays.filter((x) => x.date === d && !evs.some((e) => e.title === x.title)).map((x) => <div key={x.id} className="mev ellipsis" style={{ '--c': x.color || 'var(--c4)', '--a': 1 }}>{x.title}</div>)}
+                  {ddays.filter((x) => x.date === d).map((x) => <div key={x.id} className="mev ellipsis" style={{ '--c': x.color || 'var(--c4)', '--a': 1 }} onClick={(e) => { e.stopPropagation(); ddPeek(x) }}>{x.title}</div>)}
                   {evs.length > 3 && <div className="tiny muted">+{evs.length - 3}</div>}
                   {due.length > 0 && (st.theme?.calTaskDots ? <div className="mtdots">{due.slice(0, 8).map((t) => <i key={t.id} className={t.done ? 'on' : ''} />)}</div> : <div className="mtask tiny">☐ {due.filter((t) => !t.done).length}/{due.length}</div>)}
                 </div>

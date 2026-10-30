@@ -4,7 +4,9 @@ export default () => `function build(fam) {
 const lock = fam.startsWith('accessory')
 // 진행·남은분은 잠금 원형용 — 다른 크기에선 공부·지금 유형으로
 KIND = fam === 'accessoryCircular' ? BASEKIND : ({ pct: 'study', mins: 'now' }[BASEKIND] || BASEKIND)
-if (KIND === 'custom' && fam.startsWith('accessory')) KIND = 'dash' // 내 위젯의 잠금 화면은 대시보드와 같게
+if (KIND === 'custom' && fam.startsWith('accessory')) KIND = 'dash'
+// 공부 중(잠금 화면용): 홈 화면에선 타이머 위젯과 같게
+if (KIND === 'live' && !lock) KIND = 'timer' // 내 위젯의 잠금 화면은 대시보드와 같게
 // 시간대별 자동: 아침(5~12시) 오늘 한눈에 · 낮(12~20시) 공부 · 밤 내일 준비
 if (KIND === 'auto') { const hr = new Date().getHours(); KIND = hr >= 5 && hr < 12 ? 'today' : hr >= 12 && hr < 20 ? 'study' : 'tmrw' }
 // 잠금 화면엔 그림 없이 같은 뜻의 형태로
@@ -88,6 +90,9 @@ if (!data) {
   SCALE = Math.max(0.8, Math.min(1.3, +st.widgetScale || 1)); if (lock) SCALE = Math.min(1.25, SCALE * 1.18) // 잠금 화면은 꽉 차게 (기본 1.18배)
   WSHIFT = +st.widgetWeight || 0
   CLEAR = st.widgetClear !== false && !lock // 기본 켬
+  MARK = st.widgetMark || 'dash'; ALIGN = st.widgetAlign || 'left'
+  // 글자색 한 단계 진하게 (자동 글자색일 때)
+  if (st.widgetInk === 'dark' && inkMode === 'auto') { INK = dyn('#161a21', '#f5f7fa'); SOFT = dyn('#5a6270', '#aab1bd'); GOLD = dyn('#4f5f78', '#b4c1d6') }
   if (CLEAR) {
     // 투명·클리어 위젯: 한 단계 굵게, 흐린 글자도 또렷하게, 선도 진하게
     WSHIFT = Math.max(WSHIFT, 0) + 1
@@ -135,7 +140,9 @@ if (!data) {
   const DDC = DDHEX ? new Color(DDHEX) : null
   const quotes = Object.keys(data.settings.quotes || {}).sort().map((k) => data.settings.quotes[k]).filter((q) => !q.deleted)
   const quote = pickQuote(quotes)?.text ?? null // 1시간마다 무작위 (앱과 같은 문구)
-  const dateStr = DAY[d0.getDay()] + ' · ' + d0.getDate() + ' ' + MON[d0.getMonth()] + (STALE ? ' · ' + pad(STALE.getHours()) + ':' + pad(STALE.getMinutes()) : '') + (data.sv && data.sv > VER ? ' · 스크립트 업데이트' : '')
+  const KWD = ['일', '월', '화', '수', '목', '금', '토'], MF3 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], DF3 = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  // 날짜 줄: 앱 설정 › 위젯 날짜 표기 (숨기기 가능)
+  const dateStr = st.widgetNoDate ? '' : (st.widgetDate === 'num' ? (d0.getMonth() + 1) + '.' + d0.getDate() + ' ' + KWD[d0.getDay()] : st.widgetDate === 'en' ? MF3[d0.getMonth()] + ' ' + d0.getDate() + ' ' + DF3[d0.getDay()] : DAY[d0.getDay()] + ' · ' + d0.getDate() + ' ' + MON[d0.getMonth()]) + (STALE ? ' · ' + pad(STALE.getHours()) + ':' + pad(STALE.getMinutes()) : '') + (data.sv && data.sv > VER ? ' · 스크립트 업데이트' : '')
   const pct = Math.round(Math.min(1, mins / goal) * 100)
   // 진행 중 타이머 (앱에서 시작·정지할 때 올라옴) — 끝났거나 오래된 건 무시
   const TM = (() => {
@@ -147,6 +154,7 @@ if (!data) {
     x.pm = Math.round(Math.max(0, x.mode === 'countdown' && x.target ? x.target - x.acc : x.acc) / 60000)
     return x
   })()
+  if (KIND === 'live' && !TM) KIND = 'study' // 공부 중이 아닐 땐 오늘 공부 시간
   if (TM) w.refreshAfterDate = new Date(Math.min(w.refreshAfterDate.getTime(), Date.now() + (TM.paused ? 3 : 1) * 60000)) // 타이머 중엔 더 자주 (진행선·%)
   // 위젯이 다시 그려지지 않아도 초 단위로 흐르는 시간
   const timerDate = (parent, size, thinFont) => { const d = parent.addDate(new Date(TM.mode === 'countdown' ? TM.end : TM.start)); d.applyTimerStyle(); d.font = thinFont ? thin(size) : tw(size); d.lineLimit = 1; d.minimumScaleFactor = 0.6; return d }
@@ -169,11 +177,11 @@ if (!data) {
   const todoList = (parent, n, gap = fam === 'large' ? 7 : 5) => {
     // 하나만 넘치면 '+1 more' 줄 대신 그 할 일을 보여 줌 (같은 한 줄)
     if (items.length === n + 1) { n++; gap = Math.max(3, gap - 1) }
-    for (const x of items.slice(0, n)) {
+    for (const x of items.slice(0, CNT || n)) {
       const r = parent.addStack(); r.centerAlignContent(); r.spacing = 8
       if (x.id) r.url = taskUrl(x.id) // 제목을 누르면 그 할 일 자세히 (중·대 위젯)
       if (x.done) { if (DOODLE) { const ck = r.addImage(tickImg(12)); ck.imageSize = new Size(10, 10) } else t(r, '✓', tw(TS - 2), SOFT); strike(r, x.title, tw(TS)) }
-      else { const imp = x.priority >= 3; const mk = t(r, imp ? '•' : '–', tw(TS - 1), imp ? GOLD : SOFT); if (x.id) mk.url = doneUrl(x.id); t(r, x.title, imp ? F(TS, 'Medium') : tw(TS), INK).minimumScaleFactor = 0.85 } // 표시를 누르면 완료 · 중요는 진하게
+      else { const imp = x.priority >= 3; const mk = t(r, mkc(imp), tw(TS - 1), imp ? GOLD : SOFT); if (x.id) mk.url = doneUrl(x.id); t(r, x.title, imp ? F(TS, 'Medium') : tw(TS), INK).minimumScaleFactor = 0.85 } // 표시를 누르면 완료 · 중요는 진하게
       r.addSpacer() // 줄을 꽉 채워 왼쪽 정렬 (스택은 기본 가운데 정렬)
       parent.addSpacer(gap)
     }
@@ -183,7 +191,7 @@ if (!data) {
   const ddRow = (parent, big = 13) => { if (!dd) return; const r = parent.addStack(); r.centerAlignContent(); t(r, ddTxt, tw(big), GOLD); r.addSpacer(6); t(r, dd.title, tw(10), SOFT); r.addSpacer() }
   const subBars = (parent, width, n) => {
     const max = subMins[0]?.m || 1
-    for (const x of subMins.slice(0, n)) {
+    for (const x of subMins.slice(0, CNT || n)) {
       const r = parent.addStack(); r.centerAlignContent()
       t(r, x.s.name, tw(10), INK); r.addSpacer(); t(r, hm(x.m), tw(10), SOFT)
       parent.addSpacer(3)
@@ -228,7 +236,8 @@ if (!data) {
   const CL = (data.classes && data.classes[today]) || []
   const nm = new Date().getHours() * 60 + new Date().getMinutes()
   const clCur = CL.find((c) => c.start <= nm && c.end > nm), clNext = CL.find((c) => c.start > nm)
-  const clk = (m) => pad(Math.floor(m / 60)) + ':' + pad(m % 60)
+  // 시간 표기: 24시간 또는 12시간(오후 3:05 → 3:05p)
+  const clk = (m) => st.widgetClock === '12' ? ((Math.floor(m / 60) % 12) || 12) + ':' + pad(m % 60) + (m >= 720 ? 'p' : 'a') : pad(Math.floor(m / 60)) + ':' + pad(m % 60)
   if (CL.length) {
     const nx = clCur || clNext // 다음 교시 시작·끝에 맞춰 다시 그리기
     if (nx) { const at = new Date(d0); at.setHours(0, (clCur ? clCur.end : nx.start), 0, 0); if (at > new Date()) w.refreshAfterDate = new Date(Math.min(w.refreshAfterDate.getTime(), at.getTime())) }
@@ -429,10 +438,10 @@ if (!data) {
   const grain = (c, K, x0, y0, wd, ht) => { let sd = 7; const rnd = () => ((sd = (sd * 16807) % 2147483647) / 2147483647); c.setFillColor(new Color(VL, DK ? 0.035 : 0.03)); for (let i = 0, n = Math.round((wd * ht) / 26); i < n; i++) { const z = (0.5 + rnd() * 0.8) * K; c.fillRect(new Rect((x0 + rnd() * wd) * K, (y0 + rnd() * ht) * K, z, z)) } for (let k = 0; k < 6; k++) { c.setStrokeColor(new Color(VL, 0.006 * (6 - k))); c.setLineWidth(K); const p = new Path(); p.addRect(new Rect((x0 + k) * K, (y0 + k) * K, (wd - 2 * k) * K, (ht - 2 * k) * K)); c.addPath(p); c.strokePath() } }
   // 할 일 줄 (반반 · 세 단): 제목 누르면 그 할 일, 앞 표시 누르면 완료
   const taskRows = (P2, wd, n, fsT) => {
-    for (const x of items.slice(0, n)) {
+    for (const x of items.slice(0, CNT || n)) {
       const r = P2.addStack(); r.size = new Size(wd, 0); r.centerAlignContent(); r.spacing = 5; if (x.id) r.url = taskUrl(x.id)
       if (x.done) { if (DOODLE) { const ck = r.addImage(tickImg(10)); ck.imageSize = new Size(8, 8) } strike(r, x.title, tw(fsT)) }
-      else { const imp = x.priority >= 3; const mk = t(r, imp ? '•' : '–', tw(fsT - 1), imp ? GOLD : SOFT); if (x.id) mk.url = doneUrl(x.id); t(r, x.title, imp ? F(fsT, 'Medium') : tw(fsT), INK).minimumScaleFactor = 0.8 }
+      else { const imp = x.priority >= 3; const mk = t(r, mkc(imp), tw(fsT - 1), imp ? GOLD : SOFT); if (x.id) mk.url = doneUrl(x.id); t(r, x.title, imp ? F(fsT, 'Medium') : tw(fsT), INK).minimumScaleFactor = 0.8 }
       r.addSpacer(); P2.addSpacer(4)
     }
     if (!items.length) t(P2, 'All clear.', tw(fsT), SOFT)
@@ -538,7 +547,7 @@ if (!data) {
       const r = w.addStack()
       bwDays.forEach((k, i) => { const c = r.addStack(); c.size = new Size(cw, 0); c.layoutVertically(); const a = c.addStack(); a.addSpacer(); t(a, WDN[new Date(k + 'T12:00:00').getDay()], k === today ? F(10, 'Medium') : label(9), k === today ? INK : SOFT); a.addSpacer(); c.addSpacer(3); const b = c.addStack(); b.addSpacer(); t(b, left[i] ? String(left[i]) : '·', k === today ? tw(17) : tw(14), INK); b.addSpacer() })
     }
-  } else if (lock && TM && (KIND === 'default' || KIND === 'study' || KIND === 'quick' || KIND === 'timer')) {
+  } else if (lock && TM && (KIND === 'default' || KIND === 'study' || KIND === 'quick' || KIND === 'timer' || KIND === 'live')) {
     // ── 잠금 화면 · 진행 중 타이머 (초 단위로 흐름) ──
     if (fam === 'accessoryInline') {
       if (TM.paused) inline('일시정지 ' + TM.name + ' ' + hm(TM.pm)); else { const d = w.addDate(new Date(TM.mode === 'countdown' ? TM.end : TM.start)); d.applyTimerStyle(); d.lineLimit = 1 }

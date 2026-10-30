@@ -104,12 +104,20 @@ export function dragReorder(e, i, onMove) {
   e.preventDefault()
   const row = e.currentTarget.closest('.reorder-row'), rows = [...row.parentNode.querySelectorAll(':scope > .reorder-row')], y0 = e.clientY
   const mids = rows.map((r) => { const b = r.getBoundingClientRect(); return b.top + b.height / 2 })
+  const h = row.getBoundingClientRect().height + 1
   row.classList.add('lifting')
-  const mv = (ev) => { row.style.transform = `translateY(${ev.clientY - y0}px)` }
+  rows.forEach((r) => r !== row && r.classList.add('reorder-shift'))
+  const target = (cy) => { const y = mids[i] + cy - y0; return mids.filter((m, k) => k !== i && m < y).length }
+  // 끄는 동안 사이에 있는 항목이 한 칸씩 비켜남
+  const mv = (ev) => {
+    row.style.transform = `translateY(${ev.clientY - y0}px)`
+    const j = target(ev.clientY)
+    rows.forEach((r, k) => { if (k !== i) r.style.transform = k > i && k <= j ? `translateY(${-h}px)` : k < i && k >= j ? `translateY(${h}px)` : '' })
+  }
   const up = (ev) => {
     window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up)
-    row.style.transform = ''; row.classList.remove('lifting')
-    const y = mids[i] + ev.clientY - y0, j = mids.filter((m, k) => k !== i && m < y).length
+    rows.forEach((r) => { r.style.transform = ''; r.classList.remove('reorder-shift') }); row.classList.remove('lifting')
+    const j = target(ev.clientY)
     if (j !== i) onMove(i, j)
   }
   window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up)

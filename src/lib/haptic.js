@@ -1,6 +1,10 @@
 // 가벼운 진동: iOS 18+ Safari 의 기본 스위치(input switch)를 눌렀을 때 나는 진동을 빌려 씀 · 안드로이드는 vibrate
-let el = null
+let el = null, off = false
+const vib0 = typeof navigator !== 'undefined' && navigator.vibrate ? navigator.vibrate.bind(navigator) : null
+// 설정에서 진동 끄기 — 앱 안 모든 진동(vibrate 직접 호출 포함)
+export function setHaptics(on) { off = on === false; if (vib0) navigator.vibrate = off ? () => false : vib0 }
 export function haptic() {
+  if (off) return
   try {
     if (navigator.vibrate) { navigator.vibrate(8); return }
     if (!el) {

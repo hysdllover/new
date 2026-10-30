@@ -30,10 +30,14 @@ const thin = (s) => F(s, 'Thin')
 const label = (s) => F(s, 'Regular')
 
 // Parameter → 유형 (앱에서 미리보기할 땐 고른 Parameter 로 다시 정함)
-const KINDS = { '공부': 'study', '할일': 'todo', '디데이': 'dday', 'd-day': 'dday', '달력': 'month', '캘린더': 'cal', '일정': 'cal', calendar: 'cal', '다짐': 'quote', '시간표': 'class', '수업': 'class', class: 'class', '주간': 'week', week: 'week', '과목': 'subj', subj: 'subj', '지금': 'now', '다음': 'now', now: 'now', '진도': 'prog', prog: 'prog', '목표': 'goals', goals: 'goals', '오늘': 'today', today: 'today', '대시보드': 'dash', dash: 'dash', '내일': 'tmrw', tomorrow: 'tmrw', '마감': 'due', due: 'due', '일주일': 'week7', '7일': 'week7', week7: 'week7', '디데이목록': 'ddl', ddl: 'ddl', '바로가기': 'quick', '시작': 'quick', quick: 'quick', '구성': 'custom', '내위젯': 'custom', custom: 'custom', '타이머': 'timer', '스톱워치': 'timer', timer: 'timer', '진행': 'pct', '공부진행': 'pct', pct: 'pct', '남은분': 'mins', '분': 'mins', mins: 'mins', '노트': 'note', '메모': 'note', note: 'note', '습관': 'habit', habit: 'habit', '시리즈': 'series', series: 'series', '배치': 'board', '주간배치': 'board', board: 'board', '주차': 'weeks', weeks: 'weeks', '표': 'tbl', table: 'tbl', '보드': 'boardn', '사진': 'photo', photo: 'photo', '10분': 'ten', '플래너': 'ten', ten: 'ten', '하루': 'dayline', '하루진행': 'dayline', dayline: 'dayline', '한줄': 'line1', '문장': 'line1', line1: 'line1', '공책': 'nb', '한주': 'nb', nb: 'nb', '숫자': 'big', big: 'big', '선그래프': 'spark', '선': 'spark', spark: 'spark', '원호': 'arc', arc: 'arc', '메모지': 'memo', memo: 'memo', '인쇄': 'print', print: 'print', '주간표': 'pweek', pweek: 'pweek', '과목표': 'psubj', psubj: 'psubj', '일정표': 'pplan', pplan: 'pplan', '디데이표': 'pdday', pdday: 'pdday', '월간표': 'pmonth', pmonth: 'pmonth', '노트표': 'pnote', pnote: 'pnote', '수업표': 'ptime', ptime: 'ptime', '내일표': 'ptmr', ptmr: 'ptmr', '마감표': 'pdue', pdue: 'pdue', '진도표': 'pprog', pprog: 'pprog', '습관표': 'phabit', phabit: 'phabit', '기록표': 'plog', plog: 'plog', '반반': 'split', split: 'split', '큰수': 'hero', hero: 'hero', '세단': 'three', three: 'three', '자동': 'auto', auto: 'auto', '묶음': 'pair', pair: 'pair', '티켓': 'ddcard', ticket: 'ddcard', '영수증': 'rcard', receipt: 'rcard', '기록카드': 'rcard', '카드': 'rcard', rcard: 'rcard', '우표': 'ddcard', stamp: 'ddcard', '매거진': 'mag', '잡지': 'mag', mag: 'mag', '신문': 'news', news: 'news', '목록카드': 'catalog', '도서카드': 'catalog', catalog: 'catalog', '문고본': 'mag', '책': 'mag', book: 'mag', '타임카드': 'tcard', '출석카드': 'tcard', tcard: 'tcard', '전보': 'news', telegram: 'news', '디데이카드': 'ddcard', ddcard: 'ddcard', '일지': 'journal', '저널': 'journal', journal: 'journal', study: 'study', todo: 'todo', dday: 'dday', month: 'month', quote: 'quote' }
-let TAP, RAWP, PARAM, DDI, KIND, BASEKIND, ARG
+const KINDS = { '공부': 'study', '할일': 'todo', '디데이': 'dday', 'd-day': 'dday', '달력': 'month', '캘린더': 'cal', '일정': 'cal', calendar: 'cal', '다짐': 'quote', '시간표': 'class', '수업': 'class', class: 'class', '주간': 'week', week: 'week', '과목': 'subj', subj: 'subj', '지금': 'now', '다음': 'now', now: 'now', '진도': 'prog', prog: 'prog', '목표': 'goals', goals: 'goals', '오늘': 'today', today: 'today', '대시보드': 'dash', dash: 'dash', '내일': 'tmrw', tomorrow: 'tmrw', '마감': 'due', due: 'due', '일주일': 'week7', '7일': 'week7', week7: 'week7', '디데이목록': 'ddl', ddl: 'ddl', '바로가기': 'quick', '시작': 'quick', quick: 'quick', '구성': 'custom', '내위젯': 'custom', custom: 'custom', '타이머': 'timer', '스톱워치': 'timer', timer: 'timer', '진행': 'pct', '공부진행': 'pct', pct: 'pct', '남은분': 'mins', '분': 'mins', mins: 'mins', '노트': 'note', '메모': 'note', note: 'note', '습관': 'habit', habit: 'habit', '시리즈': 'series', series: 'series', '배치': 'board', '주간배치': 'board', board: 'board', '주차': 'weeks', weeks: 'weeks', '표': 'tbl', table: 'tbl', '보드': 'boardn', '사진': 'photo', photo: 'photo', '10분': 'ten', '플래너': 'ten', ten: 'ten', '하루': 'dayline', '하루진행': 'dayline', dayline: 'dayline', '한줄': 'line1', '문장': 'line1', line1: 'line1', '공책': 'nb', '한주': 'nb', nb: 'nb', '숫자': 'big', big: 'big', '선그래프': 'spark', '선': 'spark', spark: 'spark', '원호': 'arc', arc: 'arc', '메모지': 'memo', memo: 'memo', '인쇄': 'print', print: 'print', '주간표': 'pweek', pweek: 'pweek', '과목표': 'psubj', psubj: 'psubj', '일정표': 'pplan', pplan: 'pplan', '디데이표': 'pdday', pdday: 'pdday', '월간표': 'pmonth', pmonth: 'pmonth', '노트표': 'pnote', pnote: 'pnote', '수업표': 'ptime', ptime: 'ptime', '내일표': 'ptmr', ptmr: 'ptmr', '마감표': 'pdue', pdue: 'pdue', '진도표': 'pprog', pprog: 'pprog', '습관표': 'phabit', phabit: 'phabit', '기록표': 'plog', plog: 'plog', '반반': 'split', split: 'split', '일정할일': 'evsplit', evsplit: 'evsplit', '공부중': 'live', live: 'live', '큰수': 'hero', hero: 'hero', '세단': 'three', three: 'three', '자동': 'auto', auto: 'auto', '묶음': 'pair', pair: 'pair', '티켓': 'ddcard', ticket: 'ddcard', '영수증': 'rcard', receipt: 'rcard', '기록카드': 'rcard', '카드': 'rcard', rcard: 'rcard', '우표': 'ddcard', stamp: 'ddcard', '매거진': 'mag', '잡지': 'mag', mag: 'mag', '신문': 'news', news: 'news', '목록카드': 'catalog', '도서카드': 'catalog', catalog: 'catalog', '문고본': 'mag', '책': 'mag', book: 'mag', '타임카드': 'tcard', '출석카드': 'tcard', tcard: 'tcard', '전보': 'news', telegram: 'news', '디데이카드': 'ddcard', ddcard: 'ddcard', '일지': 'journal', '저널': 'journal', journal: 'journal', study: 'study', todo: 'todo', dday: 'dday', month: 'month', quote: 'quote' }
+let TAP, CNT, TITLE, RAWP, PARAM, DDI, KIND, BASEKIND, ARG
 function setParam(raw) {
   RAWP = String(raw || '').replace(/\\s/g, '').toLowerCase()
+  // "할일*5" → 목록 5개 · "할일#오늘 할 것" → 위쪽 제목 바꾸기 (제목은 띄어쓰기 그대로)
+  CNT = +((RAWP.match(/\\*(\\d+)/) || [])[1]) || null
+  TITLE = (String(raw || '').match(/#(.+)$/) || [])[1] || null; if (TITLE) TITLE = TITLE.split('>')[0].trim()
+  RAWP = RAWP.replace(/\\*\\d+/, '').replace(/#.*$/, '')
   TAP = { '홈': 'home', '타이머': 'study.timer', '할일': 'tasks' }[RAWP.split('>')[1] || ''] || null // "공부>타이머" → 위젯 누르면 타이머
   const P0 = RAWP.split('>')[0].split('@')[0] // "공부@2" 처럼 @ 뒤는 배경 구분용
   PARAM = P0.split(':')[0]; ARG = P0.split(':')[1] || '' // "시작:수학" → 과목 고정
@@ -180,12 +184,17 @@ function noteFlow(P2, L, wd, avail, fs) {
   }
   return k
 }
+let ALIGN = 'left' // 앱 설정 › 위젯 글자 정렬
 function t(parent, s, font, color, lines = 1) {
-  const x = parent.addText(String(s)); x.font = font; if (color) x.textColor = color; x.lineLimit = lines
+  const x = parent.addText(String(s)); x.font = font; if (color) x.textColor = color; x.lineLimit = lines; if (ALIGN === 'center') x.centerAlignText()
   return x
 }
 let inkDark = false
-function cap(parent, s) { return t(parent, s.split('').join(' '), label(8), SOFT) }
+let TITLE_USED = false
+function cap(parent, s) { if (TITLE && !TITLE_USED) { TITLE_USED = true; return t(parent, TITLE, label(9), SOFT) } return t(parent, s.split('').join(' '), label(8), SOFT) }
+// 할 일 앞 표시 (앱 설정 › 위젯): 선 · 점 · 네모 — 중요한 일은 늘 진한 점
+let MARK = 'dash'
+const mkc = (imp) => (MARK === 'box' ? (imp ? '■' : '□') : MARK === 'dot' ? '•' : imp ? '•' : '–')
 
 const data = await load()
 const nzT = (s) => String(s || '').replace(/\\s/g, '').toLowerCase()
@@ -310,6 +319,8 @@ const ACT = (() => {
 })()
 
 async function widgetAct(Q) {
+  // 새로 고침 버튼: 캐시 지우고 최신 데이터를 받아 둠 (위젯은 홈 화면으로 돌아가면 다시 그려짐)
+  if (Q.act === 'refresh') { try { const d = await fetchFresh(15); if (d && d.study) { d.at = Date.now(); CFM.writeString(cachePath, JSON.stringify(d)) } } catch (e) {} return }
   if (!ACT.tok() || !(data && data.gid)) return ACT.say('설정이 필요해요', 'Scriptable 에서 이 스크립트를 실행 › 메뉴 › 위젯에서 바로 처리 켜기')
   if (Q.act === 'view') { await miniApp(Q); await ACT.flush(); return }
   let msg = null
