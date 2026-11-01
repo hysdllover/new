@@ -29,12 +29,13 @@ export async function persistStorage() {
 
 // 앱 아이콘 배지: 오늘(지난 포함) 남은 할 일 수 · 설정에서 끔
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
-export const badgeCount = (tasks) => { const d = today(); return Object.values(tasks || {}).filter((t) => !t.deleted && !t.done && !t.archived && t.due && t.due <= d).length }
+// 배지 종류(설정): all = 오늘 + 지난 · today = 오늘 것만 · over = 지난 것만
+export const badgeCount = (tasks, kind = 'all') => { const d = today(); return Object.values(tasks || {}).filter((t) => !t.deleted && !t.done && !t.archived && t.due && (kind === 'today' ? t.due === d : kind === 'over' ? t.due < d : t.due <= d)).length }
 let lastBadge = -1
 export function updateBadge() {
   if (!navigator.setAppBadge) return
   const on = settings().appBadge !== false
-  const n = on ? badgeCount(getState().tasks) : 0
+  const n = on ? badgeCount(getState().tasks, settings().badgeKind || 'all') : 0
   if (n === lastBadge) return
   lastBadge = n
   ;(n ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch(() => {})

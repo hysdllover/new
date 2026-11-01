@@ -1357,3 +1357,34 @@ html[data-done="fade"] .task-item .title .ttl::after, html[data-done="keep"] .ta
 .np-row.done .ttl { background-size: 100% 1px; }
 /* 할 일 완료 줄: 더 가늘고 옅게 */
 .task-item .title .ttl::after { height: 3.5px; opacity: .5; }
+/* 하루 흐름 */
+.flow { display: flex; flex-direction: column; }
+.fl-row, .fl-gap { display: grid; grid-template-columns: 40px 28px 1fr auto; align-items: center; gap: 0 8px; min-height: 46px; }
+.fl-gap { min-height: 30px; }
+.fl-gap > .tiny { grid-column: 3; }
+.fl-time { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.fl-rail { position: relative; align-self: stretch; display: flex; align-items: center; justify-content: center; }
+.fl-rail::before { content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: var(--line); }
+.fl-gap .fl-rail { grid-column: 2; }
+.fl-rail.dash::before { background: repeating-linear-gradient(to bottom, var(--line) 0 3px, transparent 3px 6px); }
+.fl-node { position: relative; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--c) 18%, var(--surface)); border: 1px solid color-mix(in srgb, var(--c) 55%, transparent); color: color-mix(in srgb, var(--c) 70%, var(--text)); }
+.fl-node.sm { width: 10px; height: 10px; }
+.fl-row.cur .fl-node { background: var(--c); color: #fff; }
+.fl-row.past .fl-body, .fl-row.past .fl-node { opacity: .55; }
+.fl-body { display: flex; flex-direction: column; align-items: flex-start; text-align: left; min-width: 0; gap: 1px; padding: 6px 0; }
+.fl-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.fl-t.done { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 60%, transparent); color: var(--muted); }
+/* 기분 · 날씨 선 아이콘 */
+.mw { flex-wrap: wrap; align-items: center; }
+.mw-b { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; color: color-mix(in srgb, var(--muted) 75%, transparent); }
+.mw-b.on { color: var(--accent-t); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.mw-ic { display: grid; }
+.mw-sep { width: 1px; height: 16px; background: var(--line); margin: 0 4px; }
+@media print { .mw-b:not(.on) { display: none; } .mw-sep { display: none; } }
+.np-dd { font-size: .9em; color: var(--accent-t); }
+.npage .mw { margin: -8px 0 10px; }
+/* 형광펜 강조: 과목 색 밑칠 (글자 아래 절반) */
+.task-item.hl .title .ttl, .np-row.hl .ttl { box-shadow: inset 0 -.5em 0 color-mix(in srgb, var(--hlc) 32%, transparent); border-radius: 1px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.task-item.hl.done .title .ttl, .np-row.hl.done .ttl { box-shadow: inset 0 -.5em 0 color-mix(in srgb, var(--hlc) 14%, transparent); }
+@media print { .task-item.hl .title .ttl, .np-row.hl .ttl { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+.week-memo { padding: 10px 12px; }

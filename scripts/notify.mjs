@@ -152,7 +152,8 @@ if (!out.length) { console.log(`${date} ${hm(now)} 보낼 알림 없음 (확인 
 // 선언형 웹 푸시 (iOS 18.4+): 서비스 워커가 깨어나지 않아도 iOS 가 바로 표시 · 앱 아이콘 배지도 함께
 // 예전 방식 필드(title·body·url)도 같이 넣어 서비스 워커 처리와 호환
 const APP_URL = process.env.APP_URL || settings.appUrl || 'https://hysdllover.github.io/new/'
-const badgeN = alive(T?.tasks).filter((t) => !t.done && !t.archived && t.due && t.due <= date).length
+const bk = settings.badgeKind || 'all' // 앱 설정 › 배지 숫자
+const badgeN = alive(T?.tasks).filter((t) => !t.done && !t.archived && t.due && (bk === 'today' ? t.due === date : bk === 'over' ? t.due < date : t.due <= date)).length
 const payload = (n0) => { const n = { ...n0, ...plainNote(n0.title, n0.body) }; return JSON.stringify({
   web_push: 8030,
   notification: { title: n.title, body: n.body || '', tag: n.key, navigate: new URL(n.url || './', APP_URL).href, silent: false, ...(settings.appBadge !== false ? { app_badge: String(badgeN) } : null) },

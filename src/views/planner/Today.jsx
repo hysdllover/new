@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import Flow from './Flow.jsx'
 import { dragReorder } from '../../lib/drag.js'
 import { useColl, useRec, useSettings } from '../../store/store.js'
 import TaskQuickInput from '../../components/TaskQuickInput.jsx'
@@ -23,6 +25,8 @@ export default function Today({ date }) {
   const projects = useColl('projects')
   useNow(60000)
   const tidy = useTidy()
+  const [flow, setFlowS] = useState(() => { try { return localStorage.getItem('tl_flow') === '1' } catch { return false } })
+  const setFlow = (v) => { setFlowS(v); try { localStorage.setItem('tl_flow', v ? '1' : '') } catch {} }
   const scheduledIds = new Set(blocks.filter((b) => b.date === date && b.taskId).map((b) => b.taskId))
   const planning = useSettings().modules.planning !== false
   const dayTasks = tasks.filter((t) => !t.archived && (t.due === date || (date === today() && !t.done && t.due && t.due < date)))
@@ -38,8 +42,9 @@ export default function Today({ date }) {
       <div className="col">
         <DayCard date={date} tasks={tasks} />
         <Card className="tl-card">
+          <div className="seg sm" style={{ marginBottom: 6, alignSelf: 'flex-start' }}>{[[false, '시간표'], [true, '흐름']].map(([v, l]) => <button key={l} className={flow === v ? 'on' : ''} onClick={() => setFlow(v)}>{l}</button>)}</div>
           {date === today() && <div className="row" style={{ justifyContent: 'flex-end', marginBottom: 4 }}><button className={'btn sm' + (tidy ? ' on-acc' : '')} onClick={() => setTidy(!tidy)}>{tidy ? '모두 보기' : '끝난 것 접기'}</button></div>}
-          <div className="tl-scroll"><Timeline date={date} hidePast={tidy} /></div>
+          {flow ? <Flow date={date} /> : <div className="tl-scroll"><Timeline date={date} hidePast={tidy} /></div>}
         </Card>
       </div>
       <div className="col">

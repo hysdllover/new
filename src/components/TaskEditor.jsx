@@ -56,6 +56,7 @@ export default function TaskEditor({ id }) {
           {planning && <button className="chip" onClick={() => openSheet((c) => <SplitForm id={id} close={c} />, { title: '세션 분할' })}><Icon name="split" size={14} />세션 분할</button>}
           <button className="chip" onClick={() => { startStopwatch(t.subjectId, id); go('study', 'timer') }}><Icon name="play" size={14} />타이머</button>
           <button className={'chip' + (top3.includes(id) ? ' on' : '')} onClick={() => setDay(today(), { top3: top3.includes(id) ? top3.filter((x) => x !== id) : [...top3, id].slice(-3) })}><Icon name="star" size={14} />Top 3</button>
+          <button className={'chip' + (t.hl ? ' on' : '')} onClick={() => up({ hl: !t.hl })}><Icon name="pen" size={14} />형광펜</button>
           <button className="chip" onClick={() => addReview({ title: t.title, subjectId: t.subjectId, sourceType: 'task', sourceId: id })}><Icon name="brain" size={14} />복습 등록</button>
           <button className="chip" onClick={() => openSheet((c) => <RecordEditor subjectId={t.subjectId} onDone={c} />, { title: '공부 기록 입력' })}><Icon name="edit" size={14} />공부 기록</button>
         </div>
