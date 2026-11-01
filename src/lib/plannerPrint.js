@@ -96,12 +96,56 @@ const CSS = `
 .ppw.fill { flex: 1; }
 .ppw .pp-lines, .ppw-notes .pp-lines { flex: 1; }
 .ppw-notes { flex: 1; min-height: 0; display: flex; margin-top: 3mm; border: .3mm solid ${INK}; }
+.ppd { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 62mm; gap: 5mm; }
+.ppd-l { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.ppd-l .its { display: flex; flex-direction: column; gap: .9mm; font-size: 9.5pt; }
+.ppd-memo { white-space: pre-wrap; font-size: 9pt; line-height: 6mm; }
+.pp-it .sw { width: 2.2mm; height: 2.2mm; border-radius: 50%; flex-shrink: 0; align-self: center; }
+.ppd-g { display: flex; flex-direction: column; border: .3mm solid ${INK}; }
+.ppd-gr { flex: 1; display: grid; grid-template-columns: 6mm repeat(6, 1fr); border-top: .15mm solid ${HAIR}; }
+.ppd-gr:first-child { border-top: 0; }
+.ppd-gr i { font-style: normal; font-size: 7pt; color: ${SUB}; display: flex; align-items: center; justify-content: center; border-right: .2mm solid ${HAIR}; }
+.ppd-gr b { border-left: .15mm solid ${HAIR}; }
+.ppd-gr b:nth-child(2) { border-left: 0; }
 .ppw-notes > div { flex: 1; display: flex; flex-direction: column; padding: 1.6mm 2.6mm 2mm; }
 `
+
+// 하루 한 장 (A4 세로): 머리 띠(D-day · 목표/공부 · 기분/날씨) · 왼쪽 할 일·일정·과목별·한 줄 일기 · 오른쪽 10분 칸(새벽 5시~다음 날 4시, 과목 색)
+function buildDay(date, blank, st) {
+  const d = parseYmd(date), t0 = today()
+  const tasks = blank ? [] : list('tasks').filter((t) => !t.archived && t.due === date).sort((a, b) => (a.dueTime == null) - (b.dueTime == null) || (a.dueTime ?? 0) - (b.dueTime ?? 0) || (a.order ?? 0) - (b.order ?? 0))
+  const subs = list('subjects'), color = (id) => subs.find((x) => x.id === id)?.color || '#4a5a78'
+  const sess = blank ? [] : list('sessions').filter((x) => x.date === date)
+  const total = sess.reduce((a, x) => a + (x.dur || 0), 0), goal = goalFor(st, date)
+  const day = blank ? {} : (list('days').find((x) => x.id === date) || {}), cond = blank ? {} : (list('conditions').find((x) => x.id === date) || {})
+  const dd = blank ? null : list('ddays').filter((x) => x.date >= date).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || a.date.localeCompare(b.date))[0]
+  const dn = dd ? Math.round((parseYmd(dd.date) - d) / 864e5) : 0
+  const evs = blank ? [] : eventsOn(date)
+  const actual = {}, plan = day.grid || {}
+  for (const x of sess) { if (x.start == null) continue; const dt = new Date(x.start), a = dt.getHours() * 60 + dt.getMinutes(); for (let m = Math.floor(a / 10) * 10; m < a + (x.dur || 0); m += 10) actual[(m % 1440) / 10] = x.subjectId }
+  const grid = Array.from({ length: 24 }, (_, i) => { const h = (5 + i) % 24; return `<div class="ppd-gr"><i>${h % 12 || 12}</i>${Array.from({ length: 6 }, (_, k) => { const idx = h * 6 + k, a = actual[idx], p = plan[idx]; return `<b style="${a ? `background:${color(a)}` : p ? `background:${color(p)}40` : ''}"></b>` }).join('')}</div>` }).join('')
+  const by = subs.map((s) => ({ s, m: sess.filter((x) => x.subjectId === s.id).reduce((a, x) => a + (x.dur || 0), 0) })).filter((x) => x.m)
+  const MOOD = ['많이 지침', '조금 지침', '보통', '좋음', '아주 좋음'], WX = { sun: '맑음', cloud: '흐림', rain: '비', snow: '눈', wind: '바람' }
+  const tl = tasks.map((t) => line({ t: t.title, k: 'tk', done: t.done, at: t.dueTime != null ? clk(t.dueTime) : '' })).join('')
+  const el = evs.map((e) => line({ t: e.title, k: 'ev', at: e.start == null ? '종일' : clk(e.start) })).join('')
+  const strip = `<div class="pp-strip" style="grid-template-columns:1.4fr 1fr 1fr">
+    <div><div class="pp-cap">D-DAY</div><div class="v">${dd ? (dn === 0 ? 'D-DAY' : 'D-' + dn) + `<small>${esc(dd.title)}</small>` : '　'}</div></div>
+    <div><div class="pp-cap">STUDY / GOAL</div><div class="v">${blank ? '　' : hm(total)}<small>/ ${hm(goal)}</small></div></div>
+    <div><div class="pp-cap">MOOD · WEATHER</div><div class="v" style="font-size:9pt;padding-top:1mm">${[cond.mood ? MOOD[cond.mood - 1] : '', WX[day.weather] || ''].filter(Boolean).join(' · ') || '　'}</div></div>
+  </div>`
+  return { land: false, name: `플래너-${date}-하루${blank ? '-빈양식' : ''}`, html: `<div class="pp-top"><b>DAILY PLANNER</b><span>${DAY[d.getDay()]} · ${md(date)} · ${d.getFullYear()}</span></div>${strip}
+    <div class="ppd"><div class="ppd-l">
+      <div class="pp-cap">TO DO</div><div class="its">${tl}</div><div class="pp-lines" style="min-height:${Math.max(18, 96 - tasks.length * 6)}mm"></div>
+      ${el ? `<div class="pp-cap" style="margin-top:3mm">PLAN</div><div class="its">${el}</div>` : ''}
+      ${by.length ? `<div class="pp-cap" style="margin-top:3mm">SUBJECTS</div>${by.map((x) => `<div class="pp-it"><i class="sw" style="background:${x.s.color}"></i><span>${esc(x.s.name)}</span><em style="margin-left:auto">${hm(x.m)}</em></div>`).join('')}` : ''}
+      <div class="pp-cap" style="margin-top:3mm">NOTE</div><div class="ppd-memo">${esc(day.comment || '')}</div><div class="pp-lines" style="flex:1"></div>
+    </div><div class="ppd-g">${grid}</div></div>` }
+}
 
 // 쪽 내용(HTML) 만들기 — 인쇄 · 이미지 · HTML 이 같이 씀
 function build(kind, date, blank) {
   const st = settings(), ws0 = st.weekStart ?? 1
+  if (kind === 'day') return buildDay(date, blank, st)
   const tasks = blank ? [] : list('tasks').filter((t) => !t.archived)
   const ddays = blank ? [] : list('ddays')
   const byDay = {}; if (!blank) for (const s of list('sessions')) byDay[s.date] = (byDay[s.date] || 0) + (s.dur || 0)
@@ -149,7 +193,8 @@ function build(kind, date, blank) {
     <div><div class="pp-cap">STUDY</div><div class="v">${blank ? '　' : hm(tot)}${!blank && wgoal ? `<small>${Math.round((tot / wgoal) * 100)}%</small>` : ''}</div></div>
     <div><div class="pp-cap">THIS WEEK</div>${[0, 1, 2].map((i) => `<div class="pp-n"><i>${i + 1}</i><span>${goals[i] ? esc(goals[i].title) : ''}</span></div>`).join('')}</div>
   </div>`
-  const notes = '<div><div class="ppw-h"><b>NOTES</b></div><div class="pp-lines"></div></div>'
+  const wm = blank ? '' : (list('days').find((x) => x.id === ws)?.weekMemo || '')
+  const notes = `<div><div class="ppw-h"><b>NOTES</b></div>${wm ? `<div class="ppd-memo">${esc(wm)}</div>` : ''}<div class="pp-lines"></div></div>`
   const cell = (k, i) => {
     const d = parseYmd(k), hol = holiday(k), cap = caps[Math.floor(i / 2)]
     return `<div><div class="ppw-h"><b>${DAY[d.getDay()]}</b><span>${md(k)}</span><s>${hol ? esc(hol) : ''}</s><em><i>${done(k)}</i>${done(k) ? ' / ' : ''}${hm(goalFor(st, k))}</em></div>

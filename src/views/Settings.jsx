@@ -234,6 +234,7 @@ function DiagCard() {
         </div>
         <div className="tiny muted">기기·버전·화면·저장 공간·동기화 상태·최근 오류를 글로 복사해요. 토큰이나 노트 내용은 들어가지 않아요. 저장 공간: {pers == null ? '확인 중' : pers ? '보존됨 (공간이 부족해도 지워지지 않아요)' : '보존 요청 전'}</div>
         <Toggle checked={st.appBadge !== false} onChange={(v) => { setSettings({ appBadge: v }); setTimeout(updateBadge, 50) }} label="앱 아이콘에 남은 할 일 수 (알림 허용 필요)" />
+        {st.appBadge !== false && <Field label="배지 숫자"><Seg value={st.badgeKind || 'all'} onChange={(v) => { setSettings({ badgeKind: v }); setTimeout(updateBadge, 50) }} options={[['all', '오늘 + 지난 할 일'], ['today', '오늘 할 일만'], ['over', '지난 할 일만']]} /></Field>}
       </div>
     </Card>
   )

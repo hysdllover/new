@@ -1,9 +1,9 @@
-import { useColl, useSettings } from '../../store/store.js'
+import { useColl, useSettings, useRec } from '../../store/store.js'
 import { eventsOn, classesOn } from '../../engine/scheduler.js'
 import { weekStart, addDays, parseYmd, WD, fmtTime, today, fmtDur } from '../../engine/date.js'
 import { holiday } from '../../engine/holidays.js'
-import { openDetail, Check } from '../../components/ui.jsx'
-import { toggleTask } from '../../store/actions.js'
+import { openDetail, Check, AutoText } from '../../components/ui.jsx'
+import { toggleTask, dayRec, setDay } from '../../store/actions.js'
 import { go, setParams } from '../../nav.js'
 import { spanOn } from '../tasks/filter.js'
 import { layerAlpha } from './Month.jsx'
@@ -18,6 +18,7 @@ export default function Week({ date }) {
   const ws = weekStart(date, st.weekStart)
   const days = Array.from({ length: 7 }, (_, i) => addDays(ws, i))
   const color = (id) => subjects.find((s) => s.id === id)?.color
+  useRec('days', ws); const memo = dayRec(ws)
   return (
     <div className="week">
       {days.map((d) => {
@@ -67,6 +68,11 @@ export default function Week({ date }) {
           </div>
         )
       })}
+      {/* 이번 주 메모: 주간 지면 맨 아래 (A4 인쇄의 NOTES 칸에도 들어감) */}
+      <div className="card wday week-memo">
+        <div className="tiny muted" style={{ marginBottom: 4 }}>이번 주 메모 · 한 문장</div>
+        <AutoText className="np-memo" value={memo.weekMemo || ''} placeholder="이번 주에 남길 말" onChange={(v) => setDay(ws, { weekMemo: v })} />
+      </div>
     </div>
   )
 }

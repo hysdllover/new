@@ -27,6 +27,7 @@ function TaskQuickMenu({ id, close }) {
       {goals.length > 0 && <div className="qm-row"><span className="tiny muted">이번 주 목표</span>
         <div className="row wrap" style={{ gap: 6 }}>{goals.map((g) => <button key={g.id} className={'chip' + (t.goalId === g.id ? ' on' : '')} onClick={act(() => updateTask(id, { goalId: t.goalId === g.id ? null : g.id }))}>🎯 {g.title}</button>)}</div></div>}
       <div className="list qm-acts">
+        <button className="item" onClick={act(() => updateTask(id, { hl: !t.hl }))}><Icon name="pen" size={16} />{t.hl ? '형광펜 지우기' : '형광펜으로 강조 (과목 색)'}</button>
         <button className="item" onClick={act(() => setDay(today(), { one: { taskId: id } }), '오늘의 하나로 정했어요')}><Icon name="star" size={16} />오늘의 하나로</button>
         {!t.inbox && <button className="item" onClick={act(() => updateTask(id, { inbox: true, due: null, dueTime: null }), '받은 편지함으로 옮겼어요')}><Icon name="download" size={16} />받은 편지함으로</button>}
         <button className="item" onClick={act(() => { const { id: _, createdAt, updatedAt, done, doneAt, ...rest } = t; addTask({ ...rest, title: t.title + ' (복제)' }) }, '복제했어요')}><Icon name="plus" size={16} />복제</button>

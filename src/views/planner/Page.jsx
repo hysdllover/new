@@ -1,11 +1,14 @@
 // 오늘 페이지: 노트 한 장 — 날짜 · 오늘의 하나 · 할 일 · 일정 · 메모 + 오른쪽 10분 공부 시간표(새벽 5시~다음 날 4시)
 // 타이머 기록은 과목 색으로 자동 칠해지고(계획은 옅게), 스티커로 꾸밀 수 있음 · A4 한 장으로 인쇄
 import { useState } from 'react'
-import { useColl, useRec, find } from '../../store/store.js'
+import { useColl, useRec, useSettings, find } from '../../store/store.js'
+import { goalFor } from '../../engine/goal.js'
+import { printPlanner, savePlanner } from '../../lib/plannerPrint.js'
+import MoodWeather from '../../components/MoodWeather.jsx'
 import { dayRec, setDay, toggleTask } from '../../store/actions.js'
 import { eventsOn } from '../../engine/scheduler.js'
-import { parseYmd, fmtTime, tsToMin } from '../../engine/date.js'
-import { Check, AutoText } from '../../components/ui.jsx'
+import { parseYmd, fmtTime, tsToMin, diffDays } from '../../engine/date.js'
+import { Check, AutoText, toast } from '../../components/ui.jsx'
 import { StickerLayer, StickerTray, addSticker } from '../../components/Stickers.jsx'
 
 const WDE = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -17,6 +20,8 @@ export default function Page({ date }) {
   const tasks = useColl('tasks'), subjects = useColl('subjects'), sessions = useColl('sessions').filter((s) => s.date === date)
   useRec('days', date); useColl('events')
   const day = dayRec(date), plan = day.grid || {}
+  const st = useSettings(), ddays = useColl('ddays').filter((x) => x.date >= date).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || a.date.localeCompare(b.date))
+  const dd = ddays[0], dn = dd ? diffDays(dd.date, date) : 0
   const d = parseYmd(date)
   const color = (id) => subjects.find((s) => s.id === id)?.color || 'var(--accent)'
   const list = tasks.filter((t) => !t.archived && t.due === date).sort((a, b) => (a.dueTime == null) - (b.dueTime == null) || (a.dueTime ?? 0) - (b.dueTime ?? 0) || (a.order ?? 0) - (b.order ?? 0))
@@ -32,28 +37,31 @@ export default function Page({ date }) {
       <div className="row no-print" style={{ gap: 6 }}>
         <button className={'btn sm' + (deco ? ' on-acc' : '')} onClick={() => setDeco(!deco)}>{deco ? '꾸미기 끝' : '스티커'}</button>
         <span className="grow" />
-        <button className="btn sm" onClick={() => window.print()}>인쇄 (A4)</button>
+        <button className="btn sm" onClick={() => savePlanner('image', 'day', date).catch(() => toast('이미지를 만들지 못했어요'))}>이미지 저장</button>
+        <button className="btn sm" onClick={() => printPlanner('day', date)}>인쇄 (A4)</button>
       </div>
       {deco && <StickerTray onPick={(k, c) => addSticker(date, k, c)} />}
       <div className="npage">
         <StickerLayer date={date} editable={deco} />
         <div className="np-head">
           <span className="np-date">{WDE[d.getDay()]}, {d.getMonth() + 1}/{d.getDate()}/{d.getFullYear()}</span>
-          <span className="np-st">Study Time <b>{hm(total)}</b></span>
+          {dd && <span className="np-dd">{dd.title} {dn === 0 ? 'D-day' : 'D-' + dn}</span>}
+          <span className="np-st">Study Time <b>{hm(total)}</b> <span className="muted">/ {hm(goalFor(st, date))}</span></span>
         </div>
+        <MoodWeather date={date} />
         <div className="np-body">
           <div className="np-left">
             {one && <section><div className="np-cap">오늘의 하나</div><div className="np-one">{one}</div></section>}
             <section>
               <div className="np-cap">할 일 {list.length ? `${list.filter((t) => t.done).length}/${list.length}` : ''}</div>
-              {list.map((t) => <div key={t.id} className={'np-row' + (t.done ? ' done' : '')}><Check on={t.done} onClick={() => toggleTask(t.id)} color={subjects.find((s) => s.id === t.subjectId)?.color} /><span className="grow np-tw"><span className="ttl">{t.title}</span></span>{t.dueTime != null && <span className="tiny muted">{fmtTime(t.dueTime)}</span>}</div>)}
+              {list.map((t) => <div key={t.id} className={'np-row' + (t.done ? ' done' : '') + (t.hl ? ' hl' : '')} style={t.hl ? { '--hlc': color(t.subjectId) } : undefined}><Check on={t.done} onClick={() => toggleTask(t.id)} color={subjects.find((s) => s.id === t.subjectId)?.color} /><span className="grow np-tw"><span className="ttl">{t.title}</span></span>{t.dueTime != null && <span className="tiny muted">{fmtTime(t.dueTime)}</span>}</div>)}
               {!list.length && <div className="np-line" />}
             </section>
             {evs.length > 0 && <section><div className="np-cap">일정</div>{evs.map((e, i) => <div key={i} className="np-row"><span className="np-ev" style={{ background: e.color || 'var(--accent)' }} /><span className="grow">{e.title}</span><span className="tiny muted">{e.start != null ? fmtTime(e.start) : '종일'}</span></div>)}</section>}
             {bySub.length > 0 && <section><div className="np-cap">과목별</div>{bySub.map((x) => <div key={x.s.id} className="np-row"><span className="np-ev" style={{ background: x.s.color }} /><span className="grow">{x.s.name}</span><span className="tiny muted">{hm(x.m)}</span></div>)}</section>}
             <section className="grow">
               <div className="np-cap">메모</div>
-              <AutoText className="np-memo" value={day.comment || ''} placeholder="오늘 한 줄" onChange={(v) => setDay(date, { comment: v })} />
+              <AutoText className="np-memo" value={day.comment || ''} placeholder="오늘 한 줄 일기" onChange={(v) => setDay(date, { comment: v })} />
             </section>
           </div>
           <div className="np-grid" aria-label="10분 공부 시간표">
