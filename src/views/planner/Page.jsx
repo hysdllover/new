@@ -20,7 +20,7 @@ const hm = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`
 export default function Page({ date }) {
   const [deco, setDeco] = useState(false)
   const pageRef = useRef(null), [busy, setBusy] = useState(false)
-  // 보이는 그대로 이미지로 (모노톤): 화면 지면을 그린 뒤 회색조로 바꿔 공유 시트 · 저장
+  // 보이는 그대로 이미지로 (채도만 낮게): 화면 지면을 그린 뒤 색을 회색 쪽으로 낮춰 공유 시트 · 저장
   const saveShot = async () => {
     const node = pageRef.current; if (!node) return
     setBusy(true)
@@ -33,7 +33,7 @@ export default function Page({ date }) {
       let c
       try { await toCanvas(node, opt); c = await toCanvas(node, opt) } catch { c = await toCanvas(node, { ...opt, skipFonts: true }) } // 사파리: 두 번째에 글자까지 그려짐
       const g = c.getContext('2d'), im = g.getImageData(0, 0, c.width, c.height), px = im.data
-      for (let i = 0; i < px.length; i += 4) { const v = Math.round(px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114); px[i] = px[i + 1] = px[i + 2] = v }
+      for (let i = 0; i < px.length; i += 4) { const v = px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114; for (let k = 0; k < 3; k++) px[i + k] = Math.round(v + (px[i + k] - v) * 0.45) } // 채도만 낮춤 (회색 쪽으로 55%)
       g.putImageData(im, 0, 0)
       const blob = await new Promise((r) => c.toBlob(r, 'image/png'))
       if (!blob) throw new Error('image')
