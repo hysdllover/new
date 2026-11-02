@@ -43,6 +43,7 @@ export function WidgetFontField() {
       <Field label="위젯 배경 무늬"><Seg value={st.widgetPattern || 'plain'} onChange={(v) => setSettings({ widgetPattern: v })} options={[['plain', '무지'], ['grid', '모눈'], ['line', '줄']]} /></Field>
       <Toggle label="위젯 낙서 (물결 밑줄 · 별 · 체크)" checked={st.widgetDoodle !== false} onChange={(v) => setSettings({ widgetDoodle: v })} />
       <Toggle label="별표 D-day 색을 위젯 포인트로 (진행선 · D-day 숫자)" checked={st.widgetDdColor !== false} onChange={(v) => setSettings({ widgetDdColor: v })} />
+      <Field label="아이패드 위젯 크기 기준 (홈 화면을 주로 보는 방향)"><Seg value={st.widgetPadOrient || 'land'} onChange={(v) => setSettings({ widgetPadOrient: v })} options={[['land', '가로'], ['port', '세로']]} /></Field>
       <Field label="위젯 날짜 표기"><Seg value={st.widgetDate || 'def'} onChange={(v) => setSettings({ widgetDate: v === 'def' ? null : v })} options={[['def', 'FRI · 30 OCT'], ['num', '10.30 금'], ['en', 'Oct 30 Fri']]} /></Field>
       <Toggle label="위젯 위쪽 날짜 줄 숨기기" checked={!!st.widgetNoDate} onChange={(v) => setSettings({ widgetNoDate: v })} />
       <Field label="위젯 시간 표기"><Seg value={st.widgetClock || '24'} onChange={(v) => setSettings({ widgetClock: v })} options={[['24', '15:05'], ['12', '3:05p']]} /></Field>
