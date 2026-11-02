@@ -25,11 +25,9 @@ const SZ = (() => {
   if (Device.isPad()) {
     // 아이패드: 모델(화면 짧은 변)별 위젯 크기 — 13형 1024·1032 · 11형 834 · 10.9형 820 · 10.2형 810 · mini 744
     const sc = Device.screenSize(), sw = Math.min(sc.width, sc.height)
-    const T = { 1032: [170, 378.5, 795], 1024: [170, 378.5, 795], 834: [155, 342, 715.5], 820: [155, 342, 715.5], 810: [146, 320.5, 669], 744: [141, 305.5, 634.5] }
-    const k = Object.keys(T).map(Number).sort((a, b) => Math.abs(a - sw) - Math.abs(b - sw))[0]
-    // 가로 화면 홈은 위젯이 더 작음 (13형 실측 160 · 354 · 742pt) — 앱 설정 › 위젯 › 아이패드 기준 (기본 가로)
-    const land = (STM.widgetPadOrient || 'land') === 'land', LT = { 1032: [160, 354, 742], 1024: [160, 354, 742] }
-    const [sm, md, xl] = land ? (LT[k] || T[k].map((v) => Math.round(v * 0.94 * 2) / 2)) : T[k]
+    // 12.9·13형은 iPadOS 27 홈 화면 실측(스크린샷 비율) 187 · 411 · 863pt
+    const T = { 1032: [187, 411, 863], 1024: [187, 411, 863], 834: [155, 342, 715.5], 820: [155, 342, 715.5], 810: [146, 320.5, 669], 744: [141, 305.5, 634.5] }
+    const k = Object.keys(T).map(Number).sort((a, b) => Math.abs(a - sw) - Math.abs(b - sw))[0], [sm, md, xl] = T[k]
     return { small: sm, medium: md, large: md, extraLarge: xl, h: { small: sm, medium: sm, large: md, extraLarge: md } }
   }
   const sc = Device.screenSize(), sw = Math.min(sc.width, sc.height)
