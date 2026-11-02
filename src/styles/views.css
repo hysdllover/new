@@ -576,7 +576,7 @@ button.greet { display: block; width: 100%; text-align: left; }
 .np-row.done .ttl { color: var(--muted); }
 .np-line { height: 30px; border-bottom: 1px dashed var(--line); }
 .np-ev { width: 3px; height: 14px; border-radius: 2px; flex: none; }
-.np-memo { width: 100%; border: 0; background: repeating-linear-gradient(transparent 0 29px, color-mix(in srgb, var(--line) 90%, transparent) 29px 30px); line-height: 30px; font: inherit; color: inherit; min-height: 90px; outline: none; padding: 0; font-size: max(16px, 1em); }
+.np-memo { width: 100%; border: 0; background: repeating-linear-gradient(transparent 0 29px, color-mix(in srgb, var(--line) 90%, transparent) 29px 30px); font: inherit; color: inherit; min-height: 90px; outline: none; padding: 0; font-size: max(16px, 1em); line-height: 30px; background-attachment: local; display: block; }
 .np-grid { display: flex; flex-direction: column; border: 1px solid color-mix(in srgb, var(--c3) 45%, var(--line)); align-self: start; }
 .np-gr { display: grid; grid-template-columns: 18px repeat(6, 1fr); height: 21px; border-bottom: 1px solid color-mix(in srgb, var(--c3) 30%, var(--line)); }
 .np-gr:last-child { border-bottom: 0; }
