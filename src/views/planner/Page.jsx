@@ -1,9 +1,10 @@
 // 오늘 페이지: 노트 한 장 — 날짜 · 오늘의 하나 · 할 일 · 일정 · 메모 + 오른쪽 10분 공부 시간표(새벽 5시~다음 날 4시)
 // 타이머 기록은 과목 색으로 자동 칠해지고(계획은 옅게), 스티커로 꾸밀 수 있음 · A4 한 장으로 인쇄
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useColl, useRec, useSettings, find } from '../../store/store.js'
 import { goalFor } from '../../engine/goal.js'
-import { printPlanner, savePlanner } from '../../lib/plannerPrint.js'
+import { printPlanner } from '../../lib/plannerPrint.js'
+import { shareBlob } from '../../lib/shareCard.js'
 import MoodWeather from '../../components/MoodWeather.jsx'
 import { dayRec, setDay, toggleTask } from '../../store/actions.js'
 import { eventsOn } from '../../engine/scheduler.js'
@@ -17,6 +18,25 @@ const hm = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`
 
 export default function Page({ date }) {
   const [deco, setDeco] = useState(false)
+  const pageRef = useRef(null), [busy, setBusy] = useState(false)
+  // 보이는 그대로 이미지로 (모노톤): 화면 지면을 그린 뒤 회색조로 바꿔 공유 시트 · 저장
+  const saveShot = async () => {
+    const node = pageRef.current; if (!node) return
+    setBusy(true)
+    try {
+      const { toCanvas } = await import('html-to-image')
+      const opt = { filter: (n) => !(n.tagName === 'TEXTAREA' && !n.value), pixelRatio: 3, backgroundColor: getComputedStyle(node).backgroundColor || getComputedStyle(document.body).backgroundColor }
+      let c
+      try { await toCanvas(node, opt); c = await toCanvas(node, opt) } catch { c = await toCanvas(node, { ...opt, skipFonts: true }) } // 사파리: 두 번째에 글자까지 그려짐
+      const g = c.getContext('2d'), im = g.getImageData(0, 0, c.width, c.height), px = im.data
+      for (let i = 0; i < px.length; i += 4) { const v = Math.round(px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114); px[i] = px[i + 1] = px[i + 2] = v }
+      g.putImageData(im, 0, 0)
+      const blob = await new Promise((r) => c.toBlob(r, 'image/png'))
+      if (!blob) throw new Error('image')
+      await shareBlob(blob, `오늘페이지-${date}.png`)
+    } catch { toast('이미지를 만들지 못했어요') }
+    setBusy(false)
+  }
   const tasks = useColl('tasks'), subjects = useColl('subjects'), sessions = useColl('sessions').filter((s) => s.date === date)
   useRec('days', date); useColl('events')
   const day = dayRec(date), plan = day.grid || {}
@@ -37,11 +57,11 @@ export default function Page({ date }) {
       <div className="row no-print" style={{ gap: 6 }}>
         <button className={'btn sm' + (deco ? ' on-acc' : '')} onClick={() => setDeco(!deco)}>{deco ? '꾸미기 끝' : '스티커'}</button>
         <span className="grow" />
-        <button className="btn sm" onClick={() => savePlanner('image', 'day', date).catch(() => toast('이미지를 만들지 못했어요'))}>이미지 저장</button>
+        <button className="btn sm" disabled={busy} onClick={saveShot}>{busy ? '만드는 중…' : '이미지 저장'}</button>
         <button className="btn sm" onClick={() => printPlanner('day', date)}>인쇄 (A4)</button>
       </div>
       {deco && <StickerTray onPick={(k, c) => addSticker(date, k, c)} />}
-      <div className="npage">
+      <div className="npage" ref={pageRef}>
         <StickerLayer date={date} editable={deco} />
         <div className="np-head">
           <span className="np-date">{WDE[d.getDay()]}, {d.getMonth() + 1}/{d.getDate()}/{d.getFullYear()}</span>
