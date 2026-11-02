@@ -129,3 +129,15 @@ function addAlias(ps, buf) {
 export async function loadAllFonts() {
   await Promise.all(fonts.map((f) => loadFont(f.id)))
 }
+
+// 이미지로 저장할 때: 내 폰트(파일로 넣은 것)는 스타일시트에 없어서 그림에 안 들어감 → @font-face 를 직접 만들어 넘김
+export async function myFontCSS(ids) {
+  const out = []
+  for (const id of new Set(ids)) {
+    const blob = await get('font:' + id).catch(() => null)
+    if (!blob) continue
+    const url = await new Promise((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.onerror = () => r(null); fr.readAsDataURL(blob) })
+    if (url) out.push(`@font-face { font-family: "${fontFamily(id)}"; src: url(${url}); font-weight: 100 900; }`)
+  }
+  return out.join('\n')
+}

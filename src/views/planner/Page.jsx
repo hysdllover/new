@@ -5,6 +5,7 @@ import { useColl, useRec, useSettings, find } from '../../store/store.js'
 import { goalFor } from '../../engine/goal.js'
 import { printPlanner } from '../../lib/plannerPrint.js'
 import { shareBlob } from '../../lib/shareCard.js'
+import { myFontCSS } from '../../lib/fonts.js'
 import MoodWeather from '../../components/MoodWeather.jsx'
 import { dayRec, setDay, toggleTask } from '../../store/actions.js'
 import { eventsOn } from '../../engine/scheduler.js'
@@ -24,8 +25,11 @@ export default function Page({ date }) {
     const node = pageRef.current; if (!node) return
     setBusy(true)
     try {
-      const { toCanvas } = await import('html-to-image')
-      const opt = { filter: (n) => !(n.tagName === 'TEXTAREA' && !n.value), pixelRatio: 3, backgroundColor: getComputedStyle(node).backgroundColor || getComputedStyle(document.body).backgroundColor }
+      const { toCanvas, getFontEmbedCSS } = await import('html-to-image')
+      // 글꼴까지 화면 그대로: 앱 글꼴(스타일시트) + 내 폰트(파일)
+      const th = st.theme || {}, mine = [th.font, th.headFont, th.noteFont, th.handFont].filter((k) => k?.startsWith('my:')).map((k) => k.slice(3))
+      const fontEmbedCSS = [await getFontEmbedCSS(node).catch(() => ''), await myFontCSS(mine).catch(() => '')].join('\n')
+      const opt = { fontEmbedCSS, filter: (n) => !(n.tagName === 'TEXTAREA' && !n.value), pixelRatio: 3, backgroundColor: getComputedStyle(node).backgroundColor || getComputedStyle(document.body).backgroundColor }
       let c
       try { await toCanvas(node, opt); c = await toCanvas(node, opt) } catch { c = await toCanvas(node, { ...opt, skipFonts: true }) } // 사파리: 두 번째에 글자까지 그려짐
       const g = c.getContext('2d'), im = g.getImageData(0, 0, c.width, c.height), px = im.data
