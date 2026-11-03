@@ -1,4 +1,5 @@
 // 설정 › 위젯: 위젯 글꼴·대시보드 칸·내 위젯 구성·홈/잠금 화면 미리보기 (Settings.jsx 에서 나눔)
+import { dragReorder } from '../../lib/drag.js'
 import { useTimerState, useTick, elapsed, remaining } from '../../lib/timer.js'
 import { goalFor } from '../../engine/goal.js'
 import { Fragment, useEffect, useRef, useState } from 'react'
@@ -43,6 +44,9 @@ export function WidgetFontField() {
       <Field label="위젯 배경 무늬"><Seg value={st.widgetPattern || 'plain'} onChange={(v) => setSettings({ widgetPattern: v })} options={[['plain', '무지'], ['grid', '모눈'], ['line', '줄']]} /></Field>
       <Toggle label="위젯 낙서 (물결 밑줄 · 별 · 체크)" checked={st.widgetDoodle !== false} onChange={(v) => setSettings({ widgetDoodle: v })} />
       <Toggle label="별표 D-day 색을 위젯 포인트로 (진행선 · D-day 숫자)" checked={st.widgetDdColor !== false} onChange={(v) => setSettings({ widgetDdColor: v })} />
+      <Field label="위젯 내용 세로 위치"><Seg value={st.widgetVAlign || 'top'} onChange={(v) => setSettings({ widgetVAlign: v })} options={[['top', '위'], ['center', '가운데'], ['bottom', '아래']]} /></Field>
+      <Field label="종이 테마 결 세기"><Seg value={st.widgetGrain || 'normal'} onChange={(v) => setSettings({ widgetGrain: v })} options={[['none', '없음'], ['light', '옅게'], ['normal', '기본']]} /></Field>
+      <Field label="대시보드 칸 구분"><Seg value={st.widgetDashSep || 'gap'} onChange={(v) => setSettings({ widgetDashSep: v })} options={[['gap', '여백'], ['line', '선'], ['tint', '옅은 칸 바탕']]} /></Field>
       <Field label="위젯 날짜 표기"><Seg value={st.widgetDate || 'def'} onChange={(v) => setSettings({ widgetDate: v === 'def' ? null : v })} options={[['def', 'FRI · 30 OCT'], ['num', '10.30 금'], ['en', 'Oct 30 Fri']]} /></Field>
       <Toggle label="위젯 위쪽 날짜 줄 숨기기" checked={!!st.widgetNoDate} onChange={(v) => setSettings({ widgetNoDate: v })} />
       <Field label="위젯 시간 표기"><Seg value={st.widgetClock || '24'} onChange={(v) => setSettings({ widgetClock: v })} options={[['24', '15:05'], ['12', '3:05p']]} /></Field>
@@ -69,9 +73,10 @@ export function DashTilesField() {
   const set = (i, v) => { const k = [...keys]; const j = k.indexOf(v); if (j >= 0) k[j] = k[i]; k[i] = v; setSettings({ dashTiles: k }) }
   return (
     <Field label="대시보드 칸 (순서대로 · 중형은 할 일이 오른쪽 목록)">
-      <div className="row wrap" style={{ gap: 6 }}>
-        {keys.map((k, i) => <select key={i} className="input" style={{ width: 'auto', flex: '1 1 30%' }} value={k} onChange={(e) => set(i, e.target.value)}>{DASH_KEYS.map(([v, l]) => <option key={v} value={v}>{i + 1}. {l}</option>)}</select>)}
+      <div className="col" style={{ gap: 4 }}>
+        {keys.map((k, i) => <div key={k} className="row reorder-row" style={{ gap: 6 }}><span className="sub-grip" onPointerDown={(e) => dragReorder(e, i, (a, b) => { const x = [...keys]; x.splice(b, 0, x.splice(a, 1)[0]); setSettings({ dashTiles: x }) })} aria-label="끌어서 순서 바꾸기">⋮⋮</span><select className="input grow" value={k} onChange={(e) => set(i, e.target.value)}>{DASH_KEYS.map(([v, l]) => <option key={v} value={v}>{i + 1}. {l}</option>)}</select></div>)}
       </div>
+      <div className="tiny muted">왼쪽 ⋮⋮ 를 끌어 순서 바꾸기 · 4칸 대시보드(대시4)도 같은 칸</div>
     </Field>
   )
 }
@@ -713,6 +718,8 @@ export function WidgetPreview() {
   ]
   const phV = !phW ? M(none('노트에 사진을 넣어 주세요')) : <div style={{ position: 'absolute', inset: 0, borderRadius: 'inherit', background: phUrl ? `url(${phUrl}) center / cover` : 'var(--rule)', display: 'flex', alignItems: 'flex-end', padding: 12 }}><span style={{ fontSize: 10, color: '#fff', background: 'rgba(27,29,34,.42)', borderRadius: 7, padding: '3px 8px' }}>{phW.t}</span></div>
   V['사진'] = [phV, phV, phV]
+  // 새 형태 미리보기: 비슷한 형태 모양으로
+  V['하루지면'] = V['인쇄']; V['주간지면'] = V['주간표']; V['디데이진행'] = V['디데이']; V['디데이선'] = V['디데이목록']; V['스택'] = V['대시보드']; V['대시4'] = V['대시보드']; V['한화면'] = V['대시보드']; V['주간대시'] = V['주간']
   const L = kind === '타이머' ? Lfor('공부') : kind === '진행' ? { ...Lfor('공부'), c: [[pct + '%', B], [`공부 ${hm(mins)}`, S], [bar(mins / goal, 34)]] }
     : kind === '남은분' ? { ...Lfor('지금'), c: nC ? [[nCur ? '끝까지' : '시작까지', S], [`${Math.max(0, (nCur ? nC.e : nC.s) - nmP)}분`, { fontSize: 15 }], [nC.t, S]] : [['—', B]] }
     : Lfor({ '숫자:디데이': '디데이', '숫자:할일': '할일', '숫자:주간': '주간', '선그래프': '주간', '메모지': '노트', '인쇄': '오늘', '반반': '오늘', '세단': '오늘', '자동': autoK, '달력:과목': '달력', '기록카드': '공부', '디데이카드': '디데이목록', '일지': '오늘', '매거진': '오늘', '신문': '오늘', '목록카드': '공부', '타임카드': '주간', '주간표': '주간', '과목표': '과목', '일정표': '일주일', '디데이표': '디데이목록', '월간표': '달력', '노트표': '노트', '수업표': '시간표', '내일표': '내일', '마감표': '마감', '진도표': '진도', '습관표': '습관', '기록표': '공부' }[kind] || kind)

@@ -1384,7 +1384,7 @@ html[data-done="fade"] .task-item .title .ttl::after, html[data-done="keep"] .ta
 .np-dd { font-size: .9em; color: var(--accent-t); }
 .npage .mw { margin: -8px 0 10px; }
 /* 형광펜 강조: 과목 색 밑칠 (글자 아래 절반) */
-.task-item.hl .title .ttl, .np-row.hl .ttl { box-shadow: inset 0 -.5em 0 color-mix(in srgb, var(--hlc) 32%, transparent); border-radius: 1px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
-.task-item.hl.done .title .ttl, .np-row.hl.done .ttl { box-shadow: inset 0 -.5em 0 color-mix(in srgb, var(--hlc) 14%, transparent); }
+.task-item.hl .title .ttl, .np-row.hl .ttl { box-shadow: inset 0 -.5em 0 color-mix(in srgb, var(--hl-fixed, var(--hlc)) 32%, transparent); border-radius: 1px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.task-item.hl.done .title .ttl, .np-row.hl.done .ttl { box-shadow: inset 0 -.5em 0 color-mix(in srgb, var(--hl-fixed, var(--hlc)) 14%, transparent); }
 @media print { .task-item.hl .title .ttl, .np-row.hl .ttl { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 .week-memo { padding: 10px 12px; }

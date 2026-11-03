@@ -2,6 +2,7 @@ import { useTimerState, useTick, elapsed, remaining } from '../lib/timer.js'
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { useSettings, setSettings, useColl, put, remove, patch, batch, exportJSON, importJSON, uid, getState, deviceId as myDevice } from '../store/store.js'
 import { seriesSummary } from '../lib/series.js'
+import { CHANGES } from '../lib/whatsnew.js'
 import { diagText, recentErrors, clearErrors, persistStorage, updateBadge } from '../lib/diag.js'
 import { notesForWidget } from '../lib/notePreview.js'
 import { PRESETS, FONTS, effTheme, setDeviceTheme } from '../theme/theme.js'
@@ -218,6 +219,15 @@ const SET_SECS = [
   ['info', '정보·진단', 'info', '문제 신고, 진단, 설치 방법'],
 ]
 
+// 지난 업데이트 내역 (새로워진 점 전체, 최신이 위)
+function ChangeLog() {
+  return (
+    <div className="col" style={{ gap: 12 }}>
+      {CHANGES.slice(0, 60).map((c) => <div key={c.v}><div className="tiny muted">{c.v}</div>{c.items.map((x, i) => <div key={i} className="small">· {x}</div>)}</div>)}
+    </div>
+  )
+}
+
 // 문제 신고 · 진단: 기기·버전·저장 공간·최근 오류를 한 번에 복사 (토큰·내용 없음)
 function DiagCard() {
   const sync = useSyncStatus(), st = useSettings()
@@ -229,6 +239,7 @@ function DiagCard() {
       <div className="form">
         <div className="row wrap" style={{ gap: 6 }}>
           <button className="btn" onClick={copy}><Icon name="download" size={15} />진단 정보 복사</button>
+          <button className="btn" onClick={() => openSheet(() => <ChangeLog />, { title: '업데이트 내역' })}><Icon name="sparkle" size={15} />업데이트 내역</button>
           {errN > 0 && <button className="btn" onClick={() => { clearErrors(); setErrN(0); toast('오류 기록을 지웠어요') }}>오류 기록 지우기 ({errN})</button>}
           {pers === false && <button className="btn" onClick={async () => { const r = await persistStorage(); setPers(!!r); toast(r ? '저장 공간을 보존해요' : 'iOS 가 아직 허용하지 않았어요 · 홈 화면 앱에서 다시 눌러 주세요') }}>저장 공간 보존 요청</button>}
         </div>
@@ -920,6 +931,7 @@ function DesignDetail({ th, setTheme, st }) {
         {S('할 일 글자 크기', 'taskFs', [['s', '작게'], ['m', '보통'], ['l', '크게']], 'm')}
         {S('할 일 줄 간격', 'taskDens', [['tight', '촘촘하게'], ['normal', '보통']], 'normal')}
         {S('할 일 제목 줄 수', 'taskLines', [['1', '한 줄'], ['2', '두 줄까지'], ['all', '전부']], 'all')}
+        {S('할 일 형광펜 색', 'hlTask', [['', '과목 색'], ['violet', '바이올렛'], ['rose', '로즈'], ['olive', '올리브']], '')}
         {S('과목 표시', 'subjTag', [['tag', '배지'], ['dot', '점 + 글자']], 'tag')}
         {S('홈 카드 간격', 'homeGap', [['tight', '촘촘하게'], ['normal', '보통'], ['loose', '넉넉하게']], 'normal')}
         {S('달력 일정 글자', 'evChip', [['s', '작게'], ['m', '보통']], 's')}
