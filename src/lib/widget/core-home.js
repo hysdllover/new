@@ -418,7 +418,7 @@ export default () => `  } else if (KIND === 'study') {
       todoList(w, 6, 6)
       w.addSpacer(); if (dd) ddRow(w, 12)
     }
-  } else if (KIND === 'dash' || KIND === 'custom') {
+  } else if (KIND === 'dash' || KIND === 'custom' || KIND === 'dash4') {
     // ── 대시보드 · 내 위젯(구성1~3: 앱에서 블록·배치를 고름): D-day · 일정 · 공부 시간(타이머 중이면 흐르는 시간) · 할 일 (중·대는 칸마다 누르면 해당 화면) ──
     const left = items.filter((x) => !x.done).length, c = nCur || nNext
     const LG = fam === 'large' || fam === 'extraLarge' // 대형은 글자 크게
@@ -593,23 +593,35 @@ export default () => `  } else if (KIND === 'study') {
     rowsG.forEach((ids, ri) => {
       TBIG = isBigR(ids)
       TILEH = TBIG ? gridH * 2 + gRow : fam === 'small' ? 0 : gridH
-      const r = w.addStack(); r.spacing = gap
+      // 칸 구분 (앱 설정 › 위젯): 여백 · 선 · 옅은 칸 바탕
+      const SEP = st.widgetDashSep || 'gap'
+      const r = w.addStack(); r.spacing = SEP === 'line' ? 0 : gap
       const wdx = ids.length === 1 && wideSet.has(keys[ids[0]]) ? inner : wd
-      for (const x of ids.map((j) => tiles[j])) {
+      ids.map((j) => tiles[j]).forEach((x, xi) => {
         const wd = wdx
-        const b = r.addStack(); b.layoutVertically(); b.size = new Size(wd, TBIG ? Math.round(TILEH) : 0); if (fam !== 'small') b.url = link(x[4])
+        if (SEP === 'line' && xi) { r.addSpacer(gap / 2); vrule(r, TILEH || 40); r.addSpacer(gap / 2 - 1) }
+        const b = r.addStack(); b.layoutVertically(); b.size = new Size(SEP === 'line' && ids.length > 1 ? wd - 1 : wd, TBIG ? Math.round(TILEH) : 0); if (fam !== 'small') b.url = link(x[4])
+        if (SEP === 'tint') { b.backgroundColor = new Color(inkHex(), 0.06); b.cornerRadius = 8; b.setPadding(6, 8, 6, 8) }
         t(b, x[0], label(LG ? 9 : 7), x[0][0] === '●' ? GOLD : SOFT).minimumScaleFactor = 0.7; b.addSpacer(2)
         if (typeof x[1] === 'function') { if (x[0] === 'TO DO') b.addSpacer(3); x[1](b, thin(big), wd) } else if (x[6]) x[6](b, thin(big), INK).minimumScaleFactor = 0.5; else t(b, x[1], thin(big), INK).minimumScaleFactor = 0.5
         if (x[2]) t(b, x[2], tw(LG ? 12 : 10), x[5]).minimumScaleFactor = 0.7
         if (x[3] != null) { b.addSpacer(4); pbar(b, x[3], wd) }
         if (TBIG) b.addSpacer()
-      }
-      if (ri < rowsG.length - 1) w.addSpacer(fam === 'small' ? Math.round(16 * SCALE) : 14)
+      })
+      if (ri < rowsG.length - 1) { if (SEP === 'line') { w.addSpacer(7); rule(w, inner); w.addSpacer(6) } else w.addSpacer(fam === 'small' ? Math.round(16 * SCALE) : 14) }
     })
     TILEH = 0; TBIG = false
     }
     // 대형: 아래에 이번 주 공부 (할 일은 위 칸에 있으니 겹치지 않게)
-    if ((fam === 'large' || fam === 'extraLarge') && !CW && !keys.includes('bars')) { w.addSpacer(); rule(w, inner); w.addSpacer(10); const s2 = w.addStack(); s2.centerAlignContent(); cap(s2, 'THIS WEEK'); s2.addSpacer(); t(s2, hm(weekTot) + ' · 하루 ' + hm(weekAvg), label(10), SOFT); w.addSpacer(8); bars7(w, inner, Math.round(innerH * 0.16), GOLD, RULE); w.addSpacer(3); wdRow(w, inner, 9); FILL = true }
+    if (KIND === 'dash4' && (fam === 'large' || fam === 'extraLarge')) {
+      // 4칸 대시보드: 아래에 오늘 세 가지 (없으면 남은 할 일)
+      w.addSpacer(); rule(w, inner); w.addSpacer(10)
+      const T3 = (EX.top3 || []).length ? EX.top3.map((x) => ({ id: x.id, title: x.t, done: x.d })) : items.filter((x) => !x.done).slice(0, 3)
+      const s2 = w.addStack(); s2.centerAlignContent(); cap(s2, (EX.top3 || []).length ? 'TOP 3' : 'TO DO'); s2.addSpacer(); t(s2, done + '/' + items.length, label(10), SOFT); w.addSpacer(6)
+      T3.forEach((x, i) => { const r = w.addStack(); r.centerAlignContent(); r.spacing = 8; if (x.id) r.url = taskUrl(x.id); t(r, String(i + 1), tw(12), GOLD); t(r, x.title, tw(13), x.done ? SOFT : INK).minimumScaleFactor = 0.8; r.addSpacer(); if (x.done) t(r, '✓', tw(12), SOFT); w.addSpacer(4) })
+      if (!T3.length) t(w, 'All clear.', tw(13), SOFT)
+      FILL = true
+    } else     if ((fam === 'large' || fam === 'extraLarge') && !CW && !keys.includes('bars')) { w.addSpacer(); rule(w, inner); w.addSpacer(10); const s2 = w.addStack(); s2.centerAlignContent(); cap(s2, 'THIS WEEK'); s2.addSpacer(); t(s2, hm(weekTot) + ' · 하루 ' + hm(weekAvg), label(10), SOFT); w.addSpacer(8); bars7(w, inner, Math.round(innerH * 0.16), GOLD, RULE); w.addSpacer(3); wdRow(w, inner, 9); FILL = true }
   } else if (KIND === 'tmrw') {
     // ── 내일 준비: 수업 · 일정 · 할 일 ──
     const td = new Date(d0.getTime() + 86400000)
@@ -1071,9 +1083,10 @@ export default () => `  } else if (KIND === 'study') {
     table(rowsP, [fam === 'small' ? 44 : 54, null], rh, fam === 'small' ? 10.5 : 12)
     if (big2) {
       w.addSpacer(12)
-      const rh2 = Math.round(22 * SCALE), nT = Math.max(1, Math.floor((innerH - 20 * SCALE - rh * rowsP.length - 12 - rh2) / (rh2 + BW)))
+      const rh0 = Math.round(22 * SCALE), room = innerH - 20 * SCALE - rh * rowsP.length - 12, nT = Math.max(1, Math.floor((room - rh0) / (rh0 + BW)))
+      const rh2 = Math.floor(Math.max(rh0, (room - BW * (nT + 1)) / (nT + 1))) // 남는 높이만큼 줄 간격을 늘려 아래까지 채움
       const tr = items.slice(0, nT).map((x, i) => { const a = [String(i + 1), x.title, x.done ? '✓' : '']; a.dim = x.done; if (x.id) a.url = taskUrl(x.id); return a })
-      table([['NO', 'TO DO', 'DONE'], ...pfill(tr.length ? tr : [['', '오늘 할 일 없음', '']], nT, 3)], [32, null, 44], rh2, 11.5, true) // 남는 줄도 빈 칸으로 아래까지
+      table([['NO', 'TO DO', 'DONE'], ...pfill(tr.length ? tr : [['', '오늘 할 일 없음', '']], nT, 3)], [32, null, 44], rh2, 11.5, true); FILL = true // 남는 줄도 빈 칸으로 아래까지
     }
   } else if (KIND === 'pweek') {
     // ── 주간표: 칸 띠(합계 · 평균) · 요일 칸 7개(시간 + 진행 선) · 대형은 과목 줄 목록 ──
@@ -1531,6 +1544,164 @@ export default () => `  } else if (KIND === 'study') {
       FILL = true
     }
     w.url = link('')
+  } else if (KIND === 'pday' || KIND === 'pwk' || KIND === 'ddbar' || KIND === 'ddline' || KIND === 'stack' || KIND === 'dashxl' || KIND === 'dashwk') {
+    // ── 새 형태 공용 도구: 테두리 칸 · 머리줄 · 할 일 줄 ──
+    const EX2 = data.extra || {}, BW2 = 0.7, LGx = fam === 'large' || fam === 'extraLarge'
+    const head = (P2, a, b2) => { const h = P2.addStack(); h.centerAlignContent(); cap(h, a); h.addSpacer(); if (b2) t(h, b2, label(8), SOFT) }
+    const box = (P2, wd, ht, fn) => { const b = P2.addStack(); b.layoutVertically(); b.size = new Size(wd, ht); b.borderWidth = BW2; b.borderColor = RULE; b.setPadding(5, 7, 5, 7); fn(b); b.addSpacer(); return b }
+    const lab = (P2, s) => t(P2, s, label(7), SOFT)
+    const MOODS = ['많이 지침', '조금 지침', '보통', '좋음', '아주 좋음'], WXS = { sun: '맑음', cloud: '흐림', rain: '비', snow: '눈', wind: '바람' }
+    const tRow = (P2, x, fs) => { const r = P2.addStack(); r.centerAlignContent(); r.spacing = 6; if (x.id) r.url = taskUrl(x.id); const mk = t(r, x.done ? '✓' : mkc(x.priority >= 3), tw(fs - 1), x.priority >= 3 ? GOLD : SOFT); if (x.id && !x.done) mk.url = doneUrl(x.id); t(r, x.title, tw(fs), x.done ? SOFT : INK).minimumScaleFactor = 0.8; r.addSpacer() }
+    const evOf = (k) => ((data.cal || {})[k] || []).slice().sort((a, b) => (a.s ?? -1) - (b.s ?? -1))
+    const ddPick = ddAll[0]
+    if (KIND === 'pday') {
+      // ── 하루 지면: DATE · D-DAY · 목표/실제 · 기분 칸 + 할 일 줄 (플래너 머리 양식) ──
+      head(w, 'DAILY PAGE', DAY[d0.getDay()] + ' ' + (d0.getMonth() + 1) + '.' + pad(d0.getDate()))
+      w.addSpacer(6)
+      const cw = Math.floor((inner - 6) / 2), ch = Math.round((fam === 'small' ? 30 : 34) * SCALE)
+      const cell = (P2, a, v, sub) => box(P2, cw, ch, (b) => { lab(b, a); b.addSpacer(1); const r = b.addStack(); r.bottomAlignContent(); t(r, v, tw(fam === 'small' ? 11 : 13), INK).minimumScaleFactor = 0.6; if (sub) { r.addSpacer(4); t(r, sub, label(7), SOFT).minimumScaleFactor = 0.6 } })
+      const r1 = w.addStack(); r1.spacing = 6; cell(r1, 'STUDY', hm(mins), '/ ' + hm(goal)); cell(r1, 'D-DAY', ddPick ? ddT(ddPick) : '—', ddPick ? ddPick.title : '')
+      let used = 20 * SCALE + ch
+      if (fam !== 'small') { w.addSpacer(6); const r2 = w.addStack(); r2.spacing = 6; cell(r2, 'MOOD', EX2.mood ? MOODS[EX2.mood - 1] : '—'); cell(r2, 'WEATHER', WXS[EX2.weather] || '—'); used += ch + 6 }
+      w.addSpacer(8); used += 8
+      const fs = fam === 'small' ? 11 : 12, rowH = (fs * 1.3 + 5) * SCALE, diaryH = LGx ? 40 * SCALE : 0
+      const n = CNT || Math.max(1, Math.floor((innerH - used - 14 * SCALE - diaryH) / rowH))
+      lab(w, 'TO DO  ' + done + '/' + items.length); w.addSpacer(3)
+      for (const x of items.slice(0, n)) { tRow(w, x, fs); w.addSpacer(3) }
+      if (!items.length) t(w, '오늘 할 일 없음', tw(fs), SOFT)
+      if (LGx) { w.addSpacer(); rule(w, inner); w.addSpacer(5); lab(w, 'NOTE'); w.addSpacer(2); t(w, EX2.diary || ' ', tw(12), INK, 2).minimumScaleFactor = 0.8; FILL = true }
+      w.url = link('planner.page')
+    } else if (KIND === 'pwk') {
+      // ── 주간 지면: 요일 칸 7개 + 메모 (아주 큰·대형 2단 × 4줄, 중형은 7칸 한 줄) ──
+      const k0 = bwDays[0], k6 = bwDays[6], md2 = (k) => (+k.slice(5, 7)) + '.' + (+k.slice(8))
+      head(w, 'WEEKLY PAGE', md2(k0) + ' – ' + md2(k6) + '   ' + hm(bwDays.reduce((a, k) => a + (k === today ? mins : DM[k] || 0), 0)))
+      w.addSpacer(6)
+      if (fam === 'medium') {
+        const gap = 4, cw = Math.floor((inner - gap * 6) / 7), r = w.addStack(); r.spacing = gap
+        for (const k of bwDays) box(r, cw, innerH - 22 * SCALE, (b) => { const dt = new Date(k + 'T12:00:00'); t(b, WDN[dt.getDay()] + ' ' + dt.getDate(), label(8), k === today ? GOLD : SOFT); b.addSpacer(2); t(b, hm(k === today ? mins : DM[k] || 0), tw(10), INK).minimumScaleFactor = 0.6; b.addSpacer(2); const L = bwOf(k); dots(b, L, 5, 6) })
+        FILL = true
+      } else {
+        const cw = Math.floor((inner - 6) / 2), rows = 4, chh = Math.floor((innerH - 22 * SCALE - 6 * (rows - 1)) / rows), fs = fam === 'extraLarge' ? 11 : 10
+        const per = Math.max(1, Math.floor((chh - 26 * SCALE) / ((fs * 1.3 + 2) * SCALE)))
+        for (let r0 = 0; r0 < rows; r0++) {
+          const r = w.addStack(); r.spacing = 6
+          for (let c0 = 0; c0 < 2; c0++) {
+            const i = r0 * 2 + c0, k = bwDays[i]
+            if (k) box(r, cw, chh, (b) => {
+              const dt = new Date(k + 'T12:00:00'), hh = b.addStack(); hh.centerAlignContent(); t(hh, WDN[dt.getDay()] + '  ' + md2(k), label(8), k === today ? GOLD : SOFT); hh.addSpacer(); t(hh, hm(k === today ? mins : DM[k] || 0), label(8), SOFT); b.addSpacer(3)
+              const L = [...evOf(k).map((e) => ({ title: (e.s == null ? '' : clk(e.s % 1440) + ' ') + e.t, ev: 1 })), ...bwOf(k)]
+              for (const x of L.slice(0, per)) { const rr = b.addStack(); rr.centerAlignContent(); t(rr, x.ev ? '·' : x.done ? '✓' : mkc(false), tw(fs - 1), SOFT); rr.addSpacer(4); t(rr, x.title, tw(fs), x.done ? SOFT : INK).minimumScaleFactor = 0.75; rr.addSpacer() }
+              if (L.length > per) t(b, '+' + (L.length - per), label(7), SOFT)
+            })
+            else box(r, cw, chh, (b) => { lab(b, 'MEMO'); b.addSpacer(3); t(b, EX2.weekMemo || '앱 › 캘린더 › 주에서 이번 주 메모', tw(fs), EX2.weekMemo ? INK : SOFT, 6).minimumScaleFactor = 0.8 })
+          }
+          if (r0 < rows - 1) w.addSpacer(6)
+        }
+        FILL = true
+      }
+      w.url = link('planner.week')
+    } else if (KIND === 'ddbar') {
+      // ── D-day 진행: 시작(만든 날)부터 D-day 까지 가는 선 위 오늘 위치 ──
+      const x = ddAll[DDI] || ddPick
+      if (!x) t(w, 'No D-day', tw(13), SOFT)
+      else {
+        const st0 = x.start || (x.createdAt ? ymd(new Date(x.createdAt)) : today)
+        const tot = Math.max(1, Math.round((new Date(x.date) - new Date(st0)) / 864e5)), gone = Math.max(0, Math.min(tot, Math.round((new Date(today) - new Date(st0)) / 864e5)))
+        head(w, 'D-DAY', x.title)
+        w.addSpacer()
+        const r = w.addStack(); r.bottomAlignContent(); t(r, ddT(x), thin(fam === 'small' ? 30 : 38), DDC || INK).minimumScaleFactor = 0.6; r.addSpacer(); t(r, Math.round((gone / tot) * 100) + '%', tw(11), GOLD)
+        w.addSpacer(6)
+        const W3 = inner, c = new DrawContext(); c.size = new Size(W3, 12); c.opaque = false; c.respectScreenScale = true
+        const fg = new Color(DDHEX || inkHex()), bg = new Color(DDHEX || inkHex(), 0.2), px = Math.max(5, Math.min(W3 - 5, (W3 * gone) / tot))
+        c.setFillColor(bg); c.fillRect(new Rect(0, 5.5, W3, 1)); c.setFillColor(fg); c.fillRect(new Rect(0, 5, px, 2)); c.fillEllipse(new Rect(px - 4, 2, 8, 8)); c.fillRect(new Rect(W3 - 1, 2, 1, 8))
+        const im = w.addImage(c.getImage()); im.imageSize = new Size(W3, 12)
+        w.addSpacer(4)
+        const f2 = w.addStack(); t(f2, (+st0.slice(5, 7)) + '.' + (+st0.slice(8)), label(7), SOFT); f2.addSpacer(); t(f2, (+x.date.slice(5, 7)) + '.' + (+x.date.slice(8)), label(7), SOFT)
+        if (fam !== 'small') { w.addSpacer(4); t(w, gone + '일 지남 · ' + (tot - gone) + '일 남음', tw(10), SOFT) }
+        FILL = true
+      }
+      w.url = link('study.progress')
+    } else if (KIND === 'ddline') {
+      // ── D-day 여러 개: 오늘부터 가장 먼 D-day 까지 가로 선 위 점 ──
+      const L = ddAll.slice().sort((a, b) => a.date.localeCompare(b.date)).slice(0, fam === 'small' ? 3 : 5)
+      head(w, 'D-DAYS', L.length ? '' : '')
+      if (!L.length) t(w, 'No D-day', tw(13), SOFT)
+      else {
+        w.addSpacer()
+        const span = Math.max(1, ddN(L[L.length - 1])), W3 = inner, c = new DrawContext(); c.size = new Size(W3, 14); c.opaque = false; c.respectScreenScale = true
+        c.setFillColor(new Color(inkHex(), 0.3)); c.fillRect(new Rect(0, 6.5, W3, 1))
+        c.setFillColor(new Color(inkHex())); c.fillEllipse(new Rect(0, 4, 6, 6))
+        for (const x of L) { const px = 5 + ((W3 - 10) * ddN(x)) / span; c.setFillColor(new Color(x.color || inkHex())); c.fillEllipse(new Rect(px - 4, 3, 8, 8)) }
+        const im = w.addImage(c.getImage()); im.imageSize = new Size(W3, 14)
+        w.addSpacer(6)
+        for (const x of L) { const r = w.addStack(); r.centerAlignContent(); const dt = r.addStack(); dt.size = new Size(5, 5); dt.cornerRadius = 2.5; dt.backgroundColor = new Color(x.color || inkHex()); r.addSpacer(5); t(r, ddT(x), tw(fam === 'small' ? 10 : 11), GOLD); r.addSpacer(6); t(r, x.title, tw(fam === 'small' ? 10 : 11), INK).minimumScaleFactor = 0.7; r.addSpacer(); if (fam !== 'small') t(r, (+x.date.slice(5, 7)) + '.' + (+x.date.slice(8)), label(8), SOFT); w.addSpacer(2) }
+        FILL = true
+      }
+      w.url = link('study.progress')
+    } else if (KIND === 'stack') {
+      // ── 스택: 위 작은 칸 두 개(공부 · D-day) · 아래 할 일 목록 ──
+      const cw = Math.floor((inner - 10) / 2), ch = Math.round(innerH * 0.36)
+      const r = w.addStack(); r.spacing = 10
+      const A = box(r, cw, ch, (b) => { b.url = link(TM ? 'study.timer' : 'study.records'); lab(b, TM ? '● ' + TM.name : 'STUDY'); b.addSpacer(); studyLive(b, thin(30), INK).minimumScaleFactor = 0.5; t(b, 'of ' + hm(goal) + '  ' + pct + '%', tw(9), SOFT); b.addSpacer(4); pbar(b, mins / goal, cw - 14) })
+      box(r, cw, ch, (b) => { b.url = link('study.progress'); lab(b, 'D-DAY'); b.addSpacer(); t(b, ddPick ? ddT(ddPick) : '—', thin(30), DDC || INK).minimumScaleFactor = 0.5; t(b, ddPick ? ddPick.title : 'No D-day', tw(10), GOLD).minimumScaleFactor = 0.7 })
+      w.addSpacer(12)
+      head(w, 'TO DO', done + '/' + items.length); w.addSpacer(6)
+      const fs = 13, rowH = (fs * 1.3 + 5) * SCALE, n = CNT || Math.max(1, Math.floor((innerH - ch - 34 * SCALE) / rowH))
+      for (const x of items.filter((y) => !y.done).slice(0, n)) { tRow(w, x, fs); w.addSpacer(4) }
+      if (!items.filter((y) => !y.done).length) t(w, 'All clear.', tw(fs), SOFT)
+    } else if (KIND === 'dashxl') {
+      // ── 한 화면 대시보드 (아이패드 아주 큰 크기): 왼쪽 오늘 · 가운데 10분 칸 · 오른쪽 이번 주 + D-day ──
+      const gap = 14, c1 = Math.floor(inner * 0.36), c2 = Math.floor(inner * 0.3), c3 = inner - c1 - c2 - gap * 4 - 1.4
+      const row = w.addStack(); row.size = new Size(inner, innerH); row.topAlignContent()
+      const L = row.addStack(); L.layoutVertically(); L.size = new Size(c1, innerH)
+      head(L, 'TODAY', dateStr); L.addSpacer(8)
+      const sr = L.addStack(); sr.bottomAlignContent(); studyLive(sr, thin(40), INK).minimumScaleFactor = 0.5; sr.addSpacer(6); t(sr, '/ ' + hm(goal), tw(12), SOFT); sr.addSpacer(); t(sr, pct + '%', tw(12), GOLD)
+      L.addSpacer(4); pbar(L, mins / goal, c1); L.addSpacer(12)
+      const top3 = EX2.top3 || []
+      if (top3.length) { lab(L, 'TOP 3'); L.addSpacer(3); top3.forEach((x, i) => { const r = L.addStack(); r.url = taskUrl(x.id); t(r, (i + 1) + '  ' + x.title, tw(13), x.d ? SOFT : INK).minimumScaleFactor = 0.75; L.addSpacer(3) }); L.addSpacer(8) }
+      lab(L, 'TO DO  ' + done + '/' + items.length); L.addSpacer(3)
+      for (const x of items.filter((y) => !y.done).slice(0, CNT || (top3.length ? 5 : 8))) { tRow(L, x, 12); L.addSpacer(3) }
+      L.addSpacer()
+      const evs = evOf(today).filter((e) => e.s == null || (e.e ?? e.s + 60) > nm)
+      if (evs.length) { lab(L, 'PLAN'); L.addSpacer(3); for (const e of evs.slice(0, 3)) { const r = L.addStack(); t(r, e.s == null ? '종일' : clk(e.s % 1440), tw(11), GOLD); r.addSpacer(6); t(r, e.t, tw(12), INK).minimumScaleFactor = 0.75; r.addSpacer(); L.addSpacer(2) } }
+      row.addSpacer(gap); vrule(row, innerH); row.addSpacer(gap)
+      const M = row.addStack(); M.layoutVertically(); M.size = new Size(c2, innerH)
+      head(M, '10 MIN', hm(mins)); M.addSpacer(6)
+      { // 10분 칸 (6~23시)
+        const H3 = innerH - 22 * SCALE, rows = 18, rh = H3 / rows, lw = 15, sw = (c2 - lw) / 6
+        const cv = new DrawContext(); cv.size = new Size(c2, H3); cv.opaque = false; cv.respectScreenScale = true
+        const lightInk = inkMode === 'light' || (inkMode === 'auto' && dark()), ink = lightInk ? '#ffffff' : '#1e232b'
+        const fill = {}; const mm2 = (ts) => { const d = new Date(ts); return d.getHours() * 60 + d.getMinutes() }
+        for (const s of sessions) if (s.start) { const a = mm2(s.start), sc = (subjects.find((y) => y.id === s.subjectId) || {}).color || inkHex(); for (let m = Math.floor(a / 10) * 10; m < a + (s.dur || 0); m += 10) fill[m / 10] = sc }
+        cv.setFont(Font.systemFont(7.5)); cv.setTextColor(new Color(ink, 0.55))
+        for (let r = 0; r < rows; r++) { const hr = 6 + r, y0 = r * rh; cv.drawText(String(hr), new Point(0, y0 + rh / 2 - 5)); cv.setFillColor(new Color(ink, 0.12)); cv.fillRect(new Rect(0, y0 + rh - 0.5, c2, 0.5)); for (let k = 0; k < 6; k++) { const col2 = fill[hr * 6 + k]; if (!col2) continue; const p = new Path(); p.addRoundedRect(new Rect(lw + k * sw + 0.6, y0 + rh * 0.22, sw - 1.2, rh * 0.56), 1.5, 1.5); cv.addPath(p); cv.setFillColor(new Color(col2, 0.7)); cv.fillPath() } }
+        const im = M.addImage(cv.getImage()); im.imageSize = new Size(c2, H3)
+      }
+      row.addSpacer(gap); vrule(row, innerH); row.addSpacer(gap)
+      const R = row.addStack(); R.layoutVertically(); R.size = new Size(c3, innerH)
+      head(R, 'THIS WEEK', hm(weekTot)); R.addSpacer(8); bars7(R, c3, Math.round(innerH * 0.22), GOLD, RULE); R.addSpacer(3); wdRow(R, c3, 8)
+      R.addSpacer(14); lab(R, 'D-DAYS'); R.addSpacer(4)
+      for (const x of ddAll.slice(0, 4)) { const r = R.addStack(); r.centerAlignContent(); t(r, x.title, tw(12), INK).minimumScaleFactor = 0.7; r.addSpacer(); t(r, ddT(x), tw(12), GOLD); R.addSpacer(3) }
+      if (!ddAll.length) t(R, 'No D-day', tw(11), SOFT)
+      R.addSpacer(); if (quote) t(R, quote, tw(11), SOFT, 3).minimumScaleFactor = 0.8
+      FILL = true
+    } else if (KIND === 'dashwk') {
+      // ── 주간 대시보드: 위 요일 7칸(공부 · 할 일) · 아래 과목별 표와 이번 주 메모 ──
+      head(w, 'THIS WEEK', hm(weekTot) + ' · 하루 ' + hm(weekAvg)); w.addSpacer(6)
+      const gap = 4, cw = Math.floor((inner - gap * 6) / 7), ch = Math.round((fam === 'medium' ? innerH - 22 * SCALE : innerH * 0.3))
+      const r = w.addStack(); r.spacing = gap
+      for (const k of bwDays) box(r, cw, ch, (b) => { const dt = new Date(k + 'T12:00:00'), v = k === today ? mins : DM[k] || 0, L = bwOf(k); t(b, WDN[dt.getDay()], label(8), k === today ? GOLD : SOFT); b.addSpacer(); t(b, v ? hm(v) : '–', tw(fam === 'medium' ? 10 : 12), INK).minimumScaleFactor = 0.6; b.addSpacer(2); t(b, L.length ? L.filter((x) => x.done).length + '/' + L.length : '', label(7), SOFT) })
+      if (fam !== 'medium') {
+        w.addSpacer(12)
+        const tot = weekSub.reduce((a, x) => a + x.m, 0) || 1
+        lab(w, 'SUBJECTS'); w.addSpacer(4)
+        for (const x of weekSub.slice(0, LGx ? 5 : 3)) { const rr = w.addStack(); rr.centerAlignContent(); const d2 = rr.addStack(); d2.size = new Size(5, 5); d2.cornerRadius = 2.5; d2.backgroundColor = x.s.color ? new Color(x.s.color) : GOLD; rr.addSpacer(6); const nmS = rr.addStack(); nmS.size = new Size(70, 0); t(nmS, x.s.name, tw(11), INK).minimumScaleFactor = 0.7; nmS.addSpacer(); rr.addSpacer(6); const im = rr.addImage(line(x.m / tot, inner - 150, x.s.color || null)); im.imageSize = new Size(inner - 150, 3); rr.addSpacer(); t(rr, hm(x.m), tw(10), SOFT); w.addSpacer(4) }
+        if (!weekSub.length) t(w, '이번 주 기록 없음', tw(11), SOFT)
+        w.addSpacer(); rule(w, inner); w.addSpacer(6); lab(w, 'MEMO'); w.addSpacer(2); t(w, EX2.weekMemo || '앱 › 캘린더 › 주에서 이번 주 메모', tw(11), EX2.weekMemo ? INK : SOFT, 3).minimumScaleFactor = 0.8
+        FILL = true
+      } else FILL = true
+      w.url = link('planner.week')
+    }
   } else if (KIND === 'quote') {
     // ── 다짐 ──
     t(w, dateStr, label(9), SOFT)
@@ -1577,7 +1748,7 @@ export default () => `  } else if (KIND === 'study') {
     T.addSpacer(9)
     todoList(T, 6)
   }
-  if (!lock && !FILL) w.addSpacer()
+  if (!lock) { if (FILL ? VA === 'center' : VA !== 'bottom') w.addSpacer() }
 } catch (e) {
   // 그리다 실패해도 빈칸 대신 원인을 보여 줌
   w = new ListWidget()

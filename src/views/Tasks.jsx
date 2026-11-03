@@ -79,6 +79,7 @@ function TaskList({ params }) {
       <TaskQuickInput key={f.smart + (f.subjectId || '')} defaultDate={f.smart === 'today' ? 'today' : f.smart === 'tomorrow' ? 'tomorrow' : ''} defaults={{ subjectId: f.subjectId || null, projectId: f.projectId || null, ...(f.smart === 'inbox' ? { inbox: true } : null) }} />
       <div className="scroll-x"><div className="row" style={{ gap: 6, paddingBottom: 2 }}>
         {SMART.map(([k, l]) => <button key={k} className={'chip' + ((f.smart || 'all') === k && !view ? ' on' : '')} onClick={() => set({ smart: k })}>{l} <span className="muted tiny cnt">{k === 'done' ? applyFilter(tasks, { smart: k }).length : openCount(applyFilter(tasks, { smart: k }))}</span></button>)}
+        <span style={{ width: 1, alignSelf: "stretch", background: "var(--line)", margin: "0 2px" }} /><button className={'chip' + (f.hl ? ' on' : '')} onClick={() => setParams('tasks', { ...params, hl: !f.hl || null })}><Icon name="pen" size={12} />형광펜</button>
       </div></div>
       {views.length > 0 && (
         <div className="scroll-x"><div className="row" style={{ gap: 6 }}>

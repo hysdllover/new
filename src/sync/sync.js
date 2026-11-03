@@ -9,7 +9,7 @@ import { mergeColl, stableFile, shardOf, NOTE_SHARDS, isDataFile, mergeNote } fr
 import { blobToDataUrl, setRemoteRaw, addFile } from '../lib/files.js'
 import { eventsOn, classesOn } from '../engine/scheduler.js'
 import { weekGoals, goalProgress, addTask, toggleTask, addSession } from '../store/actions.js'
-import { today, addDays } from '../engine/date.js'
+import { today, addDays, weekStart } from '../engine/date.js'
 import { buildIcs } from '../lib/ics.js'
 import { SCRIPT_VER } from '../lib/scriptable.js'
 import { listFonts, getFontBlob, importFont, removeFont, markSynced, pendingDeletes, clearDeletes, SYNC_FONT_MAX } from '../lib/fonts.js'
@@ -313,6 +313,9 @@ function extraPayload() {
     rev: list('reviews').filter((r) => r.next && r.next <= d && !r.done).length,
     one: one ? { t: oneT ? oneT.title : one.text || '', d: oneT ? !!oneT.done : !!one.done } : null,
     // 오늘의 Top 3 (앱 '오늘'에서 정한 순서대로) — 매거진 위젯 차례
+    // 하루 지면 · 주간 지면 위젯: 기분 · 날씨 · 한 줄 일기 · 이번 주 메모
+    mood: getState().conditions?.[d]?.mood || null, weather: day?.weather || null, diary: day?.comment || '',
+    weekMemo: getState().days?.[weekStart(d)]?.weekMemo || '',
     top3: (day?.top3 || []).map((id) => getState().tasks?.[id]).filter((t) => t && !t.deleted).slice(0, 3).map((t) => ({ id: t.id, t: t.title, d: !!t.done })),
   }
 }
@@ -347,7 +350,7 @@ function widgetPayload() {
     series: seriesSummary(list('tasks'), list('subjects'), settings().seriesColors || {}).slice(0, 6).map((x) => ({ t: x.t, d: x.d, n: x.n, x: x.next?.title || '', c: x.color })),
     sv: SCRIPT_VER,
     gid: gistId(), // 위젯에서 바로 처리할 때 명령을 남길 곳 (토큰은 위젯 쪽 보관함에만)
-    settings: { settings: { main: { goalDaily: main.goalDaily, goalByDay: main.goalByDay || {}, goalWeekly: main.goalWeekly, weekStart: main.weekStart, widgetFont: main.widgetFont, widgetScale: main.widgetScale, widgetWeight: main.widgetWeight, widgetClear: main.widgetClear, widgetTheme: main.widgetTheme, widgetPad: main.widgetPad, widgetRule: main.widgetRule, widgetPattern: main.widgetPattern, dashTiles: main.dashTiles, customWidgets: main.customWidgets, dayStart: main.dayStart, dayEnd: main.dayEnd, widgetDoodle: main.widgetDoodle, widgetDdColor: main.widgetDdColor, widgetMark: main.widgetMark, widgetInk: main.widgetInk, widgetDate: main.widgetDate, widgetNoDate: main.widgetNoDate, widgetClock: main.widgetClock, widgetAlign: main.widgetAlign } }, quotes: keep('quotes') },
+    settings: { settings: { main: { goalDaily: main.goalDaily, goalByDay: main.goalByDay || {}, goalWeekly: main.goalWeekly, weekStart: main.weekStart, widgetFont: main.widgetFont, widgetScale: main.widgetScale, widgetWeight: main.widgetWeight, widgetClear: main.widgetClear, widgetTheme: main.widgetTheme, widgetPad: main.widgetPad, widgetRule: main.widgetRule, widgetPattern: main.widgetPattern, dashTiles: main.dashTiles, customWidgets: main.customWidgets, dayStart: main.dayStart, dayEnd: main.dayEnd, widgetDoodle: main.widgetDoodle, widgetDdColor: main.widgetDdColor, widgetMark: main.widgetMark, widgetInk: main.widgetInk, widgetDate: main.widgetDate, widgetNoDate: main.widgetNoDate, widgetClock: main.widgetClock, widgetAlign: main.widgetAlign, widgetVAlign: main.widgetVAlign, widgetGrain: main.widgetGrain, widgetDashSep: main.widgetDashSep } }, quotes: keep('quotes') },
   })
 }
 const ATT_MAX = 7 * 1024 * 1024 // gist 한 파일로 올릴 수 있는 첨부 크기 (base64 로 늘어나는 걸 고려)

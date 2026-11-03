@@ -85,6 +85,9 @@ export function applyTheme(t0) {
   // 목록·달력 표시 (설정 › 디자인 세부)
   Object.assign(root.dataset, { evchip: t.evChip || 's', hgap: t.homeGap || 'normal', tfs: t.taskFs || 'm', tdens: t.taskDens || 'normal', subj: t.subjTag || 'tag', strike: t.strikeSpeed || 'normal' })
   root.dataset.tlines = t.taskLines || 'all'
+  // 형광펜 색: 과목 색(기본) 또는 고정 색
+  const HLC = { violet: '#a99bc4', rose: '#c9a0a8', olive: '#9aa57a' }[t.hlTask]
+  if (HLC) root.style.setProperty('--hl-fixed', HLC); else root.style.removeProperty('--hl-fixed')
   root.toggleAttribute('data-noburst', t.checkBurst === false)
   root.toggleAttribute('data-pastdim', !!t.calPastDim)
   root.style.setProperty('--font-note', (t.noteFont && familyOf(t.noteFont)) || 'inherit')

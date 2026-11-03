@@ -6,7 +6,12 @@ const lock = fam.startsWith('accessory')
 KIND = fam === 'accessoryCircular' ? BASEKIND : ({ pct: 'study', mins: 'now' }[BASEKIND] || BASEKIND)
 if (KIND === 'custom' && fam.startsWith('accessory')) KIND = 'dash'
 // 공부 중(잠금 화면용): 홈 화면에선 타이머 위젯과 같게
-if (KIND === 'live' && !lock) KIND = 'timer' // 내 위젯의 잠금 화면은 대시보드와 같게
+if (KIND === 'live' && !lock) KIND = 'timer'
+// 새 형태: 크기에 안 맞으면 비슷한 형태로 (잠금 화면 · 작은 크기)
+if (lock) KIND = ({ pday: 'today', pwk: 'week', ddbar: 'dday', ddline: 'ddl', stack: 'dash', dash4: 'dash', dashxl: 'dash', dashwk: 'week' })[KIND] || KIND
+else if (fam === 'small') KIND = ({ pwk: 'week', stack: 'dash', dash4: 'dash', dashxl: 'dash', dashwk: 'week' })[KIND] || KIND
+else if (fam === 'medium') KIND = ({ stack: 'dash', dash4: 'dash', dashxl: 'dash' })[KIND] || KIND
+else if (fam === 'large') KIND = ({ dashxl: 'dash4' })[KIND] || KIND // 내 위젯의 잠금 화면은 대시보드와 같게
 // 시간대별 자동: 아침(5~12시) 오늘 한눈에 · 낮(12~20시) 공부 · 밤 내일 준비
 if (KIND === 'auto') { const hr = new Date().getHours(); KIND = hr >= 5 && hr < 12 ? 'today' : hr >= 12 && hr < 20 ? 'study' : 'tmrw' }
 // 잠금 화면엔 그림 없이 같은 뜻의 형태로
@@ -57,7 +62,8 @@ if (!lock) {
   if (WT === 'paper' || pat) {
     // 종이·무늬 배경: 2배 해상도로 한 번만 그려 파일에 두고 다시 씀 — 큰 위젯이 메모리 한도를 넘어 하얗게 비던 문제
     const dk = WT === 'night' || WT === 'mono' || (WT !== 'paper' && WT !== 'white' && WT !== 'black' && dark())
-    const cp = FM.joinPath(FM.documentsDirectory(), 'study-cbg-3-' + WT + '-' + (pat || 'plain') + '-' + (dk ? 'd' : 'l') + '-' + Math.round(W2) + 'x' + Math.round(H2) + '.jpg')
+    const GR = { none: 0, light: 0.45 }[STM.widgetGrain] ?? 1
+    const cp = FM.joinPath(FM.documentsDirectory(), 'study-cbg-3-' + WT + (GR < 1 ? '-g' + GR : '') + '-' + (pat || 'plain') + '-' + (dk ? 'd' : 'l') + '-' + Math.round(W2) + 'x' + Math.round(H2) + '.jpg')
     let img = null
     try { if (FM.fileExists(cp)) img = FM.readImage(cp) } catch (e) {}
     if (!img) {
@@ -65,6 +71,8 @@ if (!lock) {
       const K = 2, c = new DrawContext(); c.size = new Size(W2 * K, H2 * K); c.opaque = true; c.respectScreenScale = false
       c.setFillColor(new Color(WT === 'night' ? '#1b1d22' : WT === 'mono' ? '#1c1d21' : WT === 'paper' ? '#f2f2f1' : dk ? '#15181d' : '#f2f4f6')); c.fillRect(new Rect(0, 0, W2 * K, H2 * K))
       if (WT === 'paper' && PAPER) for (let x = 0; x < W2 * K; x += 720) for (let y = 0; y < H2 * K; y += 720) c.drawImageInRect(PAPER, new Rect(x, y, 720, 720))
+      // 종이 결 세기 (앱 설정 › 위젯): 바탕색을 덧칠해 결을 옅게
+      if (WT === 'paper' && PAPER && GR < 1) { c.setFillColor(new Color('#f2f2f1', 1 - GR)); c.fillRect(new Rect(0, 0, W2 * K, H2 * K)) }
       if (pat) {
         c.setFillColor(new Color(dk ? '#ffffff' : '#55658a', dk ? 0.07 : 0.1))
         const g = (pat === 'grid' ? 14 : 20) * K
@@ -82,6 +90,9 @@ if (!lock) {
   else w.backgroundColor = BG
 }
 
+// 내용 세로 정렬 (앱 설정 › 위젯): 위(기본) · 가운데 · 아래
+const VA = STM.widgetVAlign || 'top'
+if (!lock && (VA === 'center' || VA === 'bottom')) w.addSpacer()
 if (!data) {
   if (fam === 'accessoryInline') inline('동기화 필요')
   else t(w, lock ? '동기화 필요' : '앱에서 동기화를 연결하고 스크립트를 다시 복사해 주세요', tw(12), lock ? null : SOFT, 3)

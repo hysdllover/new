@@ -24,6 +24,7 @@ export function smartMatch(t, smart) {
 export function applyFilter(tasks, f = {}) {
   const q = (f.q || '').trim().toLowerCase()
   let out = tasks.filter((t) => !t.archived && smartMatch(t, f.smart || 'all'))
+  if (f.hl) out = out.filter((t) => t.hl) // 형광펜 칠한 것만
   if (f.subjectId) out = out.filter((t) => t.subjectId === f.subjectId)
   if (f.projectId) out = out.filter((t) => t.projectId === f.projectId)
   if (f.priority) out = out.filter((t) => (t.priority || 0) >= +f.priority)
