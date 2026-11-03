@@ -1388,3 +1388,10 @@ html[data-done="fade"] .task-item .title .ttl::after, html[data-done="keep"] .ta
 .task-item.hl.done .title .ttl, .np-row.hl.done .ttl { box-shadow: inset 0 -.5em 0 color-mix(in srgb, var(--hl-fixed, var(--hlc)) 14%, transparent); }
 @media print { .task-item.hl .title .ttl, .np-row.hl .ttl { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 .week-memo { padding: 10px 12px; }
+/* 위젯 설정: 묶음 접기 · Parameter */
+.wk-sets > details, .wk-param, .wk-howto { border-top: 1px solid var(--line); padding: 8px 0 2px; }
+.wk-sets > details > summary, .wk-param > summary, .wk-howto > summary { cursor: pointer; list-style: none; font-weight: var(--fw-b); padding: 2px 0 6px; }
+.wk-sets > details > summary::-webkit-details-marker, .wk-param > summary::-webkit-details-marker, .wk-howto > summary::-webkit-details-marker { display: none; }
+.wk-sets > details > summary::after, .wk-param > summary::after, .wk-howto > summary::after { content: '＋'; float: right; color: var(--muted); font-weight: var(--fw); }
+.wk-sets > details[open] > summary::after, .wk-param[open] > summary::after, .wk-howto[open] > summary::after { content: '－'; }
+.wk-code { font-family: ui-monospace, monospace; font-weight: 500; background: var(--surface-2); padding: 1px 6px; border-radius: 4px; }

@@ -704,7 +704,8 @@ function HomeWidgetCard() {
     <Card title="아이폰·아이패드 홈 화면 위젯">
       <WidgetPreview />
       <WidgetFontField />
-      <div className="small" style={{ lineHeight: 1.7, marginTop: 10 }}>
+      <details className="wk-howto" style={{ marginTop: 10 }}><summary className="small">처음 설치하는 방법 · 잠금 화면 · 투명 배경</summary>
+      <div className="small" style={{ lineHeight: 1.7, marginTop: 6 }}>
         1. App Store 에서 무료 앱 <b>Scriptable</b> 설치<br />
         2. 아래 <b>스크립트 복사</b> → Scriptable › ＋ › 붙여넣기 → 이름 ‘스터디’<br />
         3. 홈 화면 길게 누르기 › ＋ › Scriptable 위젯(소·중·대) 추가 → 위젯 편집 › Script: ‘스터디’ · Parameter: 위 형태 단어<br />
@@ -713,6 +714,7 @@ function HomeWidgetCard() {
         · 과목 고정 시작 버튼: Parameter 에 <b>시작:수학</b> (누르면 그 과목 타이머 시작) · 할 일을 누르면 확인 없이 바로 완료돼요(되돌리기 가능)<br />
         6. 아이패드 잠금 화면은 iPadOS 17 이상. 빈칸·오류가 보이면 Scriptable 에서 스크립트를 실행 › ‘잠금 화면 미리보기’로 오류 문구를 확인하세요.
       </div>
+      </details>
       <div className="tiny muted" style={{ marginTop: 4 }}>위젯을 누르면 해당 화면(할 일·공부 기록)이 열려요. iOS 제한으로 사파리에서 열리니, 사파리에서도 한 번 동기화를 연결해 두세요.</div>
       <div className="row" style={{ marginTop: 10 }}>
         <button className="btn primary" disabled={sync.state === 'off'} onClick={copy}><Icon name="download" size={16} />스크립트 복사</button>

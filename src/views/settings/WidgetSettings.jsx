@@ -32,34 +32,43 @@ export function WidgetFontField() {
   const st = useSettings()
   const custom = st.widgetFont != null
   return (
-    <div className="col" style={{ gap: 6, marginTop: 10 }}>
-      <Field label="위젯 폰트"><Seg value={custom ? 'c' : 'd'} onChange={(v) => setSettings({ widgetFont: v === 'c' ? '' : null })} options={[['d', '기본 · 산돌고딕 얇게'], ['c', '설치한 폰트']]} /></Field>
+    <div className="col wk-sets" style={{ gap: 6, marginTop: 10 }}>
+      <details><summary>글자</summary><div className="col" style={{ gap: 6 }}>
+      <Field label="폰트"><Seg value={custom ? 'c' : 'd'} onChange={(v) => setSettings({ widgetFont: v === 'c' ? '' : null })} options={[['d', '기본 · 산돌고딕 얇게'], ['c', '설치한 폰트']]} /></Field>
       {custom && <>
         <input className="input" placeholder="PostScript 이름 (예: NanumMyeongjo)" defaultValue={st.widgetFont} onBlur={(e) => setSettings({ widgetFont: e.target.value.trim() })} autoCapitalize="off" autoCorrect="off" spellCheck={false} />
         <div className="tiny muted" style={{ lineHeight: 1.6 }}>타자기체·손글씨체 등 한글 폰트를 폰트 앱(예: iFont)으로 설치한 뒤, 그 폰트의 PostScript 이름을 적어 주세요. 이름이 틀리거나 설치되지 않은 기기에서는 시스템 폰트로 보여요. 스크립트를 다시 복사할 필요 없어요.</div>
       </>}
-      <Field label="위젯 글자 크기"><Seg value={String(st.widgetScale || 1)} onChange={(v) => setSettings({ widgetScale: +v })} options={[['0.9', '작게'], ['1', '기본'], ['1.1', '크게'], ['1.2', '더 크게']]} /></Field>
-      <Field label="위젯 글자 굵기"><Seg value={String(st.widgetWeight || 0)} onChange={(v) => setSettings({ widgetWeight: +v })} options={[['-1', '더 얇게'], ['0', '기본'], ['1', '보통'], ['2', '진하게']]} /></Field>
-      <Field label="위젯 여백"><Seg value={st.widgetPad || 'normal'} onChange={(v) => setSettings({ widgetPad: v })} options={[['tight', '좁게'], ['normal', '기본'], ['roomy', '넓게']]} /></Field>
-      <Field label="위젯 배경 무늬"><Seg value={st.widgetPattern || 'plain'} onChange={(v) => setSettings({ widgetPattern: v })} options={[['plain', '무지'], ['grid', '모눈'], ['line', '줄']]} /></Field>
-      <Toggle label="위젯 낙서 (물결 밑줄 · 별 · 체크)" checked={st.widgetDoodle !== false} onChange={(v) => setSettings({ widgetDoodle: v })} />
-      <Toggle label="별표 D-day 색을 위젯 포인트로 (진행선 · D-day 숫자)" checked={st.widgetDdColor !== false} onChange={(v) => setSettings({ widgetDdColor: v })} />
-      <Field label="위젯 내용 세로 위치"><Seg value={st.widgetVAlign || 'top'} onChange={(v) => setSettings({ widgetVAlign: v })} options={[['top', '위'], ['center', '가운데'], ['bottom', '아래']]} /></Field>
-      <Field label="종이 테마 결 세기"><Seg value={st.widgetGrain || 'normal'} onChange={(v) => setSettings({ widgetGrain: v })} options={[['none', '없음'], ['light', '옅게'], ['normal', '기본']]} /></Field>
-      <Field label="대시보드 칸 구분"><Seg value={st.widgetDashSep || 'gap'} onChange={(v) => setSettings({ widgetDashSep: v })} options={[['gap', '여백'], ['line', '선'], ['tint', '옅은 칸 바탕']]} /></Field>
-      <Field label="위젯 날짜 표기"><Seg value={st.widgetDate || 'def'} onChange={(v) => setSettings({ widgetDate: v === 'def' ? null : v })} options={[['def', 'FRI · 30 OCT'], ['num', '10.30 금'], ['en', 'Oct 30 Fri']]} /></Field>
-      <Toggle label="위젯 위쪽 날짜 줄 숨기기" checked={!!st.widgetNoDate} onChange={(v) => setSettings({ widgetNoDate: v })} />
-      <Field label="위젯 시간 표기"><Seg value={st.widgetClock || '24'} onChange={(v) => setSettings({ widgetClock: v })} options={[['24', '15:05'], ['12', '3:05p']]} /></Field>
-      <Field label="위젯 할 일 앞 표시"><Seg value={st.widgetMark || 'dash'} onChange={(v) => setSettings({ widgetMark: v })} options={[['dash', '선 –'], ['dot', '점 •'], ['box', '네모 □']]} /></Field>
-      <Field label="위젯 글자 정렬"><Seg value={st.widgetAlign || 'left'} onChange={(v) => setSettings({ widgetAlign: v })} options={[['left', '왼쪽'], ['center', '가운데']]} /></Field>
-      <Field label="위젯 글자색"><Seg value={st.widgetInk || 'normal'} onChange={(v) => setSettings({ widgetInk: v })} options={[['normal', '기본'], ['dark', '한 단계 진하게']]} /></Field>
-      <div className="tiny muted">위젯마다: Parameter 뒤에 <b>*5</b> → 목록 5개, <b>#제목</b> → 위쪽 제목 바꾸기 (예: 할일*5#오늘 할 것)</div>
-      <Field label="위젯 구분선"><Seg value={st.widgetRule || 'normal'} onChange={(v) => setSettings({ widgetRule: v })} options={[['none', '없음'], ['thin', '가늘게'], ['normal', '기본'], ['bold', '굵게']]} /></Field>
-      <Field label="위젯 테마"><Seg value={st.widgetTheme || 'auto'} onChange={(v) => setSettings({ widgetTheme: v })} options={[['auto', '자동'], ['white', '흰 글씨'], ['black', '검은 글씨'], ['paper', '종이'], ['night', '다크'], ['mono', '단색']]} /></Field>
+      <Field label="글자 크기"><Seg value={String(st.widgetScale || 1)} onChange={(v) => setSettings({ widgetScale: +v })} options={[['0.9', '작게'], ['1', '기본'], ['1.1', '크게'], ['1.2', '더 크게']]} /></Field>
+      <Field label="글자 굵기"><Seg value={String(st.widgetWeight || 0)} onChange={(v) => setSettings({ widgetWeight: +v })} options={[['-1', '더 얇게'], ['0', '기본'], ['1', '보통'], ['2', '진하게']]} /></Field>
+      <Field label="글자 정렬"><Seg value={st.widgetAlign || 'left'} onChange={(v) => setSettings({ widgetAlign: v })} options={[['left', '왼쪽'], ['center', '가운데']]} /></Field>
+      <Field label="글자색"><Seg value={st.widgetInk || 'normal'} onChange={(v) => setSettings({ widgetInk: v })} options={[['normal', '기본'], ['dark', '한 단계 진하게']]} /></Field>
+</div></details>
+      <details><summary>모양·배경</summary><div className="col" style={{ gap: 6 }}>
+      <Field label="테마"><Seg value={st.widgetTheme || 'auto'} onChange={(v) => setSettings({ widgetTheme: v })} options={[['auto', '자동'], ['white', '흰 글씨'], ['black', '검은 글씨'], ['paper', '종이'], ['night', '다크'], ['mono', '단색']]} /></Field>
       <div className="tiny muted" style={{ marginTop: -4 }}>흰·검은 글씨는 투명 배경(Scriptable 메뉴)과 함께, 종이·다크는 배경색까지 바꿔요. 자동은 Scriptable 메뉴의 글자색을 따라요.</div>
+      <Field label="구분선"><Seg value={st.widgetRule || 'normal'} onChange={(v) => setSettings({ widgetRule: v })} options={[['none', '없음'], ['thin', '가늘게'], ['normal', '기본'], ['bold', '굵게']]} /></Field>
+      <Field label="여백"><Seg value={st.widgetPad || 'normal'} onChange={(v) => setSettings({ widgetPad: v })} options={[['tight', '좁게'], ['normal', '기본'], ['roomy', '넓게']]} /></Field>
+      <Field label="배경 무늬"><Seg value={st.widgetPattern || 'plain'} onChange={(v) => setSettings({ widgetPattern: v })} options={[['plain', '무지'], ['grid', '모눈'], ['line', '줄']]} /></Field>
+      <Toggle label="낙서 (물결 밑줄 · 별 · 체크)" checked={st.widgetDoodle !== false} onChange={(v) => setSettings({ widgetDoodle: v })} />
+      <Toggle label="별표 D-day 색을 위젯 포인트로 (진행선 · D-day 숫자)" checked={st.widgetDdColor !== false} onChange={(v) => setSettings({ widgetDdColor: v })} />
+      <Field label="내용 세로 위치"><Seg value={st.widgetVAlign || 'top'} onChange={(v) => setSettings({ widgetVAlign: v })} options={[['top', '위'], ['center', '가운데'], ['bottom', '아래']]} /></Field>
+      <Field label="종이 테마 결 세기"><Seg value={st.widgetGrain || 'normal'} onChange={(v) => setSettings({ widgetGrain: v })} options={[['none', '없음'], ['light', '옅게'], ['normal', '기본']]} /></Field>
+</div></details>
+      <details><summary>날짜·시간·할 일 표시</summary><div className="col" style={{ gap: 6 }}>
+      <Field label="날짜 표기"><Seg value={st.widgetDate || 'def'} onChange={(v) => setSettings({ widgetDate: v === 'def' ? null : v })} options={[['def', 'FRI · 30 OCT'], ['num', '10.30 금'], ['en', 'Oct 30 Fri']]} /></Field>
+      <Toggle label="위쪽 날짜 줄 숨기기" checked={!!st.widgetNoDate} onChange={(v) => setSettings({ widgetNoDate: v })} />
+      <Field label="시간 표기"><Seg value={st.widgetClock || '24'} onChange={(v) => setSettings({ widgetClock: v })} options={[['24', '15:05'], ['12', '3:05p']]} /></Field>
+      <Field label="할 일 앞 표시"><Seg value={st.widgetMark || 'dash'} onChange={(v) => setSettings({ widgetMark: v })} options={[['dash', '선 –'], ['dot', '점 •'], ['box', '네모 □']]} /></Field>
+</div></details>
+      <details><summary>대시보드·내 위젯</summary><div className="col" style={{ gap: 6 }}>
       <DashTilesField />
       <CustomWidgetsField />
+      <Field label="대시보드 칸 구분"><Seg value={st.widgetDashSep || 'gap'} onChange={(v) => setSettings({ widgetDashSep: v })} options={[['gap', '여백'], ['line', '선'], ['tint', '옅은 칸 바탕']]} /></Field>
+</div></details>
+      <details><summary>투명 위젯</summary><div className="col" style={{ gap: 6 }}>
       <Toggle checked={st.widgetClear !== false} onChange={(v) => setSettings({ widgetClear: v })} label="투명·클리어 위젯용 (글씨 또렷하게: 한 단계 굵게·조금 크게)" />
+      </div></details>
       <div className="tiny muted">미리보기에 바로 보여요. 위젯에는 다음 동기화 뒤 반영돼요 (설치한 폰트는 굵기 대신 그 폰트 그대로). 잠금 화면은 ‘크게’까지만 커져요.</div>
     </div>
   )
@@ -107,6 +116,54 @@ export function CustomWidgetsField() {
 }
 
 // 홈 화면 위젯 미리보기 (실제 데이터) — Scriptable 위젯과 같은 디자인
+// 위젯 형태 고르기: 묶음 탭 + 찾기 → 고른 형태로 Parameter 만들기(목록 개수 · 제목 · 누르면 열 화면 · 배경 번호) + 복사
+const KIND_GROUPS = [
+  ['자주', ['', '공부', '할일', '디데이', '캘린더', '오늘', '대시보드', '대시4', '지금']],
+  ['공부', ['공부', '진행', '남은분', '타이머', '주간', '과목', '진도', '달력', '달력:과목', '10분', '하루', '바로가기', '공부중', '숫자', '숫자:주간', '선그래프', '원호']],
+  ['할 일·일정', ['할일', '마감', '내일', '일주일', '캘린더', '시간표', '지금', '목표', '배치', '시리즈', '일정할일', '숫자:할일']],
+  ['D-day', ['디데이', '디데이목록', '디데이진행', '디데이선', '주차', '묶음', '디데이카드', '숫자:디데이']],
+  ['대시보드', ['대시보드', '대시4', '한화면', '주간대시', '스택', '오늘', '큰수', '세단', '자동', '구성1', '구성2', '구성3']],
+  ['플래너·종이', ['하루지면', '주간지면', '인쇄', '주간표', '과목표', '일정표', '디데이표', '월간표', '노트표', '수업표', '내일표', '마감표', '진도표', '습관표', '기록표', '공책', '메모지']],
+  ['노트·기록', ['노트', '표', '보드', '사진', '반반', '습관', '다짐', '한줄', '기록카드', '일지', '매거진', '신문', '목록카드', '타임카드']],
+]
+function KindPicker({ kind, setKind }) {
+  const [g, setG] = useState(0), [q, setQ] = useState('')
+  const [n, setN] = useState(''), [title, setTitle] = useState(''), [tap, setTap] = useState(''), [bg, setBg] = useState('')
+  const name = Object.fromEntries(WIDGET_KINDS)
+  const list = q.trim() ? WIDGET_KINDS.filter(([k, l]) => (k + l).includes(q.trim())).map(([k]) => k) : KIND_GROUPS[g][1].filter((k) => k in name)
+  const param = kind || n || title || tap || bg ? (kind || '공부') + (bg ? '@' + bg : '') + (n ? '*' + n : '') + (tap ? '>' + tap : '') + (title ? '#' + title : '') : ''
+  const copy = async () => { try { await navigator.clipboard.writeText(param); toast('Parameter 를 복사했어요 · 위젯 편집 › Parameter 에 붙여넣기') } catch { toast(param) } }
+  return (
+    <div className="col" style={{ gap: 8, marginBottom: 8 }}>
+      <div className="row" style={{ gap: 6 }}>
+        <input className="input" style={{ flex: 1 }} placeholder="형태 찾기 (예: 디데이, 표)" value={q} onChange={(e) => setQ(e.target.value)} />
+      </div>
+      {!q.trim() && <div className="scroll-x"><div className="seg sm">{KIND_GROUPS.map(([l], i) => <button key={l} className={g === i ? 'on' : ''} onClick={() => setG(i)}>{l}</button>)}</div></div>}
+      <div className="row wrap" style={{ gap: 6 }}>
+        {list.map((k) => <button key={k} className={'chip' + (kind === k ? ' on' : '')} onClick={() => setKind(k)}>{name[k]}</button>)}
+        {!list.length && <span className="tiny muted">찾는 형태가 없어요</span>}
+      </div>
+      <details className="wk-param">
+        <summary className="small">Parameter 만들기 {param ? <b>· {param}</b> : <span className="muted">· 비우면 기본 형태</span>}</summary>
+        <div className="form" style={{ marginTop: 8 }}>
+          <div className="row wrap" style={{ gap: 8 }}>
+            <Field label="목록 개수"><Seg value={n} onChange={setN} options={[['', '자동'], ['3', '3'], ['5', '5'], ['7', '7']]} /></Field>
+            <Field label="누르면 열 화면"><Seg value={tap} onChange={setTap} options={[['', '기본'], ['홈', '홈'], ['타이머', '타이머'], ['할일', '할 일']]} /></Field>
+          </div>
+          <div className="row" style={{ gap: 8 }}>
+            <Field label="위쪽 제목 바꾸기"><input className="input" value={title} placeholder="예: 오늘 할 것" onChange={(e) => setTitle(e.target.value.replace(/[#>*@]/g, ''))} /></Field>
+            <Field label="배경 번호 (같은 크기 여러 개)"><Seg value={bg} onChange={setBg} options={[['', '없음'], ['2', '@2'], ['3', '@3']]} /></Field>
+          </div>
+        </div>
+      </details>
+      <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+        <span className="small grow">위젯 편집 › Parameter: {param ? <b className="wk-code">{param}</b> : <span className="muted">비워 두기 (기본)</span>}</span>
+        {param && <button className="btn sm" onClick={copy}><Icon name="share" size={14} />복사</button>}
+      </div>
+    </div>
+  )
+}
+
 export function WidgetPreview() {
   const st = useSettings()
   useEffect(() => { loadAllFonts() }, [])
@@ -145,7 +202,7 @@ export function WidgetPreview() {
     ? <div key={t.id} className="dw-todo dw-soft"><span>✓</span><span className="ellipsis" style={{ textDecoration: 'line-through' }}>{t.title}</span></div>
     : <div key={t.id} className="dw-todo"><span className={t.priority >= 3 ? 'dw-gold' : 'dw-soft'}>{t.priority >= 3 ? '•' : '–'}</span><span className="ellipsis" style={t.priority >= 3 ? { fontWeight: 500 } : null}>{t.title}</span></div>)}
     {!items.length && <div className="dw-soft">All clear.</div>}{items.length > n && <div className="dw-soft" style={{ fontSize: 11 }}>+ {items.length - n} more</div>}</> }
-  const [kind, setKind] = useState('')
+  const [kind, setKind] = useState(''), [pz, setPz] = useState('m')
   // 노트 사진 위젯 미리보기: 최근 노트의 첫 그림
   const phW = photoPicks(getState())[0]
   const [phUrl, setPhUrl] = useState(null)
@@ -727,15 +784,10 @@ export function WidgetPreview() {
   const [vs, vm, vl] = V[kind] || V[''] // 미리보기가 없는 형태도 화면이 멈추지 않게
   return (
     <>
-      <div className="scroll-x" style={{ marginBottom: 6 }}><div className="row" style={{ gap: 6 }}>
-        {WIDGET_KINDS.map(([k, l]) => <button key={k} className={'chip' + (kind === k ? ' on' : '')} onClick={() => setKind(k)}>{l}</button>)}
-      </div></div>
-      <div className="tiny muted">{kind ? <>위젯 편집 › Parameter 에 <b>{kind}</b> 입력</> : '위젯 편집 › Parameter 를 비워 두면 기본 형태'}</div>
-      <div className="tiny muted">누르면 열 화면: Parameter 뒤에 <b>&gt;홈</b> · <b>&gt;타이머</b> · <b>&gt;할일</b> (예: 공부&gt;타이머)</div>
-      <div className="dw-row">
-        <div className={'dw dw-s' + (FULLP.has(kind) ? ' dw-full' : '')} style={{ ...ff, ...WTH }}><div className="dw-in">{vs}</div></div>
-        <div className={'dw dw-m' + (FULLP.has(kind) ? ' dw-full' : '')} style={{ ...ff, ...WTH }}><div className="dw-in">{vm}</div></div>
-        <div className={'dw dw-l' + (FULLP.has(kind) ? ' dw-full' : '')} style={{ ...ff, ...WTH }}><div className="dw-in">{vl}</div></div>
+      <KindPicker kind={kind} setKind={setKind} />
+      <div className="seg sm" style={{ alignSelf: 'flex-start', marginBottom: 6 }}>{[['s', '소형'], ['m', '중형'], ['l', '대형']].map(([k, l]) => <button key={k} className={pz === k ? 'on' : ''} onClick={() => setPz(k)}>{l}</button>)}</div>
+      <div className="dw-row" style={{ justifyContent: 'center' }}>
+        <div className={'dw dw-' + pz + (FULLP.has(kind) ? ' dw-full' : '')} style={{ ...ff, ...WTH }}><div className="dw-in">{{ s: vs, m: vm, l: vl }[pz]}</div></div>
       </div>
       <div className="tiny muted" style={{ marginTop: 8 }}>잠금 화면 · 원형 · 직사각형 · 한 줄 (Parameter 같음, 아이폰·아이패드 공통)</div>
       <div className="dw-lock" style={ff}>
