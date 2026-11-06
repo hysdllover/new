@@ -11,7 +11,7 @@ if (!TOKEN) { console.log('GIST_TOKEN 시크릿이 없어 건너뜀'); process.e
 
 const gh = async (path, opt = {}) => {
   const r = await fetch('https://api.github.com' + path, { ...opt, headers: { Authorization: `Bearer ${TOKEN}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' } })
-  if (!r.ok) throw new Error(`GitHub ${r.status} ${path}`)
+  if (!r.ok) { const m = await r.text().catch(() => ''); throw new Error(`GitHub ${r.status} ${path} · ${m.slice(0, 200)} · 남은 요청 ${r.headers.get('x-ratelimit-remaining')} · retry-after ${r.headers.get('retry-after')}`) } // 실패 이유를 로그에
   return r.json()
 }
 async function findGist() {
