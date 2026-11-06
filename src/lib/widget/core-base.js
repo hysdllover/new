@@ -161,14 +161,24 @@ const noteUrl = (n) => (RUN ? RUN + '?act=view&go=notes' + (n ? '&note=' + encod
 const HABITS = () => (data && data.extra && Array.isArray(data.extra.habits) ? data.extra.habits : [])
 const habitUrl = (h) => (RUN && h && h.id ? RUN + '?act=habit&id=' + encodeURIComponent(h.id) : APP)
 const noteAgo = (u) => { if (!u) return ''; const m = Math.round((Date.now() - u) / 60000); return m < 60 ? Math.max(1, m) + '분 전' : m < 1440 ? Math.round(m / 60) + '시간 전' : Math.round(m / 1440) + '일 전' }
+// 노트 줄 앞 표시 그림 (네모 · 채운 네모 · 점)
+function markImg(kind, z, h = z) {
+  const K = 3, c = new DrawContext(); c.size = new Size(z * K, h * K); c.opaque = false; c.respectScreenScale = false
+  const col = SOFT, p = new Path(), y0 = ((h - z) / 2) * K
+  if (kind === 'dot') { p.addRoundedRect(new Rect(0, y0, z * K, z * K), 1.5 * K, 1.5 * K); c.addPath(p); c.setFillColor(col); c.fillPath(); return c.getImage() }
+  const lw = 0.8 * K, r = new Rect(lw / 2, y0 + lw / 2, z * K - lw, z * K - lw)
+  p.addRoundedRect(r, 1.5 * K, 1.5 * K); c.addPath(p)
+  if (kind === 'on') { c.setFillColor(col); c.fillPath() } else { c.setStrokeColor(col); c.setLineWidth(lw); c.strokePath() }
+  return c.getImage()
+}
 // 노트 한 줄: 할 일은 작은 네모(완료면 채움), 글머리는 작은 점, 긴 줄은 두 줄까지
 function noteRow(P2, l, wd, fs, lim = 2) {
   const r = P2.addStack(); r.size = new Size(wd, 0); r.topAlignContent(); r.spacing = 5
   if (l.k === 'todo' || l.k === 'b') {
-    // 표시 칸 폭을 고정 (긴 글이 옆에 오면 iOS 가 이 칸을 줄여 네모 왼쪽이 잘리던 것)
-    const z = l.k === 'todo' ? Math.round(fs * 0.55) : 3, m = r.addStack(); m.layoutVertically(); m.size = new Size(z + 1, 0); m.addSpacer(fs * 0.42); const bx = m.addStack()
-    bx.size = new Size(z, z); bx.cornerRadius = l.k === 'todo' ? 1.5 : 1.5
-    if (l.k === 'todo') { bx.borderWidth = 0.8; bx.borderColor = SOFT; if (l.d) { if (PENCIL) { bx.centerAlignContent(); t(bx, '✓', F(Math.max(6, z * 0.95), 'Regular'), GOLD) } else bx.backgroundColor = SOFT } } else bx.backgroundColor = SOFT
+    // 표시(네모·점)는 그림으로 — 스택으로 만들면 긴 줄 옆에서 iOS 가 칸을 줄여 왼쪽이 잘렸음
+    // 줄 높이만큼의 그림 가운데에 표시를 그려 첫 줄과 맞춤 (스택 없이 바로 넣어 줄어들지 않게)
+    const z = l.k === 'todo' ? Math.round(fs * 0.62) : 4, lh = Math.round(fs * 1.3 * SCALE)
+    const im = r.addImage(markImg(l.k === 'todo' ? (l.d ? 'on' : 'box') : 'dot', z, lh)); im.imageSize = new Size(z, lh)
   }
   t(r, l.x, l.k === 'h' ? F(fs + 0.5, 'Regular') : tw(fs), l.d ? SOFT : INK, l.k === 'h' ? 1 : lim)
   r.addSpacer()
