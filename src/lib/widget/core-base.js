@@ -168,7 +168,9 @@ function markImg(kind, z, h = z) {
   if (kind === 'dot') { p.addRoundedRect(new Rect(0, y0, z * K, z * K), 1.5 * K, 1.5 * K); c.addPath(p); c.setFillColor(col); c.fillPath(); return c.getImage() }
   const lw = 0.8 * K, r = new Rect(lw / 2, y0 + lw / 2, z * K - lw, z * K - lw)
   p.addRoundedRect(r, 1.5 * K, 1.5 * K); c.addPath(p)
-  if (kind === 'on') { c.setFillColor(col); c.fillPath() } else { c.setStrokeColor(col); c.setLineWidth(lw); c.strokePath() }
+  c.setStrokeColor(col); c.setLineWidth(lw); c.strokePath()
+  // 끝낸 줄: 네모 안에 가는 체크 표시
+  if (kind === 'on') { const q = new Path(), Z = z * K; q.move(new Point(Z * 0.22, y0 + Z * 0.52)); q.addLine(new Point(Z * 0.43, y0 + Z * 0.74)); q.addLine(new Point(Z * 0.8, y0 + Z * 0.28)); c.addPath(q); c.setStrokeColor(GOLD); c.setLineWidth(1.1 * K); c.strokePath() }
   return c.getImage()
 }
 // 노트 한 줄: 할 일은 작은 네모(완료면 채움), 글머리는 작은 점, 긴 줄은 두 줄까지
