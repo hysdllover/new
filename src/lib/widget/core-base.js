@@ -165,7 +165,8 @@ const noteAgo = (u) => { if (!u) return ''; const m = Math.round((Date.now() - u
 function noteRow(P2, l, wd, fs, lim = 2) {
   const r = P2.addStack(); r.size = new Size(wd, 0); r.topAlignContent(); r.spacing = 5
   if (l.k === 'todo' || l.k === 'b') {
-    const m = r.addStack(); m.layoutVertically(); m.addSpacer(fs * 0.42); const bx = m.addStack(), z = l.k === 'todo' ? Math.round(fs * 0.55) : 3
+    // 표시 칸 폭을 고정 (긴 글이 옆에 오면 iOS 가 이 칸을 줄여 네모 왼쪽이 잘리던 것)
+    const z = l.k === 'todo' ? Math.round(fs * 0.55) : 3, m = r.addStack(); m.layoutVertically(); m.size = new Size(z + 1, 0); m.addSpacer(fs * 0.42); const bx = m.addStack()
     bx.size = new Size(z, z); bx.cornerRadius = l.k === 'todo' ? 1.5 : 1.5
     if (l.k === 'todo') { bx.borderWidth = 0.8; bx.borderColor = SOFT; if (l.d) { if (PENCIL) { bx.centerAlignContent(); t(bx, '✓', F(Math.max(6, z * 0.95), 'Regular'), GOLD) } else bx.backgroundColor = SOFT } } else bx.backgroundColor = SOFT
   }
