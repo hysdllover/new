@@ -173,7 +173,8 @@ function markImg(kind, z, h = z) {
 }
 // 노트 한 줄: 할 일은 작은 네모(완료면 채움), 글머리는 작은 점, 긴 줄은 두 줄까지
 function noteRow(P2, l, wd, fs, lim = 2) {
-  const r = P2.addStack(); r.size = new Size(wd, 0); r.topAlignContent(); r.spacing = 5
+  // 왼쪽 안쪽 여유 3pt: 단 경계에 붙은 첫머리(네모 · 번호)가 잘리지 않게
+  const r = P2.addStack(); r.size = new Size(wd, 0); r.topAlignContent(); r.spacing = 5; r.setPadding(0, 3, 0, 0)
   if (l.k === 'todo' || l.k === 'b') {
     // 표시(네모·점)는 그림으로 — 스택으로 만들면 긴 줄 옆에서 iOS 가 칸을 줄여 왼쪽이 잘렸음
     // 줄 높이만큼의 그림 가운데에 표시를 그려 첫 줄과 맞춤 (스택 없이 바로 넣어 줄어들지 않게)
