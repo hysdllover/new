@@ -34,6 +34,9 @@ const alive = (o) => Object.values(o || {}).filter((r) => !r.deleted)
 const hm = (m) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 const parseT = (t) => { if (!t) return null; const [h, m] = t.split(':').map(Number); return h * 60 + (m || 0) }
 
+// 요청 한도가 거의 다 찼으면 이번은 쉬어 앱 동기화 몫을 남김 (/rate_limit 은 한도에 안 셈)
+{ const rl = await gh('/rate_limit').catch(() => null), core = rl?.resources?.core
+  if (core && core.remaining < 400) { console.log(`요청 한도 거의 소진 (${core.remaining}/${core.limit}, ${new Date(core.reset * 1000).toISOString()} 초기화) · 이번 실행 건너뜀`); process.exit(0) } }
 const id = await findGist()
 if (!id) { console.log('동기화 Gist 없음'); process.exit(0) }
 const g = await gh(`/gists/${id}`)

@@ -33,6 +33,7 @@ export const useSyncStatus = () => useSyncExternalStore((f) => { L.add(f); retur
 const token = () => ls.get('gist_token')
 const gistId = () => ls.get('gist_id')
 
+let reqTimes = (() => { try { return JSON.parse(localStorage.getItem('gh_reqs') || '[]') } catch { return [] } })()
 async function ghRes(path, opt = {}) {
   const res = await fetch(API + path, {
     ...opt,
@@ -41,6 +42,11 @@ async function ghRes(path, opt = {}) {
   })
   const exp = res.headers.get('github-authentication-token-expiration') // 브라우저에 공개된 경우에만 읽힘
   if (exp) ls.set('token_exp', exp)
+  // GitHub 요청 한도: 남은 수 · 초기화 시각 + 이 기기가 최근 1시간 쓴 요청 수 (동기화 상세에서 보임)
+  const rem = res.headers.get('x-ratelimit-remaining'), lim = res.headers.get('x-ratelimit-limit'), rst = res.headers.get('x-ratelimit-reset')
+  const nowT = Date.now(); reqTimes = [...reqTimes.filter((x) => nowT - x < 3600000), nowT]
+  try { localStorage.setItem('gh_reqs', JSON.stringify(reqTimes)) } catch {}
+  if (rem != null) setStatus({ rate: { rem: +rem, lim: +lim || 5000, reset: rst ? +rst * 1000 : null, mine: reqTimes.length } })
   if (!res.ok) {
     if (res.status === 304) return res
     if (res.status === 403 || res.status === 429) {
@@ -687,7 +693,8 @@ export function startSync() {
   setInterval(() => {
     if (document.visibilityState !== 'visible' || noteEditing()) return // 노트 쓰는 중엔 받아 오기도 쉼 (쓰던 글이 흔들리지 않게)
     const every = { normal: 180000, eco: 600000, off: 0 }[settings().syncEvery || 'normal']
-    const need = localStorage.getItem('timer') ? Math.min(every || 60000, 60000) : every
+    let need = localStorage.getItem('timer') ? Math.min(every || 60000, 60000) : every
+    if (status.rate && status.rate.rem < 300) need = Math.max(need, 900000) // 한도가 거의 다 찼으면 받아 오기를 15분 간격으로
     if (need && Date.now() - lastRun >= need - 1000) syncNow()
   }, 30000)
   syncNow()
