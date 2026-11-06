@@ -843,7 +843,8 @@ export default () => `  } else if (KIND === 'study') {
     if (!L0.length) t(w, n ? '내용 없음' : '앱에서 노트를 써 보세요', tw(fs), SOFT)
     else if (fam !== 'small') {
       // 넘치면 오른쪽 단으로 이어서 (대형·특대형도)
-      const cw = Math.floor((inner - 25) / 2), row = w.addStack(); row.size = new Size(inner, avail); row.topAlignContent()
+      // 두 단: 단 폭을 넉넉히 덜어 두 단 합이 한 줄 폭을 넘지 않게 · 왼쪽 단은 4pt 들여서 (단 첫머리 잘림 방지)
+      const cw = Math.floor((inner - 25) / 2) - 4, row = w.addStack(); row.size = new Size(inner, avail); row.topAlignContent(); row.addSpacer(4)
       const L = row.addStack(); L.layoutVertically(); L.size = new Size(cw, avail); const k = noteFlow(L, L0, cw, avail, fs); L.addSpacer()
       if (k < L0.length) { row.addSpacer(12); vrule(row, avail); row.addSpacer(12); const R = row.addStack(); R.layoutVertically(); R.size = new Size(cw, avail); noteFlow(R, L0.slice(k), cw, avail, fs); R.addSpacer() }
       row.addSpacer(); FILL = true
