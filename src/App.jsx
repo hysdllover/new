@@ -19,13 +19,13 @@ import ErrorBoundary from './components/ErrorBoundary.jsx'
 import { maybeWelcome } from './components/Welcome.jsx'
 
 // 홈·건강(홈 위젯이 씀) 말고는 처음 열 때 받음 · 앱이 뜬 뒤 쉬는 시간에 미리 받아 둠(오프라인 대비)
-const LOAD = { planner: () => import('./views/Planner.jsx'), tasks: () => import('./views/Tasks.jsx'), study: () => import('./views/Study.jsx'), notes: () => import('./views/Notes.jsx'), settings: () => import('./views/Settings.jsx') }
+const LOAD = { planner: () => import('./views/Planner.jsx'), tasks: () => import('./views/Tasks.jsx'), study: () => import('./views/Study.jsx'), notes: () => import('./views/Notes.jsx'), settings: () => import('./views/Settings.jsx'), widgets: () => import('./views/Widgets.jsx') }
 const VIEWS = { home: Home, health: Health, ...Object.fromEntries(Object.entries(LOAD).map(([k, f]) => [k, lazy(f)])) }
 const prefetch = () => Object.values(LOAD).forEach((f) => f().catch(() => {}))
 if (typeof window !== 'undefined') (window.requestIdleCallback || ((f) => setTimeout(f, 2500)))(prefetch, { timeout: 4000 })
 // 아이패드 가로 2단: 오른쪽에 함께 띄울 화면 (설정 › 디자인)
 export const SPLIT = { planner: ['planner', 'today', '오늘 일정'], timer: ['study', 'timer', '타이머'], tasks: ['tasks', 'day', '오늘 할 일'], notes: ['notes', 'daily', '데일리 노트'] }
-const TITLES = { home: null, planner: '캘린더', tasks: '할 일', study: '공부 기록', notes: '노트', health: '건강', settings: '설정' }
+const TITLES = { home: null, planner: '캘린더', tasks: '할 일', study: '공부 기록', notes: '노트', health: '건강', settings: '설정', widgets: '위젯' }
 
 // 위젯을 누르면 Safari 로 열림(iOS 제한) → 연결 안 된 Safari 에서만 안내
 function SafariNote() {
@@ -52,6 +52,11 @@ export default function App() {
   const segs = (SEGMENTS[tab] || []).filter((s) => !s[2] || st.modules[s[2]] !== false)
   const seg0 = segOf(tab)
   const seg = segs.length && !segs.some((x) => x[0] === seg0) ? segs[0][0] : seg0
+  // 세그먼트가 많으면(캘린더) 자주 쓰는 4개 + 지금 보는 것만 보이고 나머지는 '···' (많이 누른 순서 기억)
+  const segUse = (() => { try { return JSON.parse(localStorage.getItem('seg_use') || '{}') } catch { return {} } })()
+  const pickSeg = (v) => { try { const u = { ...segUse, [tab + '.' + v]: (segUse[tab + '.' + v] || 0) + 1 }; localStorage.setItem('seg_use', JSON.stringify(u)) } catch {} go(tab, v) }
+  const segTop = segs.length > 5 ? segs.map((x, i) => [x, i]).sort((a, b) => (segUse[tab + '.' + b[0][0]] || 0) - (segUse[tab + '.' + a[0][0]] || 0) || a[1] - b[1]).slice(0, 4).map(([x]) => x[0]) : segs.map((x) => x[0])
+  const segShown = segs.filter(([v]) => segTop.includes(v) || v === seg), segMore = segs.filter((x) => !segShown.includes(x))
   const pins = (st.sidebarPins || []).map(tabOpt).filter(Boolean)
   const [sbOpen, setSbOpen] = useState(() => { try { return JSON.parse(localStorage.getItem('sb_open') || '{}') } catch { return {} } })
   const toggleSb = (k) => { const v = { ...sbOpen, [k]: !(k === 'all' ? sbOpen.all : sbOpen[k] !== false) }; setSbOpen(v); try { localStorage.setItem('sb_open', JSON.stringify(v)) } catch {} }
@@ -167,7 +172,8 @@ export default function App() {
         {segs.length > 0 && (
           <div className="segbar no-print">
             <div className="seg">
-              {segs.map(([v, l]) => <button key={v} className={seg === v ? 'on' : ''} onClick={() => go(tab, v)}>{l}</button>)}
+              {segShown.map(([v, l]) => <button key={v} className={seg === v ? 'on' : ''} onClick={() => pickSeg(v)}>{l}</button>)}
+              {segMore.length > 0 && <button aria-label="더보기" onClick={(e) => openMenu(e, segMore.map(([v, l]) => ({ label: l, onClick: () => pickSeg(v) })))}>···</button>}
             </div>
           </div>
         )}

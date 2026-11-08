@@ -12,7 +12,7 @@ import { ColorPick, TimeInput, SubjectSelect } from '../components/common.jsx'
 import { deviceName, useSyncStatus, connect, disconnect, syncNow, gistInfo, tokenExpiry, listBackups, backupNow, restoreBackup, calendarUrl, readGistFile, syncLog, connectLink } from '../sync/sync.js'
 import { enablePush, disablePush, pushState, testLocal, isStandalone, pushSupported } from '../lib/push.js'
 import { buildLoader, WIDGET_KINDS } from '../lib/scriptable.js'
-import { TAB_OPTIONS, DEFAULT_TABBAR, tabOpt } from '../nav.js'
+import { TAB_OPTIONS, DEFAULT_TABBAR, tabOpt, go } from '../nav.js'
 import { pickQuote } from '../lib/quote.js'
 import { pickColor, harmonize } from '../lib/colors.js'
 import { eventsOn, classesOn } from '../engine/scheduler.js'
@@ -66,7 +66,7 @@ export default function Settings() {
       </div>
       {q && <div className="set-none tiny muted">찾는 설정이 없어요</div>}
       {show('sync') && <div className="set-sec"><SyncCard /><PushCard /></div>}
-      {show('widget') && <div className="set-sec"><HomeWidgetCard /><ShareCaptureCard /><CalendarSubCard /></div>}
+      {show('widget') && <div className="set-sec"><button className="btn" style={{ alignSelf: 'flex-start' }} onClick={() => go('widgets')}><Icon name="layers" size={15} />위젯 화면에서 크게 보기</button><HomeWidgetCard /><ShareCaptureCard /><CalendarSubCard /></div>}
       {show('layout') && <div className="set-sec"><TabBarCard /><SidebarCard /></div>}
       {show('design') && <div className="set-sec">
       <Card title="디자인">
@@ -689,8 +689,8 @@ function PushCard() {
   )
 }
 
-function HomeWidgetCard() {
-  const sync = useSyncStatus()
+export function HomeWidgetCard() {
+  const sync = useSyncStatus(), st = useSettings()
   const appUrl = location.origin + location.pathname
   const copy = async () => {
     if (!gistInfo().widgetRaw) await syncNow({ flush: true })
@@ -719,7 +719,9 @@ function HomeWidgetCard() {
       <div className="row" style={{ marginTop: 10 }}>
         <button className="btn primary" disabled={sync.state === 'off'} onClick={copy}><Icon name="download" size={16} />스크립트 복사</button>
         {sync.state === 'off' && <span className="small muted">동기화를 먼저 연결하세요</span>}
+        {sync.state !== 'off' && <button className="btn" onClick={async () => { await syncNow({ flush: true }); location.href = 'scriptable:///run/' + encodeURIComponent(st.widgetScript || '스터디') + '?act=refresh' }}><Icon name="sync" size={15} />위젯 지금 새로 그리기</button>}
       </div>
+      <div className="tiny muted" style={{ marginTop: 4 }}>앱 변경을 먼저 올리고 Scriptable 을 잠깐 열어 위젯이 최신 모양·데이터로 다시 그리게 해요. 스크립트 이름이 ‘스터디’가 아니면: <input className="input" style={{ display: 'inline-block', width: 110, padding: '2px 6px', fontSize: 12 }} defaultValue={st.widgetScript || '스터디'} onBlur={(e) => setSettings({ widgetScript: e.target.value.trim() || null })} /></div>
       <div className="tiny muted" style={{ marginTop: 6 }}>스크립트에는 토큰이 들어가지 않아요(위젯 전용 비공개 주소만). 자동 업데이트 방식이라 한 번만 붙여 넣으면 앱이 바뀔 때 위젯도 같이 바뀌어요(예전 긴 스크립트를 쓰고 있다면 이번에 한 번만 새로 복사해 바꿔 주세요). 갱신 주기는 iOS가 정해요(보통 15분~1시간). 날짜 옆에 시각이 보이면 그때 받은 데이터예요.</div>
       <div className="tiny muted" style={{ marginTop: 6, lineHeight: 1.6 }}><b>위젯에서 바로 처리</b>: Scriptable 에서 이 스크립트를 한 번 실행 › 메뉴 › <b>위젯에서 바로 처리 켜기</b> › GitHub 토큰(Gists 읽기·쓰기) 입력. 그러면 위젯의 할 일을 누르면 바로 완료, 타이머·바로 시작 버튼은 시작·일시정지·정지, 그 밖의 칸을 누르면 Scriptable 안에 간단한 앱 화면(공부·타이머 · 오늘 할 일 체크 · 일정·D-day · 노트 읽기)이 열려요. 사파리를 거치지 않고, 앱을 열면 기록에도 반영돼요. 토큰은 그 아이폰의 Scriptable 보관함에만 저장돼요.</div>
       <WidgetSets />

@@ -15,11 +15,11 @@ export const WEATHER = [
 export const svgIcon = (inner, size = 18) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`
 const Ic = ({ inner }) => <span className="mw-ic" dangerouslySetInnerHTML={{ __html: svgIcon(inner) }} />
 
-export default function MoodWeather({ date }) {
+export default function MoodWeather({ date, compact }) {
   const conds = useColl('conditions'); useRec('days', date)
   const c = conds.find((x) => x.id === date) || { id: date }, day = dayRec(date)
   return (
-    <div className="mw row" style={{ gap: 2 }}>
+    <div className={'mw row' + (compact ? ' mw-c' : '')} style={{ gap: 2 }}>
       {MOOD_SVG.map((m, i) => <button key={i} className={'mw-b' + (c.mood === i + 1 ? ' on' : '')} aria-label={`기분 ${i + 1}`} onClick={() => put('conditions', { ...c, id: date, mood: c.mood === i + 1 ? null : i + 1 })}><Ic inner={m} /></button>)}
       <span className="mw-sep" />
       {WEATHER.map(([k, l, inner]) => <button key={k} className={'mw-b' + (day.weather === k ? ' on' : '')} aria-label={l} title={l} onClick={() => setDay(date, { weather: day.weather === k ? null : k })}><Ic inner={inner} /></button>)}

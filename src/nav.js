@@ -20,6 +20,7 @@ export const TABS = [
 ]
 export const EXTRA = [
   { id: 'health', label: '건강', icon: 'heart', module: 'health' },
+  { id: 'widgets', label: '위젯', icon: 'layers' },
   { id: 'settings', label: '설정', icon: 'settings' },
 ]
 

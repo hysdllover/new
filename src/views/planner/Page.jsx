@@ -9,19 +9,19 @@ import { myFontCSS } from '../../lib/fonts.js'
 import MoodWeather from '../../components/MoodWeather.jsx'
 import { dayRec, setDay, toggleTask } from '../../store/actions.js'
 import { eventsOn } from '../../engine/scheduler.js'
-import { parseYmd, fmtTime, tsToMin, diffDays } from '../../engine/date.js'
-import { Check, AutoText, toast } from '../../components/ui.jsx'
+import { parseYmd, fmtTime, tsToMin, diffDays, addDays } from '../../engine/date.js'
+import { Check, AutoText, toast, openMenu } from '../../components/ui.jsx'
 import { StickerLayer, StickerTray, addSticker } from '../../components/Stickers.jsx'
 
 const WDE = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const H0 = 5, HN = 24 // 5시부터 24줄
 const hm = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`
 
-export default function Page({ date }) {
+export default function Page({ date, setDate }) {
   const [deco, setDeco] = useState(false)
-  const pageRef = useRef(null), [busy, setBusy] = useState(false)
+  const pageRef = useRef(null), swipe = useRef(null), [busy, setBusy] = useState(false) // 좌우로 밀면 어제 · 내일 페이지
   // 보이는 그대로 이미지로 (채도만 낮게): 화면 지면을 그린 뒤 색을 회색 쪽으로 낮춰 공유 시트 · 저장
-  const saveShot = async () => {
+  const saveShot = async (ratio = 'screen') => {
     const node = pageRef.current; if (!node) return
     setBusy(true)
     try {
@@ -35,6 +35,9 @@ export default function Page({ date }) {
       const g = c.getContext('2d'), im = g.getImageData(0, 0, c.width, c.height), px = im.data
       for (let i = 0; i < px.length; i += 4) { const v = px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114; for (let k = 0; k < 3; k++) px[i + k] = Math.round(v + (px[i + k] - v) * 0.45) } // 채도만 낮춤 (회색 쪽으로 55%)
       g.putImageData(im, 0, 0)
+      // 비율 맞추기: 화면 그대로 · 세로 9:16 · A4 (가운데에 두고 둘레는 지면 바탕색)
+      const R = { story: 16 / 9, a4: 297 / 210 }[ratio]
+      if (R) { const W = Math.max(c.width, Math.ceil(c.height / R)), H = Math.round(W * R), o = document.createElement('canvas'); o.width = W; o.height = H; const og = o.getContext('2d'); og.fillStyle = opt.backgroundColor || '#fff'; og.fillRect(0, 0, W, H); og.drawImage(c, Math.round((W - c.width) / 2), Math.round((H - c.height) / 2)); c = o }
       const blob = await new Promise((r) => c.toBlob(r, 'image/png'))
       if (!blob) throw new Error('image')
       await shareBlob(blob, `오늘페이지-${date}.png`)
@@ -61,18 +64,18 @@ export default function Page({ date }) {
       <div className="row no-print" style={{ gap: 6 }}>
         <button className={'btn sm' + (deco ? ' on-acc' : '')} onClick={() => setDeco(!deco)}>{deco ? '꾸미기 끝' : '스티커'}</button>
         <span className="grow" />
-        <button className="btn sm" disabled={busy} onClick={saveShot}>{busy ? '만드는 중…' : '이미지 저장'}</button>
+        <button className="btn sm" disabled={busy} onClick={(e) => openMenu(e, [['screen', '화면 그대로'], ['story', '세로 9:16'], ['a4', 'A4 비율']].map(([k, l]) => ({ label: l, onClick: () => saveShot(k) })))}>{busy ? '만드는 중…' : '이미지 저장'}</button>
         <button className="btn sm" onClick={() => printPlanner('day', date)}>인쇄 (A4)</button>
       </div>
       {deco && <StickerTray onPick={(k, c) => addSticker(date, k, c)} />}
-      <div className="npage" ref={pageRef}>
+      <div className="npage" ref={pageRef} onTouchStart={(e) => { const p = e.touches[0]; swipe.current = { x: p.clientX, y: p.clientY } }} onTouchEnd={(e) => { const a = swipe.current, p = e.changedTouches[0]; swipe.current = null; if (!a || !setDate || deco) return; const dx = p.clientX - a.x, dy = p.clientY - a.y; if (Math.abs(dx) > 70 && Math.abs(dy) < 40) setDate(addDays(date, dx < 0 ? 1 : -1)) }}>
         <StickerLayer date={date} editable={deco} />
         <div className="np-head">
           <span className="np-date">{WDE[d.getDay()]}, {d.getMonth() + 1}/{d.getDate()}/{d.getFullYear()}</span>
           {dd && <span className="np-dd">{dd.title} {dn === 0 ? 'D-day' : 'D-' + dn}</span>}
           <span className="np-st">Study Time <b>{hm(total)}</b> <span className="muted">/ {hm(goalFor(st, date))}</span></span>
+          <MoodWeather date={date} compact />
         </div>
-        <MoodWeather date={date} />
         <div className="np-body">
           <div className="np-left">
             {one && <section><div className="np-cap">오늘의 하나</div><div className="np-one">{one}</div></section>}
