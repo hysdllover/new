@@ -490,3 +490,10 @@ html[data-evchip="m"] .mev { font-size: .8em; line-height: 1.55; }
 .drag-ghost { animation: ghost-lift .18s cubic-bezier(.2, .9, .3, 1.2); scale: 1.03; box-shadow: 0 12px 32px rgba(20, 24, 32, .22); }
 @keyframes ghost-lift { from { scale: .96; box-shadow: 0 2px 6px rgba(20, 24, 32, .1); } }
 @media (prefers-reduced-motion: reduce) { .drag-ghost { animation: none; } }
+/* 칩 크기 통일: 기본 · 작은 칩 모두 같은 글자 크기 · 높이 (작은 칩은 좌우만 좁게) */
+.chip.sm, .record-form .chip.subj { min-height: 28px; font-size: .86em; padding: 3px 9px; }
+/* 카드 안 여백: 기기 폭에 맞춰 (좁은 아이폰 12px · 아이패드 넓게) */
+html[data-win="compact"] .card { padding: 12px; }
+html[data-win="wide"] .card, html[data-win="xwide"] .card { padding: calc(var(--gap) + 6px); }
+/* 아이패드 넓은 화면(공간 더 확보 등): 내용 폭을 넓게 */
+html[data-win="xwide"] .content-inner { max-width: 1400px; }

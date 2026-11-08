@@ -836,12 +836,25 @@ export default () => `  } else if (KIND === 'study') {
     const n = pickNote(), L0 = n ? n.l : []
     w.url = noteUrl(n)
     const fs = fam === 'small' ? 10.5 : fam === 'medium' ? 11 : 12
-    const h = w.addStack(); h.size = new Size(inner, 0); h.centerAlignContent()
-    t(h, n ? n.t : '노트가 없어요', F(fs + 0.5, 'Regular'), INK, 1).minimumScaleFactor = 0.8; h.addSpacer(); if (n) { h.addSpacer(6); t(h, noteAgo(n.u), label(7), SOFT) }
-    w.addSpacer(5); rule(w, inner); w.addSpacer(fam === 'small' ? 5 : 7)
-    const avail = innerH - (fs + 0.5) * 1.3 * SCALE - 13
+    // 제목 줄 숨기기 · 갱신 시각 숨기기 (앱 설정 › 위젯 › 노트)
+    const showT = st.widgetNoteTitle !== false
+    if (showT) {
+      const h = w.addStack(); h.size = new Size(inner, 0); h.centerAlignContent()
+      t(h, n ? n.t : '노트가 없어요', F(fs + 0.5, 'Regular'), INK, 1).minimumScaleFactor = 0.8; h.addSpacer(); if (n && !st.widgetNoMeta) { h.addSpacer(6); t(h, noteAgo(n.u), label(7), SOFT) }
+      w.addSpacer(5); rule(w, inner); w.addSpacer(fam === 'small' ? 5 : 7)
+    }
+    const avail = showT ? innerH - (fs + 0.5) * 1.3 * SCALE - 13 : innerH
     if (!L0.length) t(w, n ? '내용 없음' : '앱에서 노트를 써 보세요', tw(fs), SOFT)
-    else if (fam !== 'small') {
+    else if (fam === 'extraLarge' && st.widgetNoteCols !== '1') {
+      // 아주 큰 위젯: 넘치는 만큼 두 단 → 세 단
+      const NC = st.widgetNoteCols === '2' ? 2 : 3, cw = Math.floor((inner - 25 * (NC - 1)) / NC) - 4, row = w.addStack(); row.size = new Size(inner, avail); row.topAlignContent(); row.addSpacer(4)
+      let k = 0
+      for (let ci = 0; ci < NC && k < L0.length; ci++) {
+        if (ci) { row.addSpacer(12); vrule(row, avail); row.addSpacer(12) }
+        const C = row.addStack(); C.layoutVertically(); C.size = new Size(cw, avail); k += noteFlow(C, L0.slice(k), cw, avail, fs); C.addSpacer()
+      }
+      row.addSpacer(); FILL = true
+    } else if (fam !== 'small' && st.widgetNoteCols !== '1') {
       // 넘치면 오른쪽 단으로 이어서 (대형·특대형도)
       // 두 단: 단 폭을 넉넉히 덜어 두 단 합이 한 줄 폭을 넘지 않게 · 왼쪽 단은 4pt 들여서 (단 첫머리 잘림 방지)
       const cw = Math.floor((inner - 25) / 2) - 4, row = w.addStack(); row.size = new Size(inner, avail); row.topAlignContent(); row.addSpacer(4)

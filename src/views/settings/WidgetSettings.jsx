@@ -29,7 +29,7 @@ import { APP_ICONS, iconSrc, getAppIcon, setAppIcon } from '../../lib/appIcon.js
 
 // 위젯 폰트 — 기본(산돌고딕 얇게) 또는 기기에 설치한 폰트의 PostScript 이름
 export function WidgetFontField() {
-  const st = useSettings()
+  const st = useSettings(), notesL = useColl('notes').filter((n) => !n.archived).slice(0, 80)
   const custom = st.widgetFont != null
   return (
     <div className="col wk-sets" style={{ gap: 6, marginTop: 10 }}>
@@ -47,6 +47,7 @@ export function WidgetFontField() {
       <details><summary>모양·배경</summary><div className="col" style={{ gap: 6 }}>
       <Field label="테마"><Seg value={st.widgetTheme || 'auto'} onChange={(v) => setSettings({ widgetTheme: v })} options={[['auto', '자동'], ['white', '흰 글씨'], ['black', '검은 글씨'], ['paper', '종이'], ['night', '다크'], ['mono', '단색']]} /></Field>
       <div className="tiny muted" style={{ marginTop: -4 }}>흰·검은 글씨는 투명 배경(Scriptable 메뉴)과 함께, 종이·다크는 배경색까지 바꿔요. 자동은 Scriptable 메뉴의 글자색을 따라요.</div>
+      <Field label="구분선 색"><Seg value={st.widgetRuleColor || 'blue'} onChange={(v) => setSettings({ widgetRuleColor: v })} options={[['blue', '블루그레이'], ['ink', '먹색']]} /></Field>
       <Field label="구분선"><Seg value={st.widgetRule || 'normal'} onChange={(v) => setSettings({ widgetRule: v })} options={[['none', '없음'], ['thin', '가늘게'], ['normal', '기본'], ['bold', '굵게']]} /></Field>
       <Field label="여백"><Seg value={st.widgetPad || 'normal'} onChange={(v) => setSettings({ widgetPad: v })} options={[['tight', '좁게'], ['normal', '기본'], ['roomy', '넓게']]} /></Field>
       <Field label="배경 무늬"><Seg value={st.widgetPattern || 'plain'} onChange={(v) => setSettings({ widgetPattern: v })} options={[['plain', '무지'], ['grid', '모눈'], ['line', '줄']]} /></Field>
@@ -56,11 +57,21 @@ export function WidgetFontField() {
       <Field label="종이 테마 결 세기"><Seg value={st.widgetGrain || 'normal'} onChange={(v) => setSettings({ widgetGrain: v })} options={[['none', '없음'], ['light', '옅게'], ['normal', '기본']]} /></Field>
 </div></details>
       <details><summary>날짜·시간·할 일 표시</summary><div className="col" style={{ gap: 6 }}>
+      <Field label="잠금 화면 한 줄 위젯 (Parameter 비웠을 때)"><Seg value={st.widgetInline || 'study'} onChange={(v) => setSettings({ widgetInline: v })} options={[['study', '공부 시간'], ['next', '다음 일정'], ['dday', 'D-day']]} /></Field>
       <Field label="날짜 표기"><Seg value={st.widgetDate || 'def'} onChange={(v) => setSettings({ widgetDate: v === 'def' ? null : v })} options={[['def', 'FRI · 30 OCT'], ['num', '10.30 금'], ['en', 'Oct 30 Fri']]} /></Field>
       <Toggle label="위쪽 날짜 줄 숨기기" checked={!!st.widgetNoDate} onChange={(v) => setSettings({ widgetNoDate: v })} />
       <Field label="시간 표기"><Seg value={st.widgetClock || '24'} onChange={(v) => setSettings({ widgetClock: v })} options={[['24', '15:05'], ['12', '3:05p']]} /></Field>
       <Field label="할 일 앞 표시"><Seg value={st.widgetMark || 'dash'} onChange={(v) => setSettings({ widgetMark: v })} options={[['dash', '선 –'], ['dot', '점 •'], ['box', '네모 □']]} /></Field>
 </div></details>
+      <details><summary>노트·할 일 위젯</summary><div className="col" style={{ gap: 6 }}>
+      <Field label="노트 위젯에 보일 노트"><select className="input" value={st.widgetNote || ''} onChange={(e) => setSettings({ widgetNote: e.target.value || null })}><option value="">최근에 고친 노트</option>{notesL.map((n) => <option key={n.id} value={n.id}>{n.title || '제목 없음'}</option>)}</select></Field>
+      <Field label="노트 단 나누기"><Seg value={st.widgetNoteCols || 'auto'} onChange={(v) => setSettings({ widgetNoteCols: v === 'auto' ? null : v })} options={[['auto', '자동 (넘치면 나눔)'], ['1', '한 단'], ['2', '두 단까지']]} /></Field>
+      <Field label="노트 글머리"><Seg value={st.widgetBullet || 'dot'} onChange={(v) => setSettings({ widgetBullet: v })} options={[['dot', '점'], ['dash', '짧은 선'], ['num', '숫자']]} /></Field>
+      <Field label="끝낸 줄 체크 색"><Seg value={st.widgetCheck || 'gold'} onChange={(v) => setSettings({ widgetCheck: v })} options={[['gold', '블루그레이'], ['ink', '먹색']]} /></Field>
+      <Toggle label="노트 제목 줄 보이기" checked={st.widgetNoteTitle !== false} onChange={(v) => setSettings({ widgetNoteTitle: v })} />
+      <Toggle label="갱신 시각(‘2일 전’) 숨기기" checked={!!st.widgetNoMeta} onChange={(v) => setSettings({ widgetNoMeta: v })} />
+      <Toggle label="할 일 위젯을 과목별로 묶기" checked={!!st.widgetTodoGroup} onChange={(v) => setSettings({ widgetTodoGroup: v })} />
+      </div></details>
       <details><summary>대시보드·내 위젯</summary><div className="col" style={{ gap: 6 }}>
       <DashTilesField />
       <CustomWidgetsField />
@@ -202,7 +213,7 @@ export function WidgetPreview() {
     ? <div key={t.id} className="dw-todo dw-soft"><span>✓</span><span className="ellipsis" style={{ textDecoration: 'line-through' }}>{t.title}</span></div>
     : <div key={t.id} className="dw-todo"><span className={t.priority >= 3 ? 'dw-gold' : 'dw-soft'}>{t.priority >= 3 ? '•' : '–'}</span><span className="ellipsis" style={t.priority >= 3 ? { fontWeight: 500 } : null}>{t.title}</span></div>)}
     {!items.length && <div className="dw-soft">All clear.</div>}{items.length > n && <div className="dw-soft" style={{ fontSize: 11 }}>+ {items.length - n} more</div>}</> }
-  const [kind, setKind] = useState(''), [pz, setPz] = useState('m')
+  const [kind, setKind] = useState(''), [pz, setPz] = useState('m'), [dev, setDev] = useState(() => (/iPad|Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1 ? 'pad' : 'phone')) // 미리보기 기기 비율
   // 노트 사진 위젯 미리보기: 최근 노트의 첫 그림
   const phW = photoPicks(getState())[0]
   const [phUrl, setPhUrl] = useState(null)
@@ -785,8 +796,11 @@ export function WidgetPreview() {
   return (
     <>
       <KindPicker kind={kind} setKind={setKind} />
-      <div className="seg sm" style={{ alignSelf: 'flex-start', marginBottom: 6 }}>{[['s', '소형'], ['m', '중형'], ['l', '대형']].map(([k, l]) => <button key={k} className={pz === k ? 'on' : ''} onClick={() => setPz(k)}>{l}</button>)}</div>
-      <div className="dw-row" style={{ justifyContent: 'center' }}>
+      <div className="row wrap" style={{ gap: 6, marginBottom: 6 }}>
+        <div className="seg sm">{[['s', '소형'], ['m', '중형'], ['l', '대형']].map(([k, l]) => <button key={k} className={pz === k ? 'on' : ''} onClick={() => setPz(k)}>{l}</button>)}</div>
+        <div className="seg sm">{[['phone', '아이폰'], ['pad', '아이패드']].map(([k, l]) => <button key={k} className={dev === k ? 'on' : ''} onClick={() => setDev(k)}>{l}</button>)}</div>
+      </div>
+      <div className={'dw-row' + (dev === 'pad' ? ' dw-padsz' : '')} style={{ justifyContent: 'center' }}>
         <div className={'dw dw-' + pz + (FULLP.has(kind) ? ' dw-full' : '')} style={{ ...ff, ...WTH }}><div className="dw-in">{{ s: vs, m: vm, l: vl }[pz]}</div></div>
       </div>
       <div className="tiny muted" style={{ marginTop: 8 }}>잠금 화면 · 원형 · 직사각형 · 한 줄 (Parameter 같음, 아이폰·아이패드 공통)</div>

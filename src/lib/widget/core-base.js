@@ -156,7 +156,9 @@ function rule(parent, w) { const s = parent.addStack(); s.size = new Size(w, RW 
 function vrule(parent, h) { const s = parent.addStack(); s.size = new Size(RW || 0.1, h); if (RW) s.backgroundColor = RULE }
 // 노트: Parameter '노트' → 고정·최근 노트, '노트:제목' → 제목에 그 말이 든 노트
 const NOTES = () => (data && Array.isArray(data.notes) ? data.notes : [])
-const pickNote = () => { const ns = NOTES(); return (ARG && ns.find((n) => n.t.includes(ARG))) || ns[0] || null }
+// 노트 고르기: Parameter(노트:제목) → 앱에서 고정한 노트 → 최근 노트
+let NOTE_PIN = null, NOTE_BUL = 'dot', NOTE_CK = 'gold'
+const pickNote = () => { const ns = NOTES(); return (ARG && ns.find((n) => n.t.includes(ARG))) || (NOTE_PIN && ns.find((n) => n.id === NOTE_PIN)) || ns[0] || null }
 const noteUrl = (n) => (RUN ? RUN + '?act=view&go=notes' + (n ? '&note=' + encodeURIComponent(n.id) : '') : n ? APP + '?open=' + encodeURIComponent(n.id) : APP + '?go=notes.pages')
 const HABITS = () => (data && data.extra && Array.isArray(data.extra.habits) ? data.extra.habits : [])
 const habitUrl = (h) => (RUN && h && h.id ? RUN + '?act=habit&id=' + encodeURIComponent(h.id) : APP)
@@ -165,12 +167,13 @@ const noteAgo = (u) => { if (!u) return ''; const m = Math.round((Date.now() - u
 function markImg(kind, z, h = z) {
   const K = 3, c = new DrawContext(); c.size = new Size(z * K, h * K); c.opaque = false; c.respectScreenScale = false
   const col = SOFT, p = new Path(), y0 = ((h - z) / 2) * K
+  if (kind === 'dash') { c.setFillColor(col); c.fillRect(new Rect(0, y0 + z * K / 2 - 0.5 * K, z * K, 1 * K)); return c.getImage() }
   if (kind === 'dot') { p.addRoundedRect(new Rect(0, y0, z * K, z * K), 1.5 * K, 1.5 * K); c.addPath(p); c.setFillColor(col); c.fillPath(); return c.getImage() }
   const lw = 0.8 * K, r = new Rect(lw / 2, y0 + lw / 2, z * K - lw, z * K - lw)
   p.addRoundedRect(r, 1.5 * K, 1.5 * K); c.addPath(p)
   c.setStrokeColor(col); c.setLineWidth(lw); c.strokePath()
   // 끝낸 줄: 네모 안에 가는 체크 표시
-  if (kind === 'on') { const q = new Path(), Z = z * K; q.move(new Point(Z * 0.22, y0 + Z * 0.52)); q.addLine(new Point(Z * 0.43, y0 + Z * 0.74)); q.addLine(new Point(Z * 0.8, y0 + Z * 0.28)); c.addPath(q); c.setStrokeColor(GOLD); c.setLineWidth(1.1 * K); c.strokePath() }
+  if (kind === 'on') { const q = new Path(), Z = z * K; q.move(new Point(Z * 0.22, y0 + Z * 0.52)); q.addLine(new Point(Z * 0.43, y0 + Z * 0.74)); q.addLine(new Point(Z * 0.8, y0 + Z * 0.28)); c.addPath(q); c.setStrokeColor(NOTE_CK === 'ink' ? INK : GOLD); c.setLineWidth(1.1 * K); c.strokePath() }
   return c.getImage()
 }
 // 노트 한 줄: 할 일은 작은 네모(완료면 채움), 글머리는 작은 점, 긴 줄은 두 줄까지
@@ -180,16 +183,18 @@ function noteRow(P2, l, wd, fs, lim = 2) {
   if (l.k === 'todo' || l.k === 'b') {
     // 표시(네모·점)는 그림으로 — 스택으로 만들면 긴 줄 옆에서 iOS 가 칸을 줄여 왼쪽이 잘렸음
     // 줄 높이만큼의 그림 가운데에 표시를 그려 첫 줄과 맞춤 (스택 없이 바로 넣어 줄어들지 않게)
-    const z = l.k === 'todo' ? Math.round(fs * 0.62) : 4, lh = Math.round(fs * 1.3 * SCALE)
-    const im = r.addImage(markImg(l.k === 'todo' ? (l.d ? 'on' : 'box') : 'dot', z, lh)); im.imageSize = new Size(z, lh)
+    const z = l.k === 'todo' ? Math.round(fs * 0.62) : NOTE_BUL === 'dash' ? 6 : 4, lh = Math.round(fs * 1.3 * SCALE)
+    if (l.k === 'b' && NOTE_BUL === 'num') t(r, (l.n || 1) + '.', tw(fs - 1), SOFT) // 글머리 숫자
+    else { const im = r.addImage(markImg(l.k === 'todo' ? (l.d ? 'on' : 'box') : NOTE_BUL === 'dash' ? 'dash' : 'dot', z, lh)); im.imageSize = new Size(z, lh) }
   }
   t(r, l.x, l.k === 'h' ? F(fs + 0.5, 'Regular') : tw(fs), l.d ? SOFT : INK, l.k === 'h' ? 1 : lim)
   r.addSpacer()
 }
 // 높이만큼 줄을 채우고, 들어간 줄 수를 돌려줌 (글자 수로 몇 줄로 접힐지 어림)
 function noteFlow(P2, L, wd, avail, fs) {
-  let used = 0, k = 0
-  for (const l of L) {
+  let used = 0, k = 0, bn = 0
+  for (const l0 of L) {
+    const l = l0.k === 'b' ? { ...l0, n: ++bn } : (bn = l0.k === 'h' ? 0 : bn, l0)
     const tw2 = wd - (l.k === 'todo' || l.k === 'b' ? 12 : 0), per = Math.max(4, Math.floor(tw2 / (fs * 0.92 * SCALE))), nl = l.k === 'h' ? 1 : Math.min(2, Math.ceil(l.x.length / per))
     const hh = nl * fs * 1.28 * SCALE + (l.k === 'h' && k ? 4 : 3)
     if (used + hh > avail && k) break
@@ -333,6 +338,8 @@ const ACT = (() => {
 })()
 
 async function widgetAct(Q) {
+  // 앱의 '위젯 지금 새로 그리기': 받아 둔 데이터·본체 확인 기록을 지워 다음 그리기 때 최신으로 (토큰 없이도)
+  if (Q.act === 'refresh') { const LF = FileManager.local(); for (const f of ['study-widget-cache.json', 'study-core.ver']) { try { const fp = LF.joinPath(LF.documentsDirectory(), f); if (LF.fileExists(fp)) LF.remove(fp) } catch (e) {} } return }
   if (!ACT.tok() || !(data && data.gid)) return ACT.say('설정이 필요해요', 'Scriptable 에서 이 스크립트를 실행 › 메뉴 › 위젯에서 바로 처리 켜기')
   if (Q.act === 'view') { await miniApp(Q); await ACT.flush(); return }
   let msg = null

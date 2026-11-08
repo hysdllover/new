@@ -5,7 +5,8 @@ import { Card, Icon, Empty, Ring, openSheet } from '../../components/ui.jsx'
 import RecordEditor from '../../components/RecordEditor.jsx'
 import { FileThumb } from '../../components/Attach.jsx'
 import { setParams } from '../../nav.js'
-import { today, addDays, fmtDate, fmtDur, fmtTime, tsToMin } from '../../engine/date.js'
+import { today, addDays, fmtDate, fmtDur, fmtTime, tsToMin, weekStart, monthStart } from '../../engine/date.js'
+import { useState } from 'react'
 
 export const openRecord = (rec, opt = {}) => openSheet((close) => <RecordEditor rec={rec} date={opt.date} subjectId={opt.subjectId} onDone={close} />, { title: rec ? '공부 기록 수정' : '공부 기록 입력' })
 
@@ -16,7 +17,11 @@ export default function Log({ params = {} }) {
   const files = useColl('files')
   const date = params.logDate || today()
   const setDate = (d) => setParams('study', { logDate: d })
-  const list = sessions.filter((s) => s.date === date).sort((a, b) => (b.start ?? b.createdAt ?? 0) - (a.start ?? a.createdAt ?? 0))
+  // 보기 기간: 그날 · 이번 주 · 이번 달 (위쪽 탭)
+  const [rng, setRng] = useState('day')
+  const from = rng === 'week' ? weekStart(today()) : rng === 'month' ? monthStart(today()) : date
+  const to = rng === 'week' ? addDays(from, 6) : rng === 'month' ? addDays(monthStart(addDays(from, 32)), -1) : date
+  const list = sessions.filter((s) => s.date >= from && s.date <= to).sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.start ?? b.createdAt ?? 0) - (a.start ?? a.createdAt ?? 0))
   const total = list.reduce((a, s) => a + s.dur, 0)
   const bySub = subjects.map((s) => ({ s, m: list.filter((x) => x.subjectId === s.id).reduce((a, x) => a + x.dur, 0) })).filter((x) => x.m)
 
@@ -26,17 +31,18 @@ export default function Log({ params = {} }) {
         <RecordEditor date={date} compact />
       </Card>
       <div className="col">
-        <div className="row between">
+        <div className="seg sm" style={{ alignSelf: 'flex-start' }}>{[['day', '오늘'], ['week', '이번 주'], ['month', '이번 달']].map(([k, l]) => <button key={k} className={rng === k ? 'on' : ''} onClick={() => setRng(k)}>{k === 'day' && date !== today() ? '그날' : l}</button>)}</div>
+        {rng === 'day' && <div className="row between">
           <div className="row">
             <button className="icon-btn" onClick={() => setDate(addDays(date, -1))} aria-label="이전 날"><Icon name="back" /></button>
             <label className="date-label"><b>{fmtDate(date)}</b><input type="date" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} /></label>
             <button className="icon-btn" onClick={() => setDate(addDays(date, 1))} aria-label="다음 날"><Icon name="next" /></button>
           </div>
           {date !== today() && <button className="btn sm" onClick={() => setDate(today())}>오늘</button>}
-        </div>
+        </div>}
         <Card>
           <div className="row" style={{ gap: 14 }}>
-            <Ring value={total / goalFor(st, today())} size={72}><b className="small">{Math.round(total / goalFor(st, today()) * 100)}%</b></Ring>
+            <Ring value={total / (rng === 'day' ? goalFor(st, today()) : rng === 'week' ? (st.goalWeekly || 1) : goalFor(st, today()) * 30)} size={72}><b className="small">{Math.round(total / (rng === 'day' ? goalFor(st, today()) : rng === 'week' ? (st.goalWeekly || 1) : goalFor(st, today()) * 30) * 100)}%</b></Ring>
             <div className="grow">
               <div style={{ fontSize: '1.3em', fontWeight: 'var(--fw-b)' }}>{fmtDur(total)}</div>
               <div className="stack-bar">{bySub.map(({ s, m }) => <i key={s.id} style={{ flex: m, background: s.color }} title={s.name} />)}</div>
@@ -55,7 +61,7 @@ export default function Log({ params = {} }) {
                   <div className="t">
                     <div className="row between"><b>{sub?.name || '과목 없음'}</b><span>{fmtDur(r.dur)}</span></div>
                     <div className="meta">
-                      {r.start != null ? <span>{fmtTime(tsToMin(r.start))}–{fmtTime(tsToMin(r.start) + r.dur)}</span> : <span>시각 없음</span>}
+                      {rng !== 'day' && <span>{fmtDate(r.date, { wd: false })}</span>}{r.start != null ? <span>{fmtTime(tsToMin(r.start))}–{fmtTime(tsToMin(r.start) + r.dur)}</span> : <span>시각 없음</span>}
                       <span className="badge">{r.kind === 'manual' ? '직접 입력' : r.kind === 'stopwatch' ? '스톱워치' : '타이머'}</span>
                       {r.focus > 0 && <span>집중 {focusLabel(r.focus)}</span>}
                     </div>

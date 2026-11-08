@@ -26,6 +26,7 @@ export default function TaskEditor({ id }) {
   if (!t) return <div className="pane-b empty">삭제된 할 일입니다.</div>
   const up = (p) => updateTask(id, p)
   const subs = t.subtasks || []
+  const [sec, setSec] = useState('base') // 섹션 탭: 기본 · 하위 할 일 · 기록 · 첨부
   const setSubs = (s) => patch('tasks', id, { subtasks: s })
   const dragSub = (e, i) => dragReorder(e, i, (from, to) => { const a = [...subs]; a.splice(to, 0, a.splice(from, 1)[0]); setSubs(a) })
   const spent = taskSpent(id, sessions)
@@ -43,6 +44,8 @@ export default function TaskEditor({ id }) {
       </div>
       <div className="pane-b form">
         <AutoText className="input title-input" value={t.title} onChange={(v) => patch('tasks', id, { title: v })} placeholder="할 일 제목" />
+        <div className="seg sm te-tabs">{[['base', '기본'], ['sub', `하위 할 일${subs.length ? ' ' + subs.length : ''}`], ['log', '기록'], ['att', `첨부${(t.files?.length || 0) + (t.links?.length || 0) ? ' ' + ((t.files?.length || 0) + (t.links?.length || 0)) : ''}`]].map(([k, l]) => <button key={k} className={sec === k ? 'on' : ''} onClick={() => setSec(k)}>{l}</button>)}</div>
+        {sec === 'base' && <>
         {t.seriesId && (() => { const all = list('tasks').filter((x) => x.seriesId === t.seriesId), d = all.filter((x) => x.done).length, nx = all.filter((x) => !x.done).sort((a, b) => (a.seriesN ?? 0) - (b.seriesN ?? 0))[0], col = settingsColor(t.seriesId) || subjects.find((s) => s.id === t.subjectId)?.color; return (
           <div className="series-in">
             <div className="row between small"><span className="ellipsis">{t.seriesName || '시리즈'}{t.seriesN != null ? ` · ${t.seriesN}번째` : ''}</span><span className="tiny muted">{d}/{all.length}</span></div>
@@ -83,6 +86,8 @@ export default function TaskEditor({ id }) {
         </Field>
         <button className={'chip' + (t.priority >= 3 ? ' on' : '')} style={{ alignSelf: 'flex-start' }} onClick={() => up({ priority: t.priority >= 3 ? 0 : 3 })}>★ 중요</button>
 
+        </>}
+        {sec === 'sub' && <>
         <Field label={`하위 할 일 ${subs.length ? `${subs.filter((s) => s.done).length}/${subs.length}` : ''}`}>
           {subs.length > 0 && <Prog value={subs.filter((s) => s.done).length / subs.length} />}
           <div className="list">
@@ -100,6 +105,8 @@ export default function TaskEditor({ id }) {
           </form>
         </Field>
 
+        </>}
+        {sec === 'base' && <>
         <Field label="메모"><AutoText className="input" value={t.note || ''} onChange={(v) => patch('tasks', id, { note: v })} placeholder="메모" style={{ minHeight: 60 }} /></Field>
 
         <details className="more">
@@ -134,8 +141,6 @@ export default function TaskEditor({ id }) {
           patch('notes', n.id, { blocks: bs }); patch('tasks', id, { noteId: n.id, fromNote: null, fromIndex: null }); toast('노트로 되돌렸어요')
         }}>노트로 되돌리기</button></div>}
         {t.noteId && find('notes', t.noteId) && <div className="row small" style={{ gap: 6 }}><span className="muted">노트에서 만든 할 일 · 체크하면 노트에도 반영</span><button className="chip" onClick={() => { closeDetail(); openNote(t.noteId) }}>{find('notes', t.noteId).title || '노트'} 열기</button></div>}
-        <Field label="링크"><LinksEditor links={t.links} onChange={(v) => up({ links: v })} /></Field>
-        <Field label="첨부 (사진·PDF·HTML)"><FilesEditor ids={t.files} onChange={(v) => up({ files: v })} meta={{ subjectId: t.subjectId, taskId: id }} /></Field>
         <Field label="반복"><RepeatEditor rule={t.repeat} start={t.due} onChange={(r) => up({ repeat: r })} /></Field>
 
         <Field label="간트 · 선행 작업">
@@ -154,7 +159,11 @@ export default function TaskEditor({ id }) {
           </div>
         </details>
 
+        </>}
+        {sec === 'log' && <>
         <div className="small muted">공부 시간 {fmtDur(spent)}</div>
+        {/* 이 할 일에 연결된 공부 기록 (최근 10개) */}
+        <div className="list small">{sessions.filter((x) => x.taskId === id).sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 10).map((x) => <div key={x.id} className="row" style={{ padding: '3px 0', gap: 8 }}><span className="tiny muted nowrap">{fmtShort(x.date)}</span><span className="grow">{fmtDur(x.dur)}</span>{x.note && <span className="tiny muted ellipsis">{x.note}</span>}</div>)}</div>
         <button className="btn ghost sm" onClick={() => setShowLog(!showLog)}>활동 로그 {myLogs.length}개 {showLog ? '▲' : '▼'}</button>
         {showLog && (
           <div className="list small">
@@ -166,6 +175,11 @@ export default function TaskEditor({ id }) {
             ))}
           </div>
         )}
+        </>}
+        {sec === 'att' && <>
+        <Field label="링크"><LinksEditor links={t.links} onChange={(v) => up({ links: v })} /></Field>
+        <Field label="첨부 (사진·PDF·HTML)"><FilesEditor ids={t.files} onChange={(v) => up({ files: v })} meta={{ subjectId: t.subjectId, taskId: id }} /></Field>
+        </>}
         <button className="btn sm" onClick={() => { up({ archived: !t.archived }); toast(t.archived ? '보관 해제' : '보관함으로 이동') }}><Icon name="archive" size={14} />{t.archived ? '보관 해제' : '보관'}</button>
       </div>
     </>

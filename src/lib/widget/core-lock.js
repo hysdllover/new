@@ -103,6 +103,9 @@ if (!data) {
   WSHIFT = +st.widgetWeight || 0
   CLEAR = st.widgetClear !== false && !lock // 기본 켬
   MARK = st.widgetMark || 'dash'; ALIGN = st.widgetAlign || 'left'
+  NOTE_PIN = st.widgetNote || null; NOTE_BUL = st.widgetBullet || 'dot'; NOTE_CK = st.widgetCheck || 'gold'
+  // 구분선 색: 블루그레이(기본) · 먹색
+  if (st.widgetRuleColor === 'ink' && inkMode === 'auto' && !CLEAR) RULE = dyn('#d4d4d2', '#3a3b3e')
   // 글자색 한 단계 진하게 (자동 글자색일 때)
   if (st.widgetInk === 'dark' && inkMode === 'auto') { INK = dyn('#161a21', '#f5f7fa'); SOFT = dyn('#5a6270', '#aab1bd'); GOLD = dyn('#4f5f78', '#b4c1d6') }
   if (CLEAR) {
@@ -189,7 +192,12 @@ if (!data) {
   const todoList = (parent, n, gap = fam === 'large' ? 7 : 5) => {
     // 하나만 넘치면 '+1 more' 줄 대신 그 할 일을 보여 줌 (같은 한 줄)
     if (items.length === n + 1) { n++; gap = Math.max(3, gap - 1) }
-    for (const x of items.slice(0, CNT || n)) {
+    // 과목별 묶어 보기 (앱 설정): 과목 이름 작은 머리 줄 + 그 과목 할 일
+    const GRP = st.widgetTodoGroup && KIND === 'todo', sName = (x) => (subjects.find((y) => y.id === x.subjectId) || {}).name || '기타'
+    const L5 = GRP ? items.slice().sort((a, b) => sName(a).localeCompare(sName(b))) : items
+    let lastS = null
+    for (const x of L5.slice(0, CNT || n)) {
+      if (GRP && sName(x) !== lastS) { lastS = sName(x); t(parent, lastS, label(8), GOLD); parent.addSpacer(2) }
       const r = parent.addStack(); r.centerAlignContent(); r.spacing = 8
       if (x.id) r.url = taskUrl(x.id) // 제목을 누르면 그 할 일 자세히 (중·대 위젯)
       if (x.done) { if (DOODLE) { const ck = r.addImage(tickImg(12)); ck.imageSize = new Size(10, 10) } else t(r, '✓', tw(TS - 2), SOFT); strike(r, x.title, tw(TS)) }
@@ -818,7 +826,9 @@ if (!data) {
   } else if (lock) {
     // ── 잠금 화면 ──
     if (fam === 'accessoryInline') {
-      inline(hm(mins) + (dd ? ' · ' + ddTxt + ' ' + dd.title : ''))
+      // 한 줄 위젯 내용 (앱 설정): 공부(기본) · 다음 일정 · D-day
+      const IL = st.widgetInline || 'study', nx0 = nCur || nNext
+      inline(IL === 'next' ? (nx0 ? (nCur ? '지금 ' : '') + clk(nx0.s) + ' ' + nx0.t : '남은 일정 없음') : IL === 'dday' ? (dd ? ddTxt + ' ' + dd.title : 'No D-day') : hm(mins) + (dd ? ' · ' + ddTxt + ' ' + dd.title : ''))
     } else if (fam === 'accessoryCircular') {
       const z = w.addStack(); z.size = new Size(LK.c, LK.c); z.layoutVertically(); z.centerAlignContent()
       const row = (s, f) => { const a = z.addStack(); a.addSpacer(); t(a, s, f).minimumScaleFactor = 0.6; a.addSpacer() }
