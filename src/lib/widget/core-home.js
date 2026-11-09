@@ -1497,16 +1497,17 @@ export default () => `  } else if (KIND === 'study') {
     const numCol = (parent, sz, cw) => {
       const a = parent.addStack(); a.layoutVertically(); if (cw) a.size = new Size(cw, 0)
       const ln = (s, f, c) => { if (!cw) return t(a, s, f, c); const r = a.addStack(); r.size = new Size(cw, 0); r.addSpacer(); t(r, s, f, c).minimumScaleFactor = 0.7; r.addSpacer() }
-      ln(String(d0.getDate()), thin(sz), DI); ln(MON[d0.getMonth()] + '  ·  ' + DAY[d0.getDay()], label(7.5), DS)
+      // 날짜 숫자: 다른 글자와 어울리게 크기를 줄이고 가장 얇게 (설치 폰트는 굵기 대신 크기로만)
+      ln(String(d0.getDate()), F(sz, 'UltraLight'), DI); ln(MON[d0.getMonth()] + '  ·  ' + DAY[d0.getDay()], label(7.5), DS)
     }
     if (sm) {
-      w.addSpacer(); numCol(w, 64); w.addSpacer()
+      w.addSpacer(); numCol(w, 42); w.addSpacer()
       t(w, dd ? ddTxt + '  ' + dd.title : headline, tw(10), DI, 2).minimumScaleFactor = 0.8
     } else {
       // 날짜 칸(좁게 · 가운데) | 세로선 | 다짐(세로선 바로 옆 · 왼쪽 정렬 · 세로 가운데) — 5:5 대칭 대신 왼쪽으로 기울게
       const row = w.addStack(); row.size = new Size(inner, 0); row.centerAlignContent()
       const cw = Math.round(inner * 0.36), gap = big2 ? 16 : 14
-      numCol(row, big2 ? 96 : 76, cw); row.addSpacer(gap); vrule(row, big2 ? 120 : Math.round(innerH * 0.62)); row.addSpacer(gap)
+      numCol(row, big2 ? 54 : 40, cw); row.addSpacer(gap); vrule(row, big2 ? 120 : Math.round(innerH * 0.62)); row.addSpacer(gap)
       const rw = Math.max(60, inner - cw - gap * 2 - (RW || 0.1)), hl = row.addStack(); hl.size = new Size(rw, 0)
       t(hl, headline, F(big2 ? 16 : 14, 'Light'), DI, big2 ? 4 : 3).minimumScaleFactor = 0.8; hl.addSpacer()
       if (!big2) { w.addSpacer(); rule(w, inner); w.addSpacer(5); const f = w.addStack(); f.size = new Size(inner, 0); t(f, '공부 ' + hm(mins), label(8), DI); f.addSpacer(); t(f, dd ? ddTxt : '', label(8), DI); f.addSpacer(); t(f, '할 일 ' + left.length, label(8), DS) }
