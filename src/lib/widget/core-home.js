@@ -124,15 +124,14 @@ export default () => `  } else if (TYLAY) {
           const L = dayItems(k); for (const it of L.slice(0, 2)) itemLine(C, it, INK); if (L.length > 2) t(C, '+' + (L.length - 2), label(7), SOFT); if (!L.length) t(C, '—', tw(fs), SOFT); C.addSpacer()
         })
       } else {
-        const lines = 1
+        const lines = LGt ? 2 : 1, dkW = sm ? 28 : LGt ? 40 : 34
         KS.forEach((k, i) => {
           const past = k < today, r = w.addStack(); r.topAlignContent()
-          const dk = r.addStack(); dk.layoutVertically(); dk.size = new Size(sm ? 28 : LGt ? 40 : 34, 0)
+          const dk = r.addStack(); dk.layoutVertically(); dk.size = new Size(dkW, 0)
           t(dk, +k.slice(8), thin(sm ? 15 : LGt ? 18 : 16), k === today ? GOLD : past ? SOFT : INK); t(dk, KWD[new Date(k + 'T12:00').getDay()], label(7), SOFT)
-          const R2 = r.addStack(); R2.layoutVertically(); R2.addSpacer(2)
+          const R2 = r.addStack(); R2.layoutVertically(); R2.size = new Size(inner - dkW, 0); R2.addSpacer(2) // 폭을 정해 둬야 글자가 밀려 사라지지 않음
           const L = dayItems(k); for (const it of L.slice(0, lines)) itemLine(R2, it, past ? SOFT : INK)
           if (L.length > lines) t(R2, '+' + (L.length - lines), label(7), SOFT); else if (!L.length) t(R2, '—', tw(fs), SOFT)
-          r.addSpacer()
           if (i < KS.length - 1) { w.addSpacer(sm ? 3 : 2); const ln = w.addStack(); ln.size = new Size(inner, 0.5); ln.backgroundColor = new Color(dark() ? '#3a3f48' : '#dfe3e9'); w.addSpacer(sm ? 3 : 2) }
         })
       }
