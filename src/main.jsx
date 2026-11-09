@@ -38,6 +38,8 @@ function Root() {
 const linkIn = readConnectLink() // 렌더 전에 주소에서 토큰 지움
 Promise.all([loadState(), initFonts(), restoreSync()]).then(async () => {
   persistStorage()
+  // 위젯을 홈 화면 타자기 배경화면에 맞춘 '타자기' 테마로 한 번 바꿔 둠 (설정에서 언제든 되돌릴 수 있음)
+  try { const { settings, setSettings } = await import('./store/store.js'); if (!settings().widgetTypeOnce) setSettings({ widgetTheme: 'type', widgetTypeOnce: true }) } catch {}
   // 앱 아이콘 배지: 할 일이 바뀔 때마다 (잠깐 모아서)
   let bt = 0; updateBadge(); subscribe(() => { clearTimeout(bt); bt = setTimeout(updateBadge, 800) })
   // 업데이트 뒤 처음 열면 새로워진 점 한 줄

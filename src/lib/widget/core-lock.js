@@ -58,6 +58,9 @@ const inkFile = bgPath(fam, RAWP) + '.ink'
 if (inkMode === 'auto' && FM.fileExists(bgPath(fam, RAWP)) && FM.fileExists(inkFile)) { try { const v = FM.readString(inkFile).trim(); if (v === 'light' || v === 'dark') inkMode = v } catch (e) {} }
 if (inkMode === 'light') { INK = new Color('#ffffff'); SOFT = new Color('#ffffff', 0.72); RULE = new Color('#ffffff', 0.3) }
 if (inkMode === 'dark') { INK = new Color('#3a4659'); SOFT = new Color('#3a4659', 0.6); RULE = new Color('#3a4659', 0.2) }
+// 타자기 테마: 흰 바탕 · 블루그레이 글자 · 또렷한 가는 선 (홈 화면 타자기 배경화면과 같은 결)
+const TYPE = WT === 'type'
+if (TYPE && inkMode === 'auto') { INK = dyn('#3a4659', '#dfe4ec'); SOFT = dyn('#7f8ba0', '#8b95a7'); RULE = dyn('#3a4659', '#dfe4ec', 0.6); GOLD = dyn('#5d6d86', '#9fadc4'); SECT = true }
 if (!lock) {
   w.setPadding(P, P, P, P)
   const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large, PAT = STM.widgetPattern
@@ -87,6 +90,7 @@ if (!lock) {
     }
     w.backgroundImage = img
   }
+  else if (TYPE && !hasBg) w.backgroundColor = dyn('#fdfdfc', '#18191c')
   else if (WT === 'night') w.backgroundColor = new Color('#1b1d22')
   else if (WT === 'mono') w.backgroundColor = new Color('#1c1d21')
   else if (hasBg) w.backgroundImage = FM.readImage(bgPath(fam, RAWP))
@@ -101,7 +105,7 @@ if (!data) {
   else t(w, lock ? '동기화 필요' : '앱에서 동기화를 연결하고 스크립트를 다시 복사해 주세요', tw(12), lock ? null : SOFT, 3)
 } else try {
   const st = data.settings.settings?.main || {}
-  CUSTOM = (st.widgetFont || '').trim()
+  CUSTOM = TYPE ? 'CourierNewPSMT' : (st.widgetFont || '').trim() // 타자기 테마는 타자기 글꼴 (한글은 시스템 글꼴로 이어짐)
   SCALE = Math.max(0.8, Math.min(1.3, +st.widgetScale || 1)); if (lock) SCALE = Math.min(1.25, SCALE * 1.18) // 잠금 화면은 꽉 차게 (기본 1.18배)
   WSHIFT = +st.widgetWeight || 0
   CLEAR = st.widgetClear !== false && !lock // 기본 켬
@@ -311,7 +315,7 @@ if (!data) {
   const dayName = (d) => (d.i === 0 ? 'TODAY' : d.i === 1 ? 'TMRW' : DAY[d.x.getDay()])
   // ── 종이 디자인 위젯 공용 (티켓 · 영수증 · 기록 카드 · 우표 · 매거진): 자체 종이 · 먹색 · 포인트 색 조금 ──
   // 위젯 테마(종이 · 다크 · 모노 · 흰/검은 글씨 · 배경 잘라 붙이기)를 고르면 그 바탕 위에 칸·선만 그리고 글자색도 테마를 따름
-  const HASBG = !lock && FM.fileExists(bgPath(fam, RAWP)), THEMED = ['paper', 'night', 'mono', 'white', 'black'].includes(WT) || HASBG
+  const HASBG = !lock && FM.fileExists(bgPath(fam, RAWP)), THEMED = ['paper', 'night', 'mono', 'white', 'black', 'type'].includes(WT) || HASBG
   const DK = dark(), LIK = THEMED ? inkMode === 'light' || (inkMode === 'auto' && DK) : DK, INKH = LIK ? (THEMED ? '#ffffff' : '#e6e9ee') : '#3d4a5e'
   const DI = new Color(INKH), DS = new Color(INKH, THEMED ? 0.62 : 0.52), DA = new Color(LIK ? '#c9ccd2' : '#5c6068'), DRS = new Color(LIK ? '#c8b9b6' : '#8b7a77')
   const PG = DK ? '#1b1c1f' : '#e6e7e9', PW = DK ? '#272b32' : '#fcfcfb', PL = LIK ? '#ffffff' : '#3d4a5e' // 바탕(블루그레이) · 종이 · 선
@@ -321,6 +325,7 @@ if (!data) {
     const all = new Rect(0, 0, W2 * K, H2 * K)
     if (WT === 'paper') { c.setFillColor(new Color('#f2f2f1')); c.fillRect(all); const pp = loadPaper(); if (pp) for (let x = 0; x < W2 * K; x += 720) for (let y = 0; y < H2 * K; y += 720) c.drawImageInRect(pp, new Rect(x, y, 720, 720)) }
     else if (WT === 'night' || WT === 'mono') { c.setFillColor(new Color(WT === 'night' ? '#1b1d22' : '#1c1d21')); c.fillRect(all) }
+    else if (WT === 'type') { c.setFillColor(new Color(DK ? '#18191c' : '#fdfdfc')); c.fillRect(all) }
     else if (HASBG) { c.setFillColor(new Color(PG)); c.fillRect(all); try { c.drawImageInRect(FM.readImage(bgPath(fam, RAWP)), all) } catch (e) {} }
     else if (WT === 'white' || WT === 'black') { c.setFillColor(new Color(DK ? '#15181d' : '#f2f4f6')); c.fillRect(all) }
     else { c.setFillColor(new Color(PG)); c.fillRect(all) }

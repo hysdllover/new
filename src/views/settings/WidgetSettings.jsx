@@ -45,7 +45,7 @@ export function WidgetFontField() {
       <Field label="글자색"><Seg value={st.widgetInk || 'normal'} onChange={(v) => setSettings({ widgetInk: v })} options={[['normal', '기본'], ['dark', '한 단계 진하게']]} /></Field>
 </div></details>
       <details><summary>모양·배경</summary><div className="col" style={{ gap: 6 }}>
-      <Field label="테마"><Seg value={st.widgetTheme || 'auto'} onChange={(v) => setSettings({ widgetTheme: v })} options={[['auto', '자동'], ['white', '흰 글씨'], ['black', '검은 글씨'], ['paper', '종이'], ['night', '다크'], ['mono', '단색']]} /></Field>
+      <Field label="테마"><Seg value={st.widgetTheme || 'auto'} onChange={(v) => setSettings({ widgetTheme: v })} options={[['auto', '자동'], ['white', '흰 글씨'], ['black', '검은 글씨'], ['paper', '종이'], ['night', '다크'], ['mono', '단색'], ['type', '타자기']]} /></Field>
       <div className="tiny muted" style={{ marginTop: -4 }}>흰·검은 글씨는 투명 배경(Scriptable 메뉴)과 함께, 종이·다크는 배경색까지 바꿔요. 자동은 Scriptable 메뉴의 글자색을 따라요.</div>
       <Field label="구분선 색"><Seg value={st.widgetRuleColor || 'blue'} onChange={(v) => setSettings({ widgetRuleColor: v })} options={[['blue', '블루그레이'], ['ink', '먹색']]} /></Field>
       <Field label="구분선"><Seg value={st.widgetRule || 'normal'} onChange={(v) => setSettings({ widgetRule: v })} options={[['none', '없음'], ['thin', '가늘게'], ['normal', '기본'], ['bold', '굵게']]} /></Field>
@@ -179,7 +179,7 @@ function KindPicker({ kind, setKind }) {
 export function WidgetPreview() {
   const st = useSettings()
   useEffect(() => { loadAllFonts() }, [])
-  const WTH = { white: { background: 'linear-gradient(135deg, #5b6170, #8b8f86)', color: '#fff' }, black: { background: 'linear-gradient(135deg, #e9edf1, #cdd4dc)', color: '#3a4659' }, paper: { background: `#f2f2f1 url(${import.meta.env.BASE_URL}paper.jpg) 0 0 / 360px 360px`, color: '#3d4a5e' }, night: { background: '#1b1d22', color: '#eceff3' }, mono: { background: '#1c1d21', color: '#fff', filter: 'grayscale(1)' } }[st.widgetTheme] || null
+  const WTH = { type: { background: '#fdfdfc', '--ink': '#3a4659', '--soft': '#7f8ba0', '--rule': 'rgba(58,70,89,.6)', fontFamily: '"Courier New", Courier, "Apple SD Gothic Neo", monospace' }, white: { background: 'linear-gradient(135deg, #5b6170, #8b8f86)', color: '#fff' }, black: { background: 'linear-gradient(135deg, #e9edf1, #cdd4dc)', color: '#3a4659' }, paper: { background: `#f2f2f1 url(${import.meta.env.BASE_URL}paper.jpg) 0 0 / 360px 360px`, color: '#3d4a5e' }, night: { background: '#1b1d22', color: '#eceff3' }, mono: { background: '#1c1d21', color: '#fff', filter: 'grayscale(1)' } }[st.widgetTheme] || null
   const ff = { ...(st.widgetFont ? { fontFamily: `"${st.widgetFont}", "Apple SD Gothic Neo", sans-serif` } : null), '--dw-scale': st.widgetScale || 1, '--dw-pad': { tight: 0.72, roomy: 1.25 }[st.widgetPad] || 1, '--dw-rw': ({ none: 0, thin: 0.4, bold: 1 }[st.widgetRule] ?? 0.6) + 'px', fontWeight: [200, 300, 400, 500, 600][(+st.widgetWeight || 0) + 1 + (st.widgetClear !== false ? 1 : 0)] }
   const tasks = useColl('tasks'), sessions = useColl('sessions'), ddays = useColl('ddays'), quotes = useColl('quotes'), subjects = useColl('subjects')
   const d = today()
