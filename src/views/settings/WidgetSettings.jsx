@@ -22,7 +22,7 @@ import { sortTasks } from '../tasks/filter.js'
 import { download, blobUrl } from '../../lib/files.js'
 import { useMyFonts, addFont, removeFont, fontFamily, loadAllFonts, SYNC_FONT_MAX } from '../../lib/fonts.js'
 import { requestPermission } from '../../lib/notify.js'
-import { fmtTime, fmtClock, today, WD, weekStart, addDays } from '../../engine/date.js'
+import { fmtTime, fmtClock, today, WD, weekStart, addDays, parseYmd } from '../../engine/date.js'
 import { weekGoals, goalProgress } from '../../store/actions.js'
 import { DIGEST_TIMES } from '../../engine/reminders.js'
 import { APP_ICONS, iconSrc, getAppIcon, setAppIcon } from '../../lib/appIcon.js'
@@ -214,6 +214,9 @@ export function WidgetPreview() {
     ? <div key={t.id} className="dw-todo dw-soft"><span>✓</span><span className="ellipsis" style={{ textDecoration: 'line-through' }}>{t.title}</span></div>
     : <div key={t.id} className="dw-todo"><span className={t.priority >= 3 ? 'dw-gold' : 'dw-soft'}>{t.priority >= 3 ? '•' : '–'}</span><span className="ellipsis" style={t.priority >= 3 ? { fontWeight: 500 } : null}>{t.title}</span></div>)}
     {!items.length && <div className="dw-soft">All clear.</div>}{items.length > n && <div className="dw-soft" style={{ fontSize: 11 }}>+ {items.length - n} more</div>}</> }
+  const rowRef = useRef(null), [xFit, setXFit] = useState(1)
+  // 아주 큰 미리보기는 화면 폭에 맞춰 줄여 보여 줌
+  useEffect(() => { const el = rowRef.current; if (!el) return; const on = () => setXFit(Math.min(1, (el.clientWidth - 8) / 846)); on(); const ro = new ResizeObserver(on); ro.observe(el); return () => ro.disconnect() }, [])
   const [kind, setKind] = useState(''), [pz, setPz] = useState('m'), [dev, setDev] = useState(() => (/iPad|Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1 ? 'pad' : 'phone')) // 미리보기 기기 비율
   // 노트 사진 위젯 미리보기: 최근 노트의 첫 그림
   const phW = photoPicks(getState())[0]
@@ -794,15 +797,37 @@ export function WidgetPreview() {
     : Lfor({ '숫자:디데이': '디데이', '숫자:할일': '할일', '숫자:주간': '주간', '선그래프': '주간', '메모지': '노트', '인쇄': '오늘', '반반': '오늘', '세단': '오늘', '자동': autoK, '달력:과목': '달력', '기록카드': '공부', '디데이카드': '디데이목록', '일지': '오늘', '매거진': '오늘', '신문': '오늘', '목록카드': '공부', '타임카드': '주간', '주간표': '주간', '과목표': '과목', '일정표': '일주일', '디데이표': '디데이목록', '월간표': '달력', '노트표': '노트', '수업표': '시간표', '내일표': '내일', '마감표': '마감', '진도표': '진도', '습관표': '습관', '기록표': '공부' }[kind] || kind)
   const FULLP = new Set(['메모지', '기록카드', '디데이카드', '일지', '매거진', '신문', '목록카드', '타임카드']) // 자체 종이를 쓰는 형태: 미리보기도 가장자리까지
   const [vs, vm, vl] = V[kind] || V[''] // 미리보기가 없는 형태도 화면이 멈추지 않게
+  // 아주 큰 크기(아이패드): 전용 형태는 따로 그리고, 나머지는 대형 모양을 넓게
+  const VX = (() => {
+    const col = (x, flex = 1) => <div className="col" style={{ gap: 0, flex, minWidth: 0, overflow: 'hidden' }}>{x}</div>
+    const vr = <div className="dw-vr" />
+    const dayK = (i) => addDays(wsP, i)
+    const evRow = (k) => eventsOn(k).slice(0, 4).map((e, j) => <div key={j} className="dw-todo" style={{ fontSize: 10.5 }}><span style={{ width: 2, height: 9, background: e.color || 'var(--rule)', flexShrink: 0 }} /><span className="ellipsis">{e.start != null ? fmtTime(e.start) + ' ' : ''}{e.title}</span></div>)
+    const tkRow = (k) => tasks.filter((t) => !t.archived && t.due === k).slice(0, 4).map((t) => <div key={t.id} className={'dw-todo' + (t.done ? ' dw-soft' : '')} style={{ fontSize: 10.5 }}><span className="dw-soft">{t.done ? '✓' : '–'}</span><span className="ellipsis">{t.title}</span></div>)
+    const dayM = (k) => sessions.filter((x) => x.date === k).reduce((a, x) => a + x.dur, 0)
+    const WDS = ['일', '월', '화', '수', '목', '금', '토']
+    const box = (x, k) => <div key={k} className="col" style={{ gap: 2, flex: 1, minWidth: 0, border: '0.7px solid var(--rule)', padding: '5px 7px', overflow: 'hidden' }}>{x}</div>
+    const X = {
+      '주간7칸': <>{hdr('THIS WEEK', hm(sw.week))}<div className="row" style={{ gap: 6, flex: 1, alignItems: 'stretch', flexWrap: 'nowrap' }}>{[0, 1, 2, 3, 4, 5, 6].map((i) => { const k = dayK(i), dt = parseYmd(k); return box(<><div style={{ fontSize: 18, fontWeight: 200 }} className={k === d ? 'dw-gold' : ''}>{dt.getDate()} <span className="dw-soft" style={{ fontSize: 8 }}>{WDS[dt.getDay()]}</span></div><div className="dw-soft" style={{ fontSize: 9 }}>{dayM(k) ? hm(dayM(k)) : '–'}</div>{evRow(k)}{tkRow(k)}</>, i) })}</div></>,
+      '오늘세단': <>{hdr('TODAY', dateStr)}<div className="row" style={{ gap: 14, flex: 1, alignItems: 'stretch', flexWrap: 'nowrap' }}>{col(<><span className="dw-cap">PLAN</span>{nowL.slice(0, 10).map((x, k) => <div key={k} className="dw-todo" style={{ fontSize: 12 }}><span className="dw-gold" style={{ width: 34, flexShrink: 0, fontSize: 10 }}>{fmtTime(x.s)}</span><span className="ellipsis">{x.t}</span></div>)}{!nowL.length && <span className="dw-soft">오늘 일정 없음</span>}</>)}{vr}{col(<><span className="dw-cap">TO DO {done}/{items.length}</span>{tdRows(10, 12)}</>)}{vr}{col(<><span className="dw-cap">STUDY</span>{big(40)}{subMins.slice(0, 5).map((x) => <div key={x.s.id} className="row between" style={{ fontSize: 11 }}><span>{x.s.name}</span><span className="dw-soft">{hm(x.m)}</span></div>)}<div className="grow" />{dd && <div className="row between"><span className="dw-soft">{dd.title}</span><span className="dw-gold">{ddTxt}</span></div>}</>)}</div></>,
+      '월간판': <>{hdr(`${['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][now.getMonth()]} ${now.getFullYear()}`, '')}{(() => { const y = now.getFullYear(), mo = now.getMonth(), n = new Date(y, mo + 1, 0).getDate(), ws2 = st.weekStart ?? 1, lead = (new Date(y, mo, 1).getDay() - ws2 + 7) % 7, cells = [...Array(lead).fill(0), ...Array.from({ length: n }, (_, i) => i + 1)]; while (cells.length % 7) cells.push(0); const key = (i) => `${y}-${String(mo + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`; return <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 3, flex: 1 }}>{cells.map((c, i) => c ? <div key={i} style={{ border: key(c) === d ? '1px solid var(--ink)' : '0.5px solid var(--rule)', padding: '1px 3px', overflow: 'hidden', minHeight: 0 }}><div className="row between" style={{ fontSize: 9 }}><span className="dw-soft">{c}</span><span className="dw-gold" style={{ fontSize: 7 }}>{dayM(key(c)) ? hm(dayM(key(c))) : ''}</span></div>{eventsOn(key(c)).slice(0, 2).map((e, j) => <div key={j} className="ellipsis" style={{ fontSize: 8, background: (e.color || '#66778f') + '2e', borderRadius: 2, padding: '0 2px', marginTop: 1 }}>{e.title}</div>)}</div> : <div key={i} />)}</div> })()}</>,
+      '노트두개': <div className="row" style={{ gap: 12, flex: 1, alignItems: 'stretch', flexWrap: 'nowrap' }}>{col(<>{nColP(14, 12)}</>)}{vr}{col(<><div className="ellipsis" style={{ fontSize: 13, marginBottom: 4 }}>{nOth[0] ? nOth[0].t : '노트 없음'}</div>{(nOth[0]?.l || []).slice(0, 14).map((l, i) => nRow(l, i, 12))}</>)}</div>,
+      '디데이판': <div className="row" style={{ gap: 16, flex: 1, alignItems: 'stretch', flexWrap: 'nowrap' }}>{col(<><span className="dw-cap">D-DAY</span><div className="grow" /><div style={{ fontSize: 64, fontWeight: 100, lineHeight: 1 }}>{ddTxt || '—'}</div><div className="dw-gold" style={{ fontSize: 14 }}>{dd ? dd.title + '  ' + dd.date.slice(5).replace('-', '.') : 'No D-day'}</div><div style={{ height: 8 }} />{dd && bar(0.6, '90%')}<div className="dw-soft" style={{ fontSize: 10, marginTop: 4 }}>{dd ? `주말 ${wkP(dd)}번` : ''}</div><div className="grow" /></>, 1.2)}{vr}{col(<><span className="dw-cap">ALL D-DAYS</span>{ddList.slice(0, 9).map((x) => <div key={x.id} className="row between" style={{ fontSize: 13, marginTop: 4 }}><span className="ellipsis">{x.title}</span><span className="dw-gold">D-{Math.round((new Date(x.date) - new Date(d)) / 864e5)}</span></div>)}</>)}</div>,
+      '과목판': <>{hdr('SUBJECTS', '이번 주 ' + hm(sw.week))}<div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, flex: 1 }}>{subjects.slice(0, 6).map((s2) => { const wk = (weekSub.find((x) => x.s.id === s2.id) || {}).m || 0; return box(<><div className="row between" style={{ fontSize: 13 }}><span><span className="dot" style={{ background: s2.color }} /> {s2.name}</span><span className="dw-soft" style={{ fontSize: 11 }}>{hm(wk)}</span></div>{bar(wk / Math.max(1, sw.week), '100%')}<span className="dw-gold" style={{ fontSize: 10 }}>오늘 {hm(today0.filter((x) => x.subjectId === s2.id).reduce((a, x) => a + x.dur, 0))}</span>{tasks.filter((t) => t.subjectId === s2.id && !t.done && !t.archived && t.due).slice(0, 3).map((t) => <div key={t.id} className="dw-todo" style={{ fontSize: 10.5 }}><span className="dw-soft">–</span><span className="ellipsis">{t.title}</span></div>)}</>, s2.id) })}</div></>,
+    }
+    X['한화면'] = <div className="row" style={{ gap: 14, flex: 1, alignItems: 'stretch', flexWrap: 'nowrap' }}>{col(<>{hdr('TODAY', dateStr)}{big(40)}<span className="dw-cap" style={{ marginTop: 10 }}>TO DO</span>{tdRows(7, 12)}</>, 1.2)}{vr}{col(<>{hdr('10 MIN', hm(mins))}<div className="col" style={{ gap: 3 }}>{Array.from({ length: 12 }, (_, i) => <div key={i} className="row" style={{ gap: 2, flexWrap: 'nowrap' }}><span className="dw-soft" style={{ width: 14, fontSize: 8 }}>{8 + i}</span>{[0, 1, 2, 3, 4, 5].map((k) => <i key={k} style={{ flex: 1, height: 8, background: 'var(--rule)', borderRadius: 1 }} />)}</div>)}</div></>)}{vr}{col(<>{hdr('THIS WEEK', hm(sw.week))}<span className="dw-lspark" style={{ height: 50 }}>{sw.last7.map((x, k) => <i key={k} style={{ height: Math.max(2, Math.round((x.m / Math.max(goal, ...sw.last7.map((y) => y.m))) * 46)) }} />)}</span><span className="dw-cap" style={{ marginTop: 10 }}>D-DAYS</span>{ddList.slice(0, 4).map((x) => <div key={x.id} className="row between" style={{ fontSize: 12 }}><span className="ellipsis">{x.title}</span><span className="dw-gold">D-{Math.round((new Date(x.date) - new Date(d)) / 864e5)}</span></div>)}</>)}</div>
+    X['주간지면'] = X['주간7칸']
+    return X[kind] ? M(X[kind]) : vl
+  })()
   return (
     <>
       <KindPicker kind={kind} setKind={setKind} />
       <div className="row wrap" style={{ gap: 6, marginBottom: 6 }}>
-        <div className="seg sm">{[['s', '소형'], ['m', '중형'], ['l', '대형']].map(([k, l]) => <button key={k} className={pz === k ? 'on' : ''} onClick={() => setPz(k)}>{l}</button>)}</div>
+        <div className="seg sm">{[['s', '소형'], ['m', '중형'], ['l', '대형'], ['x', '아주 큰']].map(([k, l]) => <button key={k} className={pz === k ? 'on' : ''} onClick={() => { setPz(k); if (k === 'x') setDev('pad') }}>{l}</button>)}</div>
         <div className="seg sm">{[['phone', '아이폰'], ['pad', '아이패드']].map(([k, l]) => <button key={k} className={dev === k ? 'on' : ''} onClick={() => setDev(k)}>{l}</button>)}</div>
       </div>
-      <div className={'dw-row' + (dev === 'pad' ? ' dw-padsz' : '')} style={{ justifyContent: 'center' }}>
-        <div className={'dw dw-' + pz + (FULLP.has(kind) ? ' dw-full' : '')} style={{ ...ff, ...WTH }}><div className="dw-in">{{ s: vs, m: vm, l: vl }[pz]}</div></div>
+      <div ref={rowRef} className={'dw-row' + (dev === 'pad' ? ' dw-padsz' : '')} style={{ justifyContent: 'center' }}>
+        <div className={'dw dw-' + pz + (FULLP.has(kind) ? ' dw-full' : '')} style={{ ...ff, ...WTH, ...(pz === 'x' ? { zoom: xFit } : null) }}><div className="dw-in">{{ s: vs, m: vm, l: vl, x: VX }[pz]}</div></div>
       </div>
       <div className="tiny muted" style={{ marginTop: 8 }}>잠금 화면 · 원형 · 직사각형 · 한 줄 (Parameter 같음, 아이폰·아이패드 공통)</div>
       <div className="dw-lock" style={ff}>
