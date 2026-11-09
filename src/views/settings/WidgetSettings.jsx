@@ -30,14 +30,15 @@ import { APP_ICONS, iconSrc, getAppIcon, setAppIcon } from '../../lib/appIcon.js
 // 위젯 폰트 — 기본(산돌고딕 얇게) 또는 기기에 설치한 폰트의 PostScript 이름
 export function WidgetFontField() {
   const st = useSettings(), notesL = useColl('notes').filter((n) => !n.archived).slice(0, 80)
-  const custom = st.widgetFont != null
+  const custom = st.widgetFont != null, myFonts = useMyFonts()
   return (
     <div className="col wk-sets" style={{ gap: 6, marginTop: 10 }}>
       <details><summary>글자</summary><div className="col" style={{ gap: 6 }}>
       <Field label="폰트"><Seg value={custom ? 'c' : 'd'} onChange={(v) => setSettings({ widgetFont: v === 'c' ? '' : null })} options={[['d', '기본 · 산돌고딕 얇게'], ['c', '설치한 폰트']]} /></Field>
       {custom && <>
-        <input className="input" placeholder="PostScript 이름 (예: NanumMyeongjo)" defaultValue={st.widgetFont} onBlur={(e) => setSettings({ widgetFont: e.target.value.trim() })} autoCapitalize="off" autoCorrect="off" spellCheck={false} />
-        <div className="tiny muted" style={{ lineHeight: 1.6 }}>타자기체·손글씨체 등 한글 폰트를 폰트 앱(예: iFont)으로 설치한 뒤, 그 폰트의 PostScript 이름을 적어 주세요. 이름이 틀리거나 설치되지 않은 기기에서는 시스템 폰트로 보여요. 스크립트를 다시 복사할 필요 없어요.</div>
+        <input key={st.widgetFont} className="input" placeholder="PostScript 이름 (예: NanumMyeongjo)" defaultValue={st.widgetFont} onBlur={(e) => setSettings({ widgetFont: e.target.value.trim() })} autoCapitalize="off" autoCorrect="off" spellCheck={false} />
+        {myFonts.some((f) => f.ps) && <div className="row wrap" style={{ gap: 4 }}>{myFonts.filter((f) => f.ps).map((f) => <button key={f.id} className={'chip' + (st.widgetFont === f.ps ? ' on' : '')} onClick={() => setSettings({ widgetFont: f.ps })}>{f.name}</button>)}</div>}
+        <div className="tiny muted" style={{ lineHeight: 1.6 }}>위젯(Scriptable)은 앱에 넣은 폰트를 쓸 수 없어요. 같은 폰트 파일을 폰트 앱(예: iFont)으로 iOS 에 설치한 뒤, 위 ‘내 폰트’를 누르거나 PostScript 이름을 적어 주세요. 이름이 틀리거나 설치되지 않은 기기에서는 시스템 폰트로 보여요. 스크립트를 다시 복사할 필요 없어요.</div>
       </>}
       <Field label="글자 크기"><Seg value={String(st.widgetScale || 1)} onChange={(v) => setSettings({ widgetScale: +v })} options={[['0.9', '작게'], ['1', '기본'], ['1.1', '크게'], ['1.2', '더 크게']]} /></Field>
       <Field label="글자 굵기"><Seg value={String(st.widgetWeight || 0)} onChange={(v) => setSettings({ widgetWeight: +v })} options={[['-1', '더 얇게'], ['0', '기본'], ['1', '보통'], ['2', '진하게']]} /></Field>
