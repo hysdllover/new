@@ -79,65 +79,65 @@ export default () => `  } else if (TYLAY) {
       }
       foot(dShort, done + ' / ' + items.length + ' DONE')
       w.url = link('planner.week')
-    } else if (KIND === 'ddring') {
-      // D-day 원: 만든 날부터 그날까지 지나간 만큼 호가 차오름 · 가운데 D-숫자 · 아래 이름
-      top(TITLE || 'D-DAYS', dShort)
-      const L = ddAll.slice(0, CNT || (sm ? 1 : fam === 'medium' ? 3 : 6)), cols = sm ? 1 : 3
-      const S = Math.floor(sm ? Math.min(inner, innerH - 62) : fam === 'medium' ? Math.min((inner - 40) / 3, innerH - 68) : Math.min((inner - 40) / 3 * 0.8, (innerH - 120 * SCALE) / 2))
-      const ring = (x) => {
-        const c = new DrawContext(); c.size = new Size(S, S); c.opaque = false; c.respectScreenScale = true
-        const lw = Math.max(2, S * 0.035), R = S / 2 - lw / 2 - 1, cx = S / 2, n = ddN(x)
-        const c0 = x.createdAt ? Math.round((new Date(x.date + 'T00:00') - new Date(x.createdAt)) / 864e5) : 100, r = Math.max(0.02, Math.min(1, 1 - n / Math.max(n, c0, 1)))
-        const tr = new Path(); tr.addEllipse(new Rect(cx - R, cx - R, R * 2, R * 2)); c.addPath(tr); c.setStrokeColor(new Color(dark() ? '#2c313a' : '#e4e8ed')); c.setLineWidth(lw); c.strokePath()
-        const p = new Path(), N = Math.max(2, Math.round(r * 120)); for (let i = 0; i <= N; i++) { const a = (i / 120) * Math.PI * 2 - Math.PI / 2, q = new Point(cx + R * Math.cos(a), cx + R * Math.sin(a)); if (i) p.addLine(q); else p.move(q) }
-        c.addPath(p); c.setStrokeColor(new Color(x.color || (dark() ? '#9fadc4' : '#8794a8'))); c.setLineWidth(lw); c.strokePath()
-        c.setFont(thin(Math.round(S * 0.22))); c.setTextAlignedCenter(); c.setTextColor(new Color(dark() ? '#dfe4ec' : '#3a4659')); c.drawTextInRect(n === 0 ? 'D-DAY' : 'D-' + n, new Rect(0, S / 2 - S * 0.16, S, S * 0.3))
-        return c.getImage()
+    } else if (KIND === 'ddcell') {
+      // D-day 칸: 남은 날을 작은 칸으로 — 한 주씩 묶고, 주말 칸은 옅게 · 이번 주 지난 날은 빈 테
+      top(TITLE || 'D-DAYS', sm ? '' : '1 CELL = 1 DAY')
+      const L = ddAll.slice(0, CNT || (sm ? 1 : fam === 'medium' ? 2 : 5)), ws = st.weekStart ?? 1
+      const z = sm ? 5 : LGt ? 7 : 5.5, g = sm ? 1.5 : 2, wg = sm ? 3 : 5, blk = 7 * z + 6 * g, per = Math.max(1, Math.floor((inner + wg) / (blk + wg))), maxRows = sm ? 4 : fam === 'medium' ? 1 : 2
+      const lead = (d0.getDay() - ws + 7) % 7
+      const cells = (x) => {
+        const n = ddN(x), tot = lead + n + 1, rows = Math.min(maxRows, Math.ceil(tot / (7 * per))), H = rows * (z + g) - g
+        const c = new DrawContext(); c.size = new Size(inner, H); c.opaque = false; c.respectScreenScale = true
+        const base = x.color || (dark() ? '#9fadc4' : '#8794a8')
+        for (let i = 0; i < Math.min(tot, rows * 7 * per); i++) {
+          const row = Math.floor(i / (7 * per)), wk = Math.floor((i % (7 * per)) / 7), dy = i % 7, rx = wk * (blk + wg) + dy * (z + g), ry = row * (z + g), rc = new Rect(rx, ry, z, z)
+          const wd = (dy + ws) % 7, we = wd === 0 || wd === 6, k = i - lead
+          if (k < 0) { c.setStrokeColor(new Color(dark() ? '#3a3f48' : '#dfe3e9')); c.setLineWidth(0.6); c.strokeRect(rc); continue }
+          c.setFillColor(new Color(k === n ? (dark() ? '#c8b9b6' : '#b98f95') : base, k === n ? 1 : we ? 0.35 : 0.8)); c.fillRect(rc)
+          if (k === 0) { c.setStrokeColor(new Color(dark() ? '#dfe4ec' : '#3a4659')); c.setLineWidth(1); c.strokeRect(new Rect(rx - 1, ry - 1, z + 2, z + 2)) }
+        }
+        return { img: c.getImage(), H, more: Math.max(0, tot - rows * 7 * per) }
       }
       if (!L.length) t(w, 'No D-day.', tw(13), SOFT)
-      for (let i = 0; i < L.length; i += cols) {
-        const row = w.addStack(); row.addSpacer()
-        for (const x of L.slice(i, i + cols)) {
-          const col = row.addStack(); col.layoutVertically(); col.size = new Size(sm ? inner : (inner - 24) / 3, 0)
-          const ir = col.addStack(); ir.addSpacer(); const im = ir.addImage(ring(x)); im.imageSize = new Size(S, S); ir.addSpacer()
-          col.addSpacer(5); const tr2 = col.addStack(); tr2.addSpacer(); t(tr2, x.title, tw(sm ? 11 : 11.5), INK).minimumScaleFactor = 0.6; tr2.addSpacer()
-          if (!sm) { const dr = col.addStack(); dr.addSpacer(); t(dr, (+x.date.slice(5, 7)) + '.' + (+x.date.slice(8)), label(7), SOFT); dr.addSpacer() }
-          row.addSpacer()
-        }
-        w.addSpacer(LGt ? 14 : 4)
+      for (const x of L) {
+        const h = w.addStack(); h.bottomAlignContent(); t(h, x.title, tw(sm ? 11 : 12.5), INK).minimumScaleFactor = 0.7; h.addSpacer(6); if (!sm) t(h, (+x.date.slice(5, 7)) + '.' + (+x.date.slice(8)), label(7.5), SOFT); h.addSpacer(); t(h, ddT(x), thin(sm ? 16 : LGt ? 20 : 15), x.color ? new Color(x.color) : GOLD)
+        w.addSpacer(sm ? 4 : 5)
+        const r = cells(x), ir = w.addStack(); ir.bottomAlignContent(); const im = ir.addImage(r.img); im.imageSize = new Size(inner, r.H)
+        if (r.more) { w.addSpacer(2); t(w, '+' + r.more, label(7), SOFT) }
+        w.addSpacer(sm ? 3 : LGt ? 12 : 7)
       }
-      foot(L[0] ? '주말 ' + weekends(L[0]) + '번' : '', sm ? '' : ddAll.length + ' D-DAYS')
+      foot(L[0] ? '남은 주말 ' + weekends(L[0]) + '번' : '', sm ? '' : ddAll.length + ' D-DAYS')
       w.url = link('study.progress')
-    } else if (KIND === 'mcal') {
-      // 달력: 이번 달 숫자 칸 · 일정 · D-day · 할 일 있는 날 아래 작은 점 (중형은 이번 주 한 줄)
-      const ws = st.weekStart ?? 1, y = d0.getFullYear(), m = d0.getMonth(), nD = new Date(y, m + 1, 0).getDate(), lead = (new Date(y, m, 1).getDay() - ws + 7) % 7
-      top(TITLE || MON[m] + ' ' + y, sm ? '' : dShort)
-      const marks = (k) => { const out = []; for (const e of (data.cal && data.cal[k]) || []) if (out.length < 3) out.push(e.c || (dark() ? '#9fadc4' : '#66778f')); if (out.length < 3 && tasksAll.some((x) => !x.done && x.due === k)) out.push(dark() ? '#8b95a7' : '#a9b3c1'); return out }
-      const cw = Math.floor((inner - 6 * (sm ? 2 : 4)) / 7), gap = sm ? 2 : 4
-      const cell = (P2, k, num, hgt, big) => {
-        const c = P2.addStack(); c.size = new Size(cw, hgt); c.layoutVertically()
-        const nr = c.addStack(); nr.addSpacer(); t(nr, num, big ? thin(big) : label(sm ? 7.5 : 9.5), k === today ? GOLD : k < today ? SOFT : INK); nr.addSpacer()
-        if (!sm && k) { c.addSpacer(2); const dr = c.addStack(); dr.addSpacer(); dr.spacing = 2; for (const col of marks(k)) { const d2 = dr.addStack(); d2.size = new Size(4, 4); d2.cornerRadius = 2; d2.backgroundColor = new Color(col) } dr.addSpacer() }
-        if (k === today && !sm) { c.addSpacer(2); const u = c.addStack(); u.addSpacer(); const ul = u.addStack(); ul.size = new Size(Math.min(14, cw - 4), 0.8); ul.backgroundColor = GOLD; u.addSpacer() }
-      }
-      if (fam === 'medium') {
-        const hr = w.addStack(); hr.spacing = gap
-        for (let i = 0; i < 7; i++) { const k = dOff(i - wBack), c = hr.addStack(); c.size = new Size(cw, 10); c.centerAlignContent(); t(c, KWD[new Date(k + 'T12:00').getDay()], label(7), k === today ? GOLD : SOFT) }
-        w.addSpacer(4); const row = w.addStack(); row.spacing = gap
-        for (let i = 0; i < 7; i++) { const k = dOff(i - wBack); cell(row, k, +k.slice(8), 40, 18) }
-        w.addSpacer(8); const ev = ((data.cal && data.cal[today]) || []).filter((e) => !e.dd)[0]; const nx = ev || nextEv7 && nextEv7.e
-        if (nx) t(w, (ev ? '오늘 · ' : '') + (nx.s != null ? clk(nx.s) + ' ' : '') + nx.t, tw(11), SOFT).minimumScaleFactor = 0.7
+    } else if (KIND === 'wplan') {
+      // 이번 주 판: 날짜마다 한 칸 — 가는 큰 날짜 · 요일 · 그날 일정과 할 일 (지난 날은 옅게) · 중형은 오늘부터 3일 세 단
+      top(TITLE || 'THIS WEEK', MON[d0.getMonth()] + ' ' + d0.getFullYear())
+      const MED = fam === 'medium', fs = sm ? 10 : LGt ? 11.5 : 11
+      const dayItems = (k) => { const ev = ((data.cal && data.cal[k]) || []).slice().sort((a, b) => (a.s ?? -1) - (b.s ?? -1)).map((e) => ({ t: (e.s != null ? clk(e.s) + ' ' : '') + e.t, c: e.c })); const tk = tasksAll.filter((x) => x.due === k && (!x.done || k === today)).sort(byDate).map((x) => ({ t: x.title, done: x.done })); return [...ev, ...tk] }
+      const itemLine = (P2, it, col) => { const r = P2.addStack(); r.centerAlignContent(); if (it.c) { const b = r.addStack(); b.size = new Size(2, fs - 2); b.cornerRadius = 1; b.backgroundColor = new Color(it.c); r.addSpacer(5) } else { t(r, '–', tw(fs), SOFT); r.addSpacer(5) } if (it.done) strike(r, it.t, tw(fs)); else t(r, it.t, tw(fs), col).minimumScaleFactor = 0.75; r.addSpacer(); P2.addSpacer(2) }
+      const KS = MED || sm ? [0, 1, 2].slice(0, sm ? 2 : 3).map((i) => dOff(i)) : [0, 1, 2, 3, 4, 5, 6].map((i) => dOff(i - wBack))
+      if (MED) {
+        const row = w.addStack(), cw2 = (inner - 2 * 25) / 3
+        KS.forEach((k, i) => {
+          if (i) { row.addSpacer(12); vrule(row, innerH - 60); row.addSpacer(12) }
+          const C = row.addStack(); C.layoutVertically(); C.size = new Size(cw2, 0)
+          const h = C.addStack(); h.bottomAlignContent(); t(h, +k.slice(8), thin(20), k === today ? GOLD : INK); h.addSpacer(5); t(h, KWD[new Date(k + 'T12:00').getDay()], label(8), SOFT); C.addSpacer(4)
+          const L = dayItems(k); for (const it of L.slice(0, 3)) itemLine(C, it, INK); if (!L.length) t(C, '—', tw(fs), SOFT); C.addSpacer()
+        })
       } else {
-        const hr = w.addStack(); hr.spacing = gap
-        for (let i = 0; i < 7; i++) { const c = hr.addStack(); c.size = new Size(cw, 10); c.centerAlignContent(); t(c, ['S', 'M', 'T', 'W', 'T', 'F', 'S'][(i + ws) % 7], label(7), SOFT) }
-        w.addSpacer(sm ? 2 : 5)
-        const rows = Math.ceil((lead + nD) / 7), ch = Math.floor(sm ? (innerH - 50) / rows - gap : Math.min(48, (innerH - 80 * SCALE) / rows - gap))
-        let day = 1 - lead
-        for (let r = 0; r < rows; r++) { const row = w.addStack(); row.spacing = gap; for (let i = 0; i < 7; i++, day++) { if (day < 1 || day > nD) { const e = row.addStack(); e.size = new Size(cw, ch); continue } cell(row, y + '-' + pad(m + 1) + '-' + pad(day), day, ch, 0) } w.addSpacer(gap) }
+        const lines = 1
+        KS.forEach((k, i) => {
+          const past = k < today, r = w.addStack(); r.topAlignContent()
+          const dk = r.addStack(); dk.layoutVertically(); dk.size = new Size(sm ? 28 : LGt ? 40 : 34, 0)
+          t(dk, +k.slice(8), thin(sm ? 15 : LGt ? 18 : 16), k === today ? GOLD : past ? SOFT : INK); t(dk, KWD[new Date(k + 'T12:00').getDay()], label(7), SOFT)
+          const R2 = r.addStack(); R2.layoutVertically(); R2.addSpacer(2)
+          const L = dayItems(k); for (const it of L.slice(0, lines)) itemLine(R2, it, past ? SOFT : INK)
+          if (L.length > lines) t(R2, '+' + (L.length - lines), label(7), SOFT); else if (!L.length) t(R2, '—', tw(fs), SOFT)
+          r.addSpacer()
+          if (i < KS.length - 1) { w.addSpacer(sm ? 3 : 2); const ln = w.addStack(); ln.size = new Size(inner, 0.5); ln.backgroundColor = new Color(dark() ? '#3a3f48' : '#dfe3e9'); w.addSpacer(sm ? 3 : 2) }
+        })
       }
-      const mE = Object.keys(data.cal || {}).filter((k) => k.startsWith(today.slice(0, 7)) && k >= today).reduce((a, k) => a + data.cal[k].length, 0)
-      foot(sm ? '' : '남은 일정 ' + mE, dd ? ddTxt + ' ' + dd.title : '')
-      w.url = link('planner.month')
+      foot(dShort, dd ? ddTxt + ' ' + dd.title : '')
+      w.url = link('planner.week')
     } else if (KIND === 'vow') {
       // 다짐: 배경화면 문장처럼 — 큰 글씨 한 문장 · 아래 옅은 한 줄 · 굵은 선 · 꼬리말
       top(TITLE || 'VOW', dShort)
