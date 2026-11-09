@@ -14,8 +14,8 @@ const nC = (h, a = 1) => {
 
 const dyn = (l, d, a = 1) => Color.dynamic(new Color(l, a), new Color(d, a))
 const BG = dyn('#f2f4f6', '#15181d')
-let INK = dyn('#2a2f38', '#e6e9ee')
-let SOFT = dyn('#8c94a1', '#78808d')
+let INK = dyn('#3d4a5e', '#e6e9ee')
+let SOFT = dyn('#8794a8', '#78808d')
 let GOLD = dyn('#66778f', '#9fadc4')
 let RULE = dyn('#dce1e7', '#2a2f37')
 
@@ -356,7 +356,7 @@ async function widgetAct(Q) {
 // ── 간단한 앱 화면 (Scriptable 안): 공부·타이머 · 오늘 할 일 · 일정 · D-day · 노트 ──
 async function miniApp(Q) {
   const go = Q.go || '', tb = new UITable(); tb.showSeparators = true
-  const C = { ink: Color.dynamic(new Color('#2a2f38'), new Color('#e6e9ee')), soft: Color.dynamic(new Color('#8c94a1'), new Color('#78808d')), acc: Color.dynamic(new Color('#66778f'), new Color('#9fadc4')) }
+  const C = { ink: Color.dynamic(new Color('#3d4a5e'), new Color('#e6e9ee')), soft: Color.dynamic(new Color('#8794a8'), new Color('#78808d')), acc: Color.dynamic(new Color('#66778f'), new Color('#9fadc4')) }
   const td = ACT.ymdOf(Date.now()), hmS = (m) => Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0')
   let toast = ''
   const row = (title, sub, opt = {}) => {
