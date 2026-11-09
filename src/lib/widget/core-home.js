@@ -79,34 +79,34 @@ export default () => `  } else if (TYLAY) {
       }
       foot(dShort, done + ' / ' + items.length + ' DONE')
       w.url = link('planner.week')
-    } else if (KIND === 'ddcell') {
-      // D-day 칸: 남은 날을 작은 칸으로 — 한 주씩 묶고, 주말 칸은 옅게 · 이번 주 지난 날은 빈 테
-      top(TITLE || 'D-DAYS', sm ? '' : '1 CELL = 1 DAY')
-      const L = ddAll.slice(0, CNT || (sm ? 1 : fam === 'medium' ? 2 : 5)), ws = st.weekStart ?? 1
-      const z = sm ? 5 : LGt ? 7 : 5.5, g = sm ? 1.5 : 2, wg = sm ? 3 : 5, blk = 7 * z + 6 * g, per = Math.max(1, Math.floor((inner + wg) / (blk + wg))), maxRows = sm ? 4 : fam === 'medium' ? 1 : 2
-      const lead = (d0.getDay() - ws + 7) % 7
-      const cells = (x) => {
-        const n = ddN(x), tot = lead + n + 1, rows = Math.min(maxRows, Math.ceil(tot / (7 * per))), H = rows * (z + g) - g
-        const c = new DrawContext(); c.size = new Size(inner, H); c.opaque = false; c.respectScreenScale = true
-        const base = x.color || (dark() ? '#9fadc4' : '#8794a8')
-        for (let i = 0; i < Math.min(tot, rows * 7 * per); i++) {
-          const row = Math.floor(i / (7 * per)), wk = Math.floor((i % (7 * per)) / 7), dy = i % 7, rx = wk * (blk + wg) + dy * (z + g), ry = row * (z + g), rc = new Rect(rx, ry, z, z)
-          const wd = (dy + ws) % 7, we = wd === 0 || wd === 6, k = i - lead
-          if (k < 0) { c.setStrokeColor(new Color(dark() ? '#3a3f48' : '#dfe3e9')); c.setLineWidth(0.6); c.strokeRect(rc); continue }
-          c.setFillColor(new Color(k === n ? (dark() ? '#c8b9b6' : '#b98f95') : base, k === n ? 1 : we ? 0.35 : 0.8)); c.fillRect(rc)
-          if (k === 0) { c.setStrokeColor(new Color(dark() ? '#dfe4ec' : '#3a4659')); c.setLineWidth(1); c.strokeRect(new Rect(rx - 1, ry - 1, z + 2, z + 2)) }
+    } else if (KIND === 'ddtext') {
+      // D-day 글: 가는 큰 숫자 + 'DAYS' · 이름 · 날짜와 남은 주말 · 만든 날부터 지나간 만큼 가는 선 · 다른 D-day 는 아래 한 줄씩
+      top(TITLE || 'COUNTDOWN', dShort)
+      const x = ddAll[DDI] || ddAll[0]
+      if (!x) t(w, 'No D-day.', tw(13), SOFT)
+      else {
+        const n = ddN(x), WDK = ['일', '월', '화', '수', '목', '금', '토'], xd = new Date(x.date + 'T12:00')
+        const c0 = x.createdAt ? Math.round((new Date(x.date + 'T00:00') - new Date(x.createdAt)) / 864e5) : 100, pr = Math.max(0.02, Math.min(1, 1 - n / Math.max(n, c0, 1)))
+        const others = ddAll.filter((y) => y !== x).slice(0, CNT || (fam === 'medium' ? 3 : 5))
+        const main = (P2, wd) => {
+          const r = P2.addStack(); r.bottomAlignContent(); t(r, n === 0 ? 'D' : n, thin(sm ? 40 : LGt ? 68 : 46), x.color ? new Color(x.color) : INK).minimumScaleFactor = 0.5; r.addSpacer(6)
+          const c = r.addStack(); c.layoutVertically(); t(c, n === 0 ? 'DAY' : 'DAYS', label(7), SOFT); c.addSpacer(1); t(c, x.title, tw(sm ? 11 : LGt ? 15 : 12.5), INK).minimumScaleFactor = 0.6; r.addSpacer()
+          P2.addSpacer(sm ? 4 : 6)
+          if (!sm) { t(P2, (xd.getMonth() + 1) + '월 ' + xd.getDate() + '일 ' + WDK[xd.getDay()] + '요일 · 남은 주말 ' + weekends(x) + '번', tw(LGt ? 11 : 10), SOFT).minimumScaleFactor = 0.7; P2.addSpacer(6) }
+          pbar(P2, pr, wd, x.color || null)
         }
-        return { img: c.getImage(), H, more: Math.max(0, tot - rows * 7 * per) }
+        const oRow = (P2, y) => { const r = P2.addStack(); r.centerAlignContent(); t(r, y.title, tw(LGt ? 12.5 : 11), INK).minimumScaleFactor = 0.7; r.addSpacer(); t(r, ddT(y), thin(LGt ? 15 : 13), y.color ? new Color(y.color) : GOLD); P2.addSpacer(LGt ? 7 : 4) }
+        if (fam === 'medium') {
+          const row = w.addStack(), lw2 = Math.floor(inner * 0.56)
+          const A = row.addStack(); A.layoutVertically(); A.size = new Size(lw2, 0); main(A, lw2)
+          row.addSpacer(12); vrule(row, innerH - 64); row.addSpacer(12)
+          const B = row.addStack(); B.layoutVertically(); for (const y of others) oRow(B, y); if (!others.length) t(B, '—', tw(11), SOFT); B.addSpacer()
+        } else {
+          main(w, inner)
+          if (LGt && others.length) { w.addSpacer(18); for (const y of others) oRow(w, y) }
+        }
       }
-      if (!L.length) t(w, 'No D-day.', tw(13), SOFT)
-      for (const x of L) {
-        const h = w.addStack(); h.bottomAlignContent(); t(h, x.title, tw(sm ? 11 : 12.5), INK).minimumScaleFactor = 0.7; h.addSpacer(6); if (!sm) t(h, (+x.date.slice(5, 7)) + '.' + (+x.date.slice(8)), label(7.5), SOFT); h.addSpacer(); t(h, ddT(x), thin(sm ? 16 : LGt ? 20 : 15), x.color ? new Color(x.color) : GOLD)
-        w.addSpacer(sm ? 4 : 5)
-        const r = cells(x), ir = w.addStack(); ir.bottomAlignContent(); const im = ir.addImage(r.img); im.imageSize = new Size(inner, r.H)
-        if (r.more) { w.addSpacer(2); t(w, '+' + r.more, label(7), SOFT) }
-        w.addSpacer(sm ? 3 : LGt ? 12 : 7)
-      }
-      foot(L[0] ? '남은 주말 ' + weekends(L[0]) + '번' : '', sm ? '' : ddAll.length + ' D-DAYS')
+      foot(x ? (+x.date.slice(0, 4)) + '.' + (+x.date.slice(5, 7)) + '.' + (+x.date.slice(8)) : '', sm ? '' : ddAll.length + ' D-DAYS')
       w.url = link('study.progress')
     } else if (KIND === 'wplan') {
       // 이번 주 판: 날짜마다 한 칸 — 가는 큰 날짜 · 요일 · 그날 일정과 할 일 (지난 날은 옅게) · 중형은 오늘부터 3일 세 단
@@ -118,10 +118,10 @@ export default () => `  } else if (TYLAY) {
       if (MED) {
         const row = w.addStack(), cw2 = (inner - 2 * 25) / 3
         KS.forEach((k, i) => {
-          if (i) { row.addSpacer(12); vrule(row, innerH - 60); row.addSpacer(12) }
+          if (i) { row.addSpacer(12); vrule(row, innerH - 66); row.addSpacer(12) }
           const C = row.addStack(); C.layoutVertically(); C.size = new Size(cw2, 0)
-          const h = C.addStack(); h.bottomAlignContent(); t(h, +k.slice(8), thin(20), k === today ? GOLD : INK); h.addSpacer(5); t(h, KWD[new Date(k + 'T12:00').getDay()], label(8), SOFT); C.addSpacer(4)
-          const L = dayItems(k); for (const it of L.slice(0, 3)) itemLine(C, it, INK); if (!L.length) t(C, '—', tw(fs), SOFT); C.addSpacer()
+          const h = C.addStack(); h.bottomAlignContent(); t(h, +k.slice(8), thin(17), k === today ? GOLD : INK); h.addSpacer(5); t(h, KWD[new Date(k + 'T12:00').getDay()], label(8), SOFT); C.addSpacer(3)
+          const L = dayItems(k); for (const it of L.slice(0, 2)) itemLine(C, it, INK); if (L.length > 2) t(C, '+' + (L.length - 2), label(7), SOFT); if (!L.length) t(C, '—', tw(fs), SOFT); C.addSpacer()
         })
       } else {
         const lines = 1
