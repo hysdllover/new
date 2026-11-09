@@ -11,6 +11,24 @@ let fonts = []
 const subs = new Set()
 const emit = () => subs.forEach((f) => f())
 const loaded = new Map()
+const strikes = new Map()
+// 취소선 높이: 폰트의 hhea(줄 상자)와 OS/2 취소선 위치로 줄 상자 안 % 를 구함 (폰트마다 글자 높이가 달라서)
+export function parseStrike(buf) {
+  try {
+    const v = new DataView(buf)
+    let base = 0
+    if (v.getUint32(0) === 0x74746366) base = v.getUint32(12)
+    const n = v.getUint16(base + 4), tab = {}
+    for (let i = 0; i < n; i++) { const r = base + 12 + i * 16; tab[v.getUint32(r)] = v.getUint32(r + 8) }
+    const hh = tab[0x68686561], os = tab[0x4f532f32] // 'hhea' 'OS/2'
+    if (hh == null || os == null) return null
+    const asc = v.getInt16(hh + 4), desc = v.getInt16(hh + 6), ys = v.getInt16(os + 28)
+    if (!(asc > 0) || !(ys > 0) || asc - desc <= 0) return null
+    const p = ((asc - ys) / (asc - desc)) * 100
+    return p > 20 && p < 80 ? Math.round(p * 10) / 10 : null
+  } catch { return null }
+}
+export const fontStrike = (id) => strikes.get(id) ?? null
 const aliases = new Map()
 
 export const fontFamily = (id) => 'MyFont-' + id
@@ -64,6 +82,7 @@ export async function addFont(file) {
   const face = new FontFace(fontFamily(id), buf, { weight: '100 900' })
   await face.load().catch(() => { throw new Error('폰트 파일을 읽을 수 없어요') })
   document.fonts.add(face); loaded.set(id, Promise.resolve(face))
+  strikes.set(id, parseStrike(buf))
   const names = parseFontNames(buf) || {}
   const rec = { id, name: names.family || file.name.replace(OK_EXT, ''), ps: names.ps || '', size: file.size }
   await set('font:' + id, new Blob([buf]))
@@ -112,6 +131,7 @@ async function register(id) {
   const buf = await blob.arrayBuffer()
   const face = new FontFace(fontFamily(id), buf, { weight: '100 900' })
   try { await face.load(); document.fonts.add(face) } catch { loaded.delete(id); return null }
+  strikes.set(id, parseStrike(buf))
   const rec = fonts.find((f) => f.id === id)
   if (rec?.ps) addAlias(rec.ps, buf)
   return face
