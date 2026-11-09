@@ -58,9 +58,9 @@ const inkFile = bgPath(fam, RAWP) + '.ink'
 if (inkMode === 'auto' && FM.fileExists(bgPath(fam, RAWP)) && FM.fileExists(inkFile)) { try { const v = FM.readString(inkFile).trim(); if (v === 'light' || v === 'dark') inkMode = v } catch (e) {} }
 if (inkMode === 'light') { INK = new Color('#ffffff'); SOFT = new Color('#ffffff', 0.72); RULE = new Color('#ffffff', 0.3) }
 if (inkMode === 'dark') { INK = new Color('#3a4659'); SOFT = new Color('#3a4659', 0.6); RULE = new Color('#3a4659', 0.2) }
-// 타자기 테마: 흰 바탕 · 블루그레이 글자 · 또렷한 가는 선 (홈 화면 타자기 배경화면과 같은 결)
+// 타자기 테마: 배경화면과 같은 흰 바탕(#fefefe) · 같은 먹선(#1a1a1a) · 글자만 블루그레이
 const TYPE = WT === 'type'
-if (TYPE && inkMode === 'auto') { INK = dyn('#3a4659', '#dfe4ec'); SOFT = dyn('#7f8ba0', '#8b95a7'); RULE = dyn('#3a4659', '#dfe4ec', 0.6); GOLD = dyn('#5d6d86', '#9fadc4'); SECT = true }
+if (TYPE && inkMode === 'auto') { INK = dyn('#3a4659', '#dfe4ec'); SOFT = dyn('#7f8ba0', '#8b95a7'); RULE = dyn('#1a1a1a', '#d8d8d8', 0.9); GOLD = dyn('#5d6d86', '#9fadc4'); SECT = true }
 if (!lock) {
   w.setPadding(P, P, P, P)
   const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large, PAT = STM.widgetPattern
@@ -90,7 +90,7 @@ if (!lock) {
     }
     w.backgroundImage = img
   }
-  else if (TYPE && !hasBg) w.backgroundColor = dyn('#fdfdfc', '#18191c')
+  else if (TYPE && !hasBg) w.backgroundColor = dyn('#fefefe', '#18191c')
   else if (WT === 'night') w.backgroundColor = new Color('#1b1d22')
   else if (WT === 'mono') w.backgroundColor = new Color('#1c1d21')
   else if (hasBg) w.backgroundImage = FM.readImage(bgPath(fam, RAWP))
@@ -325,7 +325,7 @@ if (!data) {
     const all = new Rect(0, 0, W2 * K, H2 * K)
     if (WT === 'paper') { c.setFillColor(new Color('#f2f2f1')); c.fillRect(all); const pp = loadPaper(); if (pp) for (let x = 0; x < W2 * K; x += 720) for (let y = 0; y < H2 * K; y += 720) c.drawImageInRect(pp, new Rect(x, y, 720, 720)) }
     else if (WT === 'night' || WT === 'mono') { c.setFillColor(new Color(WT === 'night' ? '#1b1d22' : '#1c1d21')); c.fillRect(all) }
-    else if (WT === 'type') { c.setFillColor(new Color(DK ? '#18191c' : '#fdfdfc')); c.fillRect(all) }
+    else if (WT === 'type') { c.setFillColor(new Color(DK ? '#18191c' : '#fefefe')); c.fillRect(all) }
     else if (HASBG) { c.setFillColor(new Color(PG)); c.fillRect(all); try { c.drawImageInRect(FM.readImage(bgPath(fam, RAWP)), all) } catch (e) {} }
     else if (WT === 'white' || WT === 'black') { c.setFillColor(new Color(DK ? '#15181d' : '#f2f4f6')); c.fillRect(all) }
     else { c.setFillColor(new Color(PG)); c.fillRect(all) }
