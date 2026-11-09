@@ -1,5 +1,5 @@
 // 테마 프리셋과 CSS 변수 적용
-import { fontFamily, loadFont } from '../lib/fonts.js'
+import { fontFamily, loadFont, fontStrike } from '../lib/fonts.js'
 
 export const PRESETS = {
   default: { name: '기본', accent: '#4a5a78', c2: '#7a8660', c3: '#a99bc4', c4: '#c9a0a8' },
@@ -62,6 +62,10 @@ export function applyTheme(t0) {
     '--font-head': (t.headFont && familyOf(t.headFont)) || font.family,
   }
   for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v)
+  // 내 폰트: 취소선을 그 폰트 글자 가운데에
+  const mineF = t.font?.startsWith('my:') ? t.font.slice(3) : null
+  root.style.removeProperty('--strike-y')
+  if (mineF) loadFont(mineF).then(() => { const sp = fontStrike(mineF); if (sp != null && effTheme(t0).font === t.font) root.style.setProperty('--strike-y', `calc(${sp}% - 2.5px)`) })
   // 노트: 종이 질감 + 노트 요소(모눈 · 머리줄 · 손글씨 제목)
   root.dataset.card = t.card === 'note' ? 'paper' : t.card
   root.toggleAttribute('data-note', t.card === 'note')

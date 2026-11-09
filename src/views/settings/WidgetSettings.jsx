@@ -54,7 +54,7 @@ export function WidgetFontField() {
       <Field label="배경 무늬"><Seg value={st.widgetPattern || 'plain'} onChange={(v) => setSettings({ widgetPattern: v })} options={[['plain', '무지'], ['grid', '모눈'], ['line', '줄']]} /></Field>
       <Toggle label="낙서 (물결 밑줄 · 별 · 체크)" checked={st.widgetDoodle !== false} onChange={(v) => setSettings({ widgetDoodle: v })} />
       <Toggle label="별표 D-day 색을 위젯 포인트로 (진행선 · D-day 숫자)" checked={st.widgetDdColor !== false} onChange={(v) => setSettings({ widgetDdColor: v })} />
-      <Field label="내용 세로 위치"><Seg value={st.widgetVAlign || 'top'} onChange={(v) => setSettings({ widgetVAlign: v })} options={[['top', '위'], ['center', '가운데'], ['bottom', '아래']]} /></Field>
+      <Field label="내용 세로 위치"><Seg value={st.widgetVAlign || 'center'} onChange={(v) => setSettings({ widgetVAlign: v })} options={[['top', '위'], ['center', '가운데'], ['bottom', '아래']]} /></Field>
       <Field label="종이 테마 결 세기"><Seg value={st.widgetGrain || 'normal'} onChange={(v) => setSettings({ widgetGrain: v })} options={[['none', '없음'], ['light', '옅게'], ['normal', '기본']]} /></Field>
 </div></details>
       <details><summary>날짜·시간·할 일 표시</summary><div className="col" style={{ gap: 6 }}>
