@@ -105,7 +105,7 @@ if (!data) {
   else t(w, lock ? '동기화 필요' : '앱에서 동기화를 연결하고 스크립트를 다시 복사해 주세요', tw(12), lock ? null : SOFT, 3)
 } else try {
   const st = data.settings.settings?.main || {}
-  CUSTOM = TYPE ? 'CourierNewPSMT' : (st.widgetFont || '').trim() // 타자기 테마는 타자기 글꼴 (한글은 시스템 글꼴로 이어짐)
+  CUSTOM = (st.widgetFont || '').trim()
   SCALE = Math.max(0.8, Math.min(1.3, +st.widgetScale || 1)); if (lock) SCALE = Math.min(1.25, SCALE * 1.18) // 잠금 화면은 꽉 차게 (기본 1.18배)
   WSHIFT = +st.widgetWeight || 0
   CLEAR = st.widgetClear !== false && !lock // 기본 켬
