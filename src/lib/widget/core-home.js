@@ -109,29 +109,21 @@ export default () => `  } else if (TYLAY) {
       foot(x ? (+x.date.slice(0, 4)) + '.' + (+x.date.slice(5, 7)) + '.' + (+x.date.slice(8)) : '', sm ? '' : ddAll.length + ' D-DAYS')
       w.url = link('study.progress')
     } else if (KIND === 'wplan') {
-      // 이번 주 판: 날짜마다 한 칸 — 가는 큰 날짜 · 요일 · 그날 일정과 할 일 (지난 날은 옅게) · 중형은 오늘부터 3일 세 단
+      // 이번 주 판: 날짜마다 한 줄씩 세로로 — 가는 큰 날짜 · 요일 · 그날 일정과 할 일 (지난 날은 옅게) · 중형·소형은 오늘부터 3·2일
       top(TITLE || 'THIS WEEK', MON[d0.getMonth()] + ' ' + d0.getFullYear())
       const MED = fam === 'medium', fs = sm ? 10 : LGt ? 11.5 : 11
       const dayItems = (k) => { const ev = ((data.cal && data.cal[k]) || []).slice().sort((a, b) => (a.s ?? -1) - (b.s ?? -1)).map((e) => ({ t: (e.s != null ? clk(e.s) + ' ' : '') + e.t, c: e.c })); const tk = tasksAll.filter((x) => x.due === k && (!x.done || k === today)).sort(byDate).map((x) => ({ t: x.title, done: x.done })); return [...ev, ...tk] }
-      const itemLine = (P2, it, col) => { const r = P2.addStack(); r.centerAlignContent(); if (it.c) { const b = r.addStack(); b.size = new Size(2, fs - 2); b.cornerRadius = 1; b.backgroundColor = new Color(it.c); r.addSpacer(5) } else { t(r, '–', tw(fs), SOFT); r.addSpacer(5) } if (it.done) strike(r, it.t, tw(fs)); else t(r, it.t, tw(fs), col).minimumScaleFactor = 0.75; r.addSpacer(); P2.addSpacer(2) }
+      const itemLine = (P2, it, col, more) => { const r = P2.addStack(); r.centerAlignContent(); if (it.c) { const b = r.addStack(); b.size = new Size(2, fs - 2); b.cornerRadius = 1; b.backgroundColor = new Color(it.c); r.addSpacer(5) } else { t(r, '–', tw(fs), SOFT); r.addSpacer(5) } if (it.done) strike(r, it.t, tw(fs)); else t(r, it.t, tw(fs), col).minimumScaleFactor = 0.75; if (more) { r.addSpacer(6); t(r, '+' + more, label(7), SOFT) } r.addSpacer(); P2.addSpacer(2) }
       const KS = MED || sm ? [0, 1, 2].slice(0, sm ? 2 : 3).map((i) => dOff(i)) : [0, 1, 2, 3, 4, 5, 6].map((i) => dOff(i - wBack))
-      if (MED) {
-        const row = w.addStack(), cw2 = (inner - 2 * 25) / 3
-        KS.forEach((k, i) => {
-          if (i) { row.addSpacer(12); vrule(row, innerH - 66); row.addSpacer(12) }
-          const C = row.addStack(); C.layoutVertically(); C.size = new Size(cw2, 0)
-          const h = C.addStack(); h.bottomAlignContent(); t(h, +k.slice(8), thin(17), k === today ? GOLD : INK); h.addSpacer(5); t(h, KWD[new Date(k + 'T12:00').getDay()], label(8), SOFT); C.addSpacer(3)
-          const L = dayItems(k); for (const it of L.slice(0, 2)) itemLine(C, it, INK); if (L.length > 2) t(C, '+' + (L.length - 2), label(7), SOFT); if (!L.length) t(C, '—', tw(fs), SOFT); C.addSpacer()
-        })
-      } else {
-        const lines = LGt ? 2 : 1, dkW = sm ? 28 : LGt ? 40 : 34
+      {
+        const lines = LGt ? 2 : 1, dkW = sm ? 28 : MED ? 48 : LGt ? 40 : 34
         KS.forEach((k, i) => {
           const past = k < today, r = w.addStack(); r.topAlignContent()
-          const dk = r.addStack(); dk.layoutVertically(); dk.size = new Size(dkW, 0)
-          t(dk, +k.slice(8), thin(sm ? 15 : LGt ? 18 : 16), k === today ? GOLD : past ? SOFT : INK); t(dk, KWD[new Date(k + 'T12:00').getDay()], label(7), SOFT)
+          const dk = r.addStack(); if (MED) dk.bottomAlignContent(); else dk.layoutVertically(); dk.size = new Size(dkW, 0) // 중형: 날짜 · 요일 한 줄
+          t(dk, +k.slice(8), thin(sm ? 15 : MED ? 15 : LGt ? 18 : 16), k === today ? GOLD : past ? SOFT : INK); if (MED) dk.addSpacer(4); t(dk, KWD[new Date(k + 'T12:00').getDay()], label(7), SOFT); if (MED) dk.addSpacer()
           const R2 = r.addStack(); R2.layoutVertically(); R2.size = new Size(inner - dkW, 0); R2.addSpacer(2) // 폭을 정해 둬야 글자가 밀려 사라지지 않음
-          const L = dayItems(k); for (const it of L.slice(0, lines)) itemLine(R2, it, past ? SOFT : INK)
-          if (L.length > lines) t(R2, '+' + (L.length - lines), label(7), SOFT); else if (!L.length) t(R2, '—', tw(fs), SOFT)
+          const L = dayItems(k), mo = MED || sm ? Math.max(0, L.length - lines) : 0; for (const it of L.slice(0, lines)) itemLine(R2, it, past ? SOFT : INK, mo) // 중형·소형: +n 은 같은 줄에
+          if (!mo && L.length > lines) t(R2, '+' + (L.length - lines), label(7), SOFT); else if (!L.length) t(R2, '—', tw(fs), SOFT)
           if (i < KS.length - 1) { w.addSpacer(sm ? 3 : 2); const ln = w.addStack(); ln.size = new Size(inner, 0.5); ln.backgroundColor = new Color(dark() ? '#3a3f48' : '#dfe3e9'); w.addSpacer(sm ? 3 : 2) }
         })
       }
