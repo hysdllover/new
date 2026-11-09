@@ -1945,7 +1945,8 @@ export default () => `  } else if (TYPE && !lock && ['ddl', 'mag', 'todo', 'stud
     T.addSpacer(9)
     todoList(T, 6)
   }
-  if (!lock) { if (FILL ? VA === 'center' : VA !== 'bottom') w.addSpacer() }
+  // 꽉 채우는 위젯은 기본값일 때 위아래 여백 없이 (앞 여백을 0 으로)
+  if (!lock && !TYLAY) { if (FILL && !VA0) { if (LEAD) LEAD.length = 0 } else if (FILL ? VA === 'center' : VA !== 'bottom') w.addSpacer() }
 } catch (e) {
   // 그리다 실패해도 빈칸 대신 원인을 보여 줌
   w = new ListWidget()

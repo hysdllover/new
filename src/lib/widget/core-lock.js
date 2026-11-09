@@ -97,9 +97,10 @@ if (!lock) {
   else w.backgroundColor = BG
 }
 
-// 내용 세로 정렬 (앱 설정 › 위젯): 위(기본) · 가운데 · 아래
-const VA = STM.widgetVAlign || 'top'
-if (!lock && (VA === 'center' || VA === 'bottom')) w.addSpacer()
+// 내용 세로 정렬 (앱 설정 › 위젯): 위 · 가운데(기본) · 아래 — 타자기 짜임(머리말·꼬리말)은 위아래를 꽉 채우므로 제외
+const VA0 = STM.widgetVAlign, VA = VA0 || 'center'
+const TYLAY = TYPE && ['ddl', 'mag', 'todo', 'study', 'dday', 'default', 'today'].includes(KIND)
+const LEAD = !lock && !TYLAY && (VA === 'center' || VA === 'bottom') ? w.addSpacer() : null
 if (!data) {
   if (fam === 'accessoryInline') inline('동기화 필요')
   else t(w, lock ? '동기화 필요' : '앱에서 동기화를 연결하고 스크립트를 다시 복사해 주세요', tw(12), lock ? null : SOFT, 3)
