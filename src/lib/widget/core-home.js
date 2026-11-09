@@ -63,7 +63,7 @@ export default () => `  } else if (KIND === 'study') {
       const wd0 = (d0.getDay() + 6) % 7, cols = []
       for (let k = 0; k < 7; k++) { const d = offD(k - wd0), key = ymd(d), l = clsOf(key); if (l.length || k < 5) cols.push({ key, wd: d.getDay(), l }) }
       const np = cols.some((c) => c.l.length) ? Math.max(1, ...cols.map((c) => c.l.reduce((a, x) => Math.max(a, x.period), 0))) : 0
-      const cellBg = (a) => inkMode === 'light' ? new Color('#ffffff', a * 1.6) : inkMode === 'dark' ? new Color('#1e232b', a) : dyn('#2a2f38', '#e6e9ee', a)
+      const cellBg = (a) => inkMode === 'light' ? new Color('#ffffff', a * 1.6) : inkMode === 'dark' ? new Color('#3a4659', a) : dyn('#3d4a5e', '#e6e9ee', a)
       const pw = 14, gap = 3, cw = Math.floor((inner - pw - gap * cols.length) / cols.length), rh = Math.max(16, Math.min(34, Math.floor((innerH - 44) / np) - gap))
       if (np) { const hr = w.addStack(); hr.spacing = gap; const hp = hr.addStack(); hp.size = new Size(pw, 12)
       for (const c of cols) { const s = hr.addStack(); s.size = new Size(cw, 12); s.centerAlignContent(); t(s, WDS[c.wd], c.key === today ? F(9, 'Medium') : label(9), c.key === today ? INK : SOFT) }
@@ -877,12 +877,12 @@ export default () => `  } else if (KIND === 'study') {
     const W2 = inner, H2 = Math.max(60, innerH - 24), gap = 12, cw = (W2 - gap * (cols - 1)) / cols, rh = H2 / rows, lw = 15
     const lightInk = inkMode === 'light' || (inkMode === 'auto' && dark())
     const c = new DrawContext(); c.size = new Size(W2, H2); c.opaque = false; c.respectScreenScale = true
-    c.setFont(Font.systemFont(7.5)); c.setTextColor(new Color(lightInk ? '#ffffff' : '#1e232b', 0.55))
+    c.setFont(Font.systemFont(7.5)); c.setTextColor(new Color(lightInk ? '#ffffff' : '#3a4659', 0.55))
     for (let col = 0; col < cols; col++) for (let r = 0; r < rows; r++) {
       const hr = h0 + col * rows + r; if (hr > 23) continue
       const x0 = col * (cw + gap), y0 = r * rh, sw = (cw - lw) / 6
       c.drawText(String(hr), new Point(x0, y0 + rh / 2 - 5))
-      c.setFillColor(new Color(lightInk ? '#ffffff' : '#1e232b', 0.12)); c.fillRect(new Rect(x0, y0 + rh - 0.5, cw, 0.5))
+      c.setFillColor(new Color(lightInk ? '#ffffff' : '#3a4659', 0.12)); c.fillRect(new Rect(x0, y0 + rh - 0.5, cw, 0.5))
       for (let k = 0; k < 6; k++) {
         const z = fill[(hr - 6) * 6 + k]; if (!z.f) continue
         const p = new Path(); p.addRoundedRect(new Rect(x0 + lw + k * sw + 0.6, y0 + rh * 0.22, sw - 1.2, rh * 0.56), 1.5, 1.5)
@@ -905,7 +905,7 @@ export default () => `  } else if (KIND === 'study') {
     const W2 = inner, H2 = 16, lightInk = inkMode === 'light' || (inkMode === 'auto' && dark())
     const c = new DrawContext(); c.size = new Size(W2, H2); c.opaque = false; c.respectScreenScale = true
     const X = (m) => Math.max(0, Math.min(W2, ((m - ds) / span) * W2))
-    c.setFillColor(new Color(lightInk ? '#ffffff' : '#1e232b', 0.14)); c.fillRect(new Rect(0, 9.5, W2, 1))
+    c.setFillColor(new Color(lightInk ? '#ffffff' : '#3a4659', 0.14)); c.fillRect(new Rect(0, 9.5, W2, 1))
     c.setFillColor(new Color(inkHex(), 0.8)); c.fillRect(new Rect(0, 9, X(nowM), 2))
     const mm = (ts) => { const d = new Date(ts); return d.getHours() * 60 + d.getMinutes() }
     const segs = sessions.filter((s) => s.start).map((s) => [mm(s.start), mm(s.start) + (s.dur || 0), s.subjectId])
@@ -1039,7 +1039,7 @@ export default () => `  } else if (KIND === 'study') {
     // ── 종이 메모: 줄 노트 위에 노트 줄을 줄 간격에 맞춰 (왼쪽 여백선은 연한 로즈) · 긴 줄은 다음 줄로 이어서 ──
     const n = pickNote(), L0 = n ? n.l : []; w.url = noteUrl(n)
     const dk = dark(), fs = fam === 'small' ? 11 : 12.5, LH = Math.round(fs * 1.75 * SCALE)
-    const MI = THEMED ? DI : new Color(dk ? '#e6e9ee' : '#2a2f38'), MS = THEMED ? DS : new Color(dk ? '#e6e9ee' : '#2a2f38', 0.5)
+    const MI = THEMED ? DI : new Color(dk ? '#e6e9ee' : '#3d4a5e'), MS = THEMED ? DS : new Color(dk ? '#e6e9ee' : '#3d4a5e', 0.5)
     const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large, nR = Math.max(2, Math.floor(innerH / LH))
     const mp = FM.joinPath(FM.documentsDirectory(), 'study-memo-2-' + (THEMED ? WT + (HASBG ? 'bg' : '') : 'p') + '-' + (dk ? 'd' : 'l') + '-' + W2 + 'x' + H2 + '-' + LH + '-' + P + '.jpg')
     let mimg = null
@@ -1684,7 +1684,7 @@ export default () => `  } else if (KIND === 'study') {
       { // 10분 칸 (6~23시)
         const H3 = innerH - 22 * SCALE, rows = 18, rh = H3 / rows, lw = 15, sw = (c2 - lw) / 6
         const cv = new DrawContext(); cv.size = new Size(c2, H3); cv.opaque = false; cv.respectScreenScale = true
-        const lightInk = inkMode === 'light' || (inkMode === 'auto' && dark()), ink = lightInk ? '#ffffff' : '#1e232b'
+        const lightInk = inkMode === 'light' || (inkMode === 'auto' && dark()), ink = lightInk ? '#ffffff' : '#3a4659'
         const fill = {}; const mm2 = (ts) => { const d = new Date(ts); return d.getHours() * 60 + d.getMinutes() }
         for (const s of sessions) if (s.start) { const a = mm2(s.start), sc = (subjects.find((y) => y.id === s.subjectId) || {}).color || inkHex(); for (let m = Math.floor(a / 10) * 10; m < a + (s.dur || 0); m += 10) fill[m / 10] = sc }
         cv.setFont(Font.systemFont(7.5)); cv.setTextColor(new Color(ink, 0.55))

@@ -57,7 +57,7 @@ let inkMode = WT === 'white' || WT === 'night' || WT === 'mono' ? 'light' : WT =
 const inkFile = bgPath(fam, RAWP) + '.ink'
 if (inkMode === 'auto' && FM.fileExists(bgPath(fam, RAWP)) && FM.fileExists(inkFile)) { try { const v = FM.readString(inkFile).trim(); if (v === 'light' || v === 'dark') inkMode = v } catch (e) {} }
 if (inkMode === 'light') { INK = new Color('#ffffff'); SOFT = new Color('#ffffff', 0.72); RULE = new Color('#ffffff', 0.3) }
-if (inkMode === 'dark') { INK = new Color('#1e232b'); SOFT = new Color('#1e232b', 0.6); RULE = new Color('#1e232b', 0.2) }
+if (inkMode === 'dark') { INK = new Color('#3a4659'); SOFT = new Color('#3a4659', 0.6); RULE = new Color('#3a4659', 0.2) }
 if (!lock) {
   w.setPadding(P, P, P, P)
   const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large, PAT = STM.widgetPattern
@@ -110,13 +110,13 @@ if (!data) {
   // 구분선 색: 블루그레이(기본) · 먹색
   if (st.widgetRuleColor === 'ink' && inkMode === 'auto' && !CLEAR) RULE = dyn('#d4d4d2', '#3a3b3e')
   // 글자색 한 단계 진하게 (자동 글자색일 때)
-  if (st.widgetInk === 'dark' && inkMode === 'auto') { INK = dyn('#161a21', '#f5f7fa'); SOFT = dyn('#5a6270', '#aab1bd'); GOLD = dyn('#4f5f78', '#b4c1d6') }
+  if (st.widgetInk === 'dark' && inkMode === 'auto') { INK = dyn('#2f3b4e', '#f5f7fa'); SOFT = dyn('#5d6b80', '#aab1bd'); GOLD = dyn('#4f5f78', '#b4c1d6') }
   if (CLEAR) {
     // 투명·클리어 위젯: 한 단계 굵게, 흐린 글자도 또렷하게, 선도 진하게
     WSHIFT = Math.max(WSHIFT, 0) + 1
     inkDark = inkMode === 'dark'
-    SOFT = inkMode === 'light' ? new Color('#ffffff', 0.9) : inkMode === 'dark' ? new Color('#1e232b', 0.85) : dyn('#2a2f38', '#e6e9ee', 0.85)
-    RULE = inkMode === 'light' ? new Color('#ffffff', 0.5) : inkMode === 'dark' ? new Color('#1e232b', 0.35) : dyn('#2a2f38', '#e6e9ee', 0.35)
+    SOFT = inkMode === 'light' ? new Color('#ffffff', 0.9) : inkMode === 'dark' ? new Color('#3a4659', 0.85) : dyn('#3d4a5e', '#e6e9ee', 0.85)
+    RULE = inkMode === 'light' ? new Color('#ffffff', 0.5) : inkMode === 'dark' ? new Color('#3a4659', 0.35) : dyn('#3d4a5e', '#e6e9ee', 0.35)
   }
   MH = innerH - Math.round(11 * SCALE) - 10
   // 하루 목표: 요일별 목표가 있으면 그 요일 값 (앱 설정 › 요일별 하루 목표)
@@ -142,7 +142,7 @@ if (!data) {
   let strikeImg = null // 필요할 때만 그림 (잠금 화면에선 안 그림)
   const strikeImage = () => strikeImg || (strikeImg = (() => {
     const c = new DrawContext(); c.size = new Size(240, 24); c.opaque = false; c.respectScreenScale = true
-    c.setFillColor(new Color(dark() ? '#78808d' : '#8c94a1')); c.fillRect(new Rect(0, 11.6, 240, 1.2))
+    c.setFillColor(new Color(dark() ? '#78808d' : '#8794a8')); c.fillRect(new Rect(0, 11.6, 240, 1.2))
     return c.getImage()
   })())
   const strike = (parent, s, font) => { const k = parent.addStack(); k.backgroundImage = strikeImage(); t(k, s, font, SOFT).minimumScaleFactor = 0.85; return k }
@@ -312,9 +312,9 @@ if (!data) {
   // ── 종이 디자인 위젯 공용 (티켓 · 영수증 · 기록 카드 · 우표 · 매거진): 자체 종이 · 먹색 · 포인트 색 조금 ──
   // 위젯 테마(종이 · 다크 · 모노 · 흰/검은 글씨 · 배경 잘라 붙이기)를 고르면 그 바탕 위에 칸·선만 그리고 글자색도 테마를 따름
   const HASBG = !lock && FM.fileExists(bgPath(fam, RAWP)), THEMED = ['paper', 'night', 'mono', 'white', 'black'].includes(WT) || HASBG
-  const DK = dark(), LIK = THEMED ? inkMode === 'light' || (inkMode === 'auto' && DK) : DK, INKH = LIK ? (THEMED ? '#ffffff' : '#e6e9ee') : '#2a2f38'
+  const DK = dark(), LIK = THEMED ? inkMode === 'light' || (inkMode === 'auto' && DK) : DK, INKH = LIK ? (THEMED ? '#ffffff' : '#e6e9ee') : '#3d4a5e'
   const DI = new Color(INKH), DS = new Color(INKH, THEMED ? 0.62 : 0.52), DA = new Color(LIK ? '#c9ccd2' : '#5c6068'), DRS = new Color(LIK ? '#c8b9b6' : '#8b7a77')
-  const PG = DK ? '#1b1c1f' : '#e6e7e9', PW = DK ? '#272b32' : '#fcfcfb', PL = LIK ? '#ffffff' : '#2a2f38' // 바탕(블루그레이) · 종이 · 선
+  const PG = DK ? '#1b1c1f' : '#e6e7e9', PW = DK ? '#272b32' : '#fcfcfb', PL = LIK ? '#ffffff' : '#3d4a5e' // 바탕(블루그레이) · 종이 · 선
   const DOY = Math.floor((new Date(today + 'T12:00:00') - new Date(d0.getFullYear() + '-01-01T12:00:00')) / 864e5) + 1
   // 테마 바탕: 종이 결 · 다크 · 모노 · 잘라 붙인 배경 · 기본(블루그레이)
   const themeBase = (c, K, W2, H2) => {
