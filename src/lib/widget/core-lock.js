@@ -162,7 +162,7 @@ if (!data) {
   if (st.widgetDdColor !== false && !MONO && !lock && ddAll[0] && ddAll[0].pinned && ddAll[0].color) DDHEX = ddAll[0].color
   const DDC = DDHEX ? new Color(DDHEX) : null
   const quotes = Object.keys(data.settings.quotes || {}).sort().map((k) => data.settings.quotes[k]).filter((q) => !q.deleted)
-  const quote = pickQuote(quotes)?.text ?? null // 1시간마다 무작위 (앱과 같은 문구)
+  const quote = pickQuote(quotes)?.text ?? null // 30분마다 무작위 (앱과 같은 문구)
   const KWD = ['일', '월', '화', '수', '목', '금', '토'], MF3 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], DF3 = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
   // 날짜 줄: 앱 설정 › 위젯 날짜 표기 (숨기기 가능)
   const dateStr = st.widgetNoDate ? '' : (st.widgetDate === 'num' ? (d0.getMonth() + 1) + '.' + d0.getDate() + ' ' + KWD[d0.getDay()] : st.widgetDate === 'en' ? MF3[d0.getMonth()] + ' ' + d0.getDate() + ' ' + DF3[d0.getDay()] : DAY[d0.getDay()] + ' · ' + d0.getDate() + ' ' + MON[d0.getMonth()]) + (STALE ? ' · ' + pad(STALE.getHours()) + ':' + pad(STALE.getMinutes()) : '') + (data.sv && data.sv > VER ? ' · 스크립트 업데이트' : '')
