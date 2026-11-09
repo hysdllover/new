@@ -111,7 +111,7 @@ export default () => `  } else if (TYLAY) {
     } else if (KIND === 'wplan') {
       // 이번 주 판: 날짜마다 세로 칸 — 위에 가는 날짜 · 요일, 아래로 그날 일정과 할 일 (지난 날은 옅게) · 소형 2일 · 중형 3일 · 대형·아주 큰 7일
       top(TITLE || 'THIS WEEK', MON[d0.getMonth()] + ' ' + d0.getFullYear())
-      const XL = fam === 'extraLarge', fs = sm ? 10 : XL ? 12 : LGt ? 9.5 : 11, lim = LGt && !XL ? 2 : 1
+      const XL = fam === 'extraLarge', fs = sm ? 10 : XL ? 12 : LGt ? 10 : 11, lim = LGt && !XL ? 2 : 1
       const dayItems = (k) => { const ev = ((data.cal && data.cal[k]) || []).slice().sort((a, b) => (a.s ?? -1) - (b.s ?? -1)).map((e) => ({ t: (e.s != null ? clk(e.s) + ' ' : '') + e.t, c: e.c })); const tk = tasksAll.filter((x) => x.due === k && (!x.done || k === today)).sort(byDate).map((x) => ({ t: x.title, done: x.done })); return [...ev, ...tk] }
       const KS = sm ? [dOff(0), dOff(1)] : fam === 'medium' ? [dOff(0), dOff(1), dOff(2)] : [0, 1, 2, 3, 4, 5, 6].map((i) => dOff(i - wBack))
       const n = KS.length, sp = sm ? 6 : LGt && !XL ? 4 : 10, cw = Math.floor((inner - (n - 1) * (sp * 2 + 0.6)) / n), colH = Math.max(40, Math.floor(innerH - 48 * SCALE))
@@ -120,16 +120,18 @@ export default () => `  } else if (TYLAY) {
       KS.forEach((k, i) => {
         if (i) { row.addSpacer(sp); vrule(row, colH); row.addSpacer(sp) }
         const past = k < today, C = row.addStack(); C.layoutVertically(); C.size = new Size(cw, colH)
-        const h = C.addStack(); h.bottomAlignContent(); t(h, +k.slice(8), thin(sm ? 15 : XL ? 22 : LGt ? 15 : 17), k === today ? GOLD : past ? SOFT : INK); h.addSpacer(3); t(h, KWD[new Date(k + 'T12:00').getDay()], label(7), k === today ? GOLD : SOFT); h.addSpacer()
-        C.addSpacer(XL ? 7 : 5)
+        // 글자 크기는 한 가지(fs)로만 — 날짜 머리줄도 같은 크기, 굵기·색으로만 구분 · 줄어들지 않게(minimumScaleFactor 1)
+        const h = C.addStack(); h.centerAlignContent(); const hx = t(h, (+k.slice(8)) + ' ' + KWD[new Date(k + 'T12:00').getDay()], label(fs), k === today ? GOLD : past ? SOFT : INK); hx.minimumScaleFactor = 1; h.addSpacer()
+        C.addSpacer(3); const ul = C.addStack(); ul.size = new Size(cw, 0.5); ul.backgroundColor = new Color(dark() ? '#3a3f48' : '#dfe3e9')
+        C.addSpacer(XL ? 6 : 4)
         const L = dayItems(k), show = L.length > maxN ? maxN - 1 : maxN
         for (const it of L.slice(0, show)) {
           const r = C.addStack(); r.topAlignContent(); r.size = new Size(cw, 0)
           if (it.c) { const b = r.addStack(); b.size = new Size(2, fs); b.cornerRadius = 1; b.backgroundColor = new Color(it.c); r.addSpacer(4) }
-          if (it.done) strike(r, it.t, tw(fs)); else t(r, it.t, tw(fs), past ? SOFT : INK, lim).minimumScaleFactor = 0.7
+          if (it.done) { const sk = r.addStack(); sk.backgroundImage = strikeImage(); t(sk, it.t, tw(fs), SOFT, lim).minimumScaleFactor = 1 } else t(r, it.t, tw(fs), past ? SOFT : INK, lim).minimumScaleFactor = 1
           r.addSpacer(); C.addSpacer(3)
         }
-        if (L.length > show) t(C, '+' + (L.length - show), label(7), SOFT)
+        if (L.length > show) t(C, '+' + (L.length - show), tw(fs), SOFT).minimumScaleFactor = 1
         if (!L.length) t(C, '—', tw(fs), SOFT)
         C.addSpacer()
       })
