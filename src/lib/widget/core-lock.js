@@ -750,7 +750,7 @@ if (!data) {
     } else if (KIND === 'dash') {
       const left = items.filter((x) => !x.done).length, c = nCur || nNext
       // 타이머가 돌면 공부 시간 자리에 타이머
-      if (inl) { if (TM && !TM.paused) { const d = w.addDate(new Date(TM.mode === 'countdown' ? TM.end : TM.start)); d.applyTimerStyle(); d.lineLimit = 1 } else inline((dd ? ddTxt + ' · ' : '') + (c ? clk(c.s) + ' · ' : '') + (TM ? TM.name + ' 일시정지 ' + hm(TM.pm) : '공부 ' + hm(mins))) }
+      if (inl) { if (TM && !TM.paused) { const d = w.addDate(new Date(TM.mode === 'countdown' ? TM.end : TM.start)); d.applyTimerStyle(); d.lineLimit = 1 } else inline((dd ? ddTxt + ' · ' : '') + (c ? clk(c.s) + ' · ' : '') + (TM ? TM.name + ' 일시정지 ' + hm(TM.pm) : hm(mins))) }
       else if (circ && TM) {
         const z = w.addStack(); z.size = new Size(LK.c, LK.c); z.layoutVertically(); z.centerAlignContent()
         const rowC = (fn) => { const a2 = z.addStack(); a2.addSpacer(); fn(a2); a2.addSpacer() }
