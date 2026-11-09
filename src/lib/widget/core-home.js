@@ -1,6 +1,6 @@
 // 위젯 본체 (홈 화면 위젯 형태별) — Scriptable 에서 실행되는 코드를 글자로 담음. 네 조각을 이어 붙여 본체가 됨
 // 템플릿 문자열 안: 백슬래시는 두 번, 백틱 금지
-export default () => `  } else if (TYPE && !lock && ['ddl', 'mag', 'todo', 'study', 'dday', 'default', 'today'].includes(KIND)) {
+export default () => `  } else if (TYLAY) {
     // ── 타자기 테마: 홈 화면 배경화면과 같은 짜임 — '§ 머리말 · 오른쪽 머리말' · 굵은 선 · 본문 · 가는 선 · 꼬리말 ──
     const sm = fam === 'small', LGt = fam === 'large' || fam === 'extraLarge'
     const SP = (s) => (/[가-힣]/.test(String(s)) ? String(s) : String(s).toUpperCase().split('').join(' ')) // 영문 머리말은 자간 넓은 대문자
@@ -10,6 +10,10 @@ export default () => `  } else if (TYPE && !lock && ['ddl', 'mag', 'todo', 'stud
     const row = (L, R, fL, fR, cL = INK, cR = GOLD) => { const r = w.addStack(); r.centerAlignContent(); t(r, L, fL, cL).minimumScaleFactor = 0.75; r.addSpacer(8); if (R != null) t(r, R, fR, cR); return r }
     // 큰 위젯: 남는 높이를 줄 간격으로 고르게 나눠 위쪽에 몰리지 않게
     const fillGap = (k, lh, used) => (LGt && k ? Math.max(4, Math.min(16, (innerH - used - k * lh * SCALE) / k)) : 0)
+    const sDot = (r, s) => { const d = r.addStack(); d.size = new Size(5, 5); d.cornerRadius = 2.5; d.backgroundColor = s && s.color ? new Color(s.color) : SOFT; r.addSpacer(7) }
+    const subRow = (s, a, b) => { const r = w.addStack(); r.centerAlignContent(); sDot(r, s); t(r, s.name, tw(12.5), INK).minimumScaleFactor = 0.8; r.addSpacer(); t(r, hm(a), tw(12), a ? GOLD : SOFT); if (b != null) { r.addSpacer(12); t(r, hm(b), tw(12), SOFT) } w.addSpacer(5) }
+    const taskRow = (x, fs) => { const r = w.addStack(); r.centerAlignContent(); r.spacing = 8; if (x.id) r.url = taskUrl(x.id); const mk = t(r, mkc(x.priority >= 3), tw(fs - 1), SOFT); if (x.id) mk.url = doneUrl(x.id); t(r, x.title, tw(fs), INK).minimumScaleFactor = 0.8; r.addSpacer(); w.addSpacer(4) }
+    const bigNum = (txt, sub, right) => { const r = w.addStack(); r.bottomAlignContent(); t(r, txt, thin(sm ? 28 : LGt ? 44 : 34), INK).minimumScaleFactor = 0.6; if (sub) { r.addSpacer(8); t(r, sub, tw(sm ? 10 : 12), SOFT).minimumScaleFactor = 0.7 } r.addSpacer(); if (right && !sm) t(r, right, tw(12), GOLD) }
     const ymd1 = (() => { const x = new Date(d0); x.setDate(x.getDate() - 1); return ymd(x) })()
     if (KIND === 'ddl' || KIND === 'dday') {
       const L = KIND === 'dday' ? [ddAll[DDI] || ddAll[0]].filter(Boolean) : ddAll
@@ -48,13 +52,96 @@ export default () => `  } else if (TYPE && !lock && ['ddl', 'mag', 'todo', 'stud
       if (!items.length) t(w, 'All clear.', tw(fs), SOFT)
       foot(dShort, '공부 ' + hm(mins))
       w.url = link('tasks')
+    } else if (KIND === 'tlog') {
+      // 오늘 공부 기록: 시작–끝 · 과목 · 시간 (시간 순)
+      top('STUDY LOG', dShort)
+      const toM = (ms) => { const x = new Date(ms); return x.getHours() * 60 + x.getMinutes() }
+      const L = sessions.slice().sort((a, b) => (a.start || 0) - (b.start || 0))
+      const n = CNT || (sm ? 3 : fam === 'medium' ? 3 : Math.max(3, Math.floor((innerH - 90 * SCALE) / (22 * SCALE)))), Ls = L.slice(-n)
+      if (!L.length) t(w, 'No records yet.', tw(sm ? 11 : 13), SOFT)
+      for (const x of Ls) {
+        const s = subjects.find((y) => y.id === x.subjectId), r = w.addStack(); r.centerAlignContent()
+        if (!sm) { const tm = r.addStack(); tm.size = new Size(LGt ? 86 : 78, 0); t(tm, x.start ? clk(toM(x.start)) + (x.end ? '–' + clk(toM(x.end)) : '') : '—', tw(11), SOFT).minimumScaleFactor = 0.7 }
+        sDot(r, s); t(r, (s && s.name) || '공부', tw(sm ? 11 : 12.5), INK).minimumScaleFactor = 0.75; r.addSpacer(); t(r, hm(x.dur || 0), tw(sm ? 10 : 12), GOLD)
+        w.addSpacer(LGt ? 7 : 4)
+      }
+      foot('공부 ' + hm(mins), L.length + (L.length > Ls.length ? ' · +' + (L.length - Ls.length) : '') + ' SESSIONS')
+      w.url = link('study.records')
+    } else if (KIND === 'wcmp') {
+      // 이번 주 vs 지난주 같은 기간
+      top('THIS WEEK', 'VS LAST WEEK')
+      const dlt = weekTot - lastWeek
+      bigNum(hm(weekTot), (dlt >= 0 ? '+' : '−') + hm(Math.abs(dlt)), lastWeek ? Math.round((weekTot / lastWeek) * 100) + '%' : null)
+      w.addSpacer(sm ? 6 : 8)
+      const days = week7.slice(6 - wBack), best = days.reduce((a, x) => (x.m > a.m ? x : a), { m: 0 })
+      if (!sm) { const r = w.addStack(); const st2 = (k, v) => { const c = r.addStack(); c.layoutVertically(); t(c, SP(k), label(7), SOFT); c.addSpacer(2); t(c, v, tw(13), INK) }; st2('AVG', hm(weekAvg)); r.addSpacer(); st2('BEST', best.m ? KWD[best.wd] + ' ' + hm(best.m) : '—'); r.addSpacer(); st2('LAST', hm(lastWeek)) }
+      if (LGt) {
+        w.addSpacer(16); const mx = Math.max(goal, ...week7.map((x) => x.m)) || 1
+        for (const x of week7) { const r = w.addStack(); r.centerAlignContent(); const k = r.addStack(); k.size = new Size(22, 0); t(k, KWD[x.wd], tw(11), x.d === today ? GOLD : SOFT); pbar(r, x.m / mx, inner - 90); r.addSpacer(); t(r, x.m ? hm(x.m) : '', tw(11), SOFT); w.addSpacer(7) }
+      }
+      foot('LAST ' + hm(lastWeek), '오늘 ' + hm(mins))
+      w.url = link('study.records')
+    } else if (KIND === 'sratio') {
+      // 과목 비율: 과목 색 띠 하나 + 과목별 % · 시간 (이번 주)
+      top('SUBJECTS', 'THIS WEEK')
+      const tot = weekSub.reduce((a, x) => a + x.m, 0)
+      if (!tot) t(w, 'No study yet.', tw(sm ? 11 : 13), SOFT)
+      else {
+        const band = w.addStack(); band.size = new Size(inner, sm ? 6 : 8); band.cornerRadius = 2; band.spacing = 2
+        const segs = weekSub.slice(0, 6); for (const x of segs) { const b = band.addStack(); b.size = new Size(Math.max(2, (inner - 2 * (segs.length - 1)) * x.m / tot), sm ? 6 : 8); b.backgroundColor = x.s.color ? new Color(x.s.color) : SOFT }
+        w.addSpacer(sm ? 8 : 12)
+        const n = CNT || (sm ? 3 : fam === 'medium' ? 3 : 8)
+        for (const x of weekSub.slice(0, n)) { const r = w.addStack(); r.centerAlignContent(); sDot(r, x.s); t(r, x.s.name, tw(sm ? 11 : 12.5), INK).minimumScaleFactor = 0.75; r.addSpacer(); t(r, Math.round((x.m / tot) * 100) + '%', tw(sm ? 10 : 12), GOLD); if (!sm) { r.addSpacer(12); const k = r.addStack(); k.size = new Size(48, 0); t(k, hm(x.m), tw(12), SOFT) } w.addSpacer(sm ? 3 : LGt ? 8 : 4) }
+      }
+      foot('합계 ' + hm(tot), weekSub.length + ' 과목')
+      w.url = link('study.records')
+    } else if (KIND === 'msum') {
+      // 이번 달: 합계 · 공부한 날 · 목표 채운 날 (대형은 달력)
+      top(MON[d0.getMonth()] + ' ' + d0.getFullYear(), 'MONTH')
+      const mk = today.slice(0, 7), mm = Object.entries(DM).filter(([k]) => k.startsWith(mk)).map(([, v]) => v), tot = mm.reduce((a, v) => a + v, 0), dn = mm.filter(Boolean).length, hit = mm.filter((v) => v >= goal).length
+      bigNum(hm(tot), dn ? '하루 ' + hm(Math.round(tot / dn)) : null, null)
+      w.addSpacer(sm ? 6 : 8)
+      if (!sm) { const r = w.addStack(); const st2 = (k, v) => { const c = r.addStack(); c.layoutVertically(); t(c, SP(k), label(7), SOFT); c.addSpacer(2); t(c, v, tw(13), INK) }; st2('DAYS', dn + ' / ' + d0.getDate()); r.addSpacer(); st2('GOAL', hit + '일'); r.addSpacer(); st2('WEEK', hm(weekTot)) }
+      if (LGt) { w.addSpacer(14); const g = 4, cell = Math.floor((inner - g * 6) / 7); monthGrid(w, cell, g, false, Math.max(10, Math.min(cell * 0.7, Math.floor((innerH - 170 * SCALE) / 6) - g))) }
+      else if (!sm) { w.addSpacer(10); const n = new Date(d0.getFullYear(), d0.getMonth() + 1, 0).getDate(), g = 2, cw = Math.floor((inner - g * (n - 1)) / n), r = w.addStack(); r.spacing = g; for (let i = 1; i <= n; i++) { const k = mk + '-' + pad(i), v = DM[k] || 0, c = r.addStack(); c.size = new Size(cw, 8); c.cornerRadius = 1.5; c.backgroundColor = v ? dyn('#66778f', '#9fadc4', 0.25 + 0.7 * Math.min(1, v / goal)) : RULE; if (k === today) { c.borderWidth = 1; c.borderColor = INK } } }
+      foot('공부한 날 ' + dn, '목표 ' + hit + '일')
+      w.url = link('study.records')
+    } else if (KIND === 'dleft') {
+      // 남은 하루: 하루 시작~끝(앱 설정) 중 남은 시간 · 다음 일정 · 남은 할 일 · 목표까지
+      const ds = st.dayStart != null ? st.dayStart : 420, de = st.dayEnd != null ? st.dayEnd : 1440, span = Math.max(60, de - ds), lf = Math.max(0, Math.min(span, de - nm))
+      top('TODAY', dShort)
+      bigNum(hm(lf), 'left', Math.round((1 - lf / span) * 100) + '%')
+      w.addSpacer(6); pbar(w, 1 - lf / span, inner)
+      w.addSpacer(sm ? 6 : 10)
+      const left = items.filter((x) => !x.done)
+      const ln = (k, v, c = INK) => { const r = w.addStack(); r.centerAlignContent(); const kk = r.addStack(); kk.size = new Size(sm ? 34 : 44, 0); t(kk, SP(k), label(7), SOFT); t(r, v, tw(sm ? 11 : 12.5), c).minimumScaleFactor = 0.7; r.addSpacer(); w.addSpacer(sm ? 3 : 5) }
+      const nx = nCur || nNext
+      ln(nCur ? 'NOW' : 'NEXT', nx ? clk(nx.s) + ' ' + nx.t : '—')
+      ln('TO DO', left.length ? left.length + '개 남음' : 'All clear.')
+      if (!sm) ln('GOAL', mins >= goal ? '목표 달성' : hm(goal - mins) + ' 더', mins >= goal ? GOLD : INK)
+      if (LGt && left.length) { w.addSpacer(10); for (const x of left.slice(0, CNT || 5)) taskRow(x, 13) }
+      foot(clk(ds) + ' – ' + clk(de % 1440), '공부 ' + hm(mins))
+      w.url = link('')
     } else {
       // 공부
       top('STUDY', dShort)
       const r = w.addStack(); r.bottomAlignContent(); if (TM && !TM.paused) { const d2 = timerDate(r, sm ? 28 : LGt ? 44 : 34, true); d2.textColor = INK } else studyLive(r, thin(sm ? 28 : LGt ? 44 : 34), INK).minimumScaleFactor = 0.6
       r.addSpacer(8); t(r, '/ ' + hm(goal), tw(sm ? 10 : 12), SOFT); r.addSpacer(); if (!sm) t(r, pct + '%', tw(12), GOLD)
       w.addSpacer(6); pbar(w, mins / goal, inner)
-      if (LGt) { w.addSpacer(16); bars7(w, inner, Math.max(60, Math.round(innerH - 175 * SCALE)), GOLD, RULE); w.addSpacer(4); wdRow(w, inner, 9) }
+      if (LGt) {
+        // 그래프는 짧게, 남는 자리엔 과목별 오늘 · 이번 주 (과목이 적으면 다음 할 일)
+        w.addSpacer(14); bars7(w, inner, Math.round(Math.min(52, innerH * 0.15)), GOLD, RULE); w.addSpacer(3); wdRow(w, inner, 9)
+        const sub = weekSub.slice(0, fam === 'extraLarge' ? 5 : 3)
+        if (sub.length) {
+          w.addSpacer(14); const h = w.addStack(); t(h, SP('SUBJECTS'), label(7), SOFT); h.addSpacer(); t(h, SP('TODAY') + '   ' + SP('WEEK'), label(7), SOFT); w.addSpacer(7)
+          for (const x of sub) subRow(x.s, x.today, x.m)
+        }
+        const left = items.filter((x) => !x.done)
+        if (sub.length < 2 && left.length) {
+          w.addSpacer(10); const h = w.addStack(); t(h, SP('NEXT'), label(7), SOFT); h.addSpacer(); t(h, done + ' / ' + items.length, label(7), SOFT); w.addSpacer(6)
+          for (const x of left.slice(0, 3 - sub.length)) taskRow(x, 13)
+        }
+      }
       foot('WEEK ' + hm(weekTot), 'YESTERDAY ' + hm(DM[ymd1] || 0))
       w.url = link(TM ? 'study.timer' : 'study.records')
     }
