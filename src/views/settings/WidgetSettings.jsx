@@ -796,7 +796,20 @@ export function WidgetPreview() {
     : kind === '남은분' ? { ...Lfor('지금'), c: nC ? [[nCur ? '끝까지' : '시작까지', S], [`${Math.max(0, (nCur ? nC.e : nC.s) - nmP)}분`, { fontSize: 15 }], [nC.t, S]] : [['—', B]] }
     : Lfor({ '숫자:디데이': '디데이', '숫자:할일': '할일', '숫자:주간': '주간', '선그래프': '주간', '메모지': '노트', '인쇄': '오늘', '반반': '오늘', '세단': '오늘', '자동': autoK, '달력:과목': '달력', '기록카드': '공부', '디데이카드': '디데이목록', '일지': '오늘', '매거진': '오늘', '신문': '오늘', '목록카드': '공부', '타임카드': '주간', '주간표': '주간', '과목표': '과목', '일정표': '일주일', '디데이표': '디데이목록', '월간표': '달력', '노트표': '노트', '수업표': '시간표', '내일표': '내일', '마감표': '마감', '진도표': '진도', '습관표': '습관', '기록표': '공부' }[kind] || kind)
   const FULLP = new Set(['메모지', '기록카드', '디데이카드', '일지', '매거진', '신문', '목록카드', '타임카드']) // 자체 종이를 쓰는 형태: 미리보기도 가장자리까지
-  const [vs, vm, vl] = V[kind] || V[''] // 미리보기가 없는 형태도 화면이 멈추지 않게
+  // 타자기 테마: 배경화면 짜임 (§ 머리말 · 굵은 선 · 본문 · 가는 선 · 꼬리말) 미리보기
+  const TYK = { '': 'mag', '오늘': 'mag', '매거진': 'mag', '디데이목록': 'ddl', '디데이': 'dday', '할일': 'todo', '공부': 'study' }[kind]
+  const tySp = (x) => (/[가-힣]/.test(x) ? x : String(x).toUpperCase().split('').join(' '))
+  const tyV = (z) => { const sm = z === 's', lg = z === 'l', dS = `${['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][now.getMonth()]} ${now.getDate()} · ${['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][now.getDay()]}`
+    const top = (L, R) => <><div className="row between" style={{ fontSize: sm ? 7 : 8, color: 'var(--soft)', flexWrap: 'nowrap', gap: 6 }}><span className="nowrap" style={{ whiteSpace: 'pre' }}>{'§ ' + tySp(L)}</span>{!sm && R && <span style={{ whiteSpace: 'pre' }}>{tySp(R)}</span>}</div><div style={{ height: 1, flexShrink: 0, background: 'var(--rule)', margin: '5px 0 ' + (sm ? 6 : 8) + 'px' }} /></>
+    const foot = (L, R) => <><div className="grow" /><div style={{ height: 0.6, flexShrink: 0, background: 'var(--rule)', margin: '0 0 4px' }} /><div className="row between" style={{ fontSize: 7, color: 'var(--soft)', flexWrap: 'nowrap', gap: 6 }}><span className="ellipsis" style={{ whiteSpace: 'pre' }}>{tySp(L)}</span><span style={{ whiteSpace: 'pre' }}>{R ? tySp(R) : ''}</span></div></>
+    const left = items.filter((x) => !x.done)
+    if (TYK === 'ddl' || TYK === 'dday') { const L = TYK === 'dday' ? ddList.slice(0, 1) : ddList, x = L[0], dN = (y) => 'D-' + Math.round((new Date(y.date) - new Date(d)) / 864e5)
+      return M(<>{top(TYK === 'dday' ? 'D-DAY' : 'D-DAYS', dS)}{x ? <><div className="row" style={{ alignItems: 'baseline', gap: 10, flexWrap: 'nowrap' }}><span style={{ fontSize: sm ? 24 : lg ? 40 : 26, fontWeight: 100, lineHeight: 1.15 }}>{dN(x)}</span><span className="ellipsis" style={{ fontSize: sm ? 11 : 14 }}>{x.title}</span></div>{L.slice(1, 1 + (TYK === 'dday' ? 0 : sm ? 1 : z === 'm' ? 2 : 9)).map((y) => <div key={y.id} className="row" style={{ gap: 8, fontSize: sm ? 10 : 12.5, marginTop: sm ? 2 : 3, flexWrap: 'nowrap' }}><span className="ellipsis">{y.title}</span><span className="dw-gold">{dN(y)}</span></div>)}{foot(x.title, `${+x.date.slice(5, 7)}.${+x.date.slice(8)}, ${x.date.slice(0, 4)}`)}</> : <span className="dw-soft">No D-day.</span>}</>) }
+    if (TYK === 'todo') return M(<>{top('TO DO', `${done} / ${items.length}`)}{tdRows(sm ? 3 : z === 'm' ? 3 : 10, sm ? 11 : 13)}{foot(dS, '공부 ' + hm(mins))}</>)
+    if (TYK === 'study') return M(<>{top('STUDY', dS)}{big(sm ? 28 : lg ? 44 : 34)}{foot('WEEK ' + hm(sw.week), 'YESTERDAY ' + hm(sw.yday))}</>)
+    return M(<>{top('TODAY', dS)}<div style={{ fontSize: sm ? 12 : lg ? 19 : 15, lineHeight: 1.6 }} className={sm ? '' : ''}>{quote || (dd ? `${dd.title}까지 ${ddTxt}` : '오늘을 기록하다')}</div>{lg && <div style={{ marginTop: 14 }}>{tdRows(6, 13)}</div>}{foot('공부 ' + hm(mins), (dd ? ddTxt + '  ' : '') + '할 일 ' + left.length)}</>)
+  }
+  const [vs, vm, vl] = st.widgetTheme === 'type' && TYK ? ['s', 'm', 'l'].map(tyV) : V[kind] || V[''] // 미리보기가 없는 형태도 화면이 멈추지 않게
   // 아주 큰 크기(아이패드): 전용 형태는 따로 그리고, 나머지는 대형 모양을 넓게
   const VX = (() => {
     const col = (x, flex = 1) => <div className="col" style={{ gap: 0, flex, minWidth: 0, overflow: 'hidden' }}>{x}</div>
