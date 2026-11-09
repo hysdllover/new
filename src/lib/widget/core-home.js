@@ -109,11 +109,11 @@ export default () => `  } else if (TYLAY) {
       foot(x ? (+x.date.slice(0, 4)) + '.' + (+x.date.slice(5, 7)) + '.' + (+x.date.slice(8)) : '', sm ? '' : ddAll.length + ' D-DAYS')
       w.url = link('study.progress')
     } else if (KIND === 'wplan') {
-      // 이번 주 판: 날짜마다 세로 칸 — 위에 가는 날짜 · 요일, 아래로 그날 일정과 할 일 (지난 날은 옅게) · 소형 2일 · 중형 3일 · 대형·아주 큰 7일
-      top(TITLE || 'THIS WEEK', MON[d0.getMonth()] + ' ' + d0.getFullYear())
+      // 이번 주 판: 오늘 · 내일 · 모레 · 사흘 뒤 · 나흘 뒤 세로 칸 — 아래로 그날 일정과 할 일 · 소형 2일 · 중형 3일 · 대형·아주 큰 5일
+      top(TITLE || 'NEXT DAYS', MON[d0.getMonth()] + ' ' + d0.getFullYear())
       const XL = fam === 'extraLarge', fs = sm ? 10 : XL ? 12 : LGt ? 10 : 11, lim = LGt && !XL ? 2 : 1
       const dayItems = (k) => { const ev = ((data.cal && data.cal[k]) || []).slice().sort((a, b) => (a.s ?? -1) - (b.s ?? -1)).map((e) => ({ t: (e.s != null ? clk(e.s) + ' ' : '') + e.t, c: e.c })); const tk = tasksAll.filter((x) => x.due === k && (!x.done || k === today)).sort(byDate).map((x) => ({ t: x.title, done: x.done })); return [...ev, ...tk] }
-      const KS = sm ? [dOff(0), dOff(1)] : fam === 'medium' ? [dOff(0), dOff(1), dOff(2)] : [0, 1, 2, 3, 4, 5, 6].map((i) => dOff(i - wBack))
+      const KS = [0, 1, 2, 3, 4].slice(0, sm ? 2 : fam === 'medium' ? 3 : 5).map((i) => dOff(i)), RELD = ['오늘', '내일', '모레', '사흘 뒤', '나흘 뒤'] // 오늘부터 며칠만
       const n = KS.length, sp = sm ? 6 : LGt && !XL ? 4 : 10, cw = Math.floor((inner - (n - 1) * (sp * 2 + 0.6)) / n), colH = Math.max(40, Math.floor(innerH - 48 * SCALE))
       const lh = (fs * 1.3 * lim + 3) * SCALE, maxN = Math.max(1, Math.floor((colH - (XL ? 34 : 28) * SCALE) / lh))
       const row = w.addStack(); row.topAlignContent()
@@ -121,7 +121,7 @@ export default () => `  } else if (TYLAY) {
         if (i) { row.addSpacer(sp); vrule(row, colH); row.addSpacer(sp) }
         const past = k < today, C = row.addStack(); C.layoutVertically(); C.size = new Size(cw, colH)
         // 글자 크기는 한 가지(fs)로만 — 날짜 머리줄도 같은 크기, 굵기·색으로만 구분 · 줄어들지 않게(minimumScaleFactor 1)
-        const h = C.addStack(); h.centerAlignContent(); const hx = t(h, (+k.slice(8)) + ' ' + KWD[new Date(k + 'T12:00').getDay()], label(fs), k === today ? GOLD : past ? SOFT : INK); hx.minimumScaleFactor = 1; h.addSpacer()
+        const h = C.addStack(); h.centerAlignContent(); const hx = t(h, RELD[i], label(fs), k === today ? GOLD : past ? SOFT : INK); hx.minimumScaleFactor = 1; h.addSpacer()
         C.addSpacer(3); const ul = C.addStack(); ul.size = new Size(cw, 0.5); ul.backgroundColor = new Color(dark() ? '#3a3f48' : '#dfe3e9')
         C.addSpacer(XL ? 6 : 4)
         const L = dayItems(k), show = L.length > maxN ? maxN - 1 : maxN
