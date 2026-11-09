@@ -203,25 +203,34 @@ async function storeDel(raw) {
 }
 let remoteStoreId = null
 
-// 내 폰트 동기화 (5MB 이하): live 의 폰트 항목으로 주고받음 · 지운 폰트는 항목을 지워 다른 기기에도 반영
+// 내 폰트 동기화 (20MB 이하, 큰 폰트는 조각으로): live 의 폰트 항목으로 주고받음 · 지운 폰트는 항목을 지워 다른 기기에도 반영
 async function syncFonts() {
   const recs = Object.fromEntries(Object.values(getState().live || {}).filter((r) => r.kind === 'font').map((r) => [r.id.slice(5), r]))
   const dels = await pendingDeletes()
-  for (const id of dels) { const r = recs[id]; if (r && !r.deleted) { remove('live', r.id); if (r.raw) await storeDel(r.raw) } }
+  for (const id of dels) { const r = recs[id]; if (r && !r.deleted) { remove('live', r.id); for (const x of [r.raw, ...(r.parts || [])]) if (x) await storeDel(x) } }
   for (const f of listFonts()) if (f.synced && recs[f.id]?.deleted) await removeFont(f.id, { remote: true })
   for (const [id, r] of Object.entries(recs)) {
     if (r.deleted || !r.raw || dels.includes(id) || listFonts().some((x) => x.id === id)) continue
     try {
       const meta = JSON.parse(await (await fetch(r.raw)).text())
-      await importFont(id, meta, await (await fetch(meta.data)).blob())
+      // 큰 폰트는 여러 조각으로 나눠 저장돼 있음 → 이어 붙여 복원
+      const data = meta.parts ? (await Promise.all(meta.parts.map(async (u) => { const x = await fetch(u); if (!x.ok) throw new Error('part'); return x.text() }))).join('') : meta.data
+      await importFont(id, meta, await (await fetch(data)).blob())
     } catch {}
   }
   for (const f of listFonts()) {
     if (f.size > SYNC_FONT_MAX || (f.synced && recs[f.id] && !recs[f.id].deleted)) continue
     const blob = await getFontBlob(f.id)
     if (!blob) continue
-    const raw = await storePut(`font-${f.id}.txt`, JSON.stringify({ name: f.name, ps: f.ps, data: await blobToDataUrl(blob) }))
-    put('live', { id: 'font-' + f.id, kind: 'font', name: f.name, ps: f.ps || '', raw })
+    const data = await blobToDataUrl(blob), CH = 2 * 1024 * 1024
+    let meta = { name: f.name, ps: f.ps, data }, parts
+    if (data.length > CH) { // gist 파일 하나에 다 담기엔 커서 2MB 조각으로 나눔
+      parts = []
+      for (let i = 0; i * CH < data.length; i++) parts.push(await storePut(`font-${f.id}-${i}.txt`, data.slice(i * CH, (i + 1) * CH)))
+      meta = { name: f.name, ps: f.ps, parts }
+    }
+    const raw = await storePut(`font-${f.id}.txt`, JSON.stringify(meta))
+    put('live', { id: 'font-' + f.id, kind: 'font', name: f.name, ps: f.ps || '', raw, ...(parts ? { parts } : {}) })
     await markSynced(f.id)
   }
   await clearDeletes()
