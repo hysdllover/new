@@ -11,7 +11,7 @@ if (KIND === 'live' && !lock) KIND = 'timer'
 // 아주 큰 크기 전용(x…): 다른 크기에선 비슷한 형태로
 const XL_ALT = { xweek: 'week7', xday: 'dash4', xmonth: 'cal', xnotes: 'note', xdday: 'ddl', xsubj: 'subj' }
 if (fam !== 'extraLarge' && XL_ALT[KIND]) KIND = XL_ALT[KIND]
-if (lock) KIND = ({ cover: 'dday', fnote: 'today', toc: 'todo', chron: 'ddl', pday: 'today', pwk: 'week', ddbar: 'dday', ddline: 'ddl', stack: 'dash', dash4: 'dash', dashxl: 'dash', dashwk: 'week' })[KIND] || KIND
+if (lock) KIND = ({ dring: 'study', dots: 'week', wgrid: 'week', cklist: 'todo', pday: 'today', pwk: 'week', ddbar: 'dday', ddline: 'ddl', stack: 'dash', dash4: 'dash', dashxl: 'dash', dashwk: 'week' })[KIND] || KIND
 else if (fam === 'small') KIND = ({ pwk: 'week', stack: 'dash', dash4: 'dash', dashxl: 'dash', dashwk: 'week' })[KIND] || KIND
 else if (fam === 'medium') KIND = ({ stack: 'dash', dash4: 'dash', dashxl: 'dash' })[KIND] || KIND
 else if (fam === 'large') KIND = ({ dashxl: 'dash4' })[KIND] || KIND // 내 위젯의 잠금 화면은 대시보드와 같게
@@ -99,7 +99,7 @@ if (!lock) {
 
 // 내용 세로 정렬 (앱 설정 › 위젯): 위 · 가운데(기본) · 아래 — 타자기 짜임(머리말·꼬리말)은 위아래를 꽉 채우므로 제외
 const VA0 = STM.widgetVAlign, VA = VA0 || 'center'
-const TYLAY = !lock && ((TYPE && ['ddl', 'mag', 'todo', 'study', 'dday', 'default', 'today'].includes(KIND)) || ['cover', 'fnote', 'toc', 'chron'].includes(KIND)) // 책 짜임 위젯(표지 등)은 테마와 상관없이 같은 짜임
+const TYLAY = !lock && ((TYPE && ['ddl', 'mag', 'todo', 'study', 'dday', 'default', 'today'].includes(KIND)) || ['dring', 'dots', 'wgrid', 'cklist'].includes(KIND)) // 도형 · 플래너 칸 위젯은 테마와 상관없이 같은 짜임
 const LEAD = !lock && !TYLAY && (VA === 'center' || VA === 'bottom') ? w.addSpacer() : null
 if (!data) {
   if (fam === 'accessoryInline') inline('동기화 필요')
