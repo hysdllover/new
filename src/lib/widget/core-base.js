@@ -209,8 +209,8 @@ function t(parent, s, font, color, lines = 1) {
   return x
 }
 let inkDark = false
-let TITLE_USED = false
-function cap(parent, s) { if (TITLE && !TITLE_USED) { TITLE_USED = true; return t(parent, TITLE, label(9), SOFT) } return t(parent, s.split('').join(' '), label(8), SOFT) }
+let TITLE_USED = false, SECT = false, SECT_USED = false // SECT: 타자기 테마 — 첫 머리말 앞에 '§'
+function cap(parent, s) { if (TITLE && !TITLE_USED) { TITLE_USED = true; return t(parent, (SECT ? '§ ' : '') + TITLE, label(9), SOFT) } const sec = SECT && !SECT_USED ? (SECT_USED = true, '§ ') : ''; return t(parent, sec + s.split('').join(' '), label(8), SOFT) }
 // 할 일 앞 표시 (앱 설정 › 위젯): 선 · 점 · 네모 — 중요한 일은 늘 진한 점
 let MARK = 'dash'
 const mkc = (imp) => (MARK === 'box' ? (imp ? '■' : '□') : MARK === 'dot' ? '•' : imp ? '•' : '–')
