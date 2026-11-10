@@ -101,7 +101,6 @@ export default function Settings() {
           ))}
           <Toggle label="데일리 노트 자동 기록 · 하루가 끝나면 공부·완료·일정·컨디션을 노트에 채우기" checked={st.daylog !== false} onChange={(v) => setSettings({ daylog: v })} />
           <Toggle label="조용한 모드 · 개수·지연 빨간 표시 숨기기" checked={!!st.calm} onChange={(v) => setSettings({ calm: v })} />
-          <Field label="화면 모드"><Seg value={th.mode} onChange={(v) => setTheme({ mode: v })} options={[['system', '시스템'], ['light', '라이트'], ['dark', '다크']]} /></Field>
           <Field label="폰트">
             <select className="input" value={th.font} onChange={(e) => setTheme({ font: e.target.value })}>
               {Object.entries(FONTS).map(([k, f]) => <option key={k} value={k}>{f.name}</option>)}

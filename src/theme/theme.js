@@ -112,6 +112,6 @@ export function applyTheme(t0) {
   root.dataset.nwidth = t.noteWidth || 'normal'
   root.style.setProperty('--grid-size', (t.gridSize || 18) + 'px')
   root.style.setProperty('--grid-a', (t.gridAlpha ?? 5.5) + '%')
-  if (t.mode === 'system') delete root.dataset.theme
-  else root.dataset.theme = t.mode
+  // 다크 모드 금지: 기기 설정과 상관없이 늘 밝은 화면
+  root.dataset.theme = 'light'
 }

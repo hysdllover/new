@@ -3,13 +3,13 @@
 const css = (name, fb) => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fb
 const hm = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`
 
-export const REPORT_THEMES = [['app', '앱 색'], ['light', '밝게'], ['dark', '어둡게'], ['paper', '종이']]
+export const REPORT_THEMES = [['app', '앱 색'], ['light', '밝게'], ['paper', '종이']] // 어둡게 없음 (다크 금지)
 const PAL = {
   light: { bg: '#fbfaf7', ink: '#2c2f36', soft: '#9a968e', acc: '#55658a', rule: '#e6e2da' },
-  dark: { bg: '#23272f', ink: '#e7e5e0', soft: '#8c919c', acc: '#b3a6cf', rule: '#383d48' },
   paper: { bg: '#f7f7f5', ink: '#33353a', soft: '#94958f', acc: '#6e7a52', rule: '#dedfd9', grain: true },
 }
 function palette(theme) {
+  if (theme === 'dark') theme = 'light' // 다크 금지 (예전에 고른 값도 밝게)
   if (PAL[theme]) return PAL[theme]
   return { bg: css('--bg', '#f7f6f2'), ink: css('--text', '#2b2a28'), soft: css('--muted', '#9a958c'), acc: css('--accent', '#4a5a78'), rule: css('--line', '#e4e0d8') }
 }

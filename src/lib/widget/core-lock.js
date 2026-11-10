@@ -48,7 +48,7 @@ const innerH = (SZ.h[fam] || SZ.h.large) - P * 2 // 세로 안쪽 높이
 let MH = innerH - 21 // 중형: 머리줄(제목 + 간격) 아래 남는 높이 (글자 크기 정해진 뒤 다시 계산)
 // 투명 배경(배경화면 잘라 붙이기) · 글자색
 // 앱 설정의 위젯 테마가 있으면 우선: 흰 글씨 · 검은 글씨 · 종이 · 다크 (자동이면 Scriptable 메뉴의 글자색)
-const WT = (data && data.settings && data.settings.settings && data.settings.settings.main && data.settings.settings.main.widgetTheme) || 'auto'
+const WT0 = (data && data.settings && data.settings.settings && data.settings.settings.main && data.settings.settings.main.widgetTheme) || 'auto', WT = WT0 === 'night' || WT0 === 'mono' ? 'type' : WT0 // 어두운 테마(다크 · 단색)는 쓰지 않음
 MONO = WT === 'mono'
 if (MONO) GOLD = new Color('#ffffff', 0.9)
 PENCIL = WT === 'paper'

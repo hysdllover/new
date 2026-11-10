@@ -46,7 +46,7 @@ export function WidgetFontField() {
       <Field label="글자색"><Seg value={st.widgetInk || 'normal'} onChange={(v) => setSettings({ widgetInk: v })} options={[['normal', '기본'], ['dark', '한 단계 진하게']]} /></Field>
 </div></details>
       <details><summary>모양·배경</summary><div className="col" style={{ gap: 6 }}>
-      <Field label="테마"><Seg value={st.widgetTheme || 'auto'} onChange={(v) => setSettings({ widgetTheme: v })} options={[['auto', '자동'], ['white', '흰 글씨'], ['black', '검은 글씨'], ['paper', '종이'], ['night', '다크'], ['mono', '단색'], ['type', '타자기']]} /></Field>
+      <Field label="테마"><Seg value={st.widgetTheme || 'auto'} onChange={(v) => setSettings({ widgetTheme: v })} options={[['auto', '자동'], ['white', '흰 글씨'], ['black', '검은 글씨'], ['paper', '종이'], ['type', '타자기']]} /></Field>
       <div className="tiny muted" style={{ marginTop: -4 }}>흰·검은 글씨는 투명 배경(Scriptable 메뉴)과 함께, 종이·다크는 배경색까지 바꿔요. 자동은 Scriptable 메뉴의 글자색을 따라요.</div>
       <Field label="구분선 색"><Seg value={st.widgetRuleColor || 'blue'} onChange={(v) => setSettings({ widgetRuleColor: v })} options={[['blue', '블루그레이'], ['ink', '먹색']]} /></Field>
       <Field label="구분선"><Seg value={st.widgetRule || 'normal'} onChange={(v) => setSettings({ widgetRule: v })} options={[['none', '없음'], ['thin', '가늘게'], ['normal', '기본'], ['bold', '굵게']]} /></Field>

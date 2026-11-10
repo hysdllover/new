@@ -12,7 +12,7 @@ const nC = (h, a = 1) => {
   return new  Color('#ffffff', (L > 0.78 || L < 0.22 ? 0.25 : 0.9) * a) // 아주 밝거나 어두운 색(선·바탕) → 옅게, 나머지(포인트) → 진하게
 }
 
-const dyn = (l, d, a = 1) => Color.dynamic(new Color(l, a), new Color(d, a))
+const dyn = (l, d, a = 1) => new Color(l, a) // 다크 모드 금지: 기기가 다크여도 늘 밝은 색
 const BG = dyn('#f2f4f6', '#15181d')
 let INK = dyn('#3d4a5e', '#e6e9ee')
 let SOFT = dyn('#8794a8', '#78808d')
@@ -111,7 +111,7 @@ async function load() {
   }
 }
 
-const dark = () => Device.isUsingDarkAppearance()
+const dark = () => false // 다크 모드 금지
 // 가는 진행선
 let DDHEX = null // 별표한 D-day 색 (진행선 · D-day 숫자 포인트)
 let PENCIL = false // 종이 테마: 연필 빗금 진행선 · 연필 체크
@@ -356,7 +356,7 @@ async function widgetAct(Q) {
 // ── 간단한 앱 화면 (Scriptable 안): 공부·타이머 · 오늘 할 일 · 일정 · D-day · 노트 ──
 async function miniApp(Q) {
   const go = Q.go || '', tb = new UITable(); tb.showSeparators = true
-  const C = { ink: Color.dynamic(new Color('#3d4a5e'), new Color('#e6e9ee')), soft: Color.dynamic(new Color('#8794a8'), new Color('#78808d')), acc: Color.dynamic(new Color('#66778f'), new Color('#9fadc4')) }
+  const C = { ink: new Color('#3d4a5e'), soft: new Color('#8794a8'), acc: new Color('#66778f') }
   const td = ACT.ymdOf(Date.now()), hmS = (m) => Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0')
   let toast = ''
   const row = (title, sub, opt = {}) => {
@@ -418,7 +418,7 @@ async function miniApp(Q) {
   const order = go === 'habits' ? ['habits', 'tasks', 'study', 'cal', 'notes'] : go.startsWith('tasks') ? ['tasks', 'habits', 'study', 'cal', 'notes'] : go.startsWith('planner') ? ['cal', 'tasks', 'habits', 'study', 'notes'] : go.startsWith('notes') || Q.note ? ['notes', 'tasks', 'habits', 'study', 'cal'] : ['study', 'tasks', 'habits', 'cal', 'notes']
   const render = () => {
     tb.removeAllRows()
-    if (toast) { const r = new UITableRow(); r.height = 36; r.backgroundColor = Color.dynamic(new Color('#eef1f5'), new Color('#232831')); const c = r.addText(toast + ' — 앱을 열면 기록에도 반영돼요'); c.titleFont = Font.lightSystemFont(12); c.titleColor = C.acc; tb.addRow(r) }
+    if (toast) { const r = new UITableRow(); r.height = 36; r.backgroundColor = new Color('#eef1f5'); const c = r.addText(toast + ' — 앱을 열면 기록에도 반영돼요'); c.titleFont = Font.lightSystemFont(12); c.titleColor = C.acc; tb.addRow(r) }
     for (const k of order) sec[k]()
     head('')
     row('앱(사파리)에서 열기', null, { color: C.acc, size: 13, onSelect: () => Safari.open(APP + (go ? '?go=' + go : '')) })
