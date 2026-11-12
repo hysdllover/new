@@ -51,7 +51,8 @@ let MH = innerH - 21 // 중형: 머리줄(제목 + 간격) 아래 남는 높이 
 const WT0 = (data && data.settings && data.settings.settings && data.settings.settings.main && data.settings.settings.main.widgetTheme) || 'auto', WT = WT0 === 'night' || WT0 === 'mono' ? 'type' : WT0 // 어두운 테마(다크 · 단색)는 쓰지 않음
 MONO = WT === 'mono'
 if (MONO) GOLD = new Color('#ffffff', 0.9)
-PENCIL = WT === 'paper'
+PENCIL = WT === 'paper' || WT === 'pencil'
+const PENC = WT === 'pencil' // 연필 아날로그: 흰 종이 · 흑연색 글씨 · 손으로 그은 선
 let inkMode = WT === 'white' || WT === 'night' || WT === 'mono' ? 'light' : WT === 'black' || WT === 'paper' ? 'dark' : Keychain.contains('study-ink') ? Keychain.get('study-ink') : 'auto'
 // 투명 배경을 잘라 둘 때 잰 배경 밝기로 글자색 자동 (밝은 배경 → 먹색 · 어두운 배경 → 흰색)
 const inkFile = bgPath(fam, RAWP) + '.ink'
@@ -59,8 +60,16 @@ if (inkMode === 'auto' && FM.fileExists(bgPath(fam, RAWP)) && FM.fileExists(inkF
 if (inkMode === 'light') { INK = new Color('#ffffff'); SOFT = new Color('#ffffff', 0.72); RULE = new Color('#ffffff', 0.3) }
 if (inkMode === 'dark') { INK = new Color('#3a4659'); SOFT = new Color('#3a4659', 0.6); RULE = new Color('#3a4659', 0.2) }
 // 타자기 테마: 배경화면과 같은 흰 바탕(#fefefe) · 같은 먹선(#1a1a1a) · 글자만 블루그레이
-const TYPE = WT === 'type'
+const TYPE = WT === 'type' || PENC // 연필 테마도 타자기와 같은 짜임(§ 머리말 · 선 · 꼬리말)
 if (TYPE && inkMode === 'auto') { INK = dyn('#3a4659', '#dfe4ec'); SOFT = dyn('#7f8ba0', '#8b95a7'); RULE = dyn('#1a1a1a', '#d8d8d8', 0.9); GOLD = dyn('#5d6d86', '#9fadc4'); SECT = true }
+if (PENC && inkMode === 'auto') { INK = new Color('#45484e'); SOFT = new Color('#8d9096'); RULE = new Color('#55585e', 0.8); GOLD = new Color('#64676e') }
+// 가로선: 연필 테마는 손으로 그은 듯 살짝 흔들리는 흑연 선 (두 번 겹쳐 그음), 그 외는 곧은 선
+const hline = (parent, wd, h) => {
+  if (!PENC) { const r = parent.addStack(); r.size = new Size(wd, h); r.backgroundColor = RULE; return r }
+  const H = Math.max(3, h * 3), c = new DrawContext(); c.size = new Size(wd, H); c.opaque = false; c.respectScreenScale = true
+  for (const [o, a, lw] of [[0, 0.62, h * 0.95], [0.6, 0.28, h * 0.7]]) { const p = new Path(); for (let x = 0; x <= wd; x += 6) { const y = H / 2 + o + Math.sin(x * 0.045 + o * 3) * 0.35 + Math.sin(x * 0.17) * 0.15; if (x) p.addLine(new Point(x, y)); else p.move(new Point(0, y)) } c.addPath(p); c.setStrokeColor(new Color('#4f5258', a)); c.setLineWidth(lw); c.strokePath() }
+  const im = parent.addImage(c.getImage()); im.imageSize = new Size(wd, H); return im
+}
 if (!lock) {
   w.setPadding(P, P, P, P)
   const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large, PAT = STM.widgetPattern
@@ -90,6 +99,7 @@ if (!lock) {
     }
     w.backgroundImage = img
   }
+  else if (PENC && !hasBg) w.backgroundColor = new Color('#fcfcfa')
   else if (TYPE && !hasBg) w.backgroundColor = dyn('#fefefe', '#18191c')
   else if (WT === 'night') w.backgroundColor = new Color('#1b1d22')
   else if (WT === 'mono') w.backgroundColor = new Color('#1c1d21')
@@ -316,7 +326,7 @@ if (!data) {
   const dayName = (d) => (d.i === 0 ? 'TODAY' : d.i === 1 ? 'TMRW' : DAY[d.x.getDay()])
   // ── 종이 디자인 위젯 공용 (티켓 · 영수증 · 기록 카드 · 우표 · 매거진): 자체 종이 · 먹색 · 포인트 색 조금 ──
   // 위젯 테마(종이 · 다크 · 모노 · 흰/검은 글씨 · 배경 잘라 붙이기)를 고르면 그 바탕 위에 칸·선만 그리고 글자색도 테마를 따름
-  const HASBG = !lock && FM.fileExists(bgPath(fam, RAWP)), THEMED = ['paper', 'night', 'mono', 'white', 'black', 'type'].includes(WT) || HASBG
+  const HASBG = !lock && FM.fileExists(bgPath(fam, RAWP)), THEMED = ['paper', 'night', 'mono', 'white', 'black', 'type', 'pencil'].includes(WT) || HASBG
   const DK = dark(), LIK = THEMED ? inkMode === 'light' || (inkMode === 'auto' && DK) : DK, INKH = LIK ? (THEMED ? '#ffffff' : '#e6e9ee') : '#3d4a5e'
   const DI = new Color(INKH), DS = new Color(INKH, THEMED ? 0.62 : 0.52), DA = new Color(LIK ? '#c9ccd2' : '#5c6068'), DRS = new Color(LIK ? '#c8b9b6' : '#8b7a77')
   const PG = DK ? '#1b1c1f' : '#e6e7e9', PW = DK ? '#272b32' : '#fcfcfb', PL = LIK ? '#ffffff' : '#3d4a5e' // 바탕(블루그레이) · 종이 · 선

@@ -74,6 +74,8 @@ export default function Settings() {
           <div className="row wrap" style={{ gap: 6, alignItems: 'center' }}>
             <button className={'btn' + (th.card === 'note' ? ' on-acc' : '')} onClick={() => { setTheme({ card: 'note', headFont: 'gaegu', radius: Math.min(th.radius, 6) }); setSettings({ widgetTheme: 'paper', reportTheme: 'paper' }); toast('종이 노트 테마를 적용했어요') }}>종이 노트 테마 한 번에 적용</button>
             <span className="tiny muted">종이 바탕 · 노트 카드 · 손글씨 제목 · 위젯·리포트도 종이</span>
+            <button className={'btn' + (th.preset === 'pencil' && th.textTone === 'pencil' ? ' on-acc' : '')} onClick={() => { setTheme({ card: 'paper', preset: 'pencil', accent: null, c2: null, c3: null, c4: null, textTone: 'pencil', checkShape: 'pencil', progStyle: 'pencil', doneStyle: 'strike' }); setSettings({ widgetTheme: 'pencil', reportTheme: 'paper' }); toast('연필 아날로그 테마를 적용했어요') }}>연필 아날로그</button>
+            <span className="tiny muted">흰 종이 · 흑연색 글씨 · 연필 체크 · 연필 빗금 진행선 · 위젯도 연필 (글꼴은 그대로)</span>
           </div>
           <Field label="색상 프리셋">
             <div className="row wrap" style={{ gap: 6 }}>

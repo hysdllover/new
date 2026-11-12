@@ -5,8 +5,8 @@ export default () => `  } else if (TYLAY) {
     const sm = fam === 'small', LGt = fam === 'large' || fam === 'extraLarge'
     const SP = (s) => (/[가-힣]/.test(String(s)) ? String(s) : String(s).toUpperCase().split('').join(' ')) // 영문 머리말은 자간 넓은 대문자
     const dShort = MON[d0.getMonth()] + ' ' + d0.getDate() + ' · ' + DAY[d0.getDay()]
-    const top = (L, R) => { const h = w.addStack(); h.centerAlignContent(); t(h, '§ ' + SP(TITLE || L), label(sm ? 7 : 8), SOFT).minimumScaleFactor = 0.7; h.addSpacer(); if (R && !sm) t(h, SP(R), label(8), SOFT).minimumScaleFactor = 0.7; w.addSpacer(5); const r = w.addStack(); r.size = new Size(inner, 1); r.backgroundColor = RULE; w.addSpacer(sm ? 6 : 8) }
-    const foot = (L, R) => { w.addSpacer(); const r = w.addStack(); r.size = new Size(inner, 0.6); r.backgroundColor = RULE; w.addSpacer(4); const f = w.addStack(); f.centerAlignContent(); t(f, SP(L), label(7), SOFT).minimumScaleFactor = 0.7; f.addSpacer(); if (R) t(f, SP(R), label(7), SOFT).minimumScaleFactor = 0.7; FILL = true }
+    const top = (L, R) => { const h = w.addStack(); h.centerAlignContent(); t(h, '§ ' + SP(TITLE || L), label(sm ? 7 : 8), SOFT).minimumScaleFactor = 0.7; h.addSpacer(); if (R && !sm) t(h, SP(R), label(8), SOFT).minimumScaleFactor = 0.7; w.addSpacer(5); hline(w, inner, 1); w.addSpacer(sm ? 6 : 8) }
+    const foot = (L, R) => { w.addSpacer(); hline(w, inner, 0.6); w.addSpacer(4); const f = w.addStack(); f.centerAlignContent(); t(f, SP(L), label(7), SOFT).minimumScaleFactor = 0.7; f.addSpacer(); if (R) t(f, SP(R), label(7), SOFT).minimumScaleFactor = 0.7; FILL = true }
     const row = (L, R, fL, fR, cL = INK, cR = GOLD) => { const r = w.addStack(); r.centerAlignContent(); t(r, L, fL, cL).minimumScaleFactor = 0.75; r.addSpacer(8); if (R != null) t(r, R, fR, cR); return r }
     // 큰 위젯: 남는 높이를 줄 간격으로 고르게 나눠 위쪽에 몰리지 않게
     const fillGap = (k, lh, used) => (LGt && k ? Math.max(4, Math.min(16, (innerH - used - k * lh * SCALE) / k)) : 0)

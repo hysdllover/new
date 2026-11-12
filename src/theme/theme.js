@@ -15,6 +15,7 @@ export const PRESETS = {
   sand: { name: '샌드 베이지', accent: '#9a8a74', c2: '#c2b49c', c3: '#a3a89a', c4: '#b59e9e' },
   slate: { name: '슬레이트 블루', accent: '#5f6f86', c2: '#93a3b8', c3: '#b3a9c2', c4: '#a7b3a0' },
   // 모노톤
+  pencil: { name: '연필', accent: '#55585e', c2: '#8d9096', c3: '#a9aaa6', c4: '#b8a9ac' },
   charcoal: { name: '차콜', accent: '#3f4146', c2: '#8a8c90', c3: '#b3b4b6', c4: '#6b6d72' },
   greige: { name: '그레이지', accent: '#6e6a64', c2: '#a8a39b', c3: '#c7c2ba', c4: '#8d8880' },
   bluegray: { name: '블루그레이', accent: '#5d6670', c2: '#9aa3ad', c3: '#c0c6cc', c4: '#7b848e' },
