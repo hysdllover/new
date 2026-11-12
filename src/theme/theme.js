@@ -80,6 +80,7 @@ export function applyTheme(t0) {
   for (const [k, v] of Object.entries(D)) root.dataset[k] = v
   root.toggleAttribute('data-icofill', t.iconFill === 'fill')
   root.toggleAttribute('data-fold', t.card === 'note' && t.fold !== false)
+  root.toggleAttribute('data-pencil', t.preset === 'pencil') // 연필 아날로그: 글자에 흑연 결
   Object.assign(D, { bullet: t.bulletStyle || 'dot', link: t.linkStyle || 'under', hlc: t.hlCorner || 'square', shadow: t.shadowDepth || 'normal', tabsel: t.tabSel || 'color', thc: t.thColor || 'gray' })
   for (const k of ['bullet', 'link', 'hlc', 'shadow', 'tabsel', 'thc']) root.dataset[k] = D[k]
   // 상태 막대 색을 실제 바탕색과 같게 (iOS 가 위쪽을 다른 색 · 흐림으로 칠하지 않게)

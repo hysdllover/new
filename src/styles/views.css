@@ -1417,3 +1417,11 @@ html.sc-down .task-filters { transform: translateY(-110%); opacity: 0; pointer-e
 .dw-x { width: 846px; height: 411px; padding: calc(18px * var(--dw-pad, 1)); }
 .dw-x .dw-in { flex-direction: column; }
 .widgets-page .dw-row .dw.dw-x { zoom: 1; }
+
+/* ── 연필 아날로그: 할 일 제목 · 제목 글자에 흑연 결(종이에 연필로 쓴 듯 알갱이 · 옅고 진한 곳) ── */
+html[data-pencil] :is(.ttl, h1, h2, .card-h h3, .tl-title, .one-title) {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.5' numOctaves='3' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -2.4 2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.5' numOctaves='3' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -2.4 2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  -webkit-mask-size: 90px 90px; mask-size: 90px 90px;
+}
+html[data-pencil] .card { border-color: color-mix(in srgb, #55585e 22%, transparent); }

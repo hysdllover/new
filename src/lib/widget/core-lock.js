@@ -66,15 +66,14 @@ if (PENC && inkMode === 'auto') { INK = new Color('#45484e'); SOFT = new Color('
 // 가로선: 연필 테마는 손으로 그은 듯 살짝 흔들리는 흑연 선 (두 번 겹쳐 그음), 그 외는 곧은 선
 const hline = (parent, wd, h) => {
   if (!PENC) { const r = parent.addStack(); r.size = new Size(wd, h); r.backgroundColor = RULE; return r }
-  const H = Math.max(3, h * 3), c = new DrawContext(); c.size = new Size(wd, H); c.opaque = false; c.respectScreenScale = true
-  for (const [o, a, lw] of [[0, 0.62, h * 0.95], [0.6, 0.28, h * 0.7]]) { const p = new Path(); for (let x = 0; x <= wd; x += 6) { const y = H / 2 + o + Math.sin(x * 0.045 + o * 3) * 0.35 + Math.sin(x * 0.17) * 0.15; if (x) p.addLine(new Point(x, y)); else p.move(new Point(0, y)) } c.addPath(p); c.setStrokeColor(new Color('#4f5258', a)); c.setLineWidth(lw); c.strokePath() }
-  const im = parent.addImage(c.getImage()); im.imageSize = new Size(wd, H); return im
+  const T = Math.max(4, h * 4), im = parent.addImage(graphite(wd, h, false, h >= 1)); im.imageSize = new Size(wd, T); return im
 }
+PENCV = PENC
 if (!lock) {
   w.setPadding(P, P, P, P)
   const W2 = SZ[fam] || SZ.large, H2 = SZ.h[fam] || SZ.h.large, PAT = STM.widgetPattern
   const hasBg = FM.fileExists(bgPath(fam, RAWP)), pat = (PAT === 'grid' || PAT === 'line') && !hasBg ? PAT : ''
-  if (WT === 'paper' || pat) {
+  if (WT === 'paper' || (PENC && !hasBg) || pat) {
     // 종이·무늬 배경: 2배 해상도로 한 번만 그려 파일에 두고 다시 씀 — 큰 위젯이 메모리 한도를 넘어 하얗게 비던 문제
     const dk = WT === 'night' || WT === 'mono' || (WT !== 'paper' && WT !== 'white' && WT !== 'black' && dark())
     const GR = { none: 0, light: 0.45 }[STM.widgetGrain] ?? 1
@@ -84,7 +83,11 @@ if (!lock) {
     if (!img) {
       const PAPER = WT === 'paper' ? loadPaper() : null
       const K = 2, c = new DrawContext(); c.size = new Size(W2 * K, H2 * K); c.opaque = true; c.respectScreenScale = false
-      c.setFillColor(new Color(WT === 'night' ? '#1b1d22' : WT === 'mono' ? '#1c1d21' : WT === 'paper' ? '#f2f2f1' : dk ? '#15181d' : '#f2f4f6')); c.fillRect(new Rect(0, 0, W2 * K, H2 * K))
+      c.setFillColor(new Color(WT === 'night' ? '#1b1d22' : WT === 'mono' ? '#1c1d21' : WT === 'paper' ? '#f2f2f1' : PENC ? '#fcfcfa' : dk ? '#15181d' : '#f2f4f6')); c.fillRect(new Rect(0, 0, W2 * K, H2 * K))
+      // 연필 테마: 종이 결(흑연 가루가 걸린 작은 점 · 옅은 섬유 결)
+      if (PENC && GR > 0) { let sd = 97; const rnd = () => { sd = (sd * 16807) % 2147483647; return sd / 2147483647 }; const n = Math.round((W2 * H2 * K * K) / 70 * GR)
+        for (let q = 0; q < n; q++) { const z = 0.6 + rnd() * 1.4; c.setFillColor(new Color('#55585e', 0.02 + rnd() * 0.05)); c.fillRect(new Rect(rnd() * W2 * K, rnd() * H2 * K, z, z)) }
+        for (let q = 0; q < n / 60; q++) { const x = rnd() * W2 * K, y = rnd() * H2 * K, l = 6 + rnd() * 18; c.setFillColor(new Color('#55585e', 0.025 + rnd() * 0.03)); c.fillRect(new Rect(x, y, l, 0.6)) } }
       if (WT === 'paper' && PAPER) for (let x = 0; x < W2 * K; x += 720) for (let y = 0; y < H2 * K; y += 720) c.drawImageInRect(PAPER, new Rect(x, y, 720, 720))
       // 종이 결 세기 (앱 설정 › 위젯): 바탕색을 덧칠해 결을 옅게
       if (WT === 'paper' && PAPER && GR < 1) { c.setFillColor(new Color('#f2f2f1', 1 - GR)); c.fillRect(new Rect(0, 0, W2 * K, H2 * K)) }
