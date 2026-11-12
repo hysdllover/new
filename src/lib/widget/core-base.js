@@ -115,6 +115,19 @@ const dark = () => false // 다크 모드 금지
 // 가는 진행선
 let DDHEX = null // 별표한 D-day 색 (진행선 · D-day 숫자 포인트)
 let PENCIL = false // 종이 테마: 연필 빗금 진행선 · 연필 체크
+let PENCV = false // 연필 아날로그 위젯 테마: 선을 흑연 결로
+// 흑연 선: 1px 마다 굵기·진하기가 조금씩 다른 알갱이로 그어 연필로 그은 결처럼 (가로 · 세로)
+function graphite(len, lw, vertical, strong) {
+  let sd = Math.round(len * 7 + lw * 13) || 1; const rnd = () => { sd = (sd * 16807) % 2147483647; return sd / 2147483647 }
+  const T = Math.max(4, lw * 4), c = new DrawContext(); c.size = vertical ? new Size(T, len) : new Size(len, T); c.opaque = false; c.respectScreenScale = true
+  for (const [o, a0] of [[0, strong ? 0.72 : 0.6], [0.55, 0.3]]) for (let i = 0; i < len; i += 0.8) {
+    const wob = Math.sin(i * 0.045 + o * 3) * 0.35 + Math.sin(i * 0.19 + o) * 0.18, th = lw * (0.65 + rnd() * 0.6), a = a0 * (0.35 + rnd() * 0.75)
+    if (rnd() < 0.07) continue // 종이 결에 걸려 비는 곳
+    c.setFillColor(new Color('#4a4d53', Math.min(1, a))); const m = T / 2 + o + wob - th / 2
+    c.fillRect(vertical ? new Rect(m, i, th, 0.9) : new Rect(i, m, 0.9, th))
+  }
+  return c.getImage()
+}
 function line(ratio, w, fg, bg) {
   const c = new DrawContext(); c.size = new Size(w, 3); c.opaque = false; c.respectScreenScale = true
   if (PENCIL) {
@@ -153,7 +166,7 @@ function tickImg(sz, hex) {
 function doodleWave(parent, w) { if (!DOODLE) return; const im = parent.addImage(waveImg(w)); im.imageSize = new Size(w, 6) }
 let RW = 0.6 // 구분선 굵기 (앱 설정 › 위젯 구분선)
 function rule(parent, w) { const s = parent.addStack(); s.size = new Size(w, RW || 0.1); if (RW) s.backgroundColor = RULE }
-function vrule(parent, h) { const s = parent.addStack(); s.size = new Size(RW || 0.1, h); if (RW) s.backgroundColor = RULE }
+function vrule(parent, h) { if (PENCV && RW) { const T = Math.max(4, RW * 4), im = parent.addImage(graphite(h, Math.max(0.6, RW), true)); im.imageSize = new Size(T, h); return } const s = parent.addStack(); s.size = new Size(RW || 0.1, h); if (RW) s.backgroundColor = RULE }
 // 노트: Parameter '노트' → 고정·최근 노트, '노트:제목' → 제목에 그 말이 든 노트
 const NOTES = () => (data && Array.isArray(data.notes) ? data.notes : [])
 // 노트 고르기: Parameter(노트:제목) → 앱에서 고정한 노트 → 최근 노트
