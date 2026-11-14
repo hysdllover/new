@@ -1587,3 +1587,20 @@ html[data-hand] :is(.db-table th, .db-table td) { border-color: color-mix(in srg
 html[data-hand] :is(.tag, .badge, .chip:not(.on)) { -webkit-mask-image: var(--pn-fine); mask-image: var(--pn-fine); -webkit-mask-size: 90px 90px; mask-size: 90px 90px; }
 /* 아이콘: 연필 선처럼 살짝 거칠게 */
 html[data-hand] :is(.tabbar svg, .sidebar svg, .icon-btn svg) { -webkit-mask-image: var(--pn-fine); mask-image: var(--pn-fine); -webkit-mask-size: 90px 90px; mask-size: 90px 90px; }
+/* ── 주간 배치: 필기 느낌 (공책 줄 · 연필 줄긋기 · 오늘 형광펜 · 손 밑줄) ── */
+html[data-hand] .wkb-h { border-bottom-color: transparent; border-image: var(--bi-line) 0 0 6 0 / 0 0 2px 0 / 0 stretch; }
+/* 칸 안에 옅은 공책 줄 (할 일 한 줄 높이에 맞춤) */
+html[data-hand] .wkb-col:not(.loose) .wkb-list { background-image: repeating-linear-gradient(to bottom, transparent 0 27px, color-mix(in srgb, #5a6475 10%, transparent) 27px 28px); background-position: 0 0; }
+html[data-hand] .wkb-item { min-height: 28px; padding-top: 3px; padding-bottom: 3px; }
+/* 할 일 제목: 흑연 결 · 끝낸 일은 연필로 긋듯 흔들리는 줄 */
+html[data-hand] .wkb-t { position: relative; -webkit-mask-image: var(--pn-fine); mask-image: var(--pn-fine); -webkit-mask-size: 90px 90px; mask-size: 90px 90px; }
+html[data-hand] .wkb-item.done .wkb-t { text-decoration: none; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 6' preserveAspectRatio='none'%3E%3Cpath d='M1 3.6C30 2.4 60 3.9 92 3C124 2.2 160 3.8 199 2.6' fill='none' stroke='%237d8494' stroke-width='1.4' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat 0 55% / 100% 5px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+/* 오늘 칸: 날짜에 형광펜 · 칸 테두리 조금 진하게 */
+html[data-hand] .wkb-col.today, html[data-hand] .wkb-col:has(.wkb-today) { background-color: color-mix(in srgb, var(--accent) 3%, var(--surface)); }
+html[data-hand] .wkb-d:has(.wkb-today) b { background: linear-gradient(transparent 55%, rgba(159, 177, 207, .3) 55% 92%, transparent 92%); padding: 0 2px; }
+html[data-hand] .wkb-today { background: none; padding: 0; font-style: italic; }
+/* 빈 칸 안내: 손글씨처럼 비스듬히 */
+html[data-hand] .wkb-empty { font-style: italic; transform: rotate(-2deg); opacity: .7; }
+/* 날짜 없음 칸: 점선 대신 연필 네모 + 옅은 종이 */
+html[data-hand] .wkb-col.loose { background-color: color-mix(in srgb, var(--text) 2%, var(--surface)); }
+html[data-hand] .wkb-item.done .wkb-t { flex: 0 1 auto; } /* 줄긋기는 글자 길이만큼 */
