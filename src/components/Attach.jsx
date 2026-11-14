@@ -88,9 +88,9 @@ export function FilePreview({ file }) {
   return (
     <div className="col" style={{ height: '100%' }}>
       <div className="row between small muted"><span>{fmtSize(file.size)} · {file.date}</span><a className="btn sm" href={url} target="_blank" rel="noreferrer" download={file.name}>열기</a></div>
-      {file.type?.startsWith('image') && <img src={url} alt={file.name} style={{ maxWidth: '100%', borderRadius: 8 }} />}
-      {file.type?.includes('pdf') && <iframe title={file.name} src={url} style={{ width: '100%', height: '70vh', border: 0, borderRadius: 8, background: '#fff' }} />}
-      {html != null && <iframe title={file.name} sandbox="" srcDoc={html} style={{ width: '100%', height: '70vh', border: '1px solid var(--line)', borderRadius: 8, background: '#fff' }} />}
+      {file.type?.startsWith('image') && <img src={url} alt={file.name} style={{ maxWidth: '100%', borderRadius: 2 }} />}
+      {file.type?.includes('pdf') && <iframe title={file.name} src={url} style={{ width: '100%', height: '70vh', border: 0, borderRadius: 2, background: '#fff' }} />}
+      {html != null && <iframe title={file.name} sandbox="" srcDoc={html} style={{ width: '100%', height: '70vh', border: '1px solid var(--line)', borderRadius: 2, background: '#fff' }} />}
     </div>
   )
 }

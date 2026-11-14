@@ -58,7 +58,7 @@ export function applyTheme(t0) {
     '--accent': accent, '--c2': t.c2 || p.c2, '--c3': t.c3 || p.c3, '--c4': t.c4 || p.c4,
     '--font': font.family, '--fs': t.fontSize + 'px', '--fw': t.fontWeight,
     '--fw-b': Math.min(t.fontWeight + 200, 700),
-    '--radius': t.radius + 'px', '--gap': (12 * (DENSITY[t.density] || 1)) + 'px',
+    '--radius': Math.min(t.radius ?? 3, 3) + 'px', // 둥근 디자인 금지: 모서리는 아주 살짝만 (최대 3px) '--gap': (12 * (DENSITY[t.density] || 1)) + 'px',
     // 제목·큰 숫자 글꼴 (비우면 본문과 같음)
     '--font-head': (t.headFont && familyOf(t.headFont)) || font.family,
   }
@@ -105,8 +105,8 @@ export function applyTheme(t0) {
   root.style.setProperty('--h1-size', HS[t.h1Size || 'm'][0] + 'em'); root.style.setProperty('--h2-size', HS[t.h2Size || 'm'][1] + 'em')
   root.style.setProperty('--note-lh', { tight: 1.45, normal: 1.6, loose: 1.85 }[t.noteLH || 'normal'])
   root.style.setProperty('--tint-a', ({ light: 5, normal: 8, strong: 14 }[t.tint || 'normal']) + '%')
-  const R = t.radius ?? 10
-  root.style.setProperty('--r-card', (t.rCard ?? R) + 'px'); root.style.setProperty('--r-btn', (t.rBtn ?? Math.max(0, R - 2)) + 'px'); root.style.setProperty('--r-input', (t.rInput ?? Math.max(0, R - 2)) + 'px')
+  const R = Math.min(t.radius ?? 3, 3)
+  const RM = (v) => Math.min(3, v) + 'px'; root.style.setProperty('--r-card', RM(t.rCard ?? R)); root.style.setProperty('--r-btn', RM(t.rBtn ?? Math.max(0, R - 1))); root.style.setProperty('--r-input', RM(t.rInput ?? Math.max(0, R - 1)))
   root.style.setProperty('--grain', t.grain ?? 1)
   // 날짜 머리(손글씨 + 물결 밑줄) · 손글씨 글꼴 · 노트 기본 폭
   root.dataset.datehead = t.dateHead || 'plain'

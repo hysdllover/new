@@ -132,7 +132,7 @@ function ShareCardSheet() {
   }, []) // eslint-disable-line
   return (
     <div className="col">
-      {url ? <img src={url} alt="공부 인증 카드" style={{ width: '100%', maxWidth: 420, alignSelf: 'center', borderRadius: 12, boxShadow: 'var(--shadow)' }} /> : <div className="small muted">만드는 중…</div>}
+      {url ? <img src={url} alt="공부 인증 카드" style={{ width: '100%', maxWidth: 420, alignSelf: 'center', borderRadius: 2, boxShadow: 'var(--shadow)' }} /> : <div className="small muted">만드는 중…</div>}
       <button className="btn primary" disabled={!blob} onClick={async () => { const r = await shareBlob(blob, `study-${d}.png`); if (r === 'saved') toast('이미지를 저장했어요') }}><Icon name="share" size={16} />공유 · 저장</button>
       <div className="tiny muted center">사진 앱에 저장하려면 공유 › 이미지 저장</div>
     </div>

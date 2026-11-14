@@ -32,7 +32,7 @@ export const DEFAULT_WIDGETS = [
 
 export const DEFAULT_SETTINGS = {
   id: 'main',
-  theme: { preset: 'default', accent: null, mode: 'light', font: 'system', fontSize: 13, fontWeight: 300, radius: 10, density: 'normal', card: 'line' },
+  theme: { preset: 'default', accent: null, mode: 'light', font: 'system', fontSize: 13, fontWeight: 300, radius: 3, density: 'normal', card: 'line' },
   modules: { health: true, gantt: true, db: true, mindmap: true, graph: true, matrix: true, kanban: true, circle: true, mock: true, planning: false },
   widgets: DEFAULT_WIDGETS,
   dayStart: 7 * 60, dayEnd: 24 * 60,

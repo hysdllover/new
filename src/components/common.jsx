@@ -46,7 +46,7 @@ export function ColorPick({ value, onChange, colors }) {
     <div className="row wrap" style={{ gap: 6 }}>
       {colors.map((c) => (
         <button key={c} onClick={() => onChange(c)} aria-label={c}
-          style={{ width: 26, height: 26, borderRadius: 13, background: c, outline: value === c ? '2px solid var(--text)' : 'none', outlineOffset: 2 }} />
+          style={{ width: 26, height: 26, borderRadius: 2, background: c, outline: value === c ? '2px solid var(--text)' : 'none', outlineOffset: 2 }} />
       ))}
     </div>
   )
