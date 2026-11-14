@@ -1,12 +1,13 @@
 import { Roll, CountUp } from '../components/Roll.jsx'
 import { goalFor } from '../engine/goal.js'
 import { useColl, useSettings, setSettings, put, patch, remove } from '../store/store.js'
-import { dayRec, setDay, toggleTask, completeReview } from '../store/actions.js'
+import { dayRec, setDay, toggleTask, completeReview, toggleSub, addTask } from '../store/actions.js'
 import { eventsOn, classesOn } from '../engine/scheduler.js'
 import { today, nowMin, fmtTime, fmtDur, dday, fmtShort, fmtClock, addDays, weekStart, parseYmd, fmtDate, tsToYmd } from '../engine/date.js'
 import { WeekBars, MonthHeat } from '../components/charts.jsx'
 import { openRecord } from '../views/study/Log.jsx'
-import { Card, Check, Ring, Empty, Icon, AddInput, openDetail, useNow, openSheet, NoteIcon } from '../components/ui.jsx'
+import { Card, Check, Ring, Empty, Icon, AddInput, openDetail, useNow, openSheet, NoteIcon, AutoText } from '../components/ui.jsx'
+import { pickQuote } from '../lib/quote.js'
 import TaskItem from '../components/TaskItem.jsx'
 import { WeekGoals } from '../components/WeekGoals.jsx'
 import { seriesSummary } from '../lib/series.js'
@@ -707,6 +708,87 @@ function Tomorrow() {
   )
 }
 
+// ── 새 위젯: 오늘 한 줄 · 받은 편지함 · 오늘 하루 막대 · 오늘 하위 할 일 · 이번 주 메모 · 오늘의 다짐 ──
+function DiaryLine() {
+  useColl('days'); const d = today(), rec = dayRec(d)
+  return (
+    <Card title="오늘 한 줄" action={<button className="tiny muted" onClick={goto('planner', 'page')}>오늘 페이지 →</button>}>
+      <AutoText className="input bare hw-line" value={rec.comment || ''} placeholder="오늘을 한 줄로 남겨요" onChange={(v) => setDay(d, { comment: v })} style={{ minHeight: 44 }} />
+    </Card>
+  )
+}
+
+function Inbox() {
+  const tasks = useColl('tasks'), subjects = useColl('subjects')
+  const L = tasks.filter((t) => t.inbox && !t.done && !t.archived).sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+  return (
+    <Card title={`받은 편지함 ${L.length || ''}`} action={<button className="tiny muted" onClick={goto('tasks', 'list', { smart: 'inbox' })}>전체 →</button>}>
+      <AddInput placeholder="떠오른 할 일 일단 넣기" onAdd={(title) => addTask({ title, inbox: true })} />
+      <div className="list">{L.slice(0, 5).map((t) => <TaskItem key={t.id} t={t} subjects={subjects} compact />)}</div>
+      {!L.length && <div className="tiny muted">비어 있어요 · 날짜는 나중에 정해도 돼요</div>}
+    </Card>
+  )
+}
+
+function DayBar() {
+  const sessions = useColl('sessions'), subjects = useColl('subjects'), st = useSettings(); useColl('events'); useNow(60000)
+  const d = today(), ds = st.dayStart ?? 420, de = st.dayEnd ?? 1440, span = Math.max(60, de - ds), nm = nowMin()
+  const pos = (m) => Math.max(0, Math.min(100, ((m - ds) / span) * 100))
+  const toM = (ts) => { const x = new Date(ts); return x.getHours() * 60 + x.getMinutes() }
+  const segs = sessions.filter((x) => x.date === d && x.start).map((x) => { const a = toM(x.start); return { a, b: a + (x.dur || 0), c: subjects.find((y) => y.id === x.subjectId)?.color || 'var(--accent)' } })
+  const evs = eventsOn(d).filter((e) => e.start != null)
+  const hrs = []; for (let h = Math.ceil(ds / 60); h * 60 <= de; h += 3) hrs.push(h)
+  const tot = segs.reduce((a, x) => a + (x.b - x.a), 0)
+  return (
+    <Card title="오늘 하루" action={<span className="tiny muted">공부 {fmtDur(tot)}</span>}>
+      <div className="daybar">
+        <div className="daybar-ev">{evs.map((e, i) => <i key={i} style={{ left: pos(e.start) + '%', width: Math.max(1.5, pos(e.end ?? e.start + 60) - pos(e.start)) + '%', background: e.color || 'var(--c3)' }} title={e.title} />)}</div>
+        <div className="daybar-track">{segs.map((x, i) => <i key={i} style={{ left: pos(x.a) + '%', width: Math.max(1, pos(x.b) - pos(x.a)) + '%', background: x.c }} />)}{nm >= ds && nm <= de && <b style={{ left: pos(nm) + '%' }} />}</div>
+        <div className="daybar-h">{hrs.map((h) => <span key={h} style={{ left: pos(h * 60) + '%' }}>{h % 24}</span>)}</div>
+      </div>
+    </Card>
+  )
+}
+
+function SubsToday() {
+  const tasks = useColl('tasks'), d = today()
+  const L = tasks.filter((t) => !t.archived && !t.done).flatMap((t) => (t.subtasks || []).filter((s) => !s.done && s.due && s.due <= d).map((s) => ({ t, s }))).sort((a, b) => a.s.due.localeCompare(b.s.due))
+  return (
+    <Card title={`오늘 하위 할 일 ${L.length || ''}`}>
+      <div className="col" style={{ gap: 5 }}>
+        {L.slice(0, 8).map(({ t, s }) => (
+          <div key={t.id + s.id} className="row" style={{ gap: 8, flexWrap: 'nowrap', alignItems: 'center' }}>
+            <button className={'sub-ck'} onClick={() => toggleSub(t.id, s.id)} aria-label="끝내기" />
+            <button className="grow ellipsis small" style={{ textAlign: 'left' }} onClick={() => openDetail('task', t.id)}>{s.title}<span className="tiny muted"> · {t.title}</span></button>
+            {s.due < d && <span className="tiny" style={{ color: 'var(--c4)' }}>{fmtShort(s.due)}</span>}
+          </div>
+        ))}
+        {!L.length && <div className="tiny muted">오늘로 정한 하위 할 일이 없어요</div>}
+      </div>
+    </Card>
+  )
+}
+
+function WeekMemo() {
+  useColl('days'); const st = useSettings(), ws = weekStart(today(), st.weekStart ?? 1), rec = dayRec(ws)
+  return (
+    <Card title="이번 주 메모" action={<button className="tiny muted" onClick={goto('planner', 'week')}>주간 →</button>}>
+      <AutoText className="input bare hw-line" value={rec.weekMemo || ''} placeholder="이번 주에 남길 말" onChange={(v) => setDay(ws, { weekMemo: v })} style={{ minHeight: 60 }} />
+    </Card>
+  )
+}
+
+function QuoteW() {
+  const quotes = [...useColl('quotes')].sort((a, b) => a.id.localeCompare(b.id)); useNow(60000)
+  const q = pickQuote(quotes)
+  return (
+    <Card className="quote-w">
+      <div className="quote-w-t">{q?.text || '다짐을 적어 두면 30분마다 바뀌어 보여요'}</div>
+      {q?.author && <div className="tiny muted" style={{ marginTop: 6 }}>— {q.author}</div>}
+    </Card>
+  )
+}
+
 export const WIDGETS = {
   tmrw: { label: '내일 미리보기 (저녁 6시부터)', C: Tomorrow, size: 'm' },
   now: { label: '지금 (현재·다음 일정)', C: Now, size: 'm' },
@@ -749,4 +831,10 @@ export const WIDGETS = {
   classes: { label: '오늘 시간표', C: TodayClasses, size: 'm' },
   lectures: { label: '오늘 들을 인강', C: LecturesW, size: 'm' },
   series: { label: '시리즈 진행', C: SeriesW, size: 'm' },
+  diary: { label: '오늘 한 줄', C: DiaryLine, size: 'm' },
+  inbox: { label: '받은 편지함', C: Inbox, size: 'm' },
+  daybar: { label: '오늘 하루 막대 (공부 · 일정)', C: DayBar, size: 'm' },
+  subtoday: { label: '오늘 하위 할 일', C: SubsToday, size: 'm' },
+  weekmemo: { label: '이번 주 메모', C: WeekMemo, size: 'm' },
+  quote: { label: '오늘의 다짐', C: QuoteW, size: 'm' },
 }
