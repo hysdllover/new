@@ -4,10 +4,12 @@ import { toggleTask } from '../store/actions.js'
 import { longPress } from '../lib/drag.js'
 import { openTaskMenu } from './TaskQuickMenu.jsx'
 import { openNote } from '../nav.js'
+import { today, fmtShort } from '../engine/date.js'
 
 export default function TaskItem({ t, subjects, projects, drag, compact, extra, sel }) {
   const subs = t.subtasks || []
   const sdone = subs.filter((s) => s.done).length
+  const subDue = subs.filter((s) => !s.done && s.due).map((s) => s.due).sort()[0] // 날짜가 정해진 하위 할 일 중 가장 가까운 날
   const proj = projects?.find((p) => p.id === t.projectId)
   // 길게 눌러 떼면 빠른 메뉴, 누른 채 움직이면 (있으면) 드래그
   const hold = longPress(() => ({ ...(drag?.getOpts?.() || null), onHold: () => openTaskMenu(t) }))
@@ -30,6 +32,7 @@ export default function TaskItem({ t, subjects, projects, drag, compact, extra, 
             <SubjectTag id={t.subjectId} subjects={subjects} />
             {proj && <span className="row" style={{ gap: 4 }}><span className="dot" style={{ background: proj.color }} />{proj.name}</span>}
             {subs.length > 0 && <span>☑ {sdone}/{subs.length}</span>}
+            {subDue && <span className={subDue < today() ? 'sub-late' : ''}>하위 {subDue === today() ? '오늘' : fmtShort(subDue)}</span>}
             {t.repeat && <span>↻</span>}
             {t.estimate && <span>{t.estimate}분</span>}
             {(t.files?.length > 0 || t.links?.length > 0) && <Icon name="link" size={12} />}

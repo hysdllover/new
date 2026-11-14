@@ -96,6 +96,11 @@ export default function TaskEditor({ id }) {
                 <span className="sub-grip" onPointerDown={(e) => dragSub(e, i)} aria-label="끌어서 순서 바꾸기">⋮⋮</span>
                 <Check on={s.done} round onClick={() => setSubs(subs.map((x) => x.id === s.id ? { ...x, done: !x.done } : x))} />
                 <input className="input bare grow" value={s.title} onChange={(e) => setSubs(subs.map((x) => x.id === s.id ? { ...x, title: e.target.value } : x))} />
+                {/* 하위 할 일 날짜: 누르면 날짜 고르기 · 지우면 날짜 없음 */}
+                <label className={'chip sub-due' + (s.due ? ' on' : '') + (s.due && !s.done && s.due < today() ? ' late' : '')} aria-label="날짜">
+                  {s.due ? (s.due === today() ? '오늘' : fmtShort(s.due)) : <Icon name="calendar" size={13} />}
+                  <input type="date" value={s.due || ''} onChange={(e) => setSubs(subs.map((x) => x.id === s.id ? { ...x, due: e.target.value || null } : x))} />
+                </label>
                 <button className="icon-btn" onClick={() => setSubs(subs.filter((x) => x.id !== s.id))} aria-label="삭제"><Icon name="close" size={14} /></button>
               </div>
             ))}

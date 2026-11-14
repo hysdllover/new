@@ -95,7 +95,7 @@ export function toggleTask(id, opt = {}) {
       while (nd && nd < today()) nd = nextOccurrence(t.repeat, t.repeatStart || t.due, nd)
       if (nd && !list('tasks').some((x) => x.repeatId === (t.repeatId || t.id) && x.due === nd)) {
         const { id: _, done: __, doneAt, createdAt, updatedAt, status, carry, ...rest } = t
-        addTask({ ...rest, due: nd, repeatStart: t.repeatStart || t.due, repeatId: t.repeatId || t.id, subtasks: (t.subtasks || []).map((s) => ({ ...s, done: false })) })
+        addTask({ ...rest, due: nd, repeatStart: t.repeatStart || t.due, repeatId: t.repeatId || t.id, subtasks: (t.subtasks || []).map((s) => ({ ...s, done: false, ...(s.due && t.due ? { due: addDays(s.due, diffDays(nd, t.due)) } : null) })) }) // 하위 할 일 날짜도 같은 만큼 옮김
       }
     }
     // 학습 계획 할 일 완료 → 교재 진도 반영
