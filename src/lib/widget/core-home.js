@@ -1727,7 +1727,7 @@ export default () => `  } else if (TYLAY) {
       FILL = true
     }
     w.url = link('')
-  } else if (KIND === 'pday' || KIND === 'pwk' || KIND === 'ddbar' || KIND === 'ddline' || KIND === 'stack' || KIND === 'dashxl' || KIND === 'dashwk' || KIND === 'xweek' || KIND === 'xday' || KIND === 'xmonth' || KIND === 'xnotes' || KIND === 'xdday' || KIND === 'xsubj') {
+  } else if (KIND === 'pday' || KIND === 'pwk' || KIND === 'ddbar' || KIND === 'ddline' || KIND === 'stack' || KIND === 'dashxl' || KIND === 'dashwk' || KIND === 'xweek' || KIND === 'xday' || KIND === 'xmonth' || KIND === 'xnotes' || KIND === 'xdday' || KIND === 'xsubj' || KIND === 'xplan' || KIND === 'xtodo' || KIND === 'xstudy' || KIND === 'xddw' || KIND === 'xquote' || KIND === 'xhabit' || KIND === 'x8wk' || KIND === 'xcmp') {
     // ── 새 형태 공용 도구: 테두리 칸 · 머리줄 · 할 일 줄 ──
     const EX2 = data.extra || {}, BW2 = 0.7, LGx = fam === 'large' || fam === 'extraLarge'
     const head = (P2, a, b2) => { const h = P2.addStack(); h.centerAlignContent(); cap(h, a); h.addSpacer(); if (b2) t(h, b2, label(8), SOFT) }
@@ -1869,6 +1869,132 @@ export default () => `  } else if (TYLAY) {
       if (!ddAll.length) t(R, 'No D-day', tw(11), SOFT)
       R.addSpacer(); if (quote) t(R, quote, tw(11), SOFT, 3).minimumScaleFactor = 0.8
       FILL = true
+    } else if (KIND === 'xplan') {
+      // ── 아주 큰: 3일 플랜 — 오늘 · 내일 · 모레 칸 (일정 시간 · 할 일 · 공부) ──
+      head(w, 'NEXT 3 DAYS', dateStr); w.addSpacer(8)
+      const gap = 10, cw = Math.floor((inner - gap * 2) / 3), ch = innerH - 26 * SCALE, NM = ['TODAY', 'TOMORROW', 'NEXT']
+      const r = w.addStack(); r.spacing = gap
+      for (let i = 0; i < 3; i++) box(r, cw, ch, (b) => {
+        const k = dOff(i), dt = new Date(k + 'T12:00:00'), hh = b.addStack(); hh.bottomAlignContent()
+        t(hh, String(dt.getDate()), thin(20), i === 0 ? GOLD : INK); hh.addSpacer(5); t(hh, WDN[dt.getDay()] + '  ' + NM[i], label(7), SOFT); hh.addSpacer(); if (i === 0) t(hh, hm(mins), tw(10), GOLD)
+        b.addSpacer(6)
+        const ev = evOf(k).filter((e) => !(i === 0 && e.s != null && (e.e ?? e.s + 60) <= nm))
+        for (const e of ev.slice(0, 4)) { const er = b.addStack(); er.centerAlignContent(); const bar = er.addStack(); bar.size = new Size(2, 11); bar.backgroundColor = e.c ? new Color(e.c) : SOFT; er.addSpacer(5); t(er, (e.s != null ? clk(e.s % 1440) + ' ' : '') + e.t, tw(11), INK).minimumScaleFactor = 0.75; er.addSpacer(); b.addSpacer(3) }
+        if (ev.length) b.addSpacer(4)
+        const tk = i === 0 ? items.filter((x) => !x.done) : tasksAll.filter((x) => !x.done && x.due === k).sort(byDate)
+        for (const x of tk.slice(0, CNT || 7)) { tRow(b, x, 12); b.addSpacer(3) }
+        if (!ev.length && !tk.length) t(b, '—', tw(11), SOFT)
+      })
+      FILL = true
+    } else if (KIND === 'xtodo') {
+      // ── 아주 큰: 할 일 판 — 오늘 · 마감 임박(3일) · 날짜 없음 ──
+      head(w, 'TO DO', done + ' / ' + items.length + ' DONE'); w.addSpacer(8)
+      const gap = 10, cw = Math.floor((inner - gap * 2) / 3), ch = innerH - 26 * SCALE
+      const cols = [['TODAY', items.filter((x) => !x.done)], ['DUE SOON', tasksAll.filter((x) => !x.done && x.due && x.due > today && x.due <= dOff(3)).sort(byDate)], ['NO DATE', tasksAll.filter((x) => !x.done && !x.due && !x.archived)]]
+      const r = w.addStack(); r.spacing = gap
+      for (const [nmx, L] of cols) box(r, cw, ch, (b) => {
+        const hh = b.addStack(); lab(hh, nmx); hh.addSpacer(); t(hh, String(L.length), label(7), SOFT); b.addSpacer(6)
+        for (const x of L.slice(0, CNT || 9)) { tRow(b, x, 12); if (nmx === 'DUE SOON') { const dr = b.addStack(); dr.addSpacer(18); t(dr, dueTxt(x), label(7), GOLD) } b.addSpacer(3) }
+        if (!L.length) t(b, nmx === 'TODAY' ? 'All clear.' : '—', tw(11), SOFT)
+      })
+      FILL = true
+    } else if (KIND === 'xstudy') {
+      // ── 아주 큰: 공부 판 — 오늘 큰 숫자 · 이번 주 막대 / 과목별 · 오늘 기록 ──
+      const gap = 16, c1 = Math.floor((inner - gap * 2) * 0.5), c2 = inner - c1 - gap * 2 - 1
+      const row = w.addStack(); row.topAlignContent()
+      const L = row.addStack(); L.layoutVertically(); L.size = new Size(c1, innerH)
+      head(L, 'STUDY', dateStr); L.addSpacer(8)
+      const sr = L.addStack(); sr.bottomAlignContent(); studyLive(sr, thin(48), INK).minimumScaleFactor = 0.5; sr.addSpacer(8); t(sr, '/ ' + hm(goal), tw(13), SOFT); sr.addSpacer(); t(sr, pct + '%', tw(13), GOLD)
+      L.addSpacer(5); pbar(L, mins / goal, c1); L.addSpacer(16)
+      lab(L, 'THIS WEEK  ' + hm(weekTot)); L.addSpacer(5); bars7(L, c1, Math.round(innerH * 0.3), GOLD, RULE); L.addSpacer(3); wdRow(L, c1, 8)
+      L.addSpacer()
+      row.addSpacer(gap); vrule(row, innerH); row.addSpacer(gap)
+      const R = row.addStack(); R.layoutVertically(); R.size = new Size(c2, innerH)
+      lab(R, 'SUBJECTS · WEEK'); R.addSpacer(5)
+      const mx = (weekSub[0] || {}).m || 1
+      for (const x of weekSub.slice(0, 5)) { const rr = R.addStack(); rr.centerAlignContent(); const dt = rr.addStack(); dt.size = new Size(5, 5); dt.backgroundColor = x.s.color ? new Color(x.s.color) : SOFT; rr.addSpacer(6); t(rr, x.s.name, tw(12), INK); rr.addSpacer(); t(rr, hm(x.today), tw(11), x.today ? GOLD : SOFT); rr.addSpacer(10); t(rr, hm(x.m), tw(11), SOFT); R.addSpacer(2); pbar(R, x.m / mx, c2, x.s.color || null); R.addSpacer(6) }
+      if (!weekSub.length) t(R, 'No study yet.', tw(12), SOFT)
+      R.addSpacer(8); lab(R, 'TODAY LOG'); R.addSpacer(4)
+      const toM = (ms) => { const x = new Date(ms); return x.getHours() * 60 + x.getMinutes() }
+      for (const x of sessions.slice().sort((a, b) => (b.start || 0) - (a.start || 0)).slice(0, 4)) { const s0 = subjects.find((y) => y.id === x.subjectId), rr = R.addStack(); rr.centerAlignContent(); t(rr, x.start ? clk(toM(x.start)) : '—', tw(10), SOFT); rr.addSpacer(8); t(rr, (s0 && s0.name) || '공부', tw(11.5), INK); rr.addSpacer(); t(rr, hm(x.dur || 0), tw(11), GOLD); R.addSpacer(3) }
+      R.addSpacer()
+      FILL = true
+    } else if (KIND === 'xddw') {
+      // ── 아주 큰: D-day 주차 판 — 왼쪽 큰 D-day · 남은 주 칸 / 오른쪽 다른 D-day ──
+      const gap = 16, c1 = Math.floor((inner - gap * 2) * 0.58), c2 = inner - c1 - gap * 2 - 1
+      const row = w.addStack(); row.topAlignContent()
+      const L = row.addStack(); L.layoutVertically(); L.size = new Size(c1, innerH)
+      head(L, 'COUNTDOWN', dateStr); L.addSpacer(8)
+      const x = ddPick
+      if (!x) t(L, 'No D-day.', tw(14), SOFT)
+      else {
+        const n = ddN(x), r1 = L.addStack(); r1.bottomAlignContent(); t(r1, n === 0 ? 'D-DAY' : String(n), thin(64), x.color ? new Color(x.color) : INK).minimumScaleFactor = 0.5; r1.addSpacer(8)
+        const cc = r1.addStack(); cc.layoutVertically(); t(cc, n === 0 ? '' : 'DAYS', label(8), SOFT); t(cc, x.title, tw(16), INK).minimumScaleFactor = 0.6
+        L.addSpacer(4); t(L, (+x.date.slice(5, 7)) + '월 ' + (+x.date.slice(8)) + '일 · ' + Math.floor(n / 7) + '주 ' + (n % 7) + '일 · 남은 주말 ' + weekends(x) + '번', tw(11), SOFT).minimumScaleFactor = 0.7
+        L.addSpacer(12); lab(L, 'WEEKS LEFT'); L.addSpacer(5)
+        const wk = Math.min(40, Math.ceil(n / 7)), per = 10, sz = Math.floor((c1 - (per - 1) * 5) / per)
+        for (let rI = 0; rI * per < wk; rI++) { const rr = L.addStack(); rr.spacing = 5; for (let j = rI * per; j < Math.min(wk, rI * per + per); j++) { const c = rr.addStack(); c.size = new Size(sz, Math.min(16, sz * 0.6)); c.borderWidth = 0.7; c.borderColor = RULE; if (j === 0) c.backgroundColor = x.color ? new Color(x.color, 0.35) : new Color('#8794a8', 0.35) } L.addSpacer(5) }
+      }
+      L.addSpacer()
+      row.addSpacer(gap); vrule(row, innerH); row.addSpacer(gap)
+      const R = row.addStack(); R.layoutVertically(); R.size = new Size(c2, innerH)
+      lab(R, 'D-DAYS  ' + ddAll.length); R.addSpacer(6)
+      for (const y of ddAll.slice(1, 8)) { const rr = R.addStack(); rr.bottomAlignContent(); t(rr, ddT(y), thin(20), y.color ? new Color(y.color) : GOLD).minimumScaleFactor = 0.6; rr.addSpacer(8); const cc = rr.addStack(); cc.layoutVertically(); t(cc, y.title, tw(12), INK).minimumScaleFactor = 0.7; t(cc, (+y.date.slice(5, 7)) + '.' + (+y.date.slice(8)), label(7), SOFT); rr.addSpacer(); R.addSpacer(6) }
+      if (ddAll.length < 2) t(R, '다른 D-day 없음', tw(11), SOFT)
+      R.addSpacer()
+      FILL = true
+    } else if (KIND === 'xquote') {
+      // ── 아주 큰: 다짐 지면 — 큰 문장 · 아래 옅은 줄 · 꼬리말(공부 · 할 일 · D-day) ──
+      head(w, 'VOW', dateStr); w.addSpacer()
+      t(w, quote || '오늘을 기록하다', tw(30), INK, 4).minimumScaleFactor = 0.55
+      w.addSpacer(12); if (ddPick) t(w, ddPick.title + '까지 ' + ddT(ddPick) + ' · 남은 주말 ' + weekends(ddPick) + '번', tw(13), SOFT).minimumScaleFactor = 0.7
+      w.addSpacer(); rule(w, inner); w.addSpacer(6)
+      const f = w.addStack(); t(f, '공부 ' + hm(mins) + ' / ' + hm(goal), label(8), SOFT); f.addSpacer(); t(f, '할 일 ' + items.filter((y) => !y.done).length + '개 남음', label(8), SOFT); f.addSpacer(); t(f, d0.getFullYear() + '. ' + (d0.getMonth() + 1) + '. ' + d0.getDate(), label(8), SOFT)
+      FILL = true
+    } else if (KIND === 'xhabit') {
+      // ── 아주 큰: 습관 판 — 습관마다 최근 7일 칸 · 오늘 표시 ──
+      const hs = HABITS(), on = hs.filter((y) => y.on).length
+      head(w, 'HABITS', hs.length ? on + ' / ' + hs.length + ' TODAY' : ''); w.addSpacer(10)
+      if (!hs.length) t(w, '앱 › 건강 › 습관에서 추가해 보세요', tw(13), SOFT)
+      const nameW = Math.floor(inner * 0.3), gap = 6, sz = Math.min(28, Math.floor((inner - nameW - gap * 8) / 7)), rh = Math.min(sz, Math.floor((innerH - 50 * SCALE) / Math.max(1, hs.length)) - 6)
+      const hr = w.addStack(); const nmc = hr.addStack(); nmc.size = new Size(nameW, 10); hr.spacing = gap
+      for (let i = 6; i >= 0; i--) { const dt = new Date(d0); dt.setDate(dt.getDate() - i); const c = hr.addStack(); c.size = new Size(sz, 10); c.centerAlignContent(); t(c, WDN[dt.getDay()], label(7), i === 0 ? GOLD : SOFT) }
+      w.addSpacer(4)
+      for (const h0 of hs.slice(0, 8)) {
+        const r = w.addStack(); r.spacing = gap; r.centerAlignContent(); const nc = r.addStack(); nc.size = new Size(nameW, rh); nc.centerAlignContent(); t(nc, h0.t, tw(12.5), INK).minimumScaleFactor = 0.7; nc.addSpacer()
+        for (let i = 0; i < 7; i++) { const c = r.addStack(); c.size = new Size(sz, rh); c.borderWidth = 0.7; c.borderColor = RULE; if ((h0.w || [])[i]) c.backgroundColor = h0.c ? new Color(h0.c, 0.55) : new Color('#8794a8', 0.5); if (i === 6) { c.borderWidth = 1.1; c.borderColor = INK } }
+        w.addSpacer(6)
+      }
+      w.url = link('habits')
+    } else if (KIND === 'x8wk') {
+      // ── 아주 큰: 최근 8주 공부 칸 (요일 × 주) · 주마다 합계 ──
+      head(w, 'LAST 8 WEEKS', hm(weekTot) + ' THIS WEEK'); w.addSpacer(10)
+      const ws0 = st.weekStart ?? 1, lab0 = 30, wk = 8, gap = 4, cw = Math.floor((inner - lab0 - gap * wk) / wk), ch = Math.floor((innerH - 70 * SCALE) / 7) - gap
+      const start = new Date(d0); start.setDate(start.getDate() - wBack - 7 * (wk - 1))
+      const keyOf = (wI, dI) => { const x = new Date(start); x.setDate(x.getDate() + wI * 7 + dI); return ymd(x) }
+      const totals = []
+      for (let dI = 0; dI < 7; dI++) {
+        const r = w.addStack(); r.spacing = gap; const lc = r.addStack(); lc.size = new Size(lab0 - gap, ch); lc.centerAlignContent(); t(lc, WDN[(dI + ws0) % 7], label(8), SOFT); lc.addSpacer()
+        for (let wI = 0; wI < wk; wI++) { const k = keyOf(wI, dI), v = DM[k] || 0, c = r.addStack(); c.size = new Size(cw, ch); if (k > today) { c.borderWidth = 0.5; c.borderColor = RULE } else c.backgroundColor = v ? new Color(dark() ? '#9fadc4' : '#66778f', 0.15 + 0.75 * Math.min(1, v / goal)) : new Color('#8794a8', 0.08); if (k === today) { c.borderWidth = 1.1; c.borderColor = INK } totals[wI] = (totals[wI] || 0) + v }
+        w.addSpacer(gap)
+      }
+      w.addSpacer(2); const tr = w.addStack(); tr.spacing = gap; const tl = tr.addStack(); tl.size = new Size(lab0 - gap, 12)
+      for (let wI = 0; wI < wk; wI++) { const c = tr.addStack(); c.size = new Size(cw, 12); c.centerAlignContent(); t(c, totals[wI] ? hm(totals[wI]) : '–', label(7), wI === wk - 1 ? GOLD : SOFT).minimumScaleFactor = 0.6 }
+      w.url = link('study.records')
+    } else if (KIND === 'xcmp') {
+      // ── 아주 큰: 이번 주 vs 지난주 요일별 나란히 막대 · 합계 비교 ──
+      const lw = []; for (let i = 0; i < 7; i++) { const a = new Date(d0); a.setDate(a.getDate() - wBack + i); const b = new Date(a); b.setDate(b.getDate() - 7); lw.push({ wd: a.getDay(), k: ymd(a), now: DM[ymd(a)] || 0, prev: DM[ymd(b)] || 0 }) }
+      const T1 = lw.reduce((a, x) => a + x.now, 0), T0 = lw.reduce((a, x) => a + x.prev, 0), dlt = T1 - T0
+      head(w, 'THIS WEEK VS LAST', (dlt >= 0 ? '+' : '−') + hm(Math.abs(dlt))); w.addSpacer(8)
+      const top = w.addStack(); top.bottomAlignContent(); t(top, hm(T1), thin(40), INK); top.addSpacer(8); t(top, '/ 지난주 ' + hm(T0), tw(13), SOFT); top.addSpacer()
+      w.addSpacer(12)
+      const mx = Math.max(goal, ...lw.map((x) => Math.max(x.now, x.prev))) || 1, gap = 14, cw = Math.floor((inner - gap * 6) / 7), bh = Math.floor(innerH - 120 * SCALE), bw = Math.floor((cw - 4) / 2)
+      const r = w.addStack(); r.spacing = gap; r.bottomAlignContent()
+      for (const x of lw) { const c = r.addStack(); c.size = new Size(cw, bh); c.bottomAlignContent(); c.spacing = 4; const a = c.addStack(); a.size = new Size(bw, Math.max(2, Math.round((x.prev / mx) * bh))); a.borderWidth = 0.8; a.borderColor = SOFT; const b = c.addStack(); b.size = new Size(bw, Math.max(2, Math.round((x.now / mx) * bh))); b.backgroundColor = x.k === today ? GOLD : new Color(dark() ? '#9fadc4' : '#66778f', x.k > today ? 0.15 : 0.7) }
+      w.addSpacer(3); const lr = w.addStack(); lr.spacing = gap
+      for (const x of lw) { const c = lr.addStack(); c.size = new Size(cw, 11); c.centerAlignContent(); t(c, WDN[x.wd], label(8), x.k === today ? GOLD : SOFT) }
+      w.addSpacer(); const lg = w.addStack(); lg.centerAlignContent(); const k1 = lg.addStack(); k1.size = new Size(7, 7); k1.borderWidth = 0.8; k1.borderColor = SOFT; lg.addSpacer(4); t(lg, 'LAST WEEK', label(7), SOFT); lg.addSpacer(12); const k2 = lg.addStack(); k2.size = new Size(7, 7); k2.backgroundColor = new Color('#66778f', 0.7); lg.addSpacer(4); t(lg, 'THIS WEEK', label(7), SOFT)
+      w.url = link('study.records')
     } else if (KIND === 'xweek') {
       // ── 아주 큰: 이번 주 7일 세로 칸 (요일 · 공부 시간 · 일정 · 할 일) ──
       const k0 = bwDays[0], md2 = (k) => (+k.slice(5, 7)) + '.' + (+k.slice(8))

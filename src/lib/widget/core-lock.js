@@ -9,7 +9,7 @@ if (KIND === 'custom' && fam.startsWith('accessory')) KIND = 'dash'
 if (KIND === 'live' && !lock) KIND = 'timer'
 // 새 형태: 크기에 안 맞으면 비슷한 형태로 (잠금 화면 · 작은 크기)
 // 아주 큰 크기 전용(x…): 다른 크기에선 비슷한 형태로
-const XL_ALT = { xweek: 'week7', xday: 'dash4', xmonth: 'cal', xnotes: 'note', xdday: 'ddl', xsubj: 'subj' }
+const XL_ALT = { xweek: 'week7', xday: 'dash4', xmonth: 'cal', xnotes: 'note', xdday: 'ddl', xsubj: 'subj', xplan: 'week7', xtodo: 'todo', xstudy: 'study', xddw: 'ddl', xquote: 'quote', xhabit: 'habit', x8wk: 'week', xcmp: 'week' }
 if (fam !== 'extraLarge' && XL_ALT[KIND]) KIND = XL_ALT[KIND]
 if (lock) KIND = ({ agenda: 'today', ddtext: 'dday', wplan: 'week7', vow: 'quote', pday: 'today', pwk: 'week', ddbar: 'dday', ddline: 'ddl', stack: 'dash', dash4: 'dash', dashxl: 'dash', dashwk: 'week' })[KIND] || KIND
 else if (fam === 'small') KIND = ({ pwk: 'week', stack: 'dash', dash4: 'dash', dashxl: 'dash', dashwk: 'week' })[KIND] || KIND
