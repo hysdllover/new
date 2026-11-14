@@ -57,7 +57,7 @@ export function SubList({ t, subs, only }) {
         <div key={s.id} className={'task-sub' + (s.done ? ' done' : '')}>
           <button className={'sub-ck' + (s.done ? ' on' : '')} onClick={() => toggleSub(t.id, s.id)} aria-label={s.done ? '되돌리기' : '끝내기'} />
           <span className="sub-tt ellipsis">{s.title}</span>
-          {s.due && <span className={'sub-d' + (!s.done && s.due < today() ? ' late' : '')}>{s.due === today() ? '오늘' : fmtShort(s.due)}</span>}
+          {s.due && s.due !== t.due && <span className={'sub-d' + (!s.done && s.due < today() ? ' late' : '')}>{s.due === today() ? '오늘' : fmtShort(s.due)}</span>}
         </div>
       ))}
     </div>
