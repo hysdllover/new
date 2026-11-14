@@ -4,27 +4,31 @@ import { settings } from '../store/store.js'
 import { addDays, addMonths, diffDays, today, weekStart, fmtShort, parseYmd, monthStart, daysInMonth, fmtDur, WD } from '../engine/date.js'
 
 // 선 그래프: series = [{ points: [[x,y]], color, dash }], x 는 0..1 로 정규화된 값
+// 부드러운 곡선 (Catmull-Rom → 베지어): 필기 느낌에서 손으로 그은 듯
+const smooth = (pts) => { if (pts.length < 2) return ''; let d = `M${pts[0][0]},${pts[0][1]}`; for (let i = 0; i < pts.length - 1; i++) { const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2; const c1 = [p1[0] + (p2[0] - p0[0]) / 8, p1[1] + (p2[1] - p0[1]) / 8], c2 = [p2[0] - (p3[0] - p1[0]) / 8, p2[1] - (p3[1] - p1[1]) / 8]; d += ` C${c1[0].toFixed(1)},${c1[1].toFixed(1)} ${c2[0].toFixed(1)},${c2[1].toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}` } return d }
 export function LineChart({ series, height = 140, yMax, yMin = 0, labels = [], goal }) {
-  const W = 320, H = height, P = 22
+  const HAND = typeof document !== 'undefined' && document.documentElement.hasAttribute('data-hand') // 필기 느낌: 비스듬한 날짜 자리만큼 아래 여유
+  const W = 320, H = height + (HAND ? 14 : 0), P = HAND ? 18 : 22, BASE = H - (HAND ? 32 : 18)
   const ys = series.flatMap((s) => s.points.map((p) => p[1]))
   const max = yMax ?? Math.max(1, ...ys)
   const sx = (x) => P + x * (W - P - 8)
-  const sy = (y) => H - 18 - ((y - yMin) / (max - yMin || 1)) * (H - 30)
+  const sy = (y) => BASE - ((y - yMin) / (max - yMin || 1)) * (BASE - 12)
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="chart">
-      {[0, .5, 1].map((k) => { const v = yMin + (max - yMin) * k; return <g key={k}><line x1={P} x2={W - 8} y1={sy(v)} y2={sy(v)} stroke="var(--line)" strokeWidth=".6" /><text x={P - 4} y={sy(v) + 3} fontSize="8" fill="var(--muted)" textAnchor="end">{Math.round(v)}</text></g> })}
+      {[0, .5, 1].map((k) => { const v = yMin + (max - yMin) * k; return <g key={k} className="chart-grid"><line x1={P} x2={W - 8} y1={sy(v)} y2={sy(v)} stroke="var(--line)" strokeWidth=".6" /><text x={P - 4} y={sy(v) + 3} fontSize="8" fill="var(--muted)" textAnchor="end">{Math.round(v)}</text></g> })}
       {goal != null && <line x1={P} x2={W - 8} y1={sy(goal)} y2={sy(goal)} stroke="var(--c4)" strokeDasharray="3 3" strokeWidth="1" />}
       {series.map((s, i) => s.points.length > 0 && (
         <g key={i}>
           {/* 필기 느낌에서만 보이는 것: 선 아래 옅은 빗금 면 · 점마다 값 (CSS 로 켬) */}
           {!s.dash && s.points.length > 1 && <pattern id={`hatch-${i}`} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(40)"><line x1="0" y1="0" x2="0" y2="6" stroke={s.color} strokeWidth=".55" opacity=".5" /></pattern>}
-          {!s.dash && s.points.length > 1 && <polygon className="chart-hatch" points={`${sx(s.points[0][0])},${H - 18} ` + s.points.map(([x, y]) => `${sx(x)},${sy(y)}`).join(' ') + ` ${sx(s.points[s.points.length - 1][0])},${H - 18}`} fill={`url(#hatch-${i})`} />}
+          {!s.dash && s.points.length > 1 && <path className="chart-hatch" d={smooth(s.points.map(([x, y]) => [sx(x), sy(y)])) + ` L${sx(s.points[s.points.length - 1][0])},${BASE} L${sx(s.points[0][0])},${BASE} Z`} fill={`url(#hatch-${i})`} />}
+          {!s.dash && s.points.length > 1 && <path className="chart-curve" d={smooth(s.points.map(([x, y]) => [sx(x), sy(y)]))} fill="none" stroke={s.color} strokeWidth="2.2" strokeLinecap="round" />}
           <polyline className="chart-line" points={s.points.map(([x, y]) => `${sx(x)},${sy(y)}`).join(' ')} fill="none" stroke={s.color} strokeWidth="1.6" strokeDasharray={s.dash} strokeLinejoin="round" />
           {!s.dash && s.points.map(([x, y], j) => { const lo = y === Math.min(...s.points.map((p) => p[1])); return <circle key={j} className={lo ? 'chart-pt lo' : 'chart-pt'} cx={sx(x)} cy={sy(y)} r="2.2" fill={s.color} stroke={s.color} /> })}
           {!s.dash && s.points.length <= 31 && s.points.map(([x, y], j) => <text key={'v' + j} className="chart-val" x={sx(x)} y={sy(y) - 5} fontSize="7.5" textAnchor="middle" fill="var(--muted)">{Math.round(y * 10) / 10}</text>)}
         </g>
       ))}
-      {labels.map(([x, l], i) => <text key={i} x={sx(x)} y={H - 4} fontSize="8" fill="var(--muted)" textAnchor={x > .95 ? 'end' : x < .05 ? 'start' : 'middle'}>{l}</text>)}
+      {labels.map(([x, l], i) => <text key={i} className="chart-x" x={sx(x)} y={HAND ? BASE + 12 : H - 4} fontSize="8" fill="var(--muted)" textAnchor={x > .95 ? 'end' : x < .05 ? 'start' : 'middle'}>{l}</text>)}
     </svg>
   )
 }
