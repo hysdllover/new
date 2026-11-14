@@ -928,6 +928,7 @@ function DesignDetail({ th, setTheme, st }) {
         {S('형광펜 모서리', 'hlCorner', [['square', '각지게'], ['round', '둥글게'], ['brush', '붓 자국']], 'square')}
         {S('인용 모양', 'quoteStyle', [['line', '세로선'], ['mark', '따옴표'], ['slip', '쪽지']], 'line')}
         {S('강조 상자', 'calloutStyle', [['tag', '이름표'], ['band', '색 띠만']], 'tag')}
+        {S('필기 느낌', 'handFx', [['', '자동'], ['on', '켜기'], ['off', '끄기']], '')}
         {S('완료한 줄', 'doneStyle', [['strike', '취소선'], ['fade', '흐리게'], ['keep', '그대로']], 'strike')}
         {S('구분선', 'divStyle', [['solid', '실선'], ['dot', '점선'], ['wave', '물결']], 'solid')}
         {S('체크박스', 'checkShape', [['', '자동'], ['square', '네모'], ['round', '원'], ['line', '선'], ['pencil', '연필']], '')}

@@ -173,7 +173,7 @@ export function Check({ on, onClick, round, color }) {
   const [burst, setBurst] = useState(0)
   return (
     <button
-      className={'check' + (on ? ' on' : '') + (round ? ' round' : '')}
+      className={'check' + (on ? ' on' : '') + (round ? ' round' : '') + (on && burst > 0 ? ' fresh' : '')}
       style={color ? { borderColor: color, '--ck': color, ...(on ? { background: color } : null) } : null}
       onClick={(e) => { e.stopPropagation(); if (!on) { setBurst((b) => b + 1); haptic() } onClick?.() }}
       aria-label={on ? '완료 취소' : '완료'}

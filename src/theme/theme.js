@@ -81,6 +81,8 @@ export function applyTheme(t0) {
   root.toggleAttribute('data-icofill', t.iconFill === 'fill')
   root.toggleAttribute('data-fold', t.card === 'note' && t.fold !== false)
   root.toggleAttribute('data-pencil', t.preset === 'pencil') // 연필 아날로그: 글자에 흑연 결
+  // 필기 느낌 (자동: 연필 · 종이 노트 테마에서 켜짐): 체크를 그어 그리기 · 새 할 일이 써지듯 · 중요는 손 밑줄 · 제목 살짝 기울게
+  root.toggleAttribute('data-hand', t.handFx === 'on' || (t.handFx !== 'off' && (t.preset === 'pencil' || t.card === 'note')))
   Object.assign(D, { bullet: t.bulletStyle || 'dot', link: t.linkStyle || 'under', hlc: t.hlCorner || 'square', shadow: t.shadowDepth || 'normal', tabsel: t.tabSel || 'color', thc: t.thColor || 'gray' })
   for (const k of ['bullet', 'link', 'hlc', 'shadow', 'tabsel', 'thc']) root.dataset[k] = D[k]
   // 상태 막대 색을 실제 바탕색과 같게 (iOS 가 위쪽을 다른 색 · 흐림으로 칠하지 않게)

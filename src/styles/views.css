@@ -1495,3 +1495,18 @@ html[data-pencil] .seg { background: transparent; }
 html[data-pencil] :is(.btn.primary, .stack-bar i, .sh-stack i, .rp-stack i) { -webkit-mask-image: var(--pn-crayon); mask-image: var(--pn-crayon); -webkit-mask-size: 80px 80px; mask-size: 80px 80px; }
 html[data-pencil] .btn.primary { border-radius: 2px; }
 html[data-pencil] svg.ring-svg { -webkit-mask-image: var(--pn-fine); mask-image: var(--pn-fine); -webkit-mask-size: 90px 90px; mask-size: 90px 90px; }
+
+/* ── 필기 느낌 (설정 › 디자인 세부 · 연필/종이 노트에서 자동) ── */
+@keyframes hand-write { from { clip-path: inset(-20% 100% -20% 0); } to { clip-path: inset(-20% 0 -20% 0); } }
+@keyframes hand-tick { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+/* 체크: 표시가 왼쪽에서 오른쪽으로 그어지듯 */
+html[data-hand] .check.on.fresh::after { animation: hand-tick .32s cubic-bezier(.3, .7, .3, 1) both; }
+/* 방금 추가한 할 일: 제목이 펜으로 써지듯 나타남 */
+html[data-hand] .task-item.just .ttl { animation: hand-write .7s cubic-bezier(.35, .6, .3, 1) both; }
+/* 중요한 할 일: 제목 아래 손으로 그은 물결 밑줄 */
+html[data-hand] .task-item.imp:not(.done) .title .ttl { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 6' preserveAspectRatio='none'%3E%3Cpath d='M1 3.6C14 1.6 26 4.8 40 3.2S66 1.8 80 3.4 104 4.6 119 2.4' fill='none' stroke='%23b98f95' stroke-width='1.3' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat 0 100% / 100% 5px; padding-bottom: 2px; }
+/* 카드 제목 · 날짜 머리: 손으로 쓴 듯 아주 살짝 기울게 */
+html[data-hand] :is(.card-h h3, .wkb-d, .mheat-top b) { display: inline-block; transform: rotate(-.7deg); transform-origin: left center; }
+/* 형광펜: 가장자리가 고르지 않게 */
+html[data-hand] .task-item.hl .title .ttl { border-radius: 1px 4px 2px 3px / 3px 1px 4px 2px; }
+@media (prefers-reduced-motion: reduce) { html[data-hand] .check.on.fresh::after, html[data-hand] .task-item.just .ttl { animation: none; } }
