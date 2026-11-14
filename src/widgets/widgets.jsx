@@ -789,6 +789,112 @@ function QuoteW() {
   )
 }
 
+// ── 새 위젯 2: 마감 임박 · 중요한 할 일 · 지금 할 하나 · 올해 공부 점 · 고정 노트 · 오늘 남은 시간 · 매일 체크리스트 · 카운터 ──
+function DueSoon() {
+  const tasks = useColl('tasks'), subjects = useColl('subjects'), d = today(), end = addDays(d, 3)
+  const L = tasks.filter((t) => !t.done && !t.archived && t.due && t.due > d && t.due <= end).sort((a, b) => a.due.localeCompare(b.due) || (a.order ?? 0) - (b.order ?? 0))
+  return (
+    <Card title={`마감 임박 ${L.length || ''}`} action={<span className="tiny muted">3일 안</span>}>
+      <div className="list">{L.slice(0, 5).map((t) => <TaskItem key={t.id} t={t} subjects={subjects} />)}</div>
+      {!L.length && <div className="tiny muted">3일 안에 마감인 할 일이 없어요</div>}
+    </Card>
+  )
+}
+
+function Starred() {
+  const tasks = useColl('tasks'), subjects = useColl('subjects')
+  const L = tasks.filter((t) => !t.done && !t.archived && t.priority >= 3).sort((a, b) => (a.due || '9999').localeCompare(b.due || '9999') || (a.order ?? 0) - (b.order ?? 0))
+  return (
+    <Card title={`중요한 할 일 ${L.length || ''}`}>
+      <div className="list">{L.slice(0, 5).map((t) => <TaskItem key={t.id} t={t} subjects={subjects} />)}</div>
+      {!L.length && <div className="tiny muted">★ 중요로 표시한 할 일이 여기 모여요</div>}
+    </Card>
+  )
+}
+
+function OneNow() {
+  const tasks = useColl('tasks'), subjects = useColl('subjects'), d = today(); useColl('days')
+  const top = (dayRec(d).top3 || []).map((id) => tasks.find((t) => t.id === id)).filter((t) => t && !t.done)
+  const t = top[0] || tasks.filter((x) => !x.done && !x.archived && x.due && x.due <= d).sort((a, b) => (b.priority || 0) - (a.priority || 0) || (a.order ?? 0) - (b.order ?? 0))[0]
+  const sb = t && subjects.find((x) => x.id === t.subjectId)
+  return (
+    <Card title="지금 할 하나">
+      {t ? <div className="col" style={{ gap: 8 }}>
+        <button className="one-now-t" style={{ textAlign: 'left' }} onClick={() => openDetail('task', t.id)}>{t.title}</button>
+        <div className="row" style={{ gap: 6 }}>
+          {sb && <span className="tiny muted"><span className="dot" style={{ background: sb.color }} /> {sb.name}</span>}
+          <span className="grow" />
+          <button className="btn sm" onClick={() => { startStopwatch(t.subjectId || null, t.id); go('study', 'timer') }}>시작</button>
+          <button className="btn sm" onClick={() => toggleTask(t.id)}>끝냄</button>
+        </div>
+      </div> : <div className="tiny muted">오늘 할 일을 모두 끝냈어요</div>}
+    </Card>
+  )
+}
+
+function YearDots() {
+  const sessions = useColl('sessions'), st = useSettings(), y = new Date().getFullYear()
+  const by = {}; for (const x of sessions) if (x.date?.startsWith(String(y))) by[x.date] = (by[x.date] || 0) + (x.dur || 0)
+  const t0 = today(), days = []; for (let dt = new Date(y, 0, 1); dt.getFullYear() === y; dt.setDate(dt.getDate() + 1)) { const k = `${y}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`; days.push(k) }
+  const goal = goalFor(st, t0), studied = Object.values(by).filter(Boolean).length
+  return (
+    <Card title={`${y} 공부한 날`} action={<span className="tiny muted">{studied}일</span>}>
+      <div className="year-dots">{days.map((k) => { const v = by[k] || 0; return <i key={k} className={(k === t0 ? 'now ' : '') + (k > t0 ? 'fut' : '')} style={v ? { opacity: .25 + .75 * Math.min(1, v / goal), background: 'var(--c2)' } : null} title={k} /> })}</div>
+    </Card>
+  )
+}
+
+function PinnedNotes() {
+  const notes = useColl('notes').filter((n) => n.pinned && !n.archived).sort((a, b) => (a.order ?? -a.updatedAt) - (b.order ?? -b.updatedAt)).slice(0, 6)
+  return (
+    <Card title="고정한 노트" action={<button className="tiny muted" onClick={goto('notes', 'pages')}>→</button>}>
+      <div className="pin-notes">{notes.map((n) => <button key={n.id} className="pin-note" onClick={() => openNote(n.id)}><NoteIcon icon={n.icon} /><span className="ellipsis">{noteTitle(n)}</span></button>)}</div>
+      {!notes.length && <div className="tiny muted">노트를 고정하면 여기서 바로 열려요</div>}
+    </Card>
+  )
+}
+
+function TimeLeft() {
+  const st = useSettings(); useNow(60000)
+  const ds = st.dayStart ?? 420, de = st.dayEnd ?? 1440, span = Math.max(60, de - ds), nm = nowMin(), lf = Math.max(0, Math.min(span, de - nm)), r = 1 - lf / span
+  return (
+    <Card title="오늘 남은 시간">
+      <div className="tl-big">{Math.floor(lf / 60)}<small>시간</small> {lf % 60}<small>분</small></div>
+      <div className="tl-line"><i style={{ width: r * 100 + '%' }} /></div>
+      <div className="row between tiny muted" style={{ marginTop: 4 }}><span>{fmtClock(ds)}</span><span>{fmtClock(de % 1440)}</span></div>
+    </Card>
+  )
+}
+
+// 매일 체크리스트: 항목은 위젯에 저장, 체크는 날짜마다 따로 (다음 날 새로)
+function DailyCheck({ w, update }) {
+  const d = today(), items = w.items || [], on = (w.done && w.done[d]) || []
+  const tog = (i) => update({ done: { [d]: on.includes(i) ? on.filter((x) => x !== i) : [...on, i] } })
+  return (
+    <Card title={w.title || '매일 체크리스트'} action={<span className="tiny muted">{on.length}/{items.length}</span>}>
+      <div className="col" style={{ gap: 4 }}>
+        {items.map((x, i) => <div key={i} className="row" style={{ gap: 8, alignItems: 'center', flexWrap: 'nowrap' }}><Check on={on.includes(i)} onClick={() => tog(i)} /><span className={'grow small' + (on.includes(i) ? ' muted' : '')}>{x}</span><button className="icon-btn" style={{ width: 24, height: 24 }} onClick={() => update({ items: items.filter((_, j) => j !== i), done: {} })} aria-label="삭제"><Icon name="close" size={11} /></button></div>)}
+      </div>
+      <AddInput placeholder="+ 매일 할 것 (예: 물 2L, 스트레칭)" onAdd={(v) => update({ items: [...items, v] })} />
+    </Card>
+  )
+}
+
+// 카운터: 누를 때마다 +1 (오늘 기준, 다음 날 0부터)
+function Counter({ w, update }) {
+  const d = today(), n = (w.count && w.count[d]) || 0, goal = w.goal || 8
+  return (
+    <Card title={w.title || '카운터'} action={<button className="tiny muted" onClick={() => { const t = prompt('이름', w.title || '카운터'); const g = t != null ? prompt('하루 목표 (숫자)', String(goal)) : null; if (t != null) update({ title: t, goal: +g || goal }) }}>바꾸기</button>}>
+      <div className="row" style={{ gap: 10, alignItems: 'center' }}>
+        <button className="btn sm" onClick={() => update({ count: { [d]: Math.max(0, n - 1) } })} aria-label="빼기">−</button>
+        <div className="cnt-big grow">{n}<small> / {goal}</small></div>
+        <button className="btn sm" onClick={() => update({ count: { [d]: n + 1 } })} aria-label="더하기">+</button>
+      </div>
+      <div className="cnt-marks">{Array.from({ length: goal }, (_, i) => <i key={i} className={i < n ? 'on' : ''} />)}</div>
+    </Card>
+  )
+}
+
 export const WIDGETS = {
   tmrw: { label: '내일 미리보기 (저녁 6시부터)', C: Tomorrow, size: 'm' },
   now: { label: '지금 (현재·다음 일정)', C: Now, size: 'm' },
@@ -837,4 +943,12 @@ export const WIDGETS = {
   subtoday: { label: '오늘 하위 할 일', C: SubsToday, size: 'm' },
   weekmemo: { label: '이번 주 메모', C: WeekMemo, size: 'm' },
   quote: { label: '오늘의 다짐', C: QuoteW, size: 'm' },
+  duesoon: { label: '마감 임박 (3일 안)', C: DueSoon, size: 'm' },
+  starred: { label: '중요한 할 일', C: Starred, size: 'm' },
+  onenow: { label: '지금 할 하나', C: OneNow, size: 'm' },
+  yeardots: { label: '올해 공부한 날 (점)', C: YearDots, size: 'm' },
+  pinnotes: { label: '고정한 노트', C: PinnedNotes, size: 'm' },
+  timeleft: { label: '오늘 남은 시간', C: TimeLeft, size: 's' },
+  dailycheck: { label: '매일 체크리스트', C: DailyCheck, size: 'm' },
+  counter: { label: '카운터 (물 · 스트레칭 등)', C: Counter, size: 's' },
 }

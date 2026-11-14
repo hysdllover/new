@@ -1675,3 +1675,24 @@ html[data-hand] .daybar-track i { -webkit-mask-image: var(--pn-speck); mask-imag
 .quote-w-t { font-size: 1.15em; line-height: 1.6; font-family: var(--font-head, inherit); }
 html[data-hand] .quote-w-t { transform: rotate(-.6deg); }
 html[data-hand] .hw-line { background-image: repeating-linear-gradient(to bottom, transparent 0 25px, color-mix(in srgb, #5a6475 14%, transparent) 25px 26px); line-height: 26px; padding-top: 0; }
+
+/* 홈 위젯 2 */
+.one-now-t { font-size: 1.2em; line-height: 1.45; font-family: var(--font-head, inherit); }
+.year-dots { display: grid; grid-template-columns: repeat(auto-fill, minmax(7px, 1fr)); gap: 2px; }
+.year-dots i { aspect-ratio: 1; background: color-mix(in srgb, var(--text) 7%, var(--surface)); border-radius: 1px; }
+.year-dots i.fut { opacity: .45; }
+.year-dots i.now { outline: 1px solid var(--text); outline-offset: 0; }
+html[data-hand] .year-dots i { -webkit-mask-image: var(--pn-speck); mask-image: var(--pn-speck); -webkit-mask-size: 70px 70px; mask-size: 70px 70px; }
+.pin-notes { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 6px; }
+.pin-note { display: flex; align-items: center; gap: 6px; padding: 7px 8px; border: 1px solid var(--line); border-radius: 2px; text-align: left; min-width: 0; font-size: .9em; }
+html[data-hand] .pin-note { border-color: transparent; background-image: var(--pl-h), var(--pl-h), var(--pl-v), var(--pl-v); background-position: 0 -1px, 0 calc(100% + 1px), -1px 0, calc(100% + 1px) 0; background-size: 100% 4px, 100% 4px, 4px 100%, 4px 100%; background-repeat: no-repeat; }
+.tl-big, .cnt-big { font-size: 1.9em; font-weight: 200; line-height: 1.2; font-family: var(--font-head, inherit); }
+.tl-big small, .cnt-big small { font-size: .45em; color: var(--muted); margin: 0 3px; }
+.tl-line { height: 3px; background: var(--line); margin-top: 8px; position: relative; }
+.tl-line i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); }
+html[data-hand] .tl-line i { -webkit-mask-image: var(--pn-speck); mask-image: var(--pn-speck); -webkit-mask-size: 70px 70px; mask-size: 70px 70px; }
+.cnt-big { text-align: center; }
+.cnt-marks { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; justify-content: center; }
+.cnt-marks i { width: 12px; height: 12px; border: 1px solid color-mix(in srgb, var(--accent) 50%, var(--line)); border-radius: 2px; }
+.cnt-marks i.on { background: color-mix(in srgb, var(--accent) 60%, var(--surface)); }
+html[data-hand] .cnt-marks i.on { -webkit-mask-image: var(--pn-speck); mask-image: var(--pn-speck); -webkit-mask-size: 70px 70px; mask-size: 70px 70px; }
