@@ -16,9 +16,8 @@ export function LineChart({ series, height = 140, yMax, yMin = 0, labels = [], g
       {goal != null && <line x1={P} x2={W - 8} y1={sy(goal)} y2={sy(goal)} stroke="var(--c4)" strokeDasharray="3 3" strokeWidth="1" />}
       {series.map((s, i) => s.points.length > 0 && (
         <g key={i}>
-          {/* 연필 테마에서만 보이는 빗금 면 (선 아래) */}
-          {!s.dash && s.points.length > 1 && <polygon className="chart-hatch" points={`${sx(s.points[0][0])},${H - 18} ` + s.points.map(([x, y]) => `${sx(x)},${sy(y)}`).join(' ') + ` ${sx(s.points[s.points.length - 1][0])},${H - 18}`} fill={`url(#hatch-${i})`} />}
-          <pattern id={`hatch-${i}`} width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(-50)"><line x1="0" y1="0" x2="0" y2="5" stroke={s.color} strokeWidth=".7" opacity=".55" /></pattern>
+          {/* 연필 테마에서만 보이는 옅은 면 (선 아래, 색연필 결은 CSS) */}
+          {!s.dash && s.points.length > 1 && <polygon className="chart-hatch" points={`${sx(s.points[0][0])},${H - 18} ` + s.points.map(([x, y]) => `${sx(x)},${sy(y)}`).join(' ') + ` ${sx(s.points[s.points.length - 1][0])},${H - 18}`} fill={s.color} opacity=".16" />}
           <polyline className="chart-line" points={s.points.map(([x, y]) => `${sx(x)},${sy(y)}`).join(' ')} fill="none" stroke={s.color} strokeWidth="1.6" strokeDasharray={s.dash} strokeLinejoin="round" />
           {!s.dash && s.points.map(([x, y], j) => <circle key={j} cx={sx(x)} cy={sy(y)} r="2.2" fill={s.color} />)}
         </g>
