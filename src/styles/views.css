@@ -1430,7 +1430,7 @@ html[data-pencil] .card { border-color: color-mix(in srgb, #55585e 22%, transpar
 html[data-pencil] {
   --pn-fine: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.5' numOctaves='3' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.8 1.75'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   /* 색연필로 칠한 결: 한 방향으로 길쭉한 알갱이(비스듬한 결) — 빗금 대신 */
-  --pn-crayon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.16 1.1' numOctaves='3' seed='11' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.5 1.5'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --pn-crayon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cfilter id='n' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.9' numOctaves='2' seed='11' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -.9 1.3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); /* 색연필 칠: 고운 알갱이만 옅게 (어지럽지 않게) */
   /* 가로 · 세로 연필 선 (모서리에서 3px 만 삐져나가게 — 카드 크기와 상관없이 일정) */
   --pl-h: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 4' preserveAspectRatio='none'%3E%3Cpath d='M0 2.3 L100 1.7' stroke='%235a6475' stroke-width='1' vector-effect='non-scaling-stroke' fill='none'/%3E%3C/svg%3E");
   --pl-v: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 100' preserveAspectRatio='none'%3E%3Cpath d='M1.8 0 L2.2 100' stroke='%235a6475' stroke-width='1' vector-effect='non-scaling-stroke' fill='none'/%3E%3C/svg%3E");
@@ -1446,15 +1446,15 @@ html[data-pencil] .card .card { box-shadow: none; }
 /* 카드 제목: 아래쪽에 옅은 형광펜 띠 (글자는 그대로 깔끔하게) */
 html[data-pencil] .card-h h3 { background: linear-gradient(transparent 60%, rgba(159, 177, 207, .28) 60% 94%, transparent 94%); padding: 0 2px; margin-left: -2px; -webkit-mask-image: none; mask-image: none; }
 /* 막대: 빗금 대신 색연필로 칠한 결 */
-html[data-pencil] :is(.wbar-b, .bar-t i) { box-shadow: none; border-radius: 1px; -webkit-mask-image: var(--pn-crayon); mask-image: var(--pn-crayon); -webkit-mask-size: 120px 120px; mask-size: 120px 120px; }
+html[data-pencil] :is(.wbar-b, .bar-t i) { box-shadow: none; border-radius: 1px; -webkit-mask-image: var(--pn-crayon); mask-image: var(--pn-crayon); -webkit-mask-size: 80px 80px; mask-size: 80px 80px; }
 /* 선 그래프: 흑연 결 선 · 아래는 옅게 색연필로 칠한 면 */
 .chart-hatch { display: none; }
 html[data-pencil] .chart-hatch { display: inline; }
 html[data-pencil] svg.chart { -webkit-mask-image: var(--pn-fine); mask-image: var(--pn-fine); -webkit-mask-size: 90px 90px; mask-size: 90px 90px; }
 /* 달력 · 잔디 칸: 색연필로 칠한 결 (거칠지 않게) */
-html[data-pencil] :is(.mheat-cell:not(.empty), .heat-cell) { -webkit-mask-image: var(--pn-crayon); mask-image: var(--pn-crayon); -webkit-mask-size: 120px 120px; mask-size: 120px 120px; border-radius: 2px; }
+html[data-pencil] :is(.mheat-cell:not(.empty), .heat-cell) { -webkit-mask-image: var(--pn-crayon); mask-image: var(--pn-crayon); -webkit-mask-size: 80px 80px; mask-size: 80px 80px; border-radius: 2px; }
 /* 아래 탭: 고른 탭 밑에 손으로 그은 물결 */
 html[data-pencil] .tabbar button { position: relative; }
 html[data-pencil] .tabbar button.on::after { content: ''; position: absolute; left: 50%; bottom: 3px; width: 22px; height: 5px; transform: translateX(-50%); background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 5'%3E%3Cpath d='M1 3.2C4 1.4 7 1.6 11 2.8S18 3.6 21 1.8' fill='none' stroke='%2355585e' stroke-width='1.1' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat center / 100% 100%; }
 /* 연필 아날로그: 진행선 · 막대도 빗금 대신 색연필 결 */
-html[data-pencil] :is(.prog > i, .subj-bar i, .bar-t i, .rp-track i, .rp-stack i, .rp-prog i, .wbar-b) { -webkit-mask-image: var(--pn-crayon); mask-image: var(--pn-crayon); -webkit-mask-size: 120px 120px; mask-size: 120px 120px; border-radius: 1.5px; }
+html[data-pencil] :is(.prog > i, .subj-bar i, .bar-t i, .rp-track i, .rp-stack i, .rp-prog i, .wbar-b) { -webkit-mask-image: var(--pn-crayon); mask-image: var(--pn-crayon); -webkit-mask-size: 80px 80px; mask-size: 80px 80px; border-radius: 1.5px; }
