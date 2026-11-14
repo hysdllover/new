@@ -1458,3 +1458,10 @@ html[data-pencil] .tabbar button { position: relative; }
 html[data-pencil] .tabbar button.on::after { content: ''; position: absolute; left: 50%; bottom: 3px; width: 22px; height: 5px; transform: translateX(-50%); background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 5'%3E%3Cpath d='M1 3.2C4 1.4 7 1.6 11 2.8S18 3.6 21 1.8' fill='none' stroke='%2355585e' stroke-width='1.1' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat center / 100% 100%; }
 /* 연필 아날로그: 진행선 · 막대도 빗금 대신 색연필 결 */
 html[data-pencil] :is(.prog > i, .subj-bar i, .bar-t i, .rp-track i, .rp-stack i, .rp-prog i, .wbar-b) { -webkit-mask-image: var(--pn-crayon); mask-image: var(--pn-crayon); -webkit-mask-size: 80px 80px; mask-size: 80px 80px; border-radius: 1.5px; }
+
+/* 하위 할 일 날짜 칩: 안에 숨은 날짜 입력을 눌러 고름 */
+.sub-due { position: relative; flex-shrink: 0; min-width: 34px; height: 26px; padding: 0 7px; font-size: .78em; color: var(--muted); justify-content: center; }
+.sub-due.on { color: var(--text); }
+.sub-due.late { color: var(--c4); }
+.sub-due input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; }
+.sub-late { color: var(--c4); }
