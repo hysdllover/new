@@ -114,7 +114,7 @@ export default function TaskEditor({ id }) {
             {subs.map((s, i) => (
               <div key={s.id} className="row sub-row reorder-row" style={{ minHeight: 38 }}>
                 <span className="sub-grip" onPointerDown={(e) => dragSub(e, i)} aria-label="끌어서 순서 바꾸기">⋮⋮</span>
-                <Check on={s.done} round onClick={() => setSubs(subs.map((x) => x.id === s.id ? { ...x, done: !x.done } : x))} />
+                <Check on={s.done} onClick={() => setSubs(subs.map((x) => x.id === s.id ? { ...x, done: !x.done } : x))} />
                 <input className="input bare grow" value={s.title} onChange={(e) => setSubs(subs.map((x) => x.id === s.id ? { ...x, title: e.target.value } : x))} />
                 {/* 하위 할 일 날짜: 누르면 날짜 고르기 · 지우면 날짜 없음 */}
                 <label className={'chip sub-due' + (s.due ? ' on' : '') + (s.due && !s.done && s.due < today() ? ' late' : '')} aria-label="날짜">
