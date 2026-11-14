@@ -116,7 +116,7 @@ function DayCard({ date, tasks }) {
         </div>
         <div className="row" style={{ gap: 6, marginTop: 6 }}>
           <span className="tiny muted">형광펜</span>
-          {HIGHLIGHTS.map((c) => <button key={c} onClick={() => setDay(date, { highlight: day.highlight === c ? null : c })} style={{ width: 22, height: 22, borderRadius: 6, background: c, outline: day.highlight === c ? '2px solid var(--text)' : 'none' }} aria-label="형광펜" />)}
+          {HIGHLIGHTS.map((c) => <button key={c} onClick={() => setDay(date, { highlight: day.highlight === c ? null : c })} style={{ width: 22, height: 22, borderRadius: 2, background: c, outline: day.highlight === c ? '2px solid var(--text)' : 'none' }} aria-label="형광펜" />)}
         </div>
         {templates.length > 0 && (
           <div className="row wrap" style={{ gap: 6, marginTop: 8 }}>

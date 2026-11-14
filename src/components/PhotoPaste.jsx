@@ -38,7 +38,7 @@ export default function PhotoPaste({ close }) {
         </div>
         <div className="tiny muted">단축어 ‘사진으로’가 사진을 복사해 두면 붙여넣기 한 번으로 들어와요.</div>
       </> : <>
-        <img src={url} alt="" style={{ maxWidth: '100%', maxHeight: 260, objectFit: 'contain', borderRadius: 8, alignSelf: 'center' }} />
+        <img src={url} alt="" style={{ maxWidth: '100%', maxHeight: 260, objectFit: 'contain', borderRadius: 2, alignSelf: 'center' }} />
         <input className="input" placeholder="제목 (예: 수학 p.52 3번)" value={title} onChange={(e) => setTitle(e.target.value)} />
         <div className="row wrap" style={{ gap: 6 }}>{subjects.map((s) => <button key={s.id} className={'chip' + (sub === s.id ? ' on' : '')} onClick={() => setSub(sub === s.id ? '' : s.id)}><span className="dot" style={{ background: s.color }} />{s.name}</button>)}</div>
         <div className="row" style={{ gap: 6 }}>

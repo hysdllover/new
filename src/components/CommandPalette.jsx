@@ -53,7 +53,7 @@ export default function CommandPalette({ close }) {
       </div>
       <div className="list">
         {res.map((r, i) => (
-          <button key={r.k} className="item" style={{ textAlign: 'left', background: i === sel ? 'var(--surface-2)' : null, borderRadius: 8, padding: '10px 8px' }} onClick={() => run(r)}>
+          <button key={r.k} className="item" style={{ textAlign: 'left', background: i === sel ? 'var(--surface-2)' : null, borderRadius: 2, padding: '10px 8px' }} onClick={() => run(r)}>
             <Icon name={r.icon} size={16} />
             <div className="t ellipsis">{r.label}</div>
             <span className="tiny muted nowrap">{r.sub}</span>
