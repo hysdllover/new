@@ -1835,7 +1835,7 @@ export default () => `  } else if (TYLAY) {
     } else if (KIND === 'dashxl') {
       // ── 한 화면 대시보드 (아이패드 아주 큰 크기): 왼쪽 오늘 · 가운데 10분 칸 · 오른쪽 이번 주 + D-day ──
       // 칸 사이는 늘어나는 빈칸으로 — 실제 폭이 조금 달라도 잘리지 않게
-      const WX = Math.floor(inner * 0.97), gap = 10, c1 = Math.floor(WX * 0.37), c2 = Math.floor(WX * 0.3), c3 = WX - c1 - c2 - gap * 4 - 1.4
+      const WX = inner - 2, gap = 10, c1 = Math.floor(WX * 0.37), c2 = Math.floor(WX * 0.3), c3 = WX - c1 - c2 - gap * 4 - 1.4
       const row = w.addStack(); row.topAlignContent()
       const L = row.addStack(); L.layoutVertically(); L.size = new Size(c1, innerH)
       head(L, 'TODAY', dateStr); L.addSpacer(8)
@@ -1906,7 +1906,7 @@ export default () => `  } else if (TYLAY) {
       head(L, 'STUDY', dateStr); L.addSpacer(8)
       const sr = L.addStack(); sr.bottomAlignContent(); studyLive(sr, thin(48), INK).minimumScaleFactor = 0.5; sr.addSpacer(8); t(sr, '/ ' + hm(goal), tw(13), SOFT); sr.addSpacer(); t(sr, pct + '%', tw(13), GOLD)
       L.addSpacer(5); pbar(L, mins / goal, c1); L.addSpacer(16)
-      lab(L, 'THIS WEEK  ' + hm(weekTot)); L.addSpacer(5); bars7(L, c1, Math.round(innerH * 0.3), GOLD, RULE); L.addSpacer(3); wdRow(L, c1, 8)
+      lab(L, 'THIS WEEK  ' + hm(weekTot)); L.addSpacer(5); bars7(L, c1, Math.round(innerH * 0.42), GOLD, RULE); L.addSpacer(3); wdRow(L, c1, 8)
       L.addSpacer()
       row.addSpacer(gap); vrule(row, innerH); row.addSpacer(gap)
       const R = row.addStack(); R.layoutVertically(); R.size = new Size(c2, innerH)
@@ -1957,8 +1957,8 @@ export default () => `  } else if (TYLAY) {
       head(w, 'HABITS', hs.length ? on + ' / ' + hs.length + ' TODAY' : ''); w.addSpacer(10)
       if (!hs.length) t(w, '앱 › 건강 › 습관에서 추가해 보세요', tw(13), SOFT)
       const nameW = Math.floor(inner * 0.3), gap = 6, sz = Math.min(28, Math.floor((inner - nameW - gap * 8) / 7)), rh = Math.min(sz, Math.floor((innerH - 50 * SCALE) / Math.max(1, hs.length)) - 6)
-      const hr = w.addStack(); const nmc = hr.addStack(); nmc.size = new Size(nameW, 10); hr.spacing = gap
-      for (let i = 6; i >= 0; i--) { const dt = new Date(d0); dt.setDate(dt.getDate() - i); const c = hr.addStack(); c.size = new Size(sz, 10); c.centerAlignContent(); t(c, WDN[dt.getDay()], label(7), i === 0 ? GOLD : SOFT) }
+      const hr = w.addStack(); const nmc = hr.addStack(); nmc.size = new Size(nameW, 12); hr.spacing = gap
+      for (let i = 6; i >= 0; i--) { const dt = new Date(d0); dt.setDate(dt.getDate() - i); const c = hr.addStack(); c.size = new Size(sz, 12); c.centerAlignContent(); t(c, WDN[dt.getDay()], label(7), i === 0 ? GOLD : SOFT) }
       w.addSpacer(4)
       for (const h0 of hs.slice(0, 8)) {
         const r = w.addStack(); r.spacing = gap; r.centerAlignContent(); const nc = r.addStack(); nc.size = new Size(nameW, rh); nc.centerAlignContent(); t(nc, h0.t, tw(12.5), INK).minimumScaleFactor = 0.7; nc.addSpacer()

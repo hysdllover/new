@@ -168,7 +168,8 @@ function tickImg(sz, hex) {
 function doodleWave(parent, w) { if (!DOODLE) return; const im = parent.addImage(waveImg(w)); im.imageSize = new Size(w, 6) }
 let RW = 0.6 // 구분선 굵기 (앱 설정 › 위젯 구분선)
 function rule(parent, w) { const s = parent.addStack(); s.size = new Size(w, RW || 0.1); if (RW) s.backgroundColor = RULE }
-function vrule(parent, h) { if (PENCV && RW) { const T = Math.max(4, RW * 4), im = parent.addImage(graphite(h, Math.max(0.6, RW), true)); im.imageSize = new Size(T, h); return } const s = parent.addStack(); s.size = new Size(RW || 0.1, h); if (RW) s.backgroundColor = RULE }
+// 세로 선: 연필 선은 자리 폭을 보통 선과 같게(그림은 양옆 틈으로 살짝 넘침)
+function vrule(parent, h) { if (PENCV && RW) { const T = Math.max(4, RW * 4), box = parent.addStack(); box.size = new Size(RW, h); box.centerAlignContent(); const im = box.addImage(graphite(h, Math.max(0.6, RW), true)); im.imageSize = new Size(T, h); return } const s = parent.addStack(); s.size = new Size(RW || 0.1, h); if (RW) s.backgroundColor = RULE }
 // 노트: Parameter '노트' → 고정·최근 노트, '노트:제목' → 제목에 그 말이 든 노트
 const NOTES = () => (data && Array.isArray(data.notes) ? data.notes : [])
 // 노트 고르기: Parameter(노트:제목) → 앱에서 고정한 노트 → 최근 노트
