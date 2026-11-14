@@ -1632,3 +1632,28 @@ html[data-hand] .blk-v.done { text-decoration: none; background: url("data:image
 /* 할 일 줄긋기(목록 외 다른 곳): 연필 줄 */
 html[data-hand] :is(.tl-item.done .tl-title, .one.done .one-title, .wgoal.done .wgoal-t, .mpeek-row.done .ellipsis, .bb-card.done .grow, .wgoal-task.done .ellipsis, .fl-t.done) { text-decoration: none; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 6' preserveAspectRatio='none'%3E%3Cpath d='M1 3.6C30 2.4 60 3.9 92 3C124 2.2 160 3.8 199 2.6' fill='none' stroke='%237d8494' stroke-width='1.4' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat 0 55% / 100% 5px; }
 html[data-hand] .wkb-col:not(.loose) .wkb-list:has(.wkb-empty) { background-image: repeating-linear-gradient(to bottom, transparent 0 29px, color-mix(in srgb, #5a6475 12%, transparent) 29px 30px); }
+/* ── 체크박스: 연필로 그린 네모 · 손으로 그은 체크 (색은 과목 색 · 포인트 색 그대로) ──
+   상자 색을 바탕으로 칠하고, 마스크로 '네 변 연필 선 · 체크 · 옅은 칠'만 남겨 그림 */
+html[data-hand] {
+  --ck-box: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cg fill='none' stroke='%23000' stroke-linecap='round'%3E%3Cpath d='M1.3 2.2 Q10 1.4 18.9 1.7' stroke-width='1.35'/%3E%3Cpath d='M18.2 1 Q18.9 10 18.6 18.9' stroke-width='1.2'/%3E%3Cpath d='M19 18.2 Q10 18.9 1.4 18.6' stroke-width='1.35'/%3E%3Cpath d='M1.8 19 Q1.2 10 1.6 1.2' stroke-width='1.2'/%3E%3C/g%3E%3C/svg%3E");
+  --ck-tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M4.4 10.2 C6 11.4 7.3 13.1 8.4 15.3 C10.6 10.3 13.5 6.3 17.8 2.4' fill='none' stroke='%23000' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --ck-fill: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Crect x='2' y='2.2' width='16' height='15.8' fill='%23000' fill-opacity='.13'/%3E%3C/svg%3E");
+}
+html[data-hand] .check, html[data-hand] .check.round {
+  border: 0 !important; border-radius: 0 !important; animation: none;
+  background: color-mix(in srgb, var(--ck, var(--text)) 62%, transparent) !important;
+  -webkit-mask: var(--ck-box) center / 100% 100% no-repeat; mask: var(--ck-box) center / 100% 100% no-repeat;
+}
+html[data-hand] .check.on {
+  background: var(--ck, var(--accent)) !important;
+  -webkit-mask: var(--ck-tick) center / 100% 100% no-repeat, var(--ck-box) center / 100% 100% no-repeat, var(--ck-fill) center / 100% 100% no-repeat;
+  mask: var(--ck-tick) center / 100% 100% no-repeat, var(--ck-box) center / 100% 100% no-repeat, var(--ck-fill) center / 100% 100% no-repeat;
+}
+html[data-hand] .check.on::after, html[data-hand] .check .burst { display: none; }
+/* 방금 체크했을 때: 살짝 눌렸다 돌아오는 정도만 */
+@keyframes ck-press { 0% { transform: scale(.86); } 100% { transform: scale(1); } }
+html[data-hand] .check.on.fresh { animation: ck-press .25s ease-out; }
+/* 하위 할 일 작은 체크도 같은 그림 */
+html[data-hand] .sub-ck { border: 0 !important; border-radius: 0; background: color-mix(in srgb, var(--accent) 40%, var(--muted)) !important; -webkit-mask: var(--ck-box) center / 100% 100% no-repeat; mask: var(--ck-box) center / 100% 100% no-repeat; }
+html[data-hand] .sub-ck.on { background: color-mix(in srgb, var(--accent) 75%, var(--surface)) !important; -webkit-mask: var(--ck-tick) center / 100% 100% no-repeat, var(--ck-box) center / 100% 100% no-repeat, var(--ck-fill) center / 100% 100% no-repeat; mask: var(--ck-tick) center / 100% 100% no-repeat, var(--ck-box) center / 100% 100% no-repeat, var(--ck-fill) center / 100% 100% no-repeat; }
+html[data-hand] .sub-ck.on::after { display: none; }
