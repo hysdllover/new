@@ -1465,15 +1465,15 @@ html[data-pencil] :is(.prog > i, .subj-bar i, .bar-t i, .rp-track i, .rp-stack i
 .sub-due.late { color: var(--c4); }
 .sub-due input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; }
 .sub-late { color: var(--c4); }
-/* 할 일 아래 하위 할 일 (리스트 · 주간 배치): 작은 알약 모양으로 나란히 — 체크 · 제목 · (다른 날이면) 날짜 */
+/* 할 일 아래 하위 할 일 (리스트 · 주간 배치): 각진 작은 칸으로 나란히 (둥글게 하지 않음) — 체크 · 제목 · (다른 날이면) 날짜 */
 .task-subs { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
-.task-sub { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-width: 0; min-height: 24px; padding: 2px 9px 2px 5px; border-radius: 999px; font-size: .82em; line-height: 1.3; color: color-mix(in srgb, var(--text) 88%, var(--muted)); background: color-mix(in srgb, var(--text) 4.5%, var(--surface)); border: 1px solid color-mix(in srgb, var(--line) 80%, transparent); }
+.task-sub { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-width: 0; min-height: 24px; padding: 2px 8px 2px 5px; border-radius: 2px; font-size: .82em; line-height: 1.3; color: color-mix(in srgb, var(--text) 88%, var(--muted)); background: color-mix(in srgb, var(--text) 4.5%, var(--surface)); border: 1px solid color-mix(in srgb, var(--line) 80%, transparent); }
 .task-sub.done { background: transparent; border-style: dashed; }
 .task-sub.done .sub-tt { color: var(--muted); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 55%, transparent); }
-.sub-ck { flex-shrink: 0; width: 14px; height: 14px; border-radius: 50%; border: 1.2px solid color-mix(in srgb, var(--accent) 55%, var(--muted)); background: var(--surface); padding: 0; position: relative; }
+.sub-ck { flex-shrink: 0; width: 13px; height: 13px; border-radius: 2px; border: 1.2px solid color-mix(in srgb, var(--accent) 55%, var(--muted)); background: var(--surface); padding: 0; position: relative; }
 .sub-ck::before { content: ''; position: absolute; inset: -8px; }
 .sub-ck.on { background: color-mix(in srgb, var(--accent) 70%, var(--surface)); border-color: transparent; }
-.sub-ck.on::after { content: ''; position: absolute; left: 4.3px; top: 2px; width: 3px; height: 6px; border: solid var(--surface); border-width: 0 1.4px 1.4px 0; transform: rotate(42deg); }
+.sub-ck.on::after { content: ''; position: absolute; left: 3.8px; top: 1.6px; width: 3px; height: 6px; border: solid var(--surface); border-width: 0 1.4px 1.4px 0; transform: rotate(42deg); }
 .sub-tt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sub-d { flex-shrink: 0; font-size: .9em; color: var(--muted); padding-left: 6px; border-left: 1px solid var(--line); }
 .sub-d.late { color: var(--c4); }
