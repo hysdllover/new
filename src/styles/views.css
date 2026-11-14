@@ -1661,3 +1661,17 @@ html[data-hand] .sub-ck { border: 0 !important; border-radius: 0; background: tr
 html[data-hand] .sub-ck::before { inset: -8px; background: color-mix(in srgb, var(--accent) 40%, var(--muted)); -webkit-mask: var(--ck-box) center / calc(100% - 16px) calc(100% - 16px) no-repeat; mask: var(--ck-box) center / calc(100% - 16px) calc(100% - 16px) no-repeat; }
 html[data-hand] .sub-ck.on::before { background: color-mix(in srgb, var(--accent) 75%, var(--surface)); -webkit-mask: var(--ck-box) center / calc(100% - 16px) calc(100% - 16px) no-repeat, var(--ck-fill) center / calc(100% - 16px) calc(100% - 16px) no-repeat; mask: var(--ck-box) center / calc(100% - 16px) calc(100% - 16px) no-repeat, var(--ck-fill) center / calc(100% - 16px) calc(100% - 16px) no-repeat; }
 html[data-hand] .sub-ck.on::after { content: ''; position: absolute; left: 4%; top: -4%; width: 106%; height: 104%; border: 0; transform: none; background: color-mix(in srgb, var(--accent) 80%, var(--text)); -webkit-mask: var(--ck-tick2) center / 100% 100% no-repeat; mask: var(--ck-tick2) center / 100% 100% no-repeat; }
+
+/* 홈 위젯: 오늘 하루 막대 · 다짐 · 한 줄 */
+.daybar { position: relative; padding: 2px 0 14px; }
+.daybar-ev { position: relative; height: 5px; margin-bottom: 3px; }
+.daybar-ev i { position: absolute; top: 0; height: 100%; border-radius: 1px; opacity: .7; }
+.daybar-track { position: relative; height: 16px; background: color-mix(in srgb, var(--text) 5%, var(--surface)); border-radius: 2px; overflow: hidden; }
+.daybar-track i { position: absolute; top: 0; bottom: 0; opacity: .85; }
+.daybar-track b { position: absolute; top: -2px; bottom: -2px; width: 1.5px; background: var(--text); }
+.daybar-h { position: relative; height: 12px; margin-top: 3px; }
+.daybar-h span { position: absolute; transform: translateX(-50%); font-size: .7em; color: var(--muted); }
+html[data-hand] .daybar-track i { -webkit-mask-image: var(--pn-speck); mask-image: var(--pn-speck); -webkit-mask-size: 70px 70px; mask-size: 70px 70px; }
+.quote-w-t { font-size: 1.15em; line-height: 1.6; font-family: var(--font-head, inherit); }
+html[data-hand] .quote-w-t { transform: rotate(-.6deg); }
+html[data-hand] .hw-line { background-image: repeating-linear-gradient(to bottom, transparent 0 25px, color-mix(in srgb, #5a6475 14%, transparent) 25px 26px); line-height: 26px; padding-top: 0; }
