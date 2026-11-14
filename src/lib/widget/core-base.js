@@ -114,7 +114,7 @@ async function load() {
 const dark = () => false // 다크 모드 금지
 // 가는 진행선
 let DDHEX = null // 별표한 D-day 색 (진행선 · D-day 숫자 포인트)
-let PENCIL = false // 종이 테마: 연필 빗금 진행선 · 연필 체크
+let PENCIL = false // 종이 · 연필 테마: 색연필 결 진행선 · 연필 체크
 let PENCV = false // 연필 아날로그 위젯 테마: 선을 흑연 결로
 // 흑연 선: 1px 마다 굵기·진하기가 조금씩 다른 알갱이로 그어 연필로 그은 결처럼 (가로 · 세로)
 function graphite(len, lw, vertical, strong) {
@@ -132,8 +132,9 @@ function line(ratio, w, fg, bg) {
   const c = new DrawContext(); c.size = new Size(w, 3); c.opaque = false; c.respectScreenScale = true
   if (PENCIL) {
     c.setFillColor(new Color(bg || '#c9cbcf')); c.fillRect(new Rect(0, 1.25, w, 0.5))
-    c.setStrokeColor(new Color(fg || DDHEX || '#66778f')); c.setLineWidth(0.9)
-    for (let x = 0; x < Math.max(2, w * Math.min(1, ratio)) - 1; x += 2.2) { const p = new Path(); p.move(new Point(x, 3)); p.addLine(new Point(x + 1.8, 0)); c.addPath(p); c.strokePath() }
+    // 색연필로 칠한 결: 0.7px 마다 진하기·두께가 조금씩 다른 알갱이 (빗금 대신)
+    const col = fg || DDHEX || '#66778f', end = Math.max(2, w * Math.min(1, ratio)); let sd = Math.round(w * 13) || 1; const rnd = () => { sd = (sd * 16807) % 2147483647; return sd / 2147483647 }
+    for (let x = 0; x < end; x += 0.7) { const th = 1.6 + rnd() * 0.9; c.setFillColor(new Color(col, 0.35 + rnd() * 0.55)); c.fillRect(new Rect(x, 1.5 - th / 2 + (rnd() - 0.5) * 0.4, 0.8, th)) }
     return c.getImage()
   }
   c.setFillColor(new Color(bg || (dark() ? '#2a2f37' : '#dce1e7'))); c.fillRect(new Rect(0, 1, w, 1))
