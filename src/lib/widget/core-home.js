@@ -1834,20 +1834,21 @@ export default () => `  } else if (TYLAY) {
       if (!items.filter((y) => !y.done).length) t(w, 'All clear.', tw(fs), SOFT)
     } else if (KIND === 'dashxl') {
       // ── 한 화면 대시보드 (아이패드 아주 큰 크기): 왼쪽 오늘 · 가운데 10분 칸 · 오른쪽 이번 주 + D-day ──
-      const gap = 14, c1 = Math.floor(inner * 0.36), c2 = Math.floor(inner * 0.3), c3 = inner - c1 - c2 - gap * 4 - 1.4
-      const row = w.addStack(); row.size = new Size(inner, innerH); row.topAlignContent()
+      // 칸 사이는 늘어나는 빈칸으로 — 실제 폭이 조금 달라도 잘리지 않게
+      const WX = Math.floor(inner * 0.97), gap = 10, c1 = Math.floor(WX * 0.37), c2 = Math.floor(WX * 0.3), c3 = WX - c1 - c2 - gap * 4 - 1.4
+      const row = w.addStack(); row.topAlignContent()
       const L = row.addStack(); L.layoutVertically(); L.size = new Size(c1, innerH)
       head(L, 'TODAY', dateStr); L.addSpacer(8)
       const sr = L.addStack(); sr.bottomAlignContent(); studyLive(sr, thin(40), INK).minimumScaleFactor = 0.5; sr.addSpacer(6); t(sr, '/ ' + hm(goal), tw(12), SOFT); sr.addSpacer(); t(sr, pct + '%', tw(12), GOLD)
       L.addSpacer(4); pbar(L, mins / goal, c1); L.addSpacer(12)
       const top3 = EX2.top3 || []
-      if (top3.length) { lab(L, 'TOP 3'); L.addSpacer(3); top3.forEach((x, i) => { const r = L.addStack(); r.url = taskUrl(x.id); t(r, (i + 1) + '  ' + x.title, tw(13), x.d ? SOFT : INK).minimumScaleFactor = 0.75; L.addSpacer(3) }); L.addSpacer(8) }
+      if (top3.length) { lab(L, 'TOP 3'); L.addSpacer(3); top3.forEach((x, i) => { const r = L.addStack(); r.url = taskUrl(x.id); t(r, (i + 1) + '  ' + (x.t || x.title || ''), tw(13), x.d ? SOFT : INK).minimumScaleFactor = 0.75; L.addSpacer(3) }); L.addSpacer(8) }
       lab(L, 'TO DO  ' + done + '/' + items.length); L.addSpacer(3)
       for (const x of items.filter((y) => !y.done).slice(0, CNT || (top3.length ? 5 : 8))) { tRow(L, x, 12); L.addSpacer(3) }
       L.addSpacer()
       const evs = evOf(today).filter((e) => e.s == null || (e.e ?? e.s + 60) > nm)
       if (evs.length) { lab(L, 'PLAN'); L.addSpacer(3); for (const e of evs.slice(0, 3)) { const r = L.addStack(); t(r, e.s == null ? '종일' : clk(e.s % 1440), tw(11), GOLD); r.addSpacer(6); t(r, e.t, tw(12), INK).minimumScaleFactor = 0.75; r.addSpacer(); L.addSpacer(2) } }
-      row.addSpacer(gap); vrule(row, innerH); row.addSpacer(gap)
+      row.addSpacer(gap); row.addSpacer(); vrule(row, innerH); row.addSpacer(gap)
       const M = row.addStack(); M.layoutVertically(); M.size = new Size(c2, innerH)
       head(M, '10 MIN', hm(mins)); M.addSpacer(6)
       { // 10분 칸 (6~23시)
@@ -1860,11 +1861,11 @@ export default () => `  } else if (TYLAY) {
         for (let r = 0; r < rows; r++) { const hr = 6 + r, y0 = r * rh; cv.drawText(String(hr), new Point(0, y0 + rh / 2 - 5)); cv.setFillColor(new Color(ink, 0.12)); cv.fillRect(new Rect(0, y0 + rh - 0.5, c2, 0.5)); for (let k = 0; k < 6; k++) { const col2 = fill[hr * 6 + k]; if (!col2) continue; const p = new Path(); p.addRoundedRect(new Rect(lw + k * sw + 0.6, y0 + rh * 0.22, sw - 1.2, rh * 0.56), 1.5, 1.5); cv.addPath(p); cv.setFillColor(new Color(col2, 0.7)); cv.fillPath() } }
         const im = M.addImage(cv.getImage()); im.imageSize = new Size(c2, H3)
       }
-      row.addSpacer(gap); vrule(row, innerH); row.addSpacer(gap)
+      row.addSpacer(gap); row.addSpacer(); vrule(row, innerH); row.addSpacer(gap)
       const R = row.addStack(); R.layoutVertically(); R.size = new Size(c3, innerH)
       head(R, 'THIS WEEK', hm(weekTot)); R.addSpacer(8); bars7(R, c3, Math.round(innerH * 0.22), GOLD, RULE); R.addSpacer(3); wdRow(R, c3, 8)
       R.addSpacer(14); lab(R, 'D-DAYS'); R.addSpacer(4)
-      for (const x of ddAll.slice(0, 4)) { const r = R.addStack(); r.centerAlignContent(); t(r, x.title, tw(12), INK).minimumScaleFactor = 0.7; r.addSpacer(); t(r, ddT(x), tw(12), GOLD); R.addSpacer(3) }
+      for (const x of ddAll.slice(0, 4)) { const r = R.addStack(); r.size = new Size(c3, 0); r.centerAlignContent(); t(r, x.title, tw(12), INK).minimumScaleFactor = 0.7; r.addSpacer(6); t(r, ddT(x), tw(12), GOLD); R.addSpacer(3) }
       if (!ddAll.length) t(R, 'No D-day', tw(11), SOFT)
       R.addSpacer(); if (quote) t(R, quote, tw(11), SOFT, 3).minimumScaleFactor = 0.8
       FILL = true
@@ -1898,7 +1899,7 @@ export default () => `  } else if (TYLAY) {
       const B = row.addStack(); B.layoutVertically(); B.size = new Size(cw, ch); B.url = link('tasks')
       lab(B, 'TO DO  ' + done + '/' + items.length); B.addSpacer(4)
       const top3 = EX2.top3 || []
-      top3.forEach((x, i) => { const rr = B.addStack(); rr.url = taskUrl(x.id); t(rr, (i + 1) + '  ' + x.title, F(12, 'Regular'), x.d ? SOFT : INK).minimumScaleFactor = 0.75; B.addSpacer(3) })
+      top3.forEach((x, i) => { const rr = B.addStack(); rr.url = taskUrl(x.id); t(rr, (i + 1) + '  ' + (x.t || x.title || ''), F(12, 'Regular'), x.d ? SOFT : INK).minimumScaleFactor = 0.75; B.addSpacer(3) })
       if (top3.length) { B.addSpacer(4); rule(B, cw); B.addSpacer(6) }
       for (const x of items.filter((y) => !top3.some((z) => z.id === y.id)).slice(0, CNT || 12)) { tRow(B, x, 12); B.addSpacer(3) }
       B.addSpacer()
