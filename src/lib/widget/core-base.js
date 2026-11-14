@@ -132,9 +132,10 @@ function line(ratio, w, fg, bg) {
   const c = new DrawContext(); c.size = new Size(w, 3); c.opaque = false; c.respectScreenScale = true
   if (PENCIL) {
     c.setFillColor(new Color(bg || '#c9cbcf')); c.fillRect(new Rect(0, 1.25, w, 0.5))
-    // 색연필로 칠한 결: 0.7px 마다 진하기·두께가 조금씩 다른 알갱이 (빗금 대신)
+    // 색연필 칠: 고르게 칠한 위에 고운 알갱이만 옅게 (어지럽지 않게)
     const col = fg || DDHEX || '#66778f', end = Math.max(2, w * Math.min(1, ratio)); let sd = Math.round(w * 13) || 1; const rnd = () => { sd = (sd * 16807) % 2147483647; return sd / 2147483647 }
-    for (let x = 0; x < end; x += 0.7) { const th = 1.6 + rnd() * 0.9; c.setFillColor(new Color(col, 0.35 + rnd() * 0.55)); c.fillRect(new Rect(x, 1.5 - th / 2 + (rnd() - 0.5) * 0.4, 0.8, th)) }
+    c.setFillColor(new Color(col, 0.78)); c.fillRect(new Rect(0, 0.5, end, 2)) // 고르게 칠하고
+    for (let x = 0; x < end; x += 1.1) if (rnd() < 0.35) { c.setFillColor(new Color('#ffffff', 0.12 + rnd() * 0.14)); c.fillRect(new Rect(x, 0.5 + rnd() * 1.5, 0.8, 0.5)) } // 고운 알갱이만 옅게
     return c.getImage()
   }
   c.setFillColor(new Color(bg || (dark() ? '#2a2f37' : '#dce1e7'))); c.fillRect(new Rect(0, 1, w, 1))
