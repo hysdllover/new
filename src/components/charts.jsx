@@ -157,6 +157,7 @@ export function WeekBars({ values, goal }) {
         {days.map((d) => { const v = values[d] || 0; return (
           <div key={d} className={'wbar' + (d === t ? ' now' : '') + (goal && v >= goal ? ' hit' : '')}>
             {v > 0 && <span className="wbar-v">{hm(v)}</span>}
+            {goal > 0 && v < goal && <i className="wbar-ghost" style={{ height: (goal / max) * 100 + '%' }} />}
             <i className="wbar-b" style={{ height: Math.max(v ? 3 : 0, (v / max) * 100) + '%' }} />
           </div>
         ) })}
