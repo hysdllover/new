@@ -1644,7 +1644,7 @@ html[data-hand] .check, html[data-hand] .check.round { border: 0 !important; bor
 html[data-hand] .check::before { inset: -12px; background: color-mix(in srgb, var(--ck, var(--text)) 62%, transparent); -webkit-mask: var(--ck-box) center / calc(100% - 24px) calc(100% - 24px) no-repeat; mask: var(--ck-box) center / calc(100% - 24px) calc(100% - 24px) no-repeat; }
 html[data-hand] .check.on::before { background: var(--ck, var(--accent)); -webkit-mask: var(--ck-box) center / calc(100% - 24px) calc(100% - 24px) no-repeat, var(--ck-fill) center / calc(100% - 24px) calc(100% - 24px) no-repeat; mask: var(--ck-box) center / calc(100% - 24px) calc(100% - 24px) no-repeat, var(--ck-fill) center / calc(100% - 24px) calc(100% - 24px) no-repeat; }
 html[data-hand] .check.on::after {
-  content: ''; display: block; position: absolute; left: 8%; top: -34%; width: 128%; height: 118%; border: 0; transform: none; border-radius: 0;
+  content: ''; display: block; position: absolute; left: 4%; top: -12%; width: 106%; height: 104%; border: 0; transform: none; border-radius: 0;
   background: var(--ck, var(--accent));
   -webkit-mask: var(--ck-tick2) center / 100% 100% no-repeat; mask: var(--ck-tick2) center / 100% 100% no-repeat;
 }
@@ -1660,4 +1660,4 @@ html[data-hand] .check.on.fresh::after { animation: ck-draw .32s cubic-bezier(.3
 html[data-hand] .sub-ck { border: 0 !important; border-radius: 0; background: transparent !important; overflow: visible; }
 html[data-hand] .sub-ck::before { inset: -8px; background: color-mix(in srgb, var(--accent) 40%, var(--muted)); -webkit-mask: var(--ck-box) center / calc(100% - 16px) calc(100% - 16px) no-repeat; mask: var(--ck-box) center / calc(100% - 16px) calc(100% - 16px) no-repeat; }
 html[data-hand] .sub-ck.on::before { background: color-mix(in srgb, var(--accent) 75%, var(--surface)); -webkit-mask: var(--ck-box) center / calc(100% - 16px) calc(100% - 16px) no-repeat, var(--ck-fill) center / calc(100% - 16px) calc(100% - 16px) no-repeat; mask: var(--ck-box) center / calc(100% - 16px) calc(100% - 16px) no-repeat, var(--ck-fill) center / calc(100% - 16px) calc(100% - 16px) no-repeat; }
-html[data-hand] .sub-ck.on::after { content: ''; position: absolute; left: 8%; top: -34%; width: 128%; height: 118%; border: 0; transform: none; background: color-mix(in srgb, var(--accent) 80%, var(--text)); -webkit-mask: var(--ck-tick2) center / 100% 100% no-repeat; mask: var(--ck-tick2) center / 100% 100% no-repeat; }
+html[data-hand] .sub-ck.on::after { content: ''; position: absolute; left: 4%; top: -12%; width: 106%; height: 104%; border: 0; transform: none; background: color-mix(in srgb, var(--accent) 80%, var(--text)); -webkit-mask: var(--ck-tick2) center / 100% 100% no-repeat; mask: var(--ck-tick2) center / 100% 100% no-repeat; }
