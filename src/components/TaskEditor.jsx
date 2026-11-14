@@ -7,7 +7,7 @@ import { updateTask, toggleTask, deleteTask, scheduleTask, splitTask, addReview,
 import { Icon, Check, Field, AutoText, closeDetail, openSheet, toast, Prog, openDetail } from './ui.jsx'
 import { PRI, SubjectSelect, ProjectSelect, RepeatEditor, TimeInput } from './common.jsx'
 import { LinksEditor, FilesEditor } from './Attach.jsx'
-import { fmtDur, today, fmtShort, addDays, LOOSE, looseDue } from '../engine/date.js'
+import { fmtDur, today, fmtShort, addDays, diffDays, LOOSE, looseDue } from '../engine/date.js'
 import RecordEditor from './RecordEditor.jsx'
 import { openNote } from '../nav.js'
 import { newBlock } from '../lib/notes.js'
@@ -27,6 +27,26 @@ export default function TaskEditor({ id }) {
   const up = (p) => updateTask(id, p)
   const subs = t.subtasks || []
   const [sec, setSec] = useState('base') // 섹션 탭: 기본 · 하위 할 일 · 기록 · 첨부
+  const [newDue, setNewDue0] = useState(() => { try { return localStorage.getItem('sub_newdue') || 'none' } catch { return 'none' } }) // 새 하위 할 일 날짜: 없음 · 상위와 같게 · 이어서(마지막 날짜 다음 날) — 이 기기에 기억
+  const setNewDue = (v) => { setNewDue0(v); try { localStorage.setItem('sub_newdue', v) } catch {} }
+  // 하위 할 일 날짜 한 번에 (안 끝낸 것만, 정한 순서대로)
+  const bulkDue = (mode) => {
+    const left = subs.filter((x) => !x.done), n = left.length, t0 = today()
+    if (!n) return toast('남은 하위 할 일이 없어요')
+    const start = t0
+    const span = t.due && t.due >= t0 ? diffDays(t.due, t0) + 1 : n
+    const dayOf = (i) => mode === 'today' ? t0 : mode === 'tmrw' ? addDays(t0, 1) : mode === 'parent' ? (t.due || t0) : mode === 'seq' ? addDays(start, i) : mode === 'spread' ? addDays(t0, Math.floor((i * span) / n)) : null
+    const idx = new Map(left.map((x, i) => [x.id, i]))
+    setSubs(subs.map((x) => (idx.has(x.id) ? { ...x, due: dayOf(idx.get(x.id)) } : x)))
+    toast(mode === 'clear' ? '하위 날짜를 지웠어요' : '하위 할 일 ' + n + '개 날짜를 정했어요')
+  }
+  // 새 하위 할 일 날짜 (여러 줄을 붙여 넣으면 줄마다 하나씩, '이어서'면 하루씩 이어서)
+  const addSubs = (titles) => {
+    const t0 = today(), last = subs.map((x) => x.due).filter(Boolean).sort().pop()
+    let nx = last && last >= t0 ? addDays(last, 1) : t0
+    const add = titles.map((title) => { const due = newDue === 'parent' ? t.due || null : newDue === 'seq' ? nx : null; if (newDue === 'seq') nx = addDays(nx, 1); return { id: uid(), title, done: false, ...(due ? { due } : null) } })
+    setSubs([...subs, ...add])
+  }
   const setSubs = (s) => patch('tasks', id, { subtasks: s })
   const dragSub = (e, i) => dragReorder(e, i, (from, to) => { const a = [...subs]; a.splice(to, 0, a.splice(from, 1)[0]); setSubs(a) })
   const spent = taskSpent(id, sessions)
@@ -105,9 +125,21 @@ export default function TaskEditor({ id }) {
               </div>
             ))}
           </div>
-          <form onSubmit={(e) => { e.preventDefault(); const v = e.target.s.value.trim(); if (v) { setSubs([...subs, { id: uid(), title: v, done: false }]); e.target.reset() } }}>
-            <input name="s" className="input" placeholder="+ 하위 할 일 추가" />
+          <form onSubmit={(e) => { e.preventDefault(); const v = e.target.s.value.trim(); if (v) { addSubs([v]); e.target.reset() } }}>
+            <input name="s" className="input" placeholder="+ 하위 할 일 추가 · 여러 줄 붙여넣기 가능" onPaste={(e) => { const tx = e.clipboardData.getData('text'); const L = tx.split(/\r?\n/).map((x) => x.replace(/^\s*([-*•·]|\d+[.)])\s*/, '').trim()).filter(Boolean); if (L.length > 1) { e.preventDefault(); addSubs(L); toast(L.length + '개 추가했어요') } }} />
           </form>
+          <div className="row wrap" style={{ gap: 4, alignItems: 'center', marginTop: 6 }}>
+            <span className="tiny muted">새로 추가할 때 날짜</span>
+            {[['none', '없음'], ['parent', '상위와 같게'], ['seq', '하루씩 이어서']].map(([k, l]) => <button key={k} className={'chip' + (newDue === k ? ' on' : '')} onClick={() => setNewDue(k)}>{l}</button>)}
+          </div>
+          {subs.some((x) => !x.done) && <div className="row wrap" style={{ gap: 4, alignItems: 'center', marginTop: 4 }}>
+            <span className="tiny muted">남은 것 날짜 한 번에</span>
+            <button className="chip" onClick={() => bulkDue('today')}>모두 오늘</button>
+            <button className="chip" onClick={() => bulkDue('tmrw')}>모두 내일</button>
+            <button className="chip" onClick={() => bulkDue('seq')}>오늘부터 하루에 하나씩</button>
+            {t.due && t.due > today() && <button className="chip" onClick={() => bulkDue('spread')}>마감({fmtShort(t.due)})까지 나눠서</button>}
+            <button className="chip" onClick={() => bulkDue('clear')}>날짜 지우기</button>
+          </div>}
         </Field>
 
         </>}
