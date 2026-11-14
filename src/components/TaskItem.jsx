@@ -1,12 +1,12 @@
 import { Check, Icon, openDetail } from './ui.jsx'
 import { DueBadge, SubjectTag, PRI_COLOR } from './common.jsx'
-import { toggleTask } from '../store/actions.js'
+import { toggleTask, toggleSub } from '../store/actions.js'
 import { longPress } from '../lib/drag.js'
 import { openTaskMenu } from './TaskQuickMenu.jsx'
 import { openNote } from '../nav.js'
 import { today, fmtShort } from '../engine/date.js'
 
-export default function TaskItem({ t, subjects, projects, drag, compact, extra, sel }) {
+export default function TaskItem({ t, subjects, projects, drag, compact, extra, sel, showSubs }) {
   const subs = t.subtasks || []
   const sdone = subs.filter((s) => s.done).length
   const subDue = subs.filter((s) => !s.done && s.due).map((s) => s.due).sort()[0] // 날짜가 정해진 하위 할 일 중 가장 가까운 날
@@ -41,7 +41,25 @@ export default function TaskItem({ t, subjects, projects, drag, compact, extra, 
             {extra}
           </div>
         )}
+        {showSubs && subs.length > 0 && <SubList t={t} subs={subs} />}
       </div>
+    </div>
+  )
+}
+
+// 할 일 아래 하위 할 일 (리스트 · 주간 배치): 작은 체크 · 제목 · 날짜 — 체크를 누르면 바로 끝냄
+export function SubList({ t, subs, only }) {
+  const L = only ? subs.filter(only) : subs
+  if (!L.length) return null
+  return (
+    <div className="task-subs" data-nodrag onClick={(e) => e.stopPropagation()}>
+      {L.map((s) => (
+        <div key={s.id} className={'task-sub' + (s.done ? ' done' : '')}>
+          <button className={'sub-ck' + (s.done ? ' on' : '')} onClick={() => toggleSub(t.id, s.id)} aria-label={s.done ? '되돌리기' : '끝내기'} />
+          <span className="sub-tt ellipsis">{s.title}</span>
+          {s.due && <span className={'sub-d' + (!s.done && s.due < today() ? ' late' : '')}>{s.due === today() ? '오늘' : fmtShort(s.due)}</span>}
+        </div>
+      ))}
     </div>
   )
 }

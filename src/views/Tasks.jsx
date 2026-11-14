@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
 import { useColl, patch, put, remove, batch, recordChanges } from '../store/store.js'
-import { addTask, toggleTask, moveTasks, updateTask, QUICK_DATES, undoToast } from '../store/actions.js'
+import { addTask, toggleTask, toggleSub, moveTasks, updateTask, QUICK_DATES, undoToast } from '../store/actions.js'
 import TaskQuickInput from '../components/TaskQuickInput.jsx'
 import { AddInput, Empty, Icon, openSheet, openMenu, toast, openDetail, Check } from '../components/ui.jsx'
-import TaskItem from '../components/TaskItem.jsx'
+import TaskItem, { SubList } from '../components/TaskItem.jsx'
 import { WeekGoalsCard } from '../components/WeekGoals.jsx'
 import { SMART, applyFilter, quadrant, openCount } from './tasks/filter.js'
 import { setParams } from '../nav.js'
@@ -116,7 +116,7 @@ function TaskList({ params }) {
       <div className="card" style={{ padding: '2px 12px' }}>
         <div className="list">
           {items.filter((t) => showOld || !isOld(t)).map((t) => (
-            <div key={t.id} data-drop={'task:' + t.id}><TaskItem t={t} subjects={subjects} projects={projects} drag={dragFor(t)} sel={sel.of(t)}
+            <div key={t.id} data-drop={'task:' + t.id}><TaskItem t={t} subjects={subjects} projects={projects} drag={dragFor(t)} sel={sel.of(t)} showSubs
               extra={f.smart === 'inbox' && <span className="inbox-acts" data-nodrag onClick={(e) => e.stopPropagation()}>{[['today', '오늘'], ['tomorrow', '내일'], ['weekend', '주말']].map(([k, l]) => <button key={k} className="chip sm" onClick={() => moveTasks([t.id], k)}>{l}</button>)}<button className="chip sm" onClick={() => patch('tasks', t.id, { inbox: false })}>정리됨</button></span>} /></div>
           ))}
           {oldN > 0 && <button className="btn ghost sm" style={{ width: '100%' }} onClick={() => setShowOld(!showOld)}>{showOld ? '끝낸 일 접기' : `끝낸 일 ${oldN}개`}</button>}
@@ -402,9 +402,19 @@ function WeekBoard() {
         {t.seriesId && <i className="wkb-sd" style={{ background: st.seriesColors?.[t.seriesId] || sb?.color || 'var(--muted)' }} />}
         <span className="wkb-t">{t.title}</span>
         {t.dueTime != null && <span className="tiny muted">{fmtTime(t.dueTime)}</span>}
+        {/* 하위 할 일: 날짜가 없거나 이 할 일과 같은 날인 것만 아래에 (다른 날짜는 그날 칸에) */}
+        <SubList t={t} subs={t.subtasks || []} only={(s) => !s.due || s.due === t.due} />
       </div>
     )
   }
+  // 다른 날로 정한 하위 할 일: 그날 칸에 '↳ 상위 제목' 과 함께
+  const subsOn = (d) => tasks.flatMap((t) => (t.subtasks || []).filter((s) => s.due === d && s.due !== t.due).map((s) => ({ t, s })))
+  const SubCard = ({ t, s }) => (
+    <div className={'wkb-item wkb-sub' + (s.done ? ' done' : '')} onClick={() => openDetail('task', t.id)}>
+      <button className={'sub-ck' + (s.done ? ' on' : '')} onClick={(e) => { e.stopPropagation(); toggleSub(t.id, s.id) }} aria-label="끝내기" />
+      <span className="wkb-t">{s.title}<span className="wkb-par"> · {t.title}</span></span>
+    </div>
+  )
   // 칸에 바로 추가 (그날 마감 · 날짜 없음은 받은 편지함)
   const addTo = (key) => openSheet(() => <AddInput placeholder={key ? `${fmtDate(key)} 할 일` : '날짜 없는 할 일'} onAdd={(title) => { addTask(key ? { title, due: key } : { title, inbox: true }); toast('추가했어요') }} autoFocus />, { title: key ? fmtDate(key) + ' 할 일 추가' : '날짜 없는 할 일 추가' })
   const col = (key, head, list, cls = '') => {
@@ -418,7 +428,8 @@ function WeekBoard() {
         </div>
         <div className="wkb-list">
           {list.map((t) => <Card key={t.id} t={t} />)}
-          {!list.length && <div className="wkb-empty">여기로 끌어 놓기</div>}
+          {key && subsOn(key).map(({ t, s }) => <SubCard key={t.id + s.id} t={t} s={s} />)}
+          {!list.length && !(key && subsOn(key).length) && <div className="wkb-empty">여기로 끌어 놓기</div>}
         </div>
       </div>
     )

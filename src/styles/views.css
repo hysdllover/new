@@ -1465,3 +1465,17 @@ html[data-pencil] :is(.prog > i, .subj-bar i, .bar-t i, .rp-track i, .rp-stack i
 .sub-due.late { color: var(--c4); }
 .sub-due input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; }
 .sub-late { color: var(--c4); }
+/* 할 일 아래 하위 할 일 (리스트 · 주간 배치) */
+.task-subs { display: flex; flex-direction: column; gap: 3px; margin-top: 5px; padding-left: 2px; border-left: 1px solid var(--line); }
+.task-sub { display: flex; align-items: center; gap: 7px; padding-left: 8px; font-size: .84em; min-height: 22px; min-width: 0; }
+.task-sub.done .sub-tt { color: var(--muted); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 60%, transparent); }
+.sub-ck { flex-shrink: 0; width: 13px; height: 13px; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--muted) 80%, transparent); background: transparent; padding: 0; position: relative; }
+.sub-ck::before { content: ''; position: absolute; inset: -8px; }
+.sub-ck.on { background: color-mix(in srgb, var(--accent) 55%, transparent); border-color: transparent; }
+.sub-tt { min-width: 0; flex: 1; }
+.sub-d { flex-shrink: 0; font-size: .86em; color: var(--muted); }
+.sub-d.late { color: var(--c4); }
+.wkb-item .task-subs { flex-basis: 100%; margin-top: 3px; }
+.wkb-sub { opacity: .92; }
+.wkb-sub .wkb-par { color: var(--muted); font-size: .86em; }
+.wkb-item:has(.task-subs) { flex-wrap: wrap; }
