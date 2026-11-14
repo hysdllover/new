@@ -16,10 +16,12 @@ export function LineChart({ series, height = 140, yMax, yMin = 0, labels = [], g
       {goal != null && <line x1={P} x2={W - 8} y1={sy(goal)} y2={sy(goal)} stroke="var(--c4)" strokeDasharray="3 3" strokeWidth="1" />}
       {series.map((s, i) => s.points.length > 0 && (
         <g key={i}>
-          {/* 연필 테마에서만 보이는 옅은 면 (선 아래, 색연필 결은 CSS) */}
-          {!s.dash && s.points.length > 1 && <polygon className="chart-hatch" points={`${sx(s.points[0][0])},${H - 18} ` + s.points.map(([x, y]) => `${sx(x)},${sy(y)}`).join(' ') + ` ${sx(s.points[s.points.length - 1][0])},${H - 18}`} fill={s.color} opacity=".16" />}
+          {/* 필기 느낌에서만 보이는 것: 선 아래 옅은 빗금 면 · 점마다 값 (CSS 로 켬) */}
+          {!s.dash && s.points.length > 1 && <pattern id={`hatch-${i}`} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(40)"><line x1="0" y1="0" x2="0" y2="6" stroke={s.color} strokeWidth=".55" opacity=".5" /></pattern>}
+          {!s.dash && s.points.length > 1 && <polygon className="chart-hatch" points={`${sx(s.points[0][0])},${H - 18} ` + s.points.map(([x, y]) => `${sx(x)},${sy(y)}`).join(' ') + ` ${sx(s.points[s.points.length - 1][0])},${H - 18}`} fill={`url(#hatch-${i})`} />}
           <polyline className="chart-line" points={s.points.map(([x, y]) => `${sx(x)},${sy(y)}`).join(' ')} fill="none" stroke={s.color} strokeWidth="1.6" strokeDasharray={s.dash} strokeLinejoin="round" />
-          {!s.dash && s.points.map(([x, y], j) => <circle key={j} cx={sx(x)} cy={sy(y)} r="2.2" fill={s.color} />)}
+          {!s.dash && s.points.map(([x, y], j) => { const lo = y === Math.min(...s.points.map((p) => p[1])); return <circle key={j} className={lo ? 'chart-pt lo' : 'chart-pt'} cx={sx(x)} cy={sy(y)} r="2.2" fill={s.color} stroke={s.color} /> })}
+          {!s.dash && s.points.length <= 31 && s.points.map(([x, y], j) => <text key={'v' + j} className="chart-val" x={sx(x)} y={sy(y) - 5} fontSize="7.5" textAnchor="middle" fill="var(--muted)">{Math.round(y * 10) / 10}</text>)}
         </g>
       ))}
       {labels.map(([x, l], i) => <text key={i} x={sx(x)} y={H - 4} fontSize="8" fill="var(--muted)" textAnchor={x > .95 ? 'end' : x < .05 ? 'start' : 'middle'}>{l}</text>)}

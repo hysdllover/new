@@ -1510,3 +1510,27 @@ html[data-hand] :is(.card-h h3, .wkb-d, .mheat-top b) { display: inline-block; t
 /* 형광펜: 가장자리가 고르지 않게 */
 html[data-hand] .task-item.hl .title .ttl { border-radius: 1px 4px 2px 3px / 3px 1px 4px 2px; }
 @media (prefers-reduced-motion: reduce) { html[data-hand] .check.on.fresh::after, html[data-hand] .task-item.just .ttl { animation: none; } }
+
+/* ── 필기 느낌: 그래프 (선 · 막대) ── */
+.chart-val { display: none; }
+html[data-hand] {
+  /* 색연필 알갱이: 고운 점이 또렷하게 (밝은 색 위에서 종이 결처럼) */
+  --pn-speck: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='70'%3E%3Cfilter id='n' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='2.3' numOctaves='1' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -2.2 1.95'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+html[data-hand] .chart-val { display: inline; }
+html[data-hand] .chart-hatch { display: inline; }
+html[data-hand] svg.chart .chart-line { stroke-width: 2.1; }
+html[data-hand] svg.chart .chart-pt { r: 2.6; }
+html[data-hand] svg.chart .chart-pt.lo { fill: var(--surface); stroke-width: 1.2; }
+html[data-hand] svg.chart { -webkit-mask-image: var(--pn-speck); mask-image: var(--pn-speck); -webkit-mask-size: 70px 70px; mask-size: 70px 70px; }
+/* 막대 · 진행선 · 달력 칸: 파스텔로 옅게 + 색연필 알갱이 (진하고 어지럽지 않게) */
+html[data-hand] :is(.wbar-b, .bar-t i, .stack-bar i, .sh-stack i, .rp-stack i, .prog > i, .subj-bar i, .mheat-cell:not(.empty), .heat-cell) { opacity: .78; -webkit-mask-image: var(--pn-speck); mask-image: var(--pn-speck); -webkit-mask-size: 70px 70px; mask-size: 70px 70px; }
+html[data-hand] .wbar-b { border-radius: 2px; }
+/* 과목 띠 · 쌓은 막대: 칸 사이를 살짝 띄워 블록처럼 */
+html[data-hand] :is(.stack-bar, .sh-stack, .rp-stack) { gap: 2px; background: transparent; }
+/* 필기 느낌: 막대는 넓고 파스텔로 (블루그레이 · 오늘은 세이지) */
+html[data-hand] .wbar-b { width: min(72%, 30px) !important; background: #a7b5c9 !important; }
+html[data-hand] .wbar.now .wbar-b { background: #aab79c !important; }
+html[data-hand] .prog > i { background: color-mix(in srgb, var(--accent) 45%, #c3cedd) !important; }
+html[data-hand] .rp-track i { opacity: .7; }
+html[data-hand] .gl-row:nth-child(1) .rp-track i { background: #a7b5c9 !important; }
