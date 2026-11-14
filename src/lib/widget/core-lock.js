@@ -43,7 +43,8 @@ const SZ = (() => {
   const k = Object.keys(T).map(Number).sort((a, b) => Math.abs(a - sw) - Math.abs(b - sw))[0], [sm, md, lh] = T[k]
   return { small: sm, medium: md, large: md, extraLarge: md, h: { small: sm, medium: sm, large: lh, extraLarge: lh } }
 })()
-const inner = (SZ[fam] || SZ.large) - P * 2
+// 아이패드 아주 큰: 가로 화면에선 실제 폭이 표보다 8% 쯤 작게 나와 양옆이 잘림 → 8% 안쪽으로 그림 (세로에선 양옆이 조금 남음)
+const inner = Math.floor(((SZ[fam] || SZ.large) - P * 2) * (Device.isPad() && fam === 'extraLarge' ? 0.92 : 1))
 const innerH = (SZ.h[fam] || SZ.h.large) - P * 2 // 세로 안쪽 높이
 let MH = innerH - 21 // 중형: 머리줄(제목 + 간격) 아래 남는 높이 (글자 크기 정해진 뒤 다시 계산)
 // 투명 배경(배경화면 잘라 붙이기) · 글자색
