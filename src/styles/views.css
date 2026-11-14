@@ -1504,7 +1504,7 @@ html[data-hand] .check.on.fresh::after { animation: hand-tick .32s cubic-bezier(
 /* 방금 추가한 할 일: 제목이 펜으로 써지듯 나타남 */
 html[data-hand] .task-item.just .ttl { animation: hand-write .7s cubic-bezier(.35, .6, .3, 1) both; }
 /* 중요한 할 일: 제목 아래 손으로 그은 물결 밑줄 */
-html[data-hand] .task-item.imp:not(.done) .title .ttl { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 6' preserveAspectRatio='none'%3E%3Cpath d='M1 3.6C14 1.6 26 4.8 40 3.2S66 1.8 80 3.4 104 4.6 119 2.4' fill='none' stroke='%23b98f95' stroke-width='1.3' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat 0 100% / 100% 5px; padding-bottom: 2px; }
+html[data-hand] .task-item.imp:not(.done) .title .ttl { text-decoration: underline wavy var(--c4); text-decoration-thickness: 1px; text-underline-offset: 4px; }
 /* 카드 제목 · 날짜 머리: 손으로 쓴 듯 아주 살짝 기울게 */
 html[data-hand] :is(.card-h h3, .wkb-d, .mheat-top b) { display: inline-block; transform: rotate(-.7deg); transform-origin: left center; }
 /* 형광펜: 가장자리가 고르지 않게 */
@@ -1523,27 +1523,18 @@ html[data-hand] svg.chart .chart-line { stroke-width: 2.1; }
 html[data-hand] svg.chart .chart-pt { r: 2.6; }
 html[data-hand] svg.chart .chart-pt.lo { fill: var(--surface); stroke-width: 1.2; }
 html[data-hand] svg.chart { -webkit-mask-image: var(--pn-speck); mask-image: var(--pn-speck); -webkit-mask-size: 70px 70px; mask-size: 70px 70px; }
-/* 막대 · 진행선 · 달력 칸: 파스텔로 옅게 + 색연필 알갱이 (진하고 어지럽지 않게) */
-html[data-hand] :is(.wbar-b, .bar-t i, .stack-bar i, .sh-stack i, .rp-stack i, .prog > i, .subj-bar i, .mheat-cell:not(.empty), .heat-cell) { opacity: .78; -webkit-mask-image: var(--pn-speck); mask-image: var(--pn-speck); -webkit-mask-size: 70px 70px; mask-size: 70px 70px; }
+/* 막대 · 진행선 · 달력 칸: 색은 그대로, 색연필 알갱이만 */
+html[data-hand] :is(.wbar-b, .bar-t i, .stack-bar i, .sh-stack i, .rp-stack i, .prog > i, .subj-bar i, .mheat-cell:not(.empty), .heat-cell) { -webkit-mask-image: var(--pn-speck); mask-image: var(--pn-speck); -webkit-mask-size: 70px 70px; mask-size: 70px 70px; }
 html[data-hand] .wbar-b { border-radius: 2px; }
 /* 과목 띠 · 쌓은 막대: 칸 사이를 살짝 띄워 블록처럼 */
 html[data-hand] :is(.stack-bar, .sh-stack, .rp-stack) { gap: 2px; background: transparent; }
-/* 필기 느낌: 막대는 넓고 파스텔로 (블루그레이 · 오늘은 세이지) */
-html[data-hand] .wbar-b { width: min(72%, 30px) !important; background: #a7b5c9 !important; }
-html[data-hand] .wbar.now .wbar-b { background: #aab79c !important; }
-html[data-hand] .prog > i { background: color-mix(in srgb, var(--accent) 45%, #c3cedd) !important; }
-html[data-hand] .rp-track i { opacity: .7; }
-html[data-hand] .gl-row:nth-child(1) .rp-track i { background: #a7b5c9 !important; }
 
 /* 필기 느낌 (참고 화면): 막대는 연필 빗금 + 가는 테두리, 목표까지 못 채운 만큼은 빈 테두리 칸 */
 .wbar-ghost { display: none; }
 html[data-hand] .wbar { position: relative; }
-html[data-hand] .wbar-ghost { display: block; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: min(72%, 30px); border: 1px solid #cfd5de; border-bottom: 0; border-radius: 1px; }
-html[data-hand] .wbar-b { position: relative; z-index: 1; background: repeating-linear-gradient(-55deg, #7d8ca5 0 1.2px, transparent 1.2px 4.6px), rgba(167, 181, 201, .14) !important; box-shadow: inset 0 0 0 1.1px #7d8ca5; border-radius: 1px; opacity: 1; -webkit-mask-image: var(--pn-fine); mask-image: var(--pn-fine); -webkit-mask-size: 90px 90px; mask-size: 90px 90px; }
-html[data-hand] .wbar.now .wbar-b { background: repeating-linear-gradient(-55deg, #8f9c7c 0 1.2px, transparent 1.2px 4.6px), rgba(170, 183, 156, .16) !important; box-shadow: inset 0 0 0 1.1px #8f9c7c; }
+html[data-hand] .wbar-ghost { display: block; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: min(72%, 30px); border: 1px solid var(--line); border-bottom: 0; border-radius: 1px; }
+html[data-hand] .wbar { --wbc: color-mix(in srgb, var(--c2) 70%, var(--surface)); }
+html[data-hand] :is(.wbar.hit, .wbar.now) { --wbc: var(--c2); }
+html[data-hand] .wbar-b { width: min(72%, 30px) !important; position: relative; z-index: 1; background: repeating-linear-gradient(-55deg, var(--wbc) 0 1.2px, transparent 1.2px 4.6px), color-mix(in srgb, var(--wbc) 14%, transparent) !important; box-shadow: inset 0 0 0 1.1px var(--wbc); border-radius: 1px; opacity: 1; -webkit-mask-image: var(--pn-fine); mask-image: var(--pn-fine); -webkit-mask-size: 90px 90px; mask-size: 90px 90px; }
 html[data-hand] .wbars-goal { border-top-style: dashed; }
-/* 달력 칸: 목표 채운 날은 모브, 덜 채운 날은 연한 로즈 (색연필 결) */
-html[data-hand] .mheat-cell:not(.empty) { background: #f0d9da !important; color: var(--text); opacity: 1; }
-html[data-hand] .mheat-cell.dark { background: #a8989f !important; color: #fff; }
-html[data-hand] .mheat-cell.today { outline: 1.2px solid #8e959f; outline-offset: 1px; }
-html[data-hand] .mheat-cell.empty { background-image: none; box-shadow: none; } /* 빈 날은 숫자만 (참고 화면처럼) */
+html[data-hand] .mheat-cell.empty { background-image: none !important; box-shadow: none !important; } /* 빈 날은 숫자만 (참고 화면처럼) */
