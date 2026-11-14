@@ -76,13 +76,16 @@ export function applyTheme(t0) {
   root.dataset.icons = t.iconShape === 'square' ? 'square' : 'round'
   // 디자인 세부 (설정 › 디자인 세부)
   const paper = t.card === 'paper' || t.card === 'note'
-  const D = { check: t.checkShape || (paper ? 'pencil' : 'square'), prog: t.progStyle || (paper ? 'pencil' : 'solid'), hl: t.hlStyle || 'mid', quote: t.quoteStyle || 'line', callout: t.calloutStyle || 'tag', div: t.divStyle || 'solid', done: t.doneStyle || 'strike', cardb: t.cardBorder || 'normal', tabl: t.tabLabels === false ? 'icon' : 'text' }
+  const handOn = t.handFx !== 'off' // 필기 느낌이면 체크 · 진행선도 연필이 기본
+  const D = { check: t.checkShape || (paper || handOn ? 'pencil' : 'square'), prog: t.progStyle || (paper || handOn ? 'pencil' : 'solid'), hl: t.hlStyle || 'mid', quote: t.quoteStyle || 'line', callout: t.calloutStyle || 'tag', div: t.divStyle || 'solid', done: t.doneStyle || 'strike', cardb: t.cardBorder || 'normal', tabl: t.tabLabels === false ? 'icon' : 'text' }
   for (const [k, v] of Object.entries(D)) root.dataset[k] = v
   root.toggleAttribute('data-icofill', t.iconFill === 'fill')
   root.toggleAttribute('data-fold', t.card === 'note' && t.fold !== false)
-  root.toggleAttribute('data-pencil', t.preset === 'pencil') // 연필 아날로그: 글자에 흑연 결
+  root.toggleAttribute('data-pencil', t.preset === 'pencil' || t.handFx !== 'off') // 연필 선 테두리 · 흑연 결 (필기 느낌이 켜져 있으면 테마와 상관없이)
   // 필기 느낌 (자동: 연필 · 종이 노트 테마에서 켜짐): 체크를 그어 그리기 · 새 할 일이 써지듯 · 중요는 손 밑줄 · 제목 살짝 기울게
-  root.toggleAttribute('data-hand', t.handFx === 'on' || (t.handFx !== 'off' && (t.preset === 'pencil' || t.card === 'note')))
+  // 필기 느낌: 기본으로 켬 (설정에서 끌 수 있음) — 켜면 연필 선 · 색연필 결 · 손 그림 효과를 앱 전체에 (색은 그대로)
+  const HAND = t.handFx !== 'off'
+  root.toggleAttribute('data-hand', HAND)
   Object.assign(D, { bullet: t.bulletStyle || 'dot', link: t.linkStyle || 'under', hlc: t.hlCorner || 'square', shadow: t.shadowDepth || 'normal', tabsel: t.tabSel || 'color', thc: t.thColor || 'gray' })
   for (const k of ['bullet', 'link', 'hlc', 'shadow', 'tabsel', 'thc']) root.dataset[k] = D[k]
   // 상태 막대 색을 실제 바탕색과 같게 (iOS 가 위쪽을 다른 색 · 흐림으로 칠하지 않게)
