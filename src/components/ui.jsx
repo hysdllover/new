@@ -191,7 +191,7 @@ export function Ring({ value, size = 64, stroke = 6, color = 'var(--accent)', ch
   const r = (size - stroke) / 2, c = 2 * Math.PI * r
   return (
     <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
-      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+      <svg className="ring-svg" width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--surface-2)" strokeWidth={stroke} />
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - Math.min(1, value || 0))} style={{ transition: 'stroke-dashoffset .4s' }} />
       </svg>

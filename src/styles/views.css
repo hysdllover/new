@@ -1432,13 +1432,13 @@ html[data-pencil] {
   /* 색연필로 칠한 결: 한 방향으로 길쭉한 알갱이(비스듬한 결) — 빗금 대신 */
   --pn-crayon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cfilter id='n' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.9' numOctaves='2' seed='11' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -.9 1.3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); /* 색연필 칠: 고운 알갱이만 옅게 (어지럽지 않게) */
   /* 가로 · 세로 연필 선 (모서리에서 3px 만 삐져나가게 — 카드 크기와 상관없이 일정) */
-  --pl-h: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 4' preserveAspectRatio='none'%3E%3Cpath d='M0 2.3 L100 1.7' stroke='%235a6475' stroke-width='1' vector-effect='non-scaling-stroke' fill='none'/%3E%3C/svg%3E");
-  --pl-v: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 100' preserveAspectRatio='none'%3E%3Cpath d='M1.8 0 L2.2 100' stroke='%235a6475' stroke-width='1' vector-effect='non-scaling-stroke' fill='none'/%3E%3C/svg%3E");
+  --pl-h: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 4' preserveAspectRatio='none'%3E%3Cpath d='M0 2.3 L100 1.7' stroke='%235a6475' stroke-opacity='.8' stroke-width='1' vector-effect='non-scaling-stroke' fill='none'/%3E%3C/svg%3E");
+  --pl-v: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 100' preserveAspectRatio='none'%3E%3Cpath d='M1.8 0 L2.2 100' stroke='%235a6475' stroke-opacity='.8' stroke-width='1' vector-effect='non-scaling-stroke' fill='none'/%3E%3C/svg%3E");
 }
 /* 카드: 곧은 테두리 대신 연필로 그은 네모 (네 변을 따로 그어 크기와 상관없이 맞음) */
 html[data-pencil] .card { position: relative; border-color: transparent; box-shadow: none; }
 html[data-pencil] .card::before {
-  content: ''; position: absolute; inset: -3px; pointer-events: none; opacity: .8;
+  content: ''; position: absolute; inset: -3px; pointer-events: none;
   background: var(--pl-h) 0 1px / 100% 4px no-repeat, var(--pl-h) 0 calc(100% - 1px) / 100% 4px no-repeat, var(--pl-v) 1px 0 / 4px 100% no-repeat, var(--pl-v) calc(100% - 1px) 0 / 4px 100% no-repeat;
   -webkit-mask-image: var(--pn-fine); mask-image: var(--pn-fine); -webkit-mask-size: 90px 90px; mask-size: 90px 90px;
 }
@@ -1479,3 +1479,17 @@ html[data-pencil] :is(.prog > i, .subj-bar i, .bar-t i, .rp-track i, .rp-stack i
 .wkb-sub { opacity: .92; }
 .wkb-sub .wkb-par { color: var(--muted); font-size: .86em; }
 .wkb-item:has(.task-subs) { flex-wrap: wrap; }
+
+/* 연필 아날로그: 입력칸 · 버튼 · 고른 탭 · 주간 배치 칸 · 빈 달력 칸도 연필로 그은 네모 (모서리 둥글림 거의 없이) */
+html[data-pencil] :is(.wkb-col, .input:not(.bare), .btn:not(.primary):not(.ghost), .seg button.on, .chip.on, .mheat-cell.empty, .sub-due) {
+  border-color: transparent; border-radius: 2px; box-shadow: none;
+  background-image: var(--pl-h), var(--pl-h), var(--pl-v), var(--pl-v);
+  background-position: 0 -1px, 0 calc(100% + 1px), -1px 0, calc(100% + 1px) 0;
+  background-size: 100% 4px, 100% 4px, 4px 100%, 4px 100%; background-repeat: no-repeat;
+}
+html[data-pencil] .wkb-col.loose { border: 0; }
+html[data-pencil] .seg { background: transparent; }
+/* 진한 버튼 · 원형 진행 · 과목 띠: 색연필 결 */
+html[data-pencil] :is(.btn.primary, .stack-bar i, .sh-stack i, .rp-stack i) { -webkit-mask-image: var(--pn-crayon); mask-image: var(--pn-crayon); -webkit-mask-size: 80px 80px; mask-size: 80px 80px; }
+html[data-pencil] .btn.primary { border-radius: 2px; }
+html[data-pencil] svg.ring-svg { -webkit-mask-image: var(--pn-fine); mask-image: var(--pn-fine); -webkit-mask-size: 90px 90px; mask-size: 90px 90px; }
