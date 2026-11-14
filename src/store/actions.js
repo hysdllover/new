@@ -114,6 +114,13 @@ export function deleteTask(id) {
   toast(`'${t?.title || '할 일'}' 삭제됨`, { label: '되돌리기', fn: () => restore('tasks', id) })
 }
 
+// 하위 할 일 하나 끝내기 · 되돌리기
+export function toggleSub(taskId, subId) {
+  const t = find('tasks', taskId)
+  if (!t) return
+  patch('tasks', taskId, { subtasks: (t.subtasks || []).map((s) => (s.id === subId ? { ...s, done: !s.done } : s)) })
+}
+
 export function taskProgress(t) {
   if (t.done) return 1
   const s = t.subtasks || []
