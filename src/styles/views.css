@@ -792,7 +792,7 @@ html[data-hl="full"] { --hl-top: 8%; }
 .wkb-add { width: 26px; height: 22px; margin: -3px -4px -3px 0; display: grid; place-items: center; border-radius: 2px; color: var(--muted); }
 .wkb-add:active { background: var(--surface-2); }
 .wkb-list { display: flex; flex-direction: column; gap: 1px; flex: 1; }
-.wkb-item { display: flex; align-items: center; gap: 7px; padding: 4px 3px; border-radius: 2px; font-size: .9em; touch-action: pan-y; -webkit-user-select: none; user-select: none; cursor: grab; }
+.wkb-item { display: flex; align-items: center; gap: 7px; min-width: 0; max-width: 100%; padding: 4px 3px; border-radius: 2px; font-size: .9em; touch-action: pan-y; -webkit-user-select: none; user-select: none; cursor: grab; }
 .wkb-item .check { width: 16px; height: 16px; border-radius: 2px; }
 .wkb-item.done .wkb-t { color: var(--muted); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 60%, transparent); }
 .wkb-t { flex: 1; min-width: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.35; }
@@ -1466,7 +1466,7 @@ html[data-pencil] :is(.prog > i, .subj-bar i, .bar-t i, .rp-track i, .rp-stack i
 .sub-due input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; }
 .sub-late { color: var(--c4); }
 /* 할 일 아래 하위 할 일 (리스트 · 주간 배치): 각진 작은 칸으로 나란히 (둥글게 하지 않음) — 체크 · 제목 · (다른 날이면) 날짜 */
-.task-subs { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.task-subs { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; min-width: 0; max-width: 100%; }
 .task-sub { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-width: 0; min-height: 24px; padding: 2px 8px 2px 5px; border-radius: 2px; font-size: .82em; line-height: 1.3; color: color-mix(in srgb, var(--text) 88%, var(--muted)); background: color-mix(in srgb, var(--text) 4.5%, var(--surface)); border: 1px solid color-mix(in srgb, var(--line) 80%, transparent); }
 .task-sub.done { background: transparent; border-style: dashed; }
 .task-sub.done .sub-tt { color: var(--muted); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 55%, transparent); }
@@ -1474,10 +1474,10 @@ html[data-pencil] :is(.prog > i, .subj-bar i, .bar-t i, .rp-track i, .rp-stack i
 .sub-ck::before { content: ''; position: absolute; inset: -8px; }
 .sub-ck.on { background: color-mix(in srgb, var(--accent) 70%, var(--surface)); border-color: transparent; }
 .sub-ck.on::after { content: ''; position: absolute; left: 3.8px; top: 1.6px; width: 3px; height: 6px; border: solid var(--surface); border-width: 0 1.4px 1.4px 0; transform: rotate(42deg); }
-.sub-tt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sub-tt { min-width: 0; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; } /* 긴 하위 할 일은 두 줄까지 */
 .sub-d { flex-shrink: 0; font-size: .9em; color: var(--muted); padding-left: 6px; border-left: 1px solid var(--line); }
 .sub-d.late { color: var(--c4); }
-.wkb-item .task-subs { flex-basis: 100%; margin-top: 3px; }
+.wkb-item .task-subs { flex-basis: 100%; min-width: 0; max-width: 100%; margin-top: 3px; }
 .wkb-sub { opacity: .92; }
 .wkb-sub .wkb-par { color: var(--muted); font-size: .86em; }
 .wkb-item:has(.task-subs) { flex-wrap: wrap; }
