@@ -7,9 +7,9 @@ import { diagText, recentErrors, clearErrors, persistStorage, updateBadge } from
 import { notesForWidget } from '../lib/notePreview.js'
 import { PRESETS, FONTS, effTheme, setDeviceTheme } from '../theme/theme.js'
 import { PALETTE, SOFT_PALETTE } from '../store/schema.js'
-import { Card, Seg, Toggle, Field, Icon, toast, confirmSheet, openSheet, useMedia } from '../components/ui.jsx'
+import { Card, Seg, Toggle, Field, Icon, toast, confirmSheet, openSheet, useMedia, Check } from '../components/ui.jsx'
 import { ColorPick, TimeInput, SubjectSelect } from '../components/common.jsx'
-import { deviceName, useSyncStatus, connect, disconnect, syncNow, gistInfo, tokenExpiry, listBackups, backupNow, restoreBackup, calendarUrl, readGistFile, syncLog, connectLink } from '../sync/sync.js'
+import { deviceName, useSyncStatus, connect, disconnect, syncNow, gistInfo, tokenExpiry, listBackups, backupNow, restoreBackup, previewBackup, backupSettings, syncClashes, dismissClash, applyClash, clashDiff, calendarUrl, readGistFile, syncLog, connectLink } from '../sync/sync.js'
 import { enablePush, disablePush, pushState, testLocal, isStandalone, pushSupported } from '../lib/push.js'
 import { buildLoader, WIDGET_KINDS } from '../lib/scriptable.js'
 import { TAB_OPTIONS, DEFAULT_TABBAR, tabOpt, go } from '../nav.js'
@@ -363,27 +363,102 @@ function PhotoInboxGuide() {
   )
 }
 
-// 자동 백업 목록 (보관용 gist 에 매주 저장, 최근 4개)
+// 항목 종류 이름 (백업 · 겹친 수정 표시용)
+const COLL_K = { tasks: '할 일', projects: '프로젝트', views: '저장한 보기', events: '일정', blocks: '시간 블록', templates: '템플릿', notes: '노트', subjects: '과목', sessions: '공부 기록', ddays: 'D-day', plans: '계획', textbooks: '교재', lectures: '인강', reviews: '복습', grades: '성적', habits: '습관', mocks: '모의고사', conditions: '컨디션', meds: '약', medLogs: '약 기록', links: '링크', quotes: '다짐' }
+const collK = (c) => COLL_K[c] || c
+
+// 자동 백업 목록 (보관용 gist 에 정한 주기로 저장) · 미리보기 · 종류 골라 되돌리기
 function AutoBackups() {
-  const sync = useSyncStatus()
-  const [list, setList] = useState(null), [busy, setBusy] = useState(false)
+  const sync = useSyncStatus(), st = useSettings()
+  const [list, setList] = useState(null), [busy, setBusy] = useState(false), [open, setOpen] = useState(null), [pv, setPv] = useState(null), [pick, setPick] = useState([])
   const load = () => listBackups().then(setList).catch((e) => setList({ error: e.message }))
   useEffect(() => { if (sync.state !== 'off') load() }, [sync.state === 'off']) // eslint-disable-line
-  if (sync.state === 'off') return <div className="tiny muted" style={{ marginTop: 8 }}>동기화를 연결하면 매주 자동 백업돼요.</div>
+  if (sync.state === 'off') return <div className="tiny muted" style={{ marginTop: 8 }}>동기화를 연결하면 자동 백업돼요.</div>
+  const bs = backupSettings()
+  const show = async (b) => {
+    if (open === b.name) { setOpen(null); return }
+    setOpen(b.name); setPv(null)
+    try { const p = await previewBackup(b); setPv(p); setPick(p.filter((x) => x.diff).map((x) => x.c)) } catch (e) { setPv({ error: e.message }) }
+  }
   return (
     <div style={{ marginTop: 10 }}>
-      <div className="row between"><span className="small">자동 백업 <span className="tiny muted">· 매주 · 최근 4개</span></span>
+      <div className="row between"><span className="small">자동 백업</span>
         <button className="btn sm" disabled={busy} onClick={async () => { setBusy(true); try { await backupNow(); toast('백업했어요'); load() } catch (e) { toast(e.message) } setBusy(false) }}>지금 백업</button></div>
+      <Field label="백업 주기"><Seg value={String(bs.every)} onChange={(v) => setSettings({ backupEvery: +v })} options={[['1', '매일'], ['3', '3일마다'], ['7', '매주']]} /></Field>
+      <Field label="보관 개수"><Seg value={String(st.backupKeep && [4, 8, 12].includes(+st.backupKeep) ? +st.backupKeep : 4)} onChange={(v) => setSettings({ backupKeep: +v })} options={[['4', '4개'], ['8', '8개'], ['12', '12개']]} /></Field>
       <div className="list">
         {Array.isArray(list) && list.map((b) => (
-          <div key={b.name} className="item" style={{ padding: '6px 0', alignItems: 'center' }}>
-            <span className="grow small">{fmtDateK(b.date)}</span><span className="tiny muted">{Math.round(b.size / 1024)}KB</span>
-            <button className="btn sm" onClick={() => confirmSheet('되돌리기', `${fmtDateK(b.date)} 백업 내용으로 되돌릴까요? 백업 이후 새로 만든 항목은 그대로 남아요.`, async () => { try { await restoreBackup(b); toast('되돌렸어요') } catch (e) { toast(e.message) } }, '되돌리기')}>되돌리기</button>
-          </div>
+          <Fragment key={b.name}>
+            <div className="item" style={{ padding: '6px 0', alignItems: 'center' }}>
+              <span className="grow small">{fmtDateK(b.date)}</span><span className="tiny muted">{Math.round(b.size / 1024)}KB</span>
+              <button className="btn sm" onClick={() => show(b)}>{open === b.name ? '닫기' : '살펴보기'}</button>
+            </div>
+            {open === b.name && (
+              <div className="col" style={{ gap: 4, padding: '4px 0 10px' }}>
+                {!pv && <div className="tiny muted">불러오는 중…</div>}
+                {pv?.error && <div className="tiny muted">{pv.error}</div>}
+                {Array.isArray(pv) && <>
+                  <div className="tiny muted">종류마다 백업 때 개수 → 지금 개수 · 달라진 항목 수. 고른 종류만 되돌려요 (백업 이후 새로 만든 항목은 그대로 남아요).</div>
+                  {pv.map((x) => (
+                    <div key={x.c} className="row small" style={{ gap: 8, alignItems: 'center' }}>
+                      <Check on={pick.includes(x.c)} onClick={() => setPick((p) => p.includes(x.c) ? p.filter((y) => y !== x.c) : [...p, x.c])} />
+                      <span className="grow">{collK(x.c)}</span>
+                      <span className="tiny muted">{x.then} → {x.now}{x.diff ? ` · 달라짐 ${x.diff}` : ' · 같음'}</span>
+                    </div>
+                  ))}
+                  <div className="row" style={{ gap: 6 }}>
+                    <button className="btn sm" onClick={() => setPick(pv.map((x) => x.c))}>모두</button>
+                    <button className="btn sm" onClick={() => setPick([])}>없음</button>
+                    <span className="grow" />
+                    <button className="btn sm primary" disabled={!pick.length} onClick={() => confirmSheet('되돌리기', `${fmtDateK(b.date)} 백업에서 ${pick.map(collK).join(' · ')} 을(를) 되돌릴까요?`, async () => { try { await restoreBackup(b, pick); toast('되돌렸어요'); setOpen(null) } catch (e) { toast(e.message) } }, '되돌리기')}>고른 것 되돌리기</button>
+                  </div>
+                </>}
+              </div>
+            )}
+          </Fragment>
         ))}
         {Array.isArray(list) && !list.length && <div className="tiny muted">아직 백업이 없어요 · 다음 동기화 때 만들어져요</div>}
         {list?.error && <div className="tiny muted">{list.error}</div>}
       </div>
+    </div>
+  )
+}
+
+// 겹친 수정: 두 기기에서 같은 항목을 고쳐 한쪽이 덮였을 때 — 두 버전을 나란히 보고 고르기
+const clashVal = (k, v) => {
+  if (v == null || v === '' || (Array.isArray(v) && !v.length)) return '—'
+  if (typeof v === 'boolean') return v ? '예' : '아니오'
+  if (Array.isArray(v)) return v.map((x) => (x && typeof x === 'object' ? x.title || x.text || x.t || '·' : String(x))).join(', ').slice(0, 120)
+  if (typeof v === 'object') return JSON.stringify(v).slice(0, 120)
+  return String(v).slice(0, 120)
+}
+const CLASH_K = { title: '제목', done: '완료', due: '날짜', time: '시간', note: '메모', memo: '메모', priority: '중요도', subs: '하위 할 일', tags: '태그', date: '날짜', start: '시작', end: '끝', color: '색', blocks: '내용', projectId: '프로젝트', repeat: '반복', name: '이름' }
+function SyncClashes() {
+  useSyncStatus()
+  const list = syncClashes()
+  if (!list.length) return null
+  return (
+    <div style={{ marginTop: 6 }}>
+      <div className="small">겹친 수정 <span className="tiny muted">· 두 기기에서 같은 항목을 고쳐 최신 수정이 남은 경우</span></div>
+      <div className="list">
+        {list.map((x) => {
+          const keys = clashDiff(x.win, x.lose).slice(0, 6)
+          return (
+            <div key={x.key} className="col" style={{ gap: 4, padding: '8px 0', borderBottom: '1px solid var(--line)' }}>
+              <div className="row" style={{ gap: 6, alignItems: 'baseline' }}><span className="tiny muted">{collK(x.c)}</span><span className="grow small">{x.title}</span><span className="tiny muted">{new Date(x.at).toLocaleString('ko', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span></div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr 1fr', gap: '2px 10px' }} className="tiny">
+                <span className="muted" /><span className="muted">지금 (남은 쪽)</span><span className="muted">{x.lostHere ? '이 기기에서 고친 것' : '다른 기기에서 고친 것'}</span>
+                {keys.map((k) => <Fragment key={k}><span className="muted">{CLASH_K[k] || k}</span><span style={{ wordBreak: 'break-all' }}>{clashVal(k, x.win[k])}</span><span style={{ wordBreak: 'break-all' }}>{clashVal(k, x.lose[k])}</span></Fragment>)}
+              </div>
+              <div className="row" style={{ gap: 6, justifyContent: 'flex-end' }}>
+                <button className="btn sm" onClick={() => dismissClash(x.key)}>지금대로 두기</button>
+                <button className="btn sm primary" onClick={() => { applyClash(x.key); toast('그 버전으로 바꿨어요') }}>오른쪽 버전 쓰기</button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      {list.length > 1 && <button className="btn sm" style={{ marginTop: 4 }} onClick={() => list.forEach((x) => dismissClash(x.key))}>모두 지금대로 두기</button>}
     </div>
   )
 }
@@ -443,10 +518,11 @@ function SyncCard() {
             <button className="btn" onClick={async () => { try { await navigator.clipboard.writeText(connectLink()); toast('복사했어요 · Safari 주소창에 붙여 넣으세요') } catch { toast('복사하지 못했어요') } }}>Safari 연결 링크 복사</button>
             <div className="tiny muted">위젯을 누르면 iOS 가 홈 화면 앱 대신 Safari 로 열어요(iOS 제한 · 웹 앱을 직접 여는 방법이 없어요). Safari 는 저장소가 따로라, 이 링크를 Safari 주소창에 한 번 붙여 넣으면 Safari 도 같은 데이터로 동기화돼요. 링크에 토큰이 들어 있으니 메모·채팅에 붙이지 말고 바로 Safari 에만 쓰세요.</div>
           </div>
+          <SyncClashes />
           <SyncLog />
           <Field label="자동 동기화 간격 (열려 있을 때)"><Seg value={st.syncEvery || 'normal'} onChange={(v) => setSettings({ syncEvery: v })} options={[['normal', '3분'], ['eco', '10분 · 절약'], ['off', '끄기']]} /></Field>
           <div className="tiny muted" style={{ marginTop: -4 }}>편집한 내용은 4초 뒤(연속이면 30초 간격) 올리고, 앱을 열거나 나갈 때도 동기화해요. 타이머 중에는 1분마다 받아요. ‘끄기’는 앱을 열고 닫을 때·편집할 때만 동기화해요.</div>
-          <div className="tiny muted">앱을 열 때·돌아올 때·편집 후·정한 간격마다 자동 동기화. 같은 항목은 최신 수정이 우선합니다. 홈 화면 앱과 사파리는 저장 공간이 따로라, 위젯을 눌러 사파리로 열었다면 사파리에서도 한 번 연결해 주세요.</div>
+          <div className="tiny muted">앱을 열 때·돌아올 때·편집 후·정한 간격마다 자동 동기화. 같은 항목은 최신 수정이 우선하고, 덮인 쪽은 ‘겹친 수정’에 남아 골라 쓸 수 있어요. 홈 화면 앱과 사파리는 저장 공간이 따로라, 위젯을 눌러 사파리로 열었다면 사파리에서도 한 번 연결해 주세요.</div>
         </div>
       )}
       <div className="divider" />

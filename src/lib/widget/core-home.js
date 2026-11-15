@@ -112,7 +112,7 @@ export default () => `  } else if (TYLAY) {
       // 이번 주 판: 오늘 · 내일 · 모레 · 사흘 뒤 · 나흘 뒤 세로 칸 — 아래로 그날 일정과 할 일 · 소형 2일 · 중형 3일 · 대형·아주 큰 5일
       top(TITLE || 'NEXT DAYS', MON[d0.getMonth()] + ' ' + d0.getFullYear())
       const XL = fam === 'extraLarge', fs = sm ? 10 : XL ? 12 : LGt ? 10 : 11, lim = LGt && !XL ? 2 : 1
-      const dayItems = (k) => { const ev = ((data.cal && data.cal[k]) || []).slice().sort((a, b) => (a.s ?? -1) - (b.s ?? -1)).map((e) => ({ t: (e.s != null ? clk(e.s) + ' ' : '') + e.t, c: e.c })); const tk = tasksAll.filter((x) => x.due === k && (!x.done || k === today)).sort(byDate).map((x) => ({ t: x.title, done: x.done })); return [...ev, ...tk] }
+      const dayItems = (k) => { const ev = ((data.cal && data.cal[k]) || []).slice().sort((a, b) => (a.s ?? -1) - (b.s ?? -1)).map((e) => ({ t: (e.s != null ? clk(e.s) + ' ' : '') + e.t, c: e.c })); const tk = tasksAll.filter((x) => x.due === k && (!x.done || k === today)).sort(byDate).map((x) => ({ t: x.title, done: x.done, id: x.id })); return [...ev, ...tk] }
       const KS = [0, 1, 2, 3, 4].slice(0, sm ? 2 : fam === 'medium' ? 3 : 5).map((i) => dOff(i)), RELD = ['TODAY', 'TMRW', '+2 DAYS', '+3 DAYS', '+4 DAYS'] // 오늘부터 며칠만
       const n = KS.length, sp = sm ? 6 : LGt && !XL ? 4 : 10, cw = Math.floor((inner - (n - 1) * (sp * 2 + 0.6)) / n), colH = Math.max(40, Math.floor(innerH - 48 * SCALE))
       const lh = (fs * 1.3 * lim + 3) * SCALE, maxN = Math.max(1, Math.floor((colH - (XL ? 34 : 28) * SCALE) / lh))
@@ -126,7 +126,7 @@ export default () => `  } else if (TYLAY) {
         C.addSpacer(XL ? 6 : 4)
         const L = dayItems(k), show = L.length > maxN ? maxN - 1 : maxN
         for (const it of L.slice(0, show)) {
-          const r = C.addStack(); r.topAlignContent(); r.size = new Size(cw, 0)
+          const r = C.addStack(); r.topAlignContent(); r.size = new Size(cw, 0); if (it.id) r.url = taskUrl(it.id)
           if (it.c) { const b = r.addStack(); b.size = new Size(2, fs); b.cornerRadius = 1; b.backgroundColor = new Color(it.c); r.addSpacer(4) }
           if (it.done) { const sk = r.addStack(); sk.backgroundImage = strikeImage(); t(sk, it.t, tw(fs), SOFT, lim).minimumScaleFactor = 1 } else t(r, it.t, tw(fs), past ? SOFT : INK, lim).minimumScaleFactor = 1
           r.addSpacer(); C.addSpacer(3)

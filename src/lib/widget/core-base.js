@@ -53,9 +53,10 @@ const ghErr = (sc) => (sc === 401 ? '토큰이 만료됐거나 틀려요. 메뉴
 // 토큰 저장 전에 실제로 동기화 저장소에 접근되는지 확인
 async function tokenOk(tok) { if (!data || !data.gid) return '위젯 데이터에 저장소 정보가 아직 없어요. 홈 화면 앱을 한 번 열어 동기화한 뒤 다시 해 주세요.'; try { const r = new Request('https://api.github.com/gists/' + data.gid); r.headers = { Authorization: 'Bearer ' + tok, Accept: 'application/vnd.github+json' }; await r.loadString(); const sc = r.response && r.response.statusCode; return sc && sc >= 300 ? ghErr(sc) : null } catch (e) { return String(e.message || e) } }
 const link = (path) => (/^(https?|scriptable):/.test(path || '') ? path : RUN && path === 'study.timer' ? RUN + '?act=timer' : RUN ? RUN + '?act=view&go=' + encodeURIComponent(path || '') : APP + (path ? '?go=' + path : ''))
-// 위젯에서 할 일 누르기: 확인 없이 바로 완료 (앱이 잠깐 열렸다가 완료 · 되돌리기 가능)
-// 위젯에서 할 일 제목 누르기: 그 할 일 자세히 (완료는 앞의 표시를 누름)
-const taskUrl = (id) => (RUN ? RUN + '?act=view&go=tasks' : APP + '?task=' + encodeURIComponent(id))
+// 위젯에서 할 일 누르기: 확인 없이 바로 완료 · 끝낸 할 일은 다시 누르면 완료 취소 (앱이 잠깐 열렸다가 처리 · 되돌리기 가능)
+// 위젯에서 할 일 제목 누르기: 앱 설정 '할 일 줄 누르면'이 바로 체크(기본)면 줄 전체가 체크, 자세히면 그 할 일 자세히
+const TAPDONE = () => { try { return data.settings.settings.main.widgetTap !== 'open' } catch (e) { return true } }
+const taskUrl = (id) => (TAPDONE() ? doneUrl(id) : RUN ? RUN + '?act=view&go=tasks' : APP + '?task=' + encodeURIComponent(id))
 const doneUrl = (id) => (RUN ? RUN + '?act=done&id=' + encodeURIComponent(id) : APP + '?done=' + encodeURIComponent(id) + '&quick=1')
 
 const pad = (n) => String(n).padStart(2, '0')
@@ -290,7 +291,7 @@ const ACT = (() => {
   const done = async (id) => {
     const x = data.tasks && data.tasks.tasks && data.tasks.tasks[id]
     if (!x) { await say('할 일을 찾지 못했어요', '앱에서 동기화한 뒤 다시 해 보세요'); return null }
-    if (x.done) return null
+    if (x.done) { const at = now(); if (!(await send({ act: 'undone', id, at }))) return null; x.done = false; x.doneAt = null; return '완료 취소 · ' + x.title }
     const at = now(); if (!(await send({ act: 'done', id, at }))) return null
     x.done = true; x.doneAt = at; return '완료 · ' + x.title
   }
