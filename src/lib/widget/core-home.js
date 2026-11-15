@@ -843,6 +843,42 @@ export default () => `  } else if (TYLAY) {
     }
     if (!DUE.length) t(w, '2주 안에 마감 없음', tw(TS), SOFT)
     else if (DUE.length > n) t(w, '+ ' + (DUE.length - n) + ' more', tw(11), SOFT)
+  } else if (KIND === 'subs') {
+    // ── 하위 할 일: 오늘·지난 하위 (누르면 그 하위만 체크 · 다시 누르면 취소) · 없으면 다가오는 7일 ──
+    const left = SUBQ.filter((x) => !x.done).length, two = fam === 'large' || fam === 'extraLarge'
+    const h = w.addStack(); h.centerAlignContent(); cap(h, 'SUBTASKS'); h.addSpacer(); t(h, SUBQ.length ? (left ? left + ' LEFT' : 'ALL DONE') : 'NEXT 7 DAYS', label(8), left ? SOFT : GOLD)
+    w.addSpacer(fam === 'small' ? 8 : 10)
+    const L = SUBQ.length ? SUBQ : SUBNEXT, n0 = fam === 'small' ? 4 : fam === 'medium' ? 4 : 7, n = L.length === n0 + 1 ? n0 + 1 : n0
+    if (!L.length) t(w, '오늘 하위 할 일 없음', tw(TS), SOFT)
+    for (const x of L.slice(0, CNT || n)) {
+      const r = w.addStack(); r.centerAlignContent(); r.spacing = 7; r.url = doneUrl(x.id)
+      t(r, x.done ? '✓' : mkc(x.star), tw(TS - 1), x.star ? GOLD : SOFT)
+      const c = r.addStack(); c.layoutVertically()
+      const tr = c.addStack(); tr.centerAlignContent()
+      if (x.done) { const sk = tr.addStack(); sk.backgroundImage = strikeImage(); t(sk, x.t, tw(TS), SOFT).minimumScaleFactor = 0.8 } else t(tr, x.t, x.star ? F(TS, 'Medium') : tw(TS), INK).minimumScaleFactor = 0.8
+      if (!two && fam !== 'small') { tr.addSpacer(6); t(tr, x.p, label(7), SOFT).lineLimit = 1 }
+      if (two) { c.addSpacer(1); t(c, x.p, label(7), SOFT) }
+      r.addSpacer()
+      if (x.due !== today) t(r, sdT(x.due), tw(10), x.due < today ? GOLD : SOFT)
+      w.addSpacer(fam === 'small' ? 4 : two ? 6 : 5)
+    }
+    if (L.length > n) t(w, '+ ' + (L.length - n) + ' more', tw(11), SOFT)
+    w.url = link('tasks')
+  } else if (KIND === 'subp') {
+    // ── 하위 진행: 하위가 있는 남은 할 일마다 진행선 · n/m · 다음 하위 하나 (마감 가까운 순) ──
+    const h = w.addStack(); h.centerAlignContent(); cap(h, 'SUB PROGRESS'); h.addSpacer(); t(h, String(SUBP.length), label(8), SOFT)
+    w.addSpacer(fam === 'small' ? 8 : 12)
+    const n0 = fam === 'small' ? 2 : fam === 'medium' ? 3 : fam === 'extraLarge' ? 7 : 6
+    if (!SUBP.length) t(w, '하위 할 일 없음', tw(TS), SOFT)
+    for (const x of SUBP.slice(0, CNT || n0)) {
+      const r = w.addStack(); r.centerAlignContent()
+      t(r, x.t, tw(TS), INK).minimumScaleFactor = 0.8; r.addSpacer(6); t(r, x.n + '/' + x.m, tw(10), x.n === x.m ? GOLD : SOFT)
+      w.addSpacer(3); pbar(w, x.m ? x.n / x.m : 0, inner)
+      if (x.nx && fam !== 'small' && fam !== 'medium') { w.addSpacer(3); t(w, 'NEXT  ' + x.nx, label(7), SOFT) }
+      w.addSpacer(fam === 'small' ? 7 : fam === 'medium' ? 8 : 11)
+    }
+    if (SUBP.length > n0) t(w, '+ ' + (SUBP.length - n0) + ' more', tw(11), SOFT)
+    w.url = link('tasks')
   } else if (KIND === 'week7') {
     // ── 7일 일정: 중형은 7칸, 소·대형은 날짜별 줄 ──
     const h = w.addStack(); h.centerAlignContent(); cap(h, 'NEXT 7 DAYS'); h.addSpacer(); t(h, ev7 + '개', label(8), SOFT)
