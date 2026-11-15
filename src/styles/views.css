@@ -1716,3 +1716,5 @@ html[data-hand] .task-sub.starred { background-color: color-mix(in srgb, var(--a
 .subp-bar { display: block; height: 2px; background: color-mix(in srgb, var(--muted) 22%, transparent); position: relative; }
 .subp-bar b { position: absolute; inset: 0 auto 0 0; background: color-mix(in srgb, var(--accent) 75%, var(--text)); }
 .sub-row .sub-star, .sub-row .icon-btn { width: 32px; min-width: 32px; padding: 0; }
+.dw-sbar { display: block; width: 100%; height: 2px; margin: 4px 0 3px; background: color-mix(in srgb, currentColor 16%, transparent); }
+.dw-sbar b { display: block; height: 100%; background: currentColor; opacity: .7; }

@@ -166,6 +166,21 @@ if (!data) {
   }
   const items = [...tasksAll.filter((x) => x.due && x.due <= today && (!x.done || x.due === today || doneT.includes(x))), ...subItems].sort(byDate)
   done += subItems.filter((x) => x.done).length
+  // 하위 할 일 위젯: 오늘·지난 하위(끝낸 것은 오늘 끝낸 것만) · 다가오는 하위(7일) · 하위가 있는 할 일의 진행
+  const sdT = (k) => { const n = Math.round((new Date(k + 'T00:00') - new Date(today + 'T00:00')) / 86400000); return n === 0 ? '오늘' : n === 1 ? '내일' : n < 0 ? -n + '일 지남' : (+k.slice(5, 7)) + '.' + (+k.slice(8)) }
+  const SUBQ = [], SUBNEXT = [], lim7 = (() => { const x = new Date(d0); x.setDate(x.getDate() + 7); return ymd(x) })()
+  for (const t of tasksAll) {
+    if (t.done) continue
+    for (const s of t.subtasks || []) {
+      const it = { id: t.id + ':' + s.id, t: s.title, p: t.title, due: s.due, done: !!s.done, star: !!s.star }
+      const dt = s.done && s.doneAt && new Date(s.doneAt).toDateString() === d0.toDateString()
+      if (s.due && s.due <= today && (!s.done || dt)) SUBQ.push(it)
+      else if (!s.done && s.due && s.due > today && s.due <= lim7) SUBNEXT.push(it)
+    }
+  }
+  const subOrd = (a, b) => (a.done - b.done) || a.due.localeCompare(b.due) || (b.star - a.star)
+  SUBQ.sort(subOrd); SUBNEXT.sort(subOrd)
+  const SUBP = tasksAll.filter((t) => !t.done && (t.subtasks || []).length).sort(byDate).map((t) => { const S = t.subtasks, nx = [...S.filter((x) => x.star), ...S.filter((x) => !x.star)].find((x) => !x.done); return { id: t.id, t: t.title, n: S.filter((x) => x.done).length, m: S.length, nx: nx ? nx.title : '', due: t.due } })
   // 취소선: 글자는 설정 폰트 그대로, 뒤에 가운데 가는 선 이미지를 깔아 표시 (특수 문자는 폰트가 바뀌어 사용 안 함)
   let strikeImg = null // 필요할 때만 그림 (잠금 화면에선 안 그림)
   const strikeImage = () => strikeImg || (strikeImg = (() => {
@@ -809,6 +824,23 @@ if (!data) {
         for (const x of DUE.slice(0, 3)) rRow(x.title, dueTxt(x), tw(11), label(8))
         if (!DUE.length) t(w, '2주 안에 마감 없음', tw(11))
         else if (DUE.length > 3) t(w, '+ ' + (DUE.length - 3) + ' more', label(7)).textOpacity = 0.7
+      }
+    } else if (KIND === 'subs') {
+      const left = SUBQ.filter((x) => !x.done), f = left[0] || SUBNEXT[0]
+      if (inl) inline(f ? (left.length ? '' : sdT(f.due) + ' ') + f.t : '오늘 하위 할 일 없음')
+      else if (circ) cRows([[String(left.length), thin(22)], ['하위', label(7)]])
+      else {
+        const L = left.length ? left : SUBNEXT
+        for (const x of L.slice(0, 3)) rRow(x.t, x.due === today ? '' : sdT(x.due), tw(11), label(8))
+        if (!L.length) t(w, '오늘 하위 할 일 없음', tw(11))
+      }
+    } else if (KIND === 'subp') {
+      const f = SUBP[0]
+      if (inl) inline(f ? f.t + ' ' + f.n + '/' + f.m : '하위 할 일 없음')
+      else if (circ) cRows(f ? [[f.n + '/' + f.m, thin(18)], [f.t, label(6)]] : [['—', tw(14)]])
+      else {
+        for (const x of SUBP.slice(0, 3)) rRow(x.t, x.n + '/' + x.m, tw(11), label(8))
+        if (!SUBP.length) t(w, '하위 할 일 없음', tw(11))
       }
     } else if (KIND === 'week7') {
       const nx = nextEv7
