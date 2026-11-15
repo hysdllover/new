@@ -58,6 +58,7 @@ export function WidgetFontField() {
       <Field label="종이 테마 결 세기"><Seg value={st.widgetGrain || 'normal'} onChange={(v) => setSettings({ widgetGrain: v })} options={[['none', '없음'], ['light', '옅게'], ['normal', '기본']]} /></Field>
 </div></details>
       <details><summary>날짜·시간·할 일 표시</summary><div className="col" style={{ gap: 6 }}>
+      <Field label="위젯에서 할 일 줄 누르면"><Seg value={st.widgetTap === 'open' ? 'open' : 'done'} onChange={(v) => setSettings({ widgetTap: v === 'open' ? 'open' : null })} options={[['done', '바로 체크 · 다시 누르면 취소'], ['open', '자세히 보기']]} /></Field>
       <Field label="잠금 화면 한 줄 위젯 (Parameter 비웠을 때)"><Seg value={st.widgetInline || 'study'} onChange={(v) => setSettings({ widgetInline: v })} options={[['study', '공부 시간'], ['next', '다음 일정'], ['dday', 'D-day']]} /></Field>
       <Field label="날짜 표기"><Seg value={st.widgetDate || 'def'} onChange={(v) => setSettings({ widgetDate: v === 'def' ? null : v })} options={[['def', 'FRI · 30 OCT'], ['num', '10.30 금'], ['en', 'Oct 30 Fri']]} /></Field>
       <Toggle label="위쪽 날짜 줄 숨기기" checked={!!st.widgetNoDate} onChange={(v) => setSettings({ widgetNoDate: v })} />

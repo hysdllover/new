@@ -5,7 +5,7 @@ import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval'
 import { PRESETS } from '../theme/theme.js'
 import { getState, replaceColl, onChange, patch, settings, list, put, find, remove, deviceId } from '../store/store.js'
 import { COLLECTIONS, GIST_FILES } from '../store/schema.js'
-import { mergeColl, stableFile, shardOf, NOTE_SHARDS, isDataFile, mergeNote } from './merge.js'
+import { mergeColl, stableFile, shardOf, NOTE_SHARDS, isDataFile, mergeNote, newer } from './merge.js'
 import { blobToDataUrl, setRemoteRaw, addFile } from '../lib/files.js'
 import { eventsOn, classesOn } from '../engine/scheduler.js'
 import { weekGoals, goalProgress, addTask, toggleTask, addSession } from '../store/actions.js'
@@ -28,6 +28,25 @@ const setStatus = (p) => { status = { ...status, ...p }; L.forEach((l) => l()) }
 // 동기화 기록 (이 기기 · 최근 20개): 받은 항목 · 보낸 파일 · 겹침 · 오류
 export const syncLog = () => { try { return JSON.parse(localStorage.getItem('sync_log') || '[]') } catch { return [] } }
 function addLog(x) { try { localStorage.setItem('sync_log', JSON.stringify([x, ...syncLog()].slice(0, 20))) } catch {} }
+// 겹친 수정: 두 기기에서 같은 항목을 고쳐 한쪽이 덮인 경우, 덮인 쪽 내용을 남겨 둠 (이 기기 · 최근 30개)
+const CLASH_SKIP = new Set(['settings', 'live', 'logs', 'syncBlocks', 'files', 'days'])
+const CLASH_META = new Set(['updatedAt', 'deviceId', 'doneAt', 'createdAt', 'order', 'sort'])
+export const clashDiff = (a = {}, b = {}) => [...new Set([...Object.keys(a), ...Object.keys(b)])].filter((k) => !CLASH_META.has(k) && JSON.stringify(a[k] ?? null) !== JSON.stringify(b[k] ?? null))
+export const syncClashes = () => { try { return JSON.parse(localStorage.getItem('sync_clash') || '[]') } catch { return [] } }
+const saveClashes = (x) => { try { localStorage.setItem('sync_clash', JSON.stringify(x.slice(0, 30))) } catch {} setStatus({}) }
+function addClash(c, l, r) {
+  if (CLASH_SKIP.has(c) || l.deleted || r.deleted) return
+  const keys = clashDiff(l, r); if (!keys.length) return
+  const winR = newer(r, l), win = winR ? r : l, lose = winR ? l : r
+  saveClashes([{ key: c + ':' + l.id + ':' + Date.now(), at: Date.now(), c, id: l.id, title: String(win.title || win.name || win.text || lose.title || '(제목 없음)').slice(0, 80), lostHere: winR, win, lose }, ...syncClashes().filter((x) => !(x.c === c && x.id === l.id))])
+}
+export const dismissClash = (key) => saveClashes(syncClashes().filter((x) => x.key !== key))
+// 덮인 쪽 내용으로 되살림 → 지금 시각으로 올려 모든 기기에 반영
+export function applyClash(key) {
+  const x = syncClashes().find((y) => y.key === key); if (!x) return
+  put(x.c, { ...x.lose, updatedAt: Date.now(), deviceId: deviceId })
+  dismissClash(key); syncSoon()
+}
 export const useSyncStatus = () => useSyncExternalStore((f) => { L.add(f); return () => L.delete(f) }, () => status)
 
 const token = () => ls.get('gist_token')
@@ -365,7 +384,7 @@ function widgetPayload() {
     series: seriesSummary(list('tasks'), list('subjects'), settings().seriesColors || {}).slice(0, 6).map((x) => ({ t: x.t, d: x.d, n: x.n, x: x.next?.title || '', c: x.color })),
     sv: SCRIPT_VER,
     gid: gistId(), // 위젯에서 바로 처리할 때 명령을 남길 곳 (토큰은 위젯 쪽 보관함에만)
-    settings: { settings: { main: { goalDaily: main.goalDaily, goalByDay: main.goalByDay || {}, goalWeekly: main.goalWeekly, weekStart: main.weekStart, widgetFont: main.widgetFont, widgetScale: main.widgetScale, widgetWeight: main.widgetWeight, widgetClear: main.widgetClear, widgetTheme: main.widgetTheme, widgetPad: main.widgetPad, widgetRule: main.widgetRule, widgetPattern: main.widgetPattern, dashTiles: main.dashTiles, customWidgets: main.customWidgets, dayStart: main.dayStart, dayEnd: main.dayEnd, widgetDoodle: main.widgetDoodle, widgetDdColor: main.widgetDdColor, widgetMark: main.widgetMark, widgetInk: main.widgetInk, widgetDate: main.widgetDate, widgetNoDate: main.widgetNoDate, widgetClock: main.widgetClock, widgetAlign: main.widgetAlign, widgetVAlign: main.widgetVAlign, widgetGrain: main.widgetGrain, widgetDashSep: main.widgetDashSep, widgetNote: main.widgetNote, widgetBullet: main.widgetBullet, widgetCheck: main.widgetCheck, widgetRuleColor: main.widgetRuleColor, widgetInline: main.widgetInline, widgetTodoGroup: main.widgetTodoGroup, widgetNoteTitle: main.widgetNoteTitle, widgetNoMeta: main.widgetNoMeta, widgetNoteCols: main.widgetNoteCols } }, quotes: keep('quotes') },
+    settings: { settings: { main: { goalDaily: main.goalDaily, goalByDay: main.goalByDay || {}, goalWeekly: main.goalWeekly, weekStart: main.weekStart, widgetFont: main.widgetFont, widgetScale: main.widgetScale, widgetWeight: main.widgetWeight, widgetClear: main.widgetClear, widgetTheme: main.widgetTheme, widgetPad: main.widgetPad, widgetRule: main.widgetRule, widgetPattern: main.widgetPattern, dashTiles: main.dashTiles, customWidgets: main.customWidgets, dayStart: main.dayStart, dayEnd: main.dayEnd, widgetDoodle: main.widgetDoodle, widgetDdColor: main.widgetDdColor, widgetMark: main.widgetMark, widgetInk: main.widgetInk, widgetDate: main.widgetDate, widgetNoDate: main.widgetNoDate, widgetClock: main.widgetClock, widgetAlign: main.widgetAlign, widgetVAlign: main.widgetVAlign, widgetTap: main.widgetTap, widgetGrain: main.widgetGrain, widgetDashSep: main.widgetDashSep, widgetNote: main.widgetNote, widgetBullet: main.widgetBullet, widgetCheck: main.widgetCheck, widgetRuleColor: main.widgetRuleColor, widgetInline: main.widgetInline, widgetTodoGroup: main.widgetTodoGroup, widgetNoteTitle: main.widgetNoteTitle, widgetNoMeta: main.widgetNoMeta, widgetNoteCols: main.widgetNoteCols } }, quotes: keep('quotes') },
   })
 }
 const ATT_MAX = 7 * 1024 * 1024 // gist 한 파일로 올릴 수 있는 첨부 크기 (base64 로 늘어나는 걸 고려)
@@ -439,7 +458,7 @@ async function syncWidget(remoteId, patchFiles, force) {
   if (remoteId !== id) patchFiles['widget-gist.txt'] = { content: id }
 }
 
-// 자동 백업: 7일마다 보관함에 `backup-날짜.json` 저장, 최근 4개만 보관 (이 기기에만 두는 항목은 제외)
+// 자동 백업: 설정한 주기(기본 7일)마다 보관함에 `backup-날짜.json` 저장, 설정한 개수(기본 4개)만 보관 (이 기기에만 두는 항목은 제외)
 const BACKUP_RE = /^backup-(\d{4}-\d{2}-\d{2})\.json$/
 const ymdNow = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') }
 function backupContent() {
@@ -447,16 +466,19 @@ function backupContent() {
   return JSON.stringify({ app: 'study-dashboard', exportedAt: new Date().toISOString(), state: Object.fromEntries(Object.entries(st).filter(([c]) => !ex.has(c))) })
 }
 const backupRecs = () => list('live').filter((r) => r.kind === 'backup').sort((a, b) => a.date.localeCompare(b.date))
+// 설정 › 백업: 주기(매일 · 3일 · 매주) · 보관 개수(4 · 8 · 12)
+const bkEvery = () => [1, 3, 7].includes(+settings().backupEvery) ? +settings().backupEvery : 7
+const bkKeep = () => [4, 8, 12].includes(+settings().backupKeep) ? +settings().backupKeep : 4
 async function autoBackup(force = false, legacy = {}) {
-  for (const r of backupRecs().slice(0, -4)) { remove('live', r.id); await storeDel(r.raw) }
+  for (const r of backupRecs().slice(0, -bkKeep())) { remove('live', r.id); await storeDel(r.raw) }
   if (!force && Object.keys(legacy).some((n) => BACKUP_RE.test(n))) return // 예전 백업을 다 옮긴 뒤에
   const recs = backupRecs(), last = recs[recs.length - 1]?.date
-  const due = force || !last || (Date.now() - new Date(last + 'T00:00').getTime()) / 86400000 >= 7
+  const due = force || !last || (Date.now() - new Date(last + 'T00:00').getTime()) / 86400000 >= bkEvery()
   if (!due) return
   const date = ymdNow(), content = backupContent()
   const raw = await storePut(`backup-${date}.json`, content)
   put('live', { id: 'bk-' + date, kind: 'backup', date, size: content.length, raw })
-  for (const r of backupRecs().slice(0, -4)) { remove('live', r.id); await storeDel(r.raw) }
+  for (const r of backupRecs().slice(0, -bkKeep())) { remove('live', r.id); await storeDel(r.raw) }
 }
 export async function listBackups() {
   return backupRecs().reverse().map((r) => ({ name: r.id, date: r.date, size: r.size || 0, raw: r.raw }))
@@ -465,13 +487,32 @@ export async function backupNow() {
   await autoBackup(true)
   syncNow()
 }
-// 되돌리기: 백업 속 항목을 지금 시각으로 덮어써 모든 기기에 반영 (백업 이후 새로 만든 항목은 남음)
-export async function restoreBackup(b) {
-  const data = JSON.parse(await (await fetch(b.raw, { cache: 'no-store' })).text())
-  if (!data.state) throw new Error('백업 형식이 올바르지 않아요')
+export const backupSettings = () => ({ every: bkEvery(), keep: bkKeep() })
+const bkCache = new Map()
+async function backupData(b) {
+  if (!bkCache.has(b.raw)) {
+    const data = JSON.parse(await (await fetch(b.raw, { cache: 'no-store' })).text())
+    if (!data.state) throw new Error('백업 형식이 올바르지 않아요')
+    bkCache.set(b.raw, data)
+  }
+  return bkCache.get(b.raw)
+}
+// 미리보기: 종류마다 백업 속 개수 · 지금 개수 · 백업과 달라진 항목 수 (지운 항목 제외)
+export async function previewBackup(b) {
+  const data = await backupData(b), st = getState(), live = (o) => Object.values(o || {}).filter((r) => r && !r.deleted)
+  return Object.entries(data.state).filter(([c, recs]) => c in COLLECTIONS && recs && typeof recs === 'object' && !['live', 'settings'].includes(c)).map(([c, recs]) => {
+    const old = live(recs), now = st[c] || {}
+    const diff = old.filter((r) => { const n = now[r.id]; return !n || n.deleted || clashDiff(r, n).length }).length
+    return { c, then: old.length, now: live(now).length, diff }
+  }).filter((x) => x.then || x.now)
+}
+// 되돌리기: 백업 속 항목을 지금 시각으로 덮어써 모든 기기에 반영 (백업 이후 새로 만든 항목은 남음) · only: 고른 종류만
+export async function restoreBackup(b, only = null) {
+  const data = await backupData(b)
   const now = Date.now(), dev = localStorage.getItem('deviceId')
   for (const [c, recs] of Object.entries(data.state)) {
     if (!(c in COLLECTIONS) || typeof recs !== 'object') continue
+    if (only && !only.includes(c)) continue
     const bumped = Object.fromEntries(Object.entries(recs).map(([id, r]) => [id, { ...r, updatedAt: now, deviceId: dev }]))
     replaceColl(c, { ...getState()[c], ...bumped })
   }
@@ -523,6 +564,7 @@ async function takeCmds(cmds) {
     try {
       const at = +c.at || Date.now()
       if (c.act === 'done') { const tk = findRec('tasks', c.id); if (tk && !tk.done) { toggleTask(c.id, { quiet: true }); patch('tasks', c.id, { doneAt: at }) } }
+      else if (c.act === 'undone') { const tk = findRec('tasks', c.id); if (tk && tk.done) toggleTask(c.id, { quiet: true }) }
       else if (['start', 'pause', 'resume', 'stop'].includes(c.act)) widgetTimer(c.act, at, c.sid)
       else if (c.act === 'habit') { const h = findRec('habits', c.id); if (h) { const dd = new Date(at), k = `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, '0')}-${String(dd.getDate()).padStart(2, '0')}`; patch('habits', c.id, { days: { ...(h.days || {}), [k]: !!c.on } }) } }
       else if (c.act === 'addtask' && c.title) addTask({ title: String(c.title).slice(0, 200), due: c.due || null })
@@ -597,7 +639,7 @@ export async function syncNow({ flush = false } = {}) {
         try { data = JSON.parse(remoteText[name] || '{}') } catch {}
         for (const [c, recs] of Object.entries(data)) {
           if (!(c in COLLECTIONS) || ex.has(c)) continue
-          const { merged, localChanged, received, conflicts } = mergeColl(getState()[c], recs, since, c === 'notes' ? resolveNote : null)
+          const { merged, localChanged, received, conflicts } = mergeColl(getState()[c], recs, since, (l, r) => { const m = c === 'notes' ? resolveNote(l, r) : null; if (!m) addClash(c, l, r); return m })
           if (localChanged) replaceColl(c, merged)
           got += received; clash += conflicts
         }
