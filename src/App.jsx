@@ -1,8 +1,8 @@
 import { useEffect, useState, lazy, Suspense } from 'react'
 import { Icon, UiLayer, useUi, closeDetail, openSheet, openMenu, useMedia } from './components/ui.jsx'
 import { TABS, EXTRA, SEGMENTS, useNav, go, segOf, tabOpt, DEFAULT_TABBAR } from './nav.js'
-import { useColl, useSettings, setSettings } from './store/store.js'
-import { useSyncStatus, syncNow } from './sync/sync.js'
+import { useColl, useSettings, setSettings, deviceId as myDevice } from './store/store.js'
+import { useSyncStatus, syncNow, syncLog } from './sync/sync.js'
 import { isStandalone } from './lib/push.js'
 import { fmtDate, today, fmtClock } from './engine/date.js'
 import { useTimerState, useTick, elapsed, remaining } from './lib/timer.js'
@@ -239,17 +239,22 @@ function ResumeBanner() {
 
 // 상단 상태 줄 (설정 › 디자인 세부): 진행 중 타이머 · 동기화 상태를 한 줄로
 function StatusLine({ sync }) {
-  const st = useSettings(), tm = useTimerState(), subjects = useColl('subjects')
+  const st = useSettings(), tm = useTimerState(), subjects = useColl('subjects'), live = useColl('live')
   useTick(!!tm && !tm.paused && !!st.statusLine)
   if (!st.statusLine) return null
   const sb = tm && subjects.find((x) => x.id === tm.subjectId)
   const ago = sync.last ? Math.round((Date.now() - sync.last) / 60000) : null
+  // 덧붙임: 최근 동기화에서 받은 · 보낸 수 (10분 안) · 다른 기기가 마지막으로 동기화한 때 (기기 기록은 30분마다라 '30분 안')
+  const lg = syncLog().find((x) => !x.err), lgAgo = lg ? (Date.now() - lg.at) / 60000 : null
+  const other = live.filter((x) => x.kind === 'device' && x.id !== 'dev-' + myDevice && x.at).sort((a, b) => b.at - a.at)[0]
+  const oAgo = other ? Math.round((Date.now() - other.at) / 60000) : null
+  const syncMore = sync.state === 'off' ? '' : [lg && lgAgo < 10 && (lg.got || lg.sent) ? [lg.got ? '받음 ' + lg.got : '', lg.sent ? '보냄 ' + lg.sent : ''].filter(Boolean).join(' ') : '', other ? `${other.name || '다른 기기'} ${oAgo < 30 ? '30분 안' : oAgo < 60 ? oAgo + '분 전' : oAgo < 1440 ? Math.round(oAgo / 60) + '시간 전' : Math.round(oAgo / 1440) + '일 전'}` : ''].filter(Boolean).map((x) => ' · ' + x).join('')
   const syncTxt = sync.state === 'off' ? '동기화 꺼짐' : sync.state === 'syncing' ? '동기화 중' : sync.state === 'error' ? '동기화 대기' : ago == null ? '' : ago < 1 ? '방금 동기화' : ago < 60 ? `${ago}분 전 동기화` : `${Math.round(ago / 60)}시간 전 동기화`
   return (
     <div className="status-line no-print">
       {tm ? <button className="sl-timer" onClick={() => go('study', 'timer')}><i style={{ background: sb?.color || 'var(--accent)' }} className={tm.paused ? 'paused' : ''} />{sb?.name || '공부'} <b>{fmtClock((tm.mode === 'countdown' ? remaining(tm) : elapsed(tm)) / 1000)}</b>{tm.paused ? ' · 일시정지' : ''}</button> : <span>{fmtDate(today())}</span>}
       <span className="grow" />
-      <span className={'sl-sync ' + sync.state}>{syncTxt}</span>
+      <button className={'sl-sync ' + sync.state} onClick={() => { try { localStorage.setItem('set_sec', 'sync') } catch {} go('settings') }} aria-label="동기화 자세히">{(syncTxt + syncMore).replace(/^ · /, '')}</button>
     </div>
   )
 }

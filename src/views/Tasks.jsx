@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
 import { useColl, patch, put, remove, batch, recordChanges } from '../store/store.js'
-import { addTask, toggleTask, toggleSub, moveTasks, updateTask, QUICK_DATES, undoToast } from '../store/actions.js'
+import { addTask, toggleTask, toggleSub, moveTasks, updateTask, QUICK_DATES, undoToast, patchSub } from '../store/actions.js'
 import TaskQuickInput from '../components/TaskQuickInput.jsx'
 import { AddInput, Empty, Icon, openSheet, openMenu, toast, openDetail, Check } from '../components/ui.jsx'
-import TaskItem, { SubList } from '../components/TaskItem.jsx'
+import TaskItem, { SubList, SubChip } from '../components/TaskItem.jsx'
 import { WeekGoalsCard } from '../components/WeekGoals.jsx'
 import { SMART, applyFilter, quadrant, openCount } from './tasks/filter.js'
 import { setParams } from '../nav.js'
@@ -178,6 +178,9 @@ function DayView({ params }) {
   }
   const rel = (d) => { const n = Math.round((parseYmd(d) - parseYmd(t0)) / 86400000); return n === 0 ? '오늘' : n === 1 ? '내일' : n === -1 ? '어제' : n === 2 ? '모레' : null }
   const left = items.filter((t) => !t.done).length
+  // 이날로 날짜를 정한 하위 할 일 (상위 날짜와 다를 때) · 오늘이면 지난 날짜의 남은 하위도 — 끝낸 것은 줄 그은 채
+  const daySubs = live.flatMap((t) => (t.subtasks || []).filter((s) => s.due && s.due !== t.due && (s.due === date || (isToday && s.due < t0 && !s.done)) && !(tidy && s.done)).map((s) => ({ t, s })))
+    .sort((a, b) => a.s.due.localeCompare(b.s.due))
   const row = (t) => <div key={t.id} data-drop={'task:' + t.id}><TaskItem t={t} subjects={subjects} projects={projects} drag={dragFor(t)} sel={sel.of(t)} /></div>
   return (
     <div className="col" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
@@ -235,6 +238,12 @@ function DayView({ params }) {
           {!items.length && <Empty hint={!all.length && isToday ? '위 칸에 적고 엔터 · 날짜를 왼쪽·오른쪽으로 밀어 다른 날도 볼 수 있어요' : null}>{all.length ? '모두 끝냈어요' : isToday ? '오늘 할 일이 없어요' : '이날 할 일이 없어요'}</Empty>}
         </div>
       </div>
+      {daySubs.length > 0 && (
+        <div className="card" style={{ padding: '6px 12px 10px' }}>
+          <div className="small muted" style={{ padding: '4px 0 2px' }}>{rel(date) || fmtDate(date)} 하위 할 일 <span className="cnt">{daySubs.filter(({ s }) => !s.done).length}</span></div>
+          <div className="task-subs day-subs">{daySubs.map(({ t, s }) => <SubChip key={t.id + s.id} t={t} s={s} parent />)}</div>
+        </div>
+      )}
       {left > 0 && !sel.mode && <BulkMove ids={items.filter((t) => !t.done).map((t) => t.id)} />}
       {sel.mode ? <SelBar sel={sel} all={[...overdue, ...items]} /> : <div className="tiny muted center">좌우로 밀어 날짜 이동 · 길게 눌러 순서 변경 (시간 있는 할 일은 시간순)</div>}
     </div>
@@ -394,6 +403,8 @@ function WeekBoard() {
   const ord = (a, b) => (a.done - b.done) || (a.dueTime == null) - (b.dueTime == null) || (a.dueTime ?? 0) - (b.dueTime ?? 0) || (a.order ?? 0) - (b.order ?? 0)
   const loose = tasks.filter((t) => !t.done && !t.due).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).slice(0, 40)
   const drop = (t) => (z) => { const k = z.dataset.drop; if (!k?.startsWith('wd:')) return; const due = k.slice(3) || null; if ((t.due || null) === due) return; const ch = recordChanges(() => updateTask(t.id, due ? { due } : { due: null, dueTime: null })); undoToast(due ? `${fmtDate(due)}로 옮겼어요` : '날짜를 뺐어요', ch) }
+  // 하위 칩을 길게 눌러 다른 날 칸에 놓으면 그 하위 날짜만 바뀜 (상위와 같은 날이면 날짜를 비워 상위 아래로)
+  const dropSub = (t, s) => (z) => { const k = z.dataset.drop; if (!k?.startsWith('wd:')) return; const d = k.slice(3) || null; const due = d && d === t.due ? null : d; if ((s.due || null) === due) return; const ch = recordChanges(() => patchSub(t.id, s.id, { due })); undoToast(d ? `${fmtDate(d)}로 옮겼어요 · ${s.title}` : `날짜를 뺐어요 · ${s.title}`, ch) }
   const Card = ({ t }) => {
     const sb = subjects.find((x) => x.id === t.subjectId)
     return (
@@ -403,16 +414,15 @@ function WeekBoard() {
         <span className="wkb-t">{t.title}</span>
         {t.dueTime != null && <span className="tiny muted">{fmtTime(t.dueTime)}</span>}
         {/* 하위 할 일: 날짜가 없거나 이 할 일과 같은 날인 것만 아래에 (다른 날짜는 그날 칸에) */}
-        <SubList t={t} subs={t.subtasks || []} only={(s) => !s.due || s.due === t.due} />
+        <SubList t={t} subs={t.subtasks || []} only={(s) => !s.due || s.due === t.due} drop={dropSub} />
       </div>
     )
   }
   // 다른 날로 정한 하위 할 일: 그날 칸에 '↳ 상위 제목' 과 함께
   const subsOn = (d) => tasks.flatMap((t) => (t.subtasks || []).filter((s) => s.due === d && s.due !== t.due).map((s) => ({ t, s })))
   const SubCard = ({ t, s }) => (
-    <div className={'wkb-item wkb-sub' + (s.done ? ' done' : '')} onClick={() => openDetail('task', t.id)}>
-      <button className={'sub-ck' + (s.done ? ' on' : '')} onClick={(e) => { e.stopPropagation(); toggleSub(t.id, s.id) }} aria-label="끝내기" />
-      <span className="wkb-t">{s.title}<span className="wkb-par"> · {t.title}</span></span>
+    <div className="wkb-item wkb-sub" onClick={() => openDetail('task', t.id)}>
+      <SubChip t={t} s={s} drop={dropSub} parent />
     </div>
   )
   // 칸에 바로 추가 (그날 마감 · 날짜 없음은 받은 편지함)

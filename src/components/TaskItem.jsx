@@ -4,7 +4,9 @@ import { toggleTask, toggleSub } from '../store/actions.js'
 import { longPress } from '../lib/drag.js'
 import { openTaskMenu } from './TaskQuickMenu.jsx'
 import { openNote } from '../nav.js'
-import { today, fmtShort } from '../engine/date.js'
+import { today, fmtShort, diffDays } from '../engine/date.js'
+import { settings } from '../store/store.js'
+import { openSubMenu } from './SubMenu.jsx'
 
 export default function TaskItem({ t, subjects, projects, drag, compact, extra, sel, showSubs }) {
   const subs = t.subtasks || []
@@ -32,7 +34,7 @@ export default function TaskItem({ t, subjects, projects, drag, compact, extra, 
             <SubjectTag id={t.subjectId} subjects={subjects} />
             {proj && <span className="row" style={{ gap: 4 }}><span className="dot" style={{ background: proj.color }} />{proj.name}</span>}
             {subs.length > 0 && <span>☑ {sdone}/{subs.length}</span>}
-            {subDue && <span className={subDue < today() ? 'sub-late' : ''}>하위 {subDue === today() ? '오늘' : fmtShort(subDue)}</span>}
+            {subDue && <span className={subDue < today() ? 'sub-late' : ''}>하위 {subDateText(subDue)}</span>}
             {t.repeat && <span>↻</span>}
             {t.estimate && <span>{t.estimate}분</span>}
             {(t.files?.length > 0 || t.links?.length > 0) && <Icon name="link" size={12} />}
@@ -47,19 +49,36 @@ export default function TaskItem({ t, subjects, projects, drag, compact, extra, 
   )
 }
 
+// 하위 날짜 표기: 설정에 따라 날짜(11.17) 또는 상대(내일 · 3일 뒤)
+export function subDateText(d) {
+  if (!d) return ''
+  const t0 = today()
+  if (d === t0) return '오늘'
+  if (settings().subDate !== 'rel') return fmtShort(d)
+  const n = diffDays(d, t0)
+  return n === 1 ? '내일' : n === 2 ? '모레' : n === -1 ? '어제' : n > 0 ? n + '일 뒤' : -n + '일 전'
+}
+
 // 할 일 아래 하위 할 일 (리스트 · 주간 배치): 작은 체크 · 제목 · 날짜 — 체크를 누르면 바로 끝냄
-export function SubList({ t, subs, only }) {
-  const L = only ? subs.filter(only) : subs
-  if (!L.length) return null
+// 중요 표시한 하위는 맨 앞 · 길게 누르면 메뉴(날짜 · 이름 · 꺼내기 · 지우기) · drop 이 있으면 끌어서 다른 날 칸으로
+export function SubList({ t, subs, only, drop }) {
+  const L0 = only ? subs.filter(only) : subs
+  if (!L0.length) return null
+  const L = [...L0.filter((s) => s.star), ...L0.filter((s) => !s.star)]
+  const grid = settings().subChips === 'grid'
   return (
-    <div className="task-subs" data-nodrag onClick={(e) => e.stopPropagation()}>
-      {L.map((s) => (
-        <div key={s.id} className={'task-sub' + (s.done ? ' done' : '')}>
-          <button className={'sub-ck' + (s.done ? ' on' : '')} onClick={() => toggleSub(t.id, s.id)} aria-label={s.done ? '되돌리기' : '끝내기'} />
-          <span className="sub-tt">{s.title}</span>
-          {s.due && s.due !== t.due && <span className={'sub-d' + (!s.done && s.due < today() ? ' late' : '')}>{s.due === today() ? '오늘' : fmtShort(s.due)}</span>}
-        </div>
-      ))}
+    <div className={'task-subs' + (grid ? ' grid' : '')} onClick={(e) => e.stopPropagation()}>
+      {L.map((s) => <SubChip key={s.id} t={t} s={s} drop={drop} />)}
+    </div>
+  )
+}
+export function SubChip({ t, s, drop, parent }) {
+  const hold = longPress(() => ({ onHold: () => openSubMenu(t.id, s.id), ...(drop ? { label: s.title, onDrop: drop(t, s) } : null) }))
+  return (
+    <div className={'task-sub' + (s.done ? ' done' : '') + (s.star ? ' starred' : '')} {...hold} onPointerDown={(e) => { e.stopPropagation(); hold.onPointerDown(e) }} onClick={(e) => { e.stopPropagation(); if (Date.now() - (e.currentTarget.__held || 0) < 700) return }}>
+      <button className={'sub-ck' + (s.done ? ' on' : '')} onClick={() => toggleSub(t.id, s.id)} aria-label={s.done ? '되돌리기' : '끝내기'} />
+      <span className="sub-tt">{s.title}{parent && <span className="wkb-par"> · {t.title}</span>}</span>
+      {s.due && s.due !== t.due && !parent && <span className={'sub-d' + (!s.done && s.due < today() ? ' late' : '')}>{subDateText(s.due)}</span>}
     </div>
   )
 }

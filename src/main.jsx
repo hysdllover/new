@@ -83,8 +83,13 @@ Promise.all([loadState(), initFonts(), restoreSync()]).then(async () => {
   const doneIn = q.get('done')
   if (doneIn) {
     const { find } = await import('./store/store.js')
-    const tk = find('tasks', doneIn)
-    if (q.get('quick') && tk && !tk.deleted) {
+    // 하위 할 일 ('할일id:하위id'): 그 하위만 체크 · 다시 누르면 취소
+    if (doneIn.includes(':')) {
+      const [tid, sid] = doneIn.split(':'), { toggleSub } = await import('./store/actions.js'), pt = find('tasks', tid)
+      if (pt && (pt.subtasks || []).some((x) => x.id === sid)) setTimeout(() => toggleSub(tid, sid), 500)
+    }
+    const tk = doneIn.includes(':') ? null : find('tasks', doneIn)
+    if (doneIn.includes(':')) { /* 하위는 위에서 처리 */ } else if (q.get('quick') && tk && !tk.deleted) {
       // 위젯에서 바로 완료 (확인 창 없이) — 잘못 눌렀으면 되돌리기
       const { toggleTask } = await import('./store/actions.js')
       // 끝낸 할 일을 다시 누르면 완료 취소

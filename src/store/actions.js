@@ -37,7 +37,9 @@ export const setWeekGoals = (goals, id = weekId()) => put('days', { ...(find('da
 export function goalProgress(g, tasks) {
   const linked = tasks.filter((t) => t.goalId === g.id && !t.archived)
   const done = linked.filter((t) => t.done).length
-  return { linked: linked.length, done, ratio: g.done ? 1 : linked.length ? done / linked.length : 0 }
+  // 하위 할 일이 있는 할 일은 하위 진행만큼 반영
+  const part = linked.reduce((a, t) => a + taskProgress(t), 0)
+  return { linked: linked.length, done, ratio: g.done ? 1 : linked.length ? part / linked.length : 0 }
 }
 
 // 빠른 날짜 목표: 오늘·내일·이번 주말(토)·다음 주 월요일
@@ -89,6 +91,8 @@ export function toggleTask(id, opt = {}) {
   const ch = recordChanges(() => batch(() => {
     const done = !t.done
     patch('tasks', id, { done, doneAt: done ? Date.now() : null, status: done ? 'done' : t.status === 'done' ? 'todo' : t.status })
+    // 설정: 상위를 끝내면 남은 하위도 함께 체크
+    if (done && settings().subWithParent && (t.subtasks || []).some((s) => !s.done)) setSubs(id, t.subtasks.map((s) => (s.done ? s : { ...s, done: true, doneAt: Date.now() })))
     log(id, done ? 'done' : 'undone', done ? '완료' : '완료 취소')
     if (done && t.repeat && t.due) {
       let nd = nextOccurrence(t.repeat, t.repeatStart || t.due, t.due)
@@ -115,10 +119,79 @@ export function deleteTask(id) {
 }
 
 // 하위 할 일 하나 끝내기 · 되돌리기
-export function toggleSub(taskId, subId) {
+/* ── 하위 할 일 ── */
+// 하위마다 at(마지막 수정 시각): 두 기기에서 같은 할 일의 다른 하위를 고쳐도 둘 다 남게 합칠 때 씀 (sync merge)
+const subKey = (x) => { const { at, ...r } = x || {}; return JSON.stringify(r) }
+export function stampSubs(prev = [], next = []) {
+  const P = new Map(prev.map((x) => [x.id, x])), now = Date.now()
+  return next.map((x) => { const o = P.get(x.id); return !o || subKey(o) !== subKey(x) ? { ...x, at: now } : x })
+}
+// 하위 목록 바꾸기 (편집 화면 등) — 지운 하위는 30일 동안 subTrash 에 (되살리기)
+export function setSubs(taskId, next) {
   const t = find('tasks', taskId)
   if (!t) return
-  patch('tasks', taskId, { subtasks: (t.subtasks || []).map((s) => (s.id === subId ? { ...s, done: !s.done } : s)) })
+  const prev = t.subtasks || [], ids = new Set(next.map((x) => x.id)), now = Date.now()
+  const gone = prev.filter((x) => !ids.has(x.id)).map((x) => ({ ...x, deletedAt: now }))
+  const trash = [...gone, ...(t.subTrash || []).filter((x) => !ids.has(x.id) && now - (x.deletedAt || 0) < 30 * 86400000)].slice(0, 100)
+  patch('tasks', taskId, { subtasks: stampSubs(prev, next), ...(gone.length || (t.subTrash || []).length !== trash.length ? { subTrash: trash } : null) })
+}
+export function patchSub(taskId, subId, partial) {
+  const t = find('tasks', taskId)
+  if (!t) return
+  setSubs(taskId, (t.subtasks || []).map((s) => (s.id === subId ? { ...s, ...partial } : s)))
+}
+// 하위 체크 — 되돌리기 알림 · 설정에 따라 다 끝내면 상위도 완료
+export function toggleSub(taskId, subId, opt = {}) {
+  const t = find('tasks', taskId)
+  if (!t) return
+  const s0 = (t.subtasks || []).find((s) => s.id === subId)
+  if (!s0) return
+  const done = !s0.done
+  const ch = recordChanges(() => batch(() => {
+    const next = (t.subtasks || []).map((s) => (s.id === subId ? { ...s, done, doneAt: done ? Date.now() : null } : s))
+    setSubs(taskId, next)
+    if (done && !t.done && settings().subAutoDone && next.every((s) => s.done)) toggleTask(taskId, { quiet: true })
+  }))
+  if (!opt.quiet) undoToast(`${done ? '끝냄' : '되돌림'} · ${s0.title}`, ch)
+}
+export function deleteSub(taskId, subId) {
+  const t = find('tasks', taskId)
+  if (!t) return
+  const s0 = (t.subtasks || []).find((s) => s.id === subId)
+  const ch = recordChanges(() => setSubs(taskId, (t.subtasks || []).filter((s) => s.id !== subId)))
+  undoToast(`지움 · ${s0?.title || ''}`, ch)
+}
+// 지운 하위 되살리기 (맨 뒤로)
+export function restoreSub(taskId, subId) {
+  const t = find('tasks', taskId)
+  const x = t && (t.subTrash || []).find((s) => s.id === subId)
+  if (!x) return
+  const { deletedAt, ...sub } = x
+  patch('tasks', taskId, { subTrash: (t.subTrash || []).filter((s) => s.id !== subId) })
+  setSubs(taskId, [...(find('tasks', taskId).subtasks || []), sub])
+}
+// 하위 → 따로 할 일 (과목 · 프로젝트 · 목표는 상위를 따름)
+export function promoteSub(taskId, subId) {
+  const t = find('tasks', taskId)
+  const s0 = t && (t.subtasks || []).find((s) => s.id === subId)
+  if (!s0) return
+  const ch = recordChanges(() => batch(() => {
+    addTask({ title: s0.title, due: s0.due || t.due || null, done: !!s0.done, doneAt: s0.done ? (s0.doneAt || Date.now()) : null, subjectId: t.subjectId || null, projectId: t.projectId || null, goalId: t.goalId || null, priority: s0.star ? 2 : 0 })
+    setSubs(taskId, (t.subtasks || []).filter((s) => s.id !== subId))
+    const t2 = find('tasks', taskId); patch('tasks', taskId, { subTrash: (t2.subTrash || []).filter((s) => s.id !== subId) }) // 꺼낸 것은 '지운 하위'에 두지 않음
+  }))
+  undoToast(`할 일로 꺼냈어요 · ${s0.title}`, ch)
+}
+// 할 일 → 다른 할 일의 하위 (그 할 일의 하위도 함께 이어 붙임)
+export function demoteTask(taskId, parentId) {
+  const t = find('tasks', taskId), p = find('tasks', parentId)
+  if (!t || !p || t.id === p.id) return
+  const own = (t.subtasks || []).map((s) => ({ ...s, id: uid() }))
+  const ch = recordChanges(() => batch(() => {
+    setSubs(parentId, [...(p.subtasks || []), { id: uid(), title: t.title, done: !!t.done, doneAt: t.doneAt || null, due: t.due && t.due !== p.due ? t.due : null, star: t.priority >= 2 || undefined }, ...own])
+    remove('tasks', taskId)
+  }))
+  undoToast(`‘${p.title}’ 아래로 넣었어요`, ch)
 }
 
 export function taskProgress(t) {

@@ -81,3 +81,28 @@ test('노트 블록 3방향 합치기', async () => {
   assert.equal(n.title, 'T2'); assert.equal(n.blocks.length, 4)
   assert.equal(mergeNote(null, { blocks: [] }, { blocks: [] }), null)
 })
+
+test('mergeTask: 두 기기에서 다른 하위를 체크하면 둘 다 남음', async () => {
+  const { mergeTask } = await import('../src/sync/merge.js')
+  const base = [{ id: 'a', title: '1', at: 1 }, { id: 'b', title: '2', at: 1 }]
+  const l = { id: 't', title: 'T', updatedAt: 10, subtasks: [{ ...base[0], done: true, at: 10 }, base[1]] }
+  const r = { id: 't', title: 'T', updatedAt: 11, subtasks: [base[0], { ...base[1], done: true, at: 11 }] }
+  const m = mergeTask(l, r)
+  assert.deepEqual(m.subtasks.map((x) => [x.id, !!x.done]), [['a', true], ['b', true]])
+})
+
+test('mergeTask: 한쪽에서 추가 · 다른 쪽에서 지움', async () => {
+  const { mergeTask } = await import('../src/sync/merge.js')
+  const l = { id: 't', updatedAt: 10, subtasks: [{ id: 'a', at: 1 }, { id: 'n', title: '새', at: 10 }] }
+  const r = { id: 't', updatedAt: 11, subtasks: [], subTrash: [{ id: 'a', at: 1, deletedAt: 11 }] }
+  const m = mergeTask(l, r)
+  assert.deepEqual(m.subtasks.map((x) => x.id), ['n'])
+  assert.deepEqual(m.subTrash.map((x) => x.id), ['a'])
+})
+
+test('mergeTask: 지운 뒤 다른 기기에서 고친 하위는 살림', async () => {
+  const { mergeTask } = await import('../src/sync/merge.js')
+  const l = { id: 't', updatedAt: 12, subtasks: [{ id: 'a', title: '고침', at: 12 }] }
+  const r = { id: 't', updatedAt: 11, subtasks: [], subTrash: [{ id: 'a', at: 1, deletedAt: 11 }] }
+  assert.deepEqual(mergeTask(l, r).subtasks.map((x) => x.title), ['고침'])
+})

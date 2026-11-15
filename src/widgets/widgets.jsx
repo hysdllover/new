@@ -769,6 +769,29 @@ function SubsToday() {
   )
 }
 
+// 하위 진행: 하위 할 일이 있는 남은 할 일마다 진행선 · n/m · 다음 하나 (마감 가까운 순)
+function SubProgress() {
+  const tasks = useColl('tasks'), subjects = useColl('subjects')
+  const L = tasks.filter((t) => !t.archived && !t.done && (t.subtasks || []).length).sort((a, b) => (a.due || '9999').localeCompare(b.due || '9999')).slice(0, 6)
+  return (
+    <Card title="하위 진행" action={<button className="tiny muted" onClick={goto('tasks', 'list')}>할 일 →</button>}>
+      <div className="col" style={{ gap: 9 }}>
+        {L.map((t) => {
+          const S = t.subtasks, n = S.filter((x) => x.done).length, nx = [...S.filter((x) => x.star), ...S.filter((x) => !x.star)].find((x) => !x.done), c = subjects.find((x) => x.id === t.subjectId)?.color
+          return (
+            <button key={t.id} className="subp" onClick={() => openDetail('task', t.id)}>
+              <span className="row" style={{ gap: 6, flexWrap: 'nowrap' }}><span className="grow ellipsis small">{t.title}</span><span className="tiny muted nowrap">{n}/{S.length}</span></span>
+              <i className="subp-bar"><b style={{ width: (n / S.length) * 100 + '%', ...(c ? { background: c } : null) }} /></i>
+              {nx && <span className="tiny muted ellipsis">다음 · {nx.title}</span>}
+            </button>
+          )
+        })}
+        {!L.length && <div className="tiny muted">하위 할 일이 있는 할 일이 없어요</div>}
+      </div>
+    </Card>
+  )
+}
+
 function WeekMemo() {
   useColl('days'); const st = useSettings(), ws = weekStart(today(), st.weekStart ?? 1), rec = dayRec(ws)
   return (
@@ -941,6 +964,7 @@ export const WIDGETS = {
   inbox: { label: '받은 편지함', C: Inbox, size: 'm' },
   daybar: { label: '오늘 하루 막대 (공부 · 일정)', C: DayBar, size: 'm' },
   subtoday: { label: '오늘 하위 할 일', C: SubsToday, size: 'm' },
+  subprog: { label: '하위 진행 (할 일마다 진행선)', C: SubProgress, size: 'm' },
   weekmemo: { label: '이번 주 메모', C: WeekMemo, size: 'm' },
   quote: { label: '오늘의 다짐', C: QuoteW, size: 'm' },
   duesoon: { label: '마감 임박 (3일 안)', C: DueSoon, size: 'm' },

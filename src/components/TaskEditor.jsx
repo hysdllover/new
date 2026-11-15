@@ -3,7 +3,7 @@ import { dragReorder } from '../lib/drag.js'
 import { weekGoals } from '../store/actions.js'
 import { REMINDER_OPTS, taskReminders } from '../engine/reminders.js'
 import { useRec, useColl, useSettings, patch, uid, list, find, settings } from '../store/store.js'
-import { updateTask, toggleTask, deleteTask, scheduleTask, splitTask, addReview, taskSpent, dayRec, setDay } from '../store/actions.js'
+import { updateTask, toggleTask, deleteTask, scheduleTask, splitTask, addReview, taskSpent, dayRec, setDay, setSubs as setSubsAct, restoreSub } from '../store/actions.js'
 import { Icon, Check, Field, AutoText, closeDetail, openSheet, toast, Prog, openDetail } from './ui.jsx'
 import { PRI, SubjectSelect, ProjectSelect, RepeatEditor, TimeInput } from './common.jsx'
 import { LinksEditor, FilesEditor } from './Attach.jsx'
@@ -47,7 +47,7 @@ export default function TaskEditor({ id }) {
     const add = titles.map((title) => { const due = newDue === 'parent' ? t.due || null : newDue === 'seq' ? nx : null; if (newDue === 'seq') nx = addDays(nx, 1); return { id: uid(), title, done: false, ...(due ? { due } : null) } })
     setSubs([...subs, ...add])
   }
-  const setSubs = (s) => patch('tasks', id, { subtasks: s })
+  const setSubs = (s) => setSubsAct(id, s) // 하위 시각 기록 · 지운 하위는 30일 보관
   const dragSub = (e, i) => dragReorder(e, i, (from, to) => { const a = [...subs]; a.splice(to, 0, a.splice(from, 1)[0]); setSubs(a) })
   const spent = taskSpent(id, sessions)
   const myLogs = logs.filter((l) => l.taskId === id).sort((a, b) => b.at - a.at)
@@ -114,13 +114,14 @@ export default function TaskEditor({ id }) {
             {subs.map((s, i) => (
               <div key={s.id} className="row sub-row reorder-row" style={{ minHeight: 38 }}>
                 <span className="sub-grip" onPointerDown={(e) => dragSub(e, i)} aria-label="끌어서 순서 바꾸기">⋮⋮</span>
-                <Check on={s.done} onClick={() => setSubs(subs.map((x) => x.id === s.id ? { ...x, done: !x.done } : x))} />
+                <Check on={s.done} onClick={() => setSubs(subs.map((x) => x.id === s.id ? { ...x, done: !x.done, doneAt: !x.done ? Date.now() : null } : x))} />
                 <input className="input bare grow" value={s.title} onChange={(e) => setSubs(subs.map((x) => x.id === s.id ? { ...x, title: e.target.value } : x))} />
                 {/* 하위 할 일 날짜: 누르면 날짜 고르기 · 지우면 날짜 없음 */}
                 <label className={'chip sub-due' + (s.due ? ' on' : '') + (s.due && !s.done && s.due < today() ? ' late' : '')} aria-label="날짜">
                   {s.due ? (s.due === today() ? '오늘' : fmtShort(s.due)) : <Icon name="calendar" size={13} />}
                   <input type="date" value={s.due || ''} onChange={(e) => setSubs(subs.map((x) => x.id === s.id ? { ...x, due: e.target.value || null } : x))} />
                 </label>
+                <button className={'icon-btn sub-star' + (s.star ? ' on' : '')} onClick={() => setSubs(subs.map((x) => x.id === s.id ? { ...x, star: !x.star || undefined } : x))} aria-label={s.star ? '중요 표시 빼기' : '중요 표시'}><Icon name="star" size={14} /></button>
                 <button className="icon-btn" onClick={() => setSubs(subs.filter((x) => x.id !== s.id))} aria-label="삭제"><Icon name="close" size={14} /></button>
               </div>
             ))}
@@ -140,6 +141,15 @@ export default function TaskEditor({ id }) {
             {t.due && t.due > today() && <button className="chip" onClick={() => bulkDue('spread')}>마감({fmtShort(t.due)})까지 나눠서</button>}
             <button className="chip" onClick={() => bulkDue('clear')}>날짜 지우기</button>
           </div>}
+          {subs.length > 0 && <div className="row wrap" style={{ gap: 4, alignItems: 'center', marginTop: 4 }}>
+            <span className="tiny muted">체크리스트</span>
+            <button className="chip" onClick={() => import('../lib/subPrint.js').then((m) => m.printSubs(find('tasks', id)))}>A4 인쇄</button>
+            <button className="chip" onClick={() => import('../lib/subPrint.js').then((m) => m.saveSubsImage(find('tasks', id)))}>이미지 저장</button>
+          </div>}
+          {(t.subTrash || []).length > 0 && <details className="more" style={{ marginTop: 6 }}>
+            <summary>지운 하위 {t.subTrash.length} <span className="tiny muted">· 30일 보관</span></summary>
+            <div className="list">{t.subTrash.map((x) => <div key={x.id} className="row" style={{ gap: 6, minHeight: 32 }}><span className="grow small muted">{x.title}</span><button className="btn sm" onClick={() => restoreSub(id, x.id)}>되살리기</button></div>)}</div>
+          </details>}
         </Field>
 
         </>}
