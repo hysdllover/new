@@ -79,3 +79,29 @@ export function mergeNote(base, mine, theirs) {
   const top = newer(mine, theirs) ? mine : theirs
   return { ...top, title, blocks }
 }
+
+// 할 일 두 버전 합치기: 하위 할 일은 하나씩 (at 이 큰 쪽) — 한 기기는 1번, 다른 기기는 2번을 체크해도 둘 다 남음
+// 지운 하위(subTrash)는 양쪽 다 반영 · 나머지 칸은 최신 수정 우선 · 하위가 둘 다 없으면 null (그냥 최신 수정 우선)
+export function mergeTask(l, r) {
+  if (!l || !r || l.deleted || r.deleted) return null
+  const ls = l.subtasks || [], rs = r.subtasks || []
+  if (!ls.length && !rs.length) return null
+  const top = newer(r, l) ? r : l, other = top === r ? l : r
+  const trash = new Map()
+  for (const x of [...(l.subTrash || []), ...(r.subTrash || [])]) if (!trash.has(x.id) || (x.deletedAt || 0) > (trash.get(x.id).deletedAt || 0)) trash.set(x.id, x)
+  const T = new Map((top.subtasks || []).map((x) => [x.id, x])), O = new Map((other.subtasks || []).map((x) => [x.id, x]))
+  const pick = (a, b) => (!a ? b : !b ? a : (b.at || 0) > (a.at || 0) ? b : a)
+  const alive = (x) => { const d = trash.get(x.id); return !d || (x.at || 0) > (d.deletedAt || 0) }
+  const out = [], seen = new Set()
+  // 순서는 최신 쪽을 따르고, 다른 쪽에만 있는 하위는 그 앞 하위 뒤에 끼움
+  for (const x of top.subtasks || []) { const m = pick(x, O.get(x.id)); if (alive(m)) out.push(m); seen.add(x.id) }
+  let prev = null
+  for (const x of other.subtasks || []) {
+    if (seen.has(x.id)) { prev = x.id; continue }
+    if (!alive(x)) continue
+    const at = prev ? out.findIndex((y) => y.id === prev) + 1 : 0
+    out.splice(at, 0, x); prev = x.id; seen.add(x.id)
+  }
+  const subTrash = [...trash.values()].filter((x) => !out.some((y) => y.id === x.id))
+  return { ...top, subtasks: out, ...(subTrash.length ? { subTrash } : null) }
+}

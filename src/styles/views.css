@@ -1696,3 +1696,23 @@ html[data-hand] .tl-line i { -webkit-mask-image: var(--pn-speck); mask-image: va
 .cnt-marks i { width: 12px; height: 12px; border: 1px solid color-mix(in srgb, var(--accent) 50%, var(--line)); border-radius: 2px; }
 .cnt-marks i.on { background: color-mix(in srgb, var(--accent) 60%, var(--surface)); }
 html[data-hand] .cnt-marks i.on { -webkit-mask-image: var(--pn-speck); mask-image: var(--pn-speck); -webkit-mask-size: 70px 70px; mask-size: 70px 70px; }
+
+/* 하위 할 일: 중요 표시 · 칸 맞춤 보기 · 길게 누르기 */
+.task-sub { cursor: default; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: pan-y; }
+.task-sub.holding { outline: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); }
+.task-sub.starred { border-color: color-mix(in srgb, var(--accent) 65%, var(--text)); font-weight: var(--fw-b, 500); }
+.task-sub.starred .sub-tt { color: var(--text); }
+html[data-hand] .task-sub.starred { background-color: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
+.task-subs.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); }
+.task-subs.grid .task-sub { display: flex; max-width: none; }
+.task-subs.grid .sub-d { margin-left: auto; }
+.sub-star { color: var(--muted); opacity: .5; }
+.sub-star.on { color: var(--accent); opacity: 1; }
+.sub-star.on svg { fill: currentColor; }
+.day-subs { margin-top: 2px; }
+.day-subs .task-sub { max-width: 100%; }
+.day-subs .wkb-par, .task-sub .wkb-par { color: var(--muted); font-size: .86em; }
+.subp { display: flex; flex-direction: column; gap: 3px; text-align: left; width: 100%; min-width: 0; }
+.subp-bar { display: block; height: 2px; background: color-mix(in srgb, var(--muted) 22%, transparent); position: relative; }
+.subp-bar b { position: absolute; inset: 0 auto 0 0; background: color-mix(in srgb, var(--accent) 75%, var(--text)); }
+.sub-row .sub-star, .sub-row .icon-btn { width: 32px; min-width: 32px; padding: 0; }

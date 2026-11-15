@@ -5,10 +5,10 @@ import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval'
 import { PRESETS } from '../theme/theme.js'
 import { getState, replaceColl, onChange, patch, settings, list, put, find, remove, deviceId } from '../store/store.js'
 import { COLLECTIONS, GIST_FILES } from '../store/schema.js'
-import { mergeColl, stableFile, shardOf, NOTE_SHARDS, isDataFile, mergeNote, newer } from './merge.js'
+import { mergeColl, stableFile, shardOf, NOTE_SHARDS, isDataFile, mergeNote, mergeTask, newer } from './merge.js'
 import { blobToDataUrl, setRemoteRaw, addFile } from '../lib/files.js'
 import { eventsOn, classesOn } from '../engine/scheduler.js'
-import { weekGoals, goalProgress, addTask, toggleTask, addSession } from '../store/actions.js'
+import { weekGoals, goalProgress, addTask, toggleTask, toggleSub, addSession } from '../store/actions.js'
 import { today, addDays, weekStart } from '../engine/date.js'
 import { buildIcs } from '../lib/ics.js'
 import { SCRIPT_VER } from '../lib/scriptable.js'
@@ -369,7 +369,7 @@ function widgetPayload() {
   const recent = Date.now() - 2 * 86400000
   const main = settings()
   return JSON.stringify({
-    tasks: { tasks: keep('tasks', (t) => !t.archived && (!t.done || (t.doneAt && new Date(t.doneAt).getTime() > recent))) },
+    tasks: { tasks: Object.fromEntries(Object.entries(keep('tasks', (t) => !t.archived && (!t.done || (t.doneAt && new Date(t.doneAt).getTime() > recent)))).map(([k, t]) => { const { subTrash, ...r } = t; return [k, r] })) },
     study: { subjects: keep('subjects'), sessions: keep('sessions', (x) => x.date >= from), ddays: keep('ddays') },
     cal: calPayload(),
     timer: timerPayload(),
@@ -564,6 +564,7 @@ async function takeCmds(cmds) {
     try {
       const at = +c.at || Date.now()
       if (c.act === 'done') { const tk = findRec('tasks', c.id); if (tk && !tk.done) { toggleTask(c.id, { quiet: true }); patch('tasks', c.id, { doneAt: at }) } }
+      else if (c.act === 'sub') { const tk = findRec('tasks', c.id), sb = tk && (tk.subtasks || []).find((x) => x.id === c.sid); if (sb && !!sb.done !== !!c.on) toggleSub(c.id, c.sid, { quiet: true }) }
       else if (c.act === 'undone') { const tk = findRec('tasks', c.id); if (tk && tk.done) toggleTask(c.id, { quiet: true }) }
       else if (['start', 'pause', 'resume', 'stop'].includes(c.act)) widgetTimer(c.act, at, c.sid)
       else if (c.act === 'habit') { const h = findRec('habits', c.id); if (h) { const dd = new Date(at), k = `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, '0')}-${String(dd.getDate()).padStart(2, '0')}`; patch('habits', c.id, { days: { ...(h.days || {}), [k]: !!c.on } }) } }
@@ -634,12 +635,22 @@ export async function syncNow({ flush = false } = {}) {
         if (m.title === r.title && JSON.stringify(m.blocks) === JSON.stringify(r.blocks)) return r
         return { ...m, updatedAt: Math.max(Date.now(), (l.updatedAt || 0) + 1, (r.updatedAt || 0) + 1), deviceId }
       }
+      // 두 기기에서 같은 할 일을 고쳤으면 하위 할 일은 하나씩 합침 (체크가 서로 덮이지 않게) → 다른 칸이 같으면 겹친 수정으로 남기지 않음
+      const resolveTask = (l, r) => {
+        const m = mergeTask(l, r)
+        if (!m) return null
+        const { subtasks: a, subTrash: b, ...restL } = l, { subtasks: c2, subTrash: d, ...restR } = r
+        const same = clashDiff(restL, restR).length === 0
+        if (JSON.stringify(m.subtasks) === JSON.stringify(r.subtasks) && same) return r
+        if (!same) addClash('tasks', l, r) // 하위 밖의 칸도 둘 다 고쳤으면 기록은 남김
+        return { ...m, updatedAt: Math.max(Date.now(), (l.updatedAt || 0) + 1, (r.updatedAt || 0) + 1), deviceId }
+      }
       for (const name of Object.keys(remoteText).filter(isDataFile)) {
         let data = {}
         try { data = JSON.parse(remoteText[name] || '{}') } catch {}
         for (const [c, recs] of Object.entries(data)) {
           if (!(c in COLLECTIONS) || ex.has(c)) continue
-          const { merged, localChanged, received, conflicts } = mergeColl(getState()[c], recs, since, (l, r) => { const m = c === 'notes' ? resolveNote(l, r) : null; if (!m) addClash(c, l, r); return m })
+          const { merged, localChanged, received, conflicts } = mergeColl(getState()[c], recs, since, (l, r) => { const m = c === 'notes' ? resolveNote(l, r) : c === 'tasks' ? resolveTask(l, r) : null; if (!m) addClash(c, l, r); return m })
           if (localChanged) replaceColl(c, merged)
           got += received; clash += conflicts
         }

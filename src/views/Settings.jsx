@@ -177,6 +177,16 @@ export default function Settings() {
         </div>
       </Card>
 
+      <Card title="하위 할 일">
+        <div className="form">
+          <Field label="보기 (리스트 · 주간 배치)"><Seg value={st.subChips === 'grid' ? 'grid' : 'free'} onChange={(v) => setSettings({ subChips: v === 'grid' ? 'grid' : null })} options={[['free', '나란히 (글자만큼)'], ['grid', '칸 맞춤']]} /></Field>
+          <Field label="날짜 표기"><Seg value={st.subDate === 'rel' ? 'rel' : 'date'} onChange={(v) => setSettings({ subDate: v === 'rel' ? 'rel' : null })} options={[['date', '11.17'], ['rel', '내일 · 3일 뒤']]} /></Field>
+          <Toggle label="하위를 모두 끝내면 상위 할 일도 완료" checked={!!st.subAutoDone} onChange={(v) => setSettings({ subAutoDone: v || null })} />
+          <Toggle label="상위 할 일을 끝내면 남은 하위도 함께 체크" checked={!!st.subWithParent} onChange={(v) => setSettings({ subWithParent: v || null })} />
+          <div className="tiny muted">하위 칩을 길게 누르면 날짜 · 이름 · 중요 표시 · 할 일로 꺼내기 · 지우기를 바로 할 수 있어요. 할 일을 길게 누르면 다른 할 일의 하위로 넣을 수 있어요.</div>
+        </div>
+      </Card>
+
       <TemplatesCard />
       </div>}
 

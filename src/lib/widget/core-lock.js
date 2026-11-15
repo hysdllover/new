@@ -154,9 +154,18 @@ if (!data) {
   const byDate = (a, b) => (a.due || '9999').localeCompare(b.due || '9999') || (a.dueTime ?? 9999) - (b.dueTime ?? 9999) || (a.order ?? 0) - (b.order ?? 0)
   const todo = tasksAll.filter((x) => !x.done && x.due && x.due <= today).sort(byDate)
   const doneT = tasksAll.filter((x) => x.done && x.doneAt && new Date(x.doneAt).toDateString() === d0.toDateString())
-  const done = doneT.length
+  let done = doneT.length
   // 오늘 할 일: 완료해도 자리 그대로, 줄 그어 표시
-  const items = tasksAll.filter((x) => x.due && x.due <= today && (!x.done || x.due === today || doneT.includes(x))).sort(byDate)
+  // 날짜를 오늘(또는 지난 날짜에 남은)로 정한 하위 할 일도 함께 · 누르면 그 하위만 체크 (id 는 '할일id:하위id')
+  const subItems = []
+  for (const t of tasksAll) for (const s of t.subtasks || []) {
+    if (!s.due || s.due > today) continue
+    const doneToday = s.done && s.doneAt && new Date(s.doneAt).toDateString() === d0.toDateString()
+    if (s.done ? !(s.due === today || doneToday) : false) continue
+    subItems.push({ id: t.id + ':' + s.id, sub: true, title: s.title + ' · ' + String(t.title || '').slice(0, 10), due: s.due, done: !!s.done, doneAt: s.doneAt || null, priority: s.star ? 3 : 0, order: (t.order ?? 0) + 0.5, dueTime: t.dueTime ?? null })
+  }
+  const items = [...tasksAll.filter((x) => x.due && x.due <= today && (!x.done || x.due === today || doneT.includes(x))), ...subItems].sort(byDate)
+  done += subItems.filter((x) => x.done).length
   // 취소선: 글자는 설정 폰트 그대로, 뒤에 가운데 가는 선 이미지를 깔아 표시 (특수 문자는 폰트가 바뀌어 사용 안 함)
   let strikeImg = null // 필요할 때만 그림 (잠금 화면에선 안 그림)
   const strikeImage = () => strikeImg || (strikeImg = (() => {

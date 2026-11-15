@@ -56,7 +56,7 @@ const link = (path) => (/^(https?|scriptable):/.test(path || '') ? path : RUN &&
 // 위젯에서 할 일 누르기: 확인 없이 바로 완료 · 끝낸 할 일은 다시 누르면 완료 취소 (앱이 잠깐 열렸다가 처리 · 되돌리기 가능)
 // 위젯에서 할 일 제목 누르기: 앱 설정 '할 일 줄 누르면'이 바로 체크(기본)면 줄 전체가 체크, 자세히면 그 할 일 자세히
 const TAPDONE = () => { try { return data.settings.settings.main.widgetTap !== 'open' } catch (e) { return true } }
-const taskUrl = (id) => (TAPDONE() ? doneUrl(id) : RUN ? RUN + '?act=view&go=tasks' : APP + '?task=' + encodeURIComponent(id))
+const taskUrl = (id) => (TAPDONE() ? doneUrl(id) : RUN ? RUN + '?act=view&go=tasks' : APP + '?task=' + encodeURIComponent(String(id).split(':')[0]))
 const doneUrl = (id) => (RUN ? RUN + '?act=done&id=' + encodeURIComponent(id) : APP + '?done=' + encodeURIComponent(id) + '&quick=1')
 
 const pad = (n) => String(n).padStart(2, '0')
@@ -289,6 +289,13 @@ const ACT = (() => {
     dirty = false
   }
   const done = async (id) => {
+    // 하위 할 일 ('할일id:하위id'): 그 하위만 체크 · 다시 누르면 취소
+    if (String(id).indexOf(':') > 0) {
+      const [tid, sid] = String(id).split(':'), pt = data.tasks && data.tasks.tasks && data.tasks.tasks[tid], sb = pt && (pt.subtasks || []).find((y) => y.id === sid)
+      if (!sb) { await say('하위 할 일을 찾지 못했어요', '앱에서 동기화한 뒤 다시 해 보세요'); return null }
+      const at = now(); if (!(await send({ act: 'sub', id: tid, sid, on: !sb.done, at }))) return null
+      sb.done = !sb.done; sb.doneAt = sb.done ? at : null; return (sb.done ? '완료 · ' : '완료 취소 · ') + sb.title
+    }
     const x = data.tasks && data.tasks.tasks && data.tasks.tasks[id]
     if (!x) { await say('할 일을 찾지 못했어요', '앱에서 동기화한 뒤 다시 해 보세요'); return null }
     if (x.done) { const at = now(); if (!(await send({ act: 'undone', id, at }))) return null; x.done = false; x.doneAt = null; return '완료 취소 · ' + x.title }
