@@ -20,7 +20,7 @@ const DEVICES = [
   ['iPadPro13-가로', 1376, 1032, 2, UA_IPAD, false],
   ['iPadPro11', 834, 1210, 2, UA_IPAD, false],
 ]
-const SEGS = { home: [''], plan: ['list', 'week', 'books'], record: ['timer', 'log', 'stats'], exam: [''], settings: [''] }
+const SEGS = { home: [''], plan: ['list', 'sheet', 'week', 'books'], record: ['timer', 'log', 'stats'], exam: [''], settings: [''] }
 
 const b = await chromium.launch()
 let bad = 0
