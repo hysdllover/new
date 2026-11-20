@@ -218,7 +218,12 @@ textarea.input { min-height: 70px; resize: vertical; }
 .sh-date span { font-size: 11px; color: var(--soft); }
 .sh-rows { display: flex; flex-direction: column; gap: 9px; min-width: 0; }
 .sh-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.sh-area { width: 34px; flex-shrink: 0; font-size: 11px; color: var(--soft); }
+.sh-area { width: 34px; flex-shrink: 0; font-size: 11px; color: var(--muted); text-align: center; padding: 1px 0; border-radius: 2px; background: color-mix(in srgb, var(--soft) 14%, transparent); }
+.sh-area.a-lc { background: color-mix(in srgb, #8a9bb5 22%, transparent); }
+.sh-area.a-rc { background: color-mix(in srgb, #a99bc4 24%, transparent); }
+.sh-area.a-vo { background: color-mix(in srgb, #b5a47a 24%, transparent); }
+.sh-row.imp .sh-t { color: color-mix(in srgb, #c9a0a8 75%, var(--text)); }
+.sh-day.exam { background: color-mix(in srgb, #c9a0a8 16%, transparent); margin: 0 -15px; padding: 12px 15px; }
 .sh-t { flex: 1; min-width: 0; text-align: left; font-size: 14px; }
 .sh-row.done .sh-t { color: var(--soft); text-decoration: line-through; text-decoration-thickness: .5px; }
 @media (min-width: 760px) { .sh-day { grid-template-columns: 110px 1fr; } }

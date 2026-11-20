@@ -1,6 +1,6 @@
 // 계획: 할 일 (날짜별 묶음) · 주간 (7칸) · 교재 · 강의 진도
 import { useState } from 'react'
-import { useColl, useSettings } from '../store/store.js'
+import { useColl, useSettings, list } from '../store/store.js'
 import { byOrder, upcoming, weekDays, toggleTask } from '../store/actions.js'
 import { Card, Seg, Empty, Icon, Check, Line, Toggle } from '../components/ui.jsx'
 import { TaskRow, QuickAdd, MaterialRow } from '../components/parts.jsx'
@@ -9,7 +9,7 @@ import { openSheet, toast } from '../components/toast.js'
 import { today, addDays, fmtDate, rel, WD, parseYmd, fmtShort, dday, diffDays } from '../lib/date.js'
 import { examName } from '../lib/exams.js'
 import { setSeg } from '../lib/nav.js'
-import { PLANS, planCount, importPlan } from '../lib/plans.js'
+import { PLANS, planCount, planDays, importPlan } from '../lib/plans.js'
 
 export default function Plan({ seg = 'list' }) {
   return (
@@ -104,6 +104,9 @@ function Books() {
 }
 export { rel }
 
+// 영역 표시 색 (옅은 칸)
+const AREA_C = { LC: 'lc', RC: 'rc', 보카: 'vo', 기타: 'et', 모의: 'lc', 오답: 'et', 복습: 'et' }
+
 // 진도표 불러오기 시트
 export const openPlanImport = () => openSheet((close) => <PlanImport close={close} />, { title: '진도표 불러오기' })
 function PlanImport({ close }) {
@@ -114,10 +117,10 @@ function PlanImport({ close }) {
         <div key={p.id} className="col" style={{ gap: 8 }}>
           <b>{p.title}</b>
           <div className="small muted">{p.note}</div>
-          <div className="meta"><span>할 일 {planCount(p)}개</span><span>{fmtShort(Object.keys(p.days)[0])} – {fmtShort(p.exam.date)}</span><span>교재 {p.materials.length}권</span></div>
+          <div className="meta"><span>{planDays(p)}일 · 할 일 {planCount(p)}개</span><span>{fmtShort(Object.keys(p.days)[0])} – {fmtShort(p.exam.date)}</span><span>교재 {p.materials.length}권</span></div>
           <Toggle label={`하루 목표를 ${p.goalDaily / 60}시간으로`} checked={goal} onChange={setGoal} />
           <Toggle label="교재 진도도 함께 (단기공략 LC · RC · 기출보카 · 기출문제집)" checked={books} onChange={setBooks} />
-          <div className="row end"><button className="btn primary" onClick={() => { const n = importPlan(p, { goal, books }); close(); setSeg('plan', 'sheet'); toast(n ? `할 일 ${n}개를 넣었어요` : '이미 넣은 진도표예요') }}>넣기</button></div>
+          <div className="row end"><button className="btn primary" onClick={() => { const r = importPlan(p, { goal, books }); close(); setSeg('plan', 'sheet'); toast(r.added ? `할 일 ${r.added}개를 넣었어요${r.removed ? ` · 예전 진도표 ${r.removed}개는 뺐어요` : ''}` : '이미 넣은 진도표예요') }}>{list('tasks').some((t) => t.plan === p.replaces) ? '예전 진도표를 이걸로 바꾸기' : '넣기'}</button></div>
         </div>
       ))}
     </div>
@@ -152,14 +155,14 @@ function Sheet() {
           <div key={k}>
             <div className="sh-week">{k === lastK ? '마지막 주' : `${k + 1}주`} · {fmtShort(addDays(ws0, k * 7))}–{fmtShort(addDays(ws0, k * 7 + 6))}</div>
             {W.map((d) => {
-              const T = L.filter((t) => t.due === d), wd = parseYmd(d).getDay(), mock = T.some((t) => t.area === '모의'), exam = d === ex.date
+              const T = L.filter((t) => t.due === d), wd = parseYmd(d).getDay(), mock = T.some((t) => t.mock || t.area === '모의'), exam = d === ex.date
               return (
-                <div key={d} id={'sh-' + d} className={'sh-day' + (mock || exam ? ' tint' : '') + (d === t0 ? ' today' : '') + (d < t0 ? ' past' : '')}>
+                <div key={d} id={'sh-' + d} className={'sh-day' + (mock ? ' tint' : '') + (exam ? ' exam' : '') + (d === t0 ? ' today' : '') + (d < t0 ? ' past' : '')}>
                   <div className="sh-date"><b className="num">{+d.slice(5, 7)}/{+d.slice(8)}</b><span className={wd === 0 ? 'bad-t' : wd === 6 ? 'acc-t' : ''}>{WD[wd]}{mock ? ' · 모의고사' : ''}{d === t0 ? ' · 오늘' : ''}</span></div>
                   <div className="sh-rows">{T.map((t) => (
-                    <div key={t.id} className={'sh-row' + (t.done ? ' done' : '')}>
+                    <div key={t.id} className={'sh-row' + (t.done ? ' done' : '') + (t.imp || t.examDay ? ' imp' : '')}>
                       <Check on={t.done} onClick={() => toggleTask(t.id)} />
-                      <span className="sh-area">{t.area || (exam && !t.area ? '시험' : '할일')}</span>
+                      <span className={'sh-area a-' + (AREA_C[t.area] || 'x')}>{t.area || (exam ? '시험' : '할일')}</span>
                       <button className="sh-t" onClick={() => openTask(t.id)}>{t.title}</button>
                     </div>
                   ))}</div>
