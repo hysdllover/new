@@ -1,265 +1,51 @@
-import { useEffect, useRef, useState } from 'react'
-import { useColl, useSettings, setSettings, uid, put, patch, remove } from '../store/store.js'
-import { WIDGETS } from '../widgets/widgets.jsx'
-import { Icon, openSheet, Seg, Field, confirmSheet, AddInput, useNow, Check } from '../components/ui.jsx'
-import { pickQuote } from '../lib/quote.js'
-import { ColorPick } from '../components/common.jsx'
-import { PALETTE } from '../store/schema.js'
-import { longPress } from '../lib/drag.js'
-import { dayRec, setDay, toggleTask } from '../store/actions.js'
-import { today } from '../engine/date.js'
-import { openPlanDay } from '../components/PlanDay.jsx'
-import { openCloseDay } from '../components/CloseDay.jsx'
-
-// 위젯 배치: 모든 기기에서 같은 4칸 격자 (아이폰·아이패드 배치가 같게)
-const COLS = [[1, '1/4'], [2, '2/4'], [3, '3/4'], [4, '한 줄']]
-const ROWS = [[1, '기본'], [2, '2배'], [3, '3배']]
-const STYLES = [['card', '카드'], ['tint', '색채움'], ['plain', '미니멀'], ['bold', '진하게'], ['glass', '유리'], ['outline', '테두리'], ['gradient', '그라데이션']]
-export const wCols = (w) => w.cols || { s: 2, m: 4, l: 4, t: 2 }[w.size || 's'] || 2
-export const wRows = (w) => w.rows || (w.size === 't' ? 2 : 1)
-// 벤토: 작은 위젯이 이어지면 [큰 칸(반 폭·2배 높이), 작은 칸, 작은 칸] 묶음으로 · 넓은 위젯은 한 줄
-const bento = (ws) => { let run = 0; return ws.map((w) => { const z = WIDGETS[w.type]?.size || 's'; if (z === 'm' || z === 'l') { run = 0; return { ...w, cols: 4, rows: 1, size: 'l' } } const big = run % 3 === 0; run++; const [cols, rows] = big ? [2, 2] : [2, 1]; return { ...w, cols, rows, size: sizeOf(cols, rows) } }) }
-// 편집 중 오른쪽 아래 손잡이를 끌어 크기 바꾸기 (4칸 격자 · 넓은 화면은 8칸 격자의 반까지 · 높이 1~3배)
-function startResize(e, w, done) {
-  e.preventDefault(); e.stopPropagation()
-  const card = e.currentTarget.closest('.wf'), grid = card?.parentElement; if (!card || !grid) return
-  // 아이패드 가로처럼 넓으면 격자가 8칸 (위젯이 반 폭씩 두 줄로) — 실제 칸 수로 계산
-  const cs = getComputedStyle(grid), gap = parseFloat(cs.columnGap) || 12, tracks = cs.gridTemplateColumns.split(' ').length || 4, colW = (grid.clientWidth - gap * (tracks - 1)) / tracks, rowH = 120 + gap
-  const r = card.getBoundingClientRect(), x0 = e.clientX, y0 = e.clientY
-  let cols = wCols(w), rows = wRows(w)
-  const mv = (ev) => {
-    cols = Math.max(1, Math.min(4, Math.round((r.width + ev.clientX - x0 + gap) / (colW + gap))))
-    rows = Math.max(1, Math.min(3, Math.round((r.height + ev.clientY - y0 + gap) / rowH)))
-    card.style.gridColumn = `span ${cols}`; card.style.gridRow = rows > 1 ? `span ${rows}` : ''; card.dataset.rs = `${cols}/4${rows > 1 ? ' · ' + rows + '배' : ''}`
-  }
-  const up = () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); delete card.dataset.rs; done(cols, rows) }
-  window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up)
-}
-const sizeOf = (cols, rows) => (rows >= 2 && cols <= 2 ? 't' : cols >= 4 ? 'l' : cols === 3 ? 'm' : 's')
-
-export const DEFAULT_PAGES = [
-  { id: 'pg-study', name: '공부', widgets: [
-    { id: 'a1', type: 'quickrec', size: 'm' }, { id: 'a2', type: 'goal', size: 's' }, { id: 'a3', type: 'bigdday', size: 's', style: 'tint' },
-    { id: 'a4', type: 'donut', size: 'm' }, { id: 'a5', type: 'today', size: 'l' }, { id: 'a6', type: 'weekstudy', size: 'm' },
-    { id: 'a7', type: 'streak', size: 's', style: 'tint', color: '#b5a47a' }, { id: 'a8', type: 'taskring', size: 's' }, { id: 'a9', type: 'review', size: 'm' },
-  ] },
-  { id: 'pg-life', name: '생활', widgets: [
-    { id: 'b1', type: 'clock', size: 's', style: 'bold' }, { id: 'b2', type: 'now', size: 'm' }, { id: 'b3', type: 'weekstrip', size: 'l' },
-    { id: 'b4', type: 'habits', size: 'm' }, { id: 'b5', type: 'meds', size: 's' }, { id: 'b6', type: 'sticky', size: 's', style: 'tint', color: '#b5a47a' },
-    { id: 'b7', type: 'quicknote', size: 'm' }, { id: 'b9', type: 'links', size: 's' },
-  ] },
-]
-
-export function usePages() {
-  const st = useSettings()
-  return st.widgetPages?.length ? st.widgetPages : DEFAULT_PAGES
-}
-const savePages = (pages) => setSettings({ widgetPages: pages })
+// 오늘: 시험 D-day · 오늘 공부 · 타이머 · 오늘 할 일 · 이번 주 · 교재 진도
+import { useMemo } from 'react'
+import { useColl, useSettings } from '../store/store.js'
+import { upcoming, weekDays, byOrder } from '../store/actions.js'
+import { Card, Line, Empty, Icon } from '../components/ui.jsx'
+import { TaskRow, QuickAdd, TimerCard, ExamSummary, MaterialRow } from '../components/parts.jsx'
+import { openExam, openSession } from '../components/editors.jsx'
+import { Bars7 } from '../components/charts.jsx'
+import { today, fmtDate, hm, tsYmd } from '../lib/date.js'
+import { go } from '../lib/nav.js'
 
 export default function Home() {
-  const pages = usePages()
-  const hide = useSettings().homeHide || {}
-  const [editing, setEditing] = useState(false)
-  const [cur, setCur] = useState(() => { try { return +localStorage.getItem('homePage') || 0 } catch { return 0 } })
-  const scroller = useRef(null)
-  const idx = Math.min(cur, pages.length - 1)
-
-  useEffect(() => { try { localStorage.setItem('homePage', String(idx)) } catch {} }, [idx])
-  useEffect(() => { const el = scroller.current; if (el) el.scrollTo({ left: idx * el.clientWidth }) }, []) // eslint-disable-line
-  const goPage = (i) => { setCur(i); const el = scroller.current; el?.scrollTo({ left: i * el.clientWidth, behavior: 'smooth' }) }
-  const onScroll = (e) => { const el = e.currentTarget; const i = Math.round(el.scrollLeft / el.clientWidth); if (i !== cur) setCur(i) }
-
-  const setPage = (pi, fn) => savePages(pages.map((p, i) => (i === pi ? fn(p) : p)))
-  const setW = (pi, ws) => setPage(pi, (p) => ({ ...p, widgets: ws }))
-
-  const addWidget = (pi) => openSheet((close) => (
-    <div className="list">
-      {Object.entries(WIDGETS).map(([type, def]) => (
-        <button key={type} className="item" style={{ textAlign: 'left', alignItems: 'center' }} onClick={() => { setW(pi, [...pages[pi].widgets, { id: uid(), type, size: def.size }]); close() }}>
-          <span className="t">{def.label}</span>{pages[pi].widgets.some((w) => w.type === type) && <span className="tiny muted">사용 중</span>}<Icon name="plus" size={16} />
-        </button>
-      ))}
-    </div>
-  ), { title: '위젯 추가' })
-
-  const widgetSettings = (pi, w) => openSheet((close) => <WidgetSettings w={w} pages={pages} pi={pi} close={close} onSave={(nw, toPage) => {
-    if (toPage != null && toPage !== pi) {
-      savePages(pages.map((p, i) => i === pi ? { ...p, widgets: p.widgets.filter((x) => x.id !== w.id) } : i === toPage ? { ...p, widgets: [...p.widgets, nw] } : p))
-    } else setW(pi, pages[pi].widgets.map((x) => (x.id === w.id ? nw : x)))
-  }} onDelete={() => setW(pi, pages[pi].widgets.filter((x) => x.id !== w.id))} />, { title: WIDGETS[w.type]?.label || '위젯' })
-
+  const st = useSettings(), exams = useColl('exams'), scores = useColl('scores'), tasks = useColl('tasks'), sessions = useColl('sessions'), mats = useColl('materials')
+  const t0 = today()
+  const mins = useMemo(() => { const m = {}; for (const s of sessions) m[s.date] = (m[s.date] || 0) + (s.min || 0); return m }, [sessions])
+  const ups = upcoming(exams)
+  const mine = tasks.filter((t) => t.due && (t.due < t0 ? !t.done : t.due === t0 && (!t.done || tsYmd(t.doneAt || 0) === t0))).sort((a, b) => (a.due < t0) - (b.due < t0) || byOrder(a, b))
+  const left = mine.filter((t) => !t.done).length
+  const days = weekDays(t0, st.weekStart), wk = days.reduce((a, d) => a + (mins[d] || 0), 0)
+  const now = mins[t0] || 0
   return (
-    <div className="col">
-      {!hide.greet && <Greeting />}
-      {!hide.plan && <PlanBanner />}
-      {!hide.close && <CloseBanner />}
-      {!hide.one && <TodayOne />}
-      {editing && <div className="row wrap no-print" style={{ gap: 6 }}><span className="tiny muted">위쪽 카드</span>
-        {[['greet', '인사·날짜'], ['plan', '계획 안내'], ['close', '하루 마감'], ['one', '오늘 하나']].map(([k, l]) => <button key={k} className={'chip' + (!hide[k] ? ' on' : '')} onClick={() => setSettings({ homeHide: { ...hide, [k]: !hide[k] } })}>{l}</button>)}
-        <span className="tiny muted">· 위젯은 길게 끌거나 ‹ › 로 순서 바꾸기</span></div>}
-      <div className="row no-print" style={{ gap: 6 }}>
-        <div className="scroll-x grow"><div className="row" style={{ gap: 6 }}>
-          {pages.map((p, i) => <button key={p.id} className={'chip' + (i === idx ? ' on' : '')} onClick={() => goPage(i)}>{p.name}</button>)}
-          {editing && <button className="chip" onClick={() => { const name = prompt('새 페이지 이름', '새 페이지'); if (name) { savePages([...pages, { id: uid(), name, widgets: [] }]); setTimeout(() => goPage(pages.length), 50) } }}>+ 페이지</button>}
-        </div></div>
-        <button className="btn ghost sm" onClick={() => setEditing(!editing)}>{editing ? '완료' : '편집'}</button>
+    <>
+      <header className="page-h"><h1>오늘</h1><span className="sub">{fmtDate(t0)}</span></header>
+      <div className="grid three">
+        <Card title="시험" action={<button className="lnk" onClick={() => openExam()}>+ 시험</button>}>
+          {ups.slice(0, 3).map((e) => <ExamSummary key={e.id} exam={e} scores={scores} big />)}
+          {!ups.length && <Empty>다가오는 시험을 추가해 보세요<br /><button className="btn sm" style={{ marginTop: 8 }} onClick={() => openExam()}><Icon name="plus" size={14} />JLPT · 토익 · 직접</button></Empty>}
+        </Card>
+        <Card title="오늘 공부" action={<button className="lnk" onClick={() => openSession()}>+ 기록</button>}>
+          <div className="row" style={{ alignItems: 'baseline' }}><span className="big num">{hm(now)}</span><span className="soft">/ {hm(st.goalDaily)}</span><span className="grow" /><span className="small num soft">{Math.round((now / Math.max(1, st.goalDaily)) * 100)}%</span></div>
+          <div style={{ margin: '8px 0 4px' }}><Line value={now / Math.max(1, st.goalDaily)} /></div>
+          <div className="meta"><span>이번 주 {hm(wk)}</span></div>
+        </Card>
+        <TimerCard />
+        <Card title={`오늘 할 일${mine.length ? ` ${mine.length - left}/${mine.length}` : ''}`} className="span2" action={<button className="lnk" onClick={() => go('plan', 'list')}>계획 →</button>}>
+          <div className="rows">{mine.map((t) => <TaskRow key={t.id} t={t} exams={exams} />)}</div>
+          {!mine.length && <Empty>오늘 할 일이 없어요</Empty>}
+          <QuickAdd />
+        </Card>
+        <Card title="이번 주" action={<button className="lnk" onClick={() => go('record', 'stats')}>기록 →</button>}>
+          <Bars7 days={days} mins={mins} goal={st.goalDaily} />
+        </Card>
+        {mats.some((m) => (m.current || 0) < m.total) && (
+          <Card title="교재 · 강의" className="span2" action={<button className="lnk" onClick={() => go('plan', 'books')}>전체 →</button>}>
+            <div className="rows">{mats.filter((m) => (m.current || 0) < m.total).slice(0, 4).map((m) => <MaterialRow key={m.id} m={m} exams={exams} />)}</div>
+          </Card>
+        )}
       </div>
-      <div className="wpages" ref={scroller} onScroll={onScroll}>
-        {pages.map((p, pi) => (
-          <div key={p.id} className={'wpage' + (p.bg ? ' wpbg wpbg-' + p.bg : '')}>
-            {editing && (
-              <div className="row" style={{ gap: 6, marginBottom: 8 }}>
-                <input className="input" value={p.name} onChange={(e) => setPage(pi, (x) => ({ ...x, name: e.target.value }))} style={{ maxWidth: 200 }} />
-                <button className="btn sm" onClick={() => addWidget(pi)}><Icon name="plus" size={14} />위젯</button>
-                <div className="seg" title="페이지 배경">{[['', '무지'], ['paper', '종이'], ['grid', '모눈'], ['dot', '점']].map(([k, l]) => <button key={k} className={(p.bg || '') === k ? 'on' : ''} onClick={() => setPage(pi, (x) => ({ ...x, bg: k || null }))}>{l}</button>)}</div>
-                <button className="btn sm" onClick={() => confirmSheet('벤토 배치', '이 페이지 위젯 크기를 벤토 격자로 맞춰요 (작은 위젯은 큰 칸 하나 + 작은 칸 둘씩 묶고, 넓은 위젯은 한 줄). 순서는 그대로예요.', () => setW(pi, bento(p.widgets)), '맞추기')}>벤토 배치</button>
-                {pages.length > 1 && <button className="btn sm danger" onClick={() => confirmSheet('페이지 삭제', `'${p.name}' 페이지를 삭제할까요?`, () => { savePages(pages.filter((_, i) => i !== pi)); setCur(0) }, '삭제')}>페이지 삭제</button>}
-              </div>
-            )}
-            <div className="widgets">
-              {p.widgets.filter((w) => WIDGETS[w.type]).map((w) => {
-                const W = WIDGETS[w.type].C
-                const move = (id, toId) => { const a = [...p.widgets]; const i = a.findIndex((x) => x.id === id), j = a.findIndex((x) => x.id === toId); if (i < 0 || j < 0 || i === j) return; const [m] = a.splice(i, 1); a.splice(j, 0, m); setW(pi, a) }
-                return (
-                  <div key={w.id} className={`w-${w.size || 's'} wf wf-${w.style || 'card'}` + (w.pad ? ' wf-pad-' + w.pad : '') + (editing ? ' w-edit draggable' : '')} style={{ gridColumn: `span ${wCols(w)}`, gridRow: wRows(w) > 1 ? `span ${wRows(w)}` : null, minHeight: wRows(w) > 1 ? wRows(w) * 120 + (wRows(w) - 1) * 12 : null, ...(w.color ? { '--wc': w.color } : null) }}
-                    data-drop={editing ? 'w:' + w.id : undefined}
-                    onClick={editing ? () => widgetSettings(pi, w) : undefined}
-                    {...(editing ? longPress(() => ({ label: WIDGETS[w.type].label, onDrop: (z) => move(w.id, z.dataset.drop.slice(2)) }), 250) : {})}>
-                    {editing && <div className="w-badge row" style={{ gap: 4 }}>
-                      <button className="icon-btn" aria-label="앞으로" onClick={(e) => { e.stopPropagation(); const a = [...p.widgets], i = a.indexOf(w); if (i > 0) { [a[i - 1], a[i]] = [a[i], a[i - 1]]; setW(pi, a) } }}>‹</button>
-                      <span>{wCols(w)}/4{wRows(w) > 1 ? ` · ${wRows(w)}배` : ''} · 탭해서 설정</span>
-                      <button className="icon-btn" aria-label="뒤로" onClick={(e) => { e.stopPropagation(); const a = [...p.widgets], i = a.indexOf(w); if (i < a.length - 1) { [a[i + 1], a[i]] = [a[i], a[i + 1]]; setW(pi, a) } }}>›</button>
-                    </div>}
-                    {editing && <span className="w-resize" aria-label="크기 조절" onClick={(e) => e.stopPropagation()} onPointerDown={(e) => startResize(e, w, (cols, rows) => setW(pi, p.widgets.map((x) => (x.id === w.id ? { ...x, cols, rows, size: sizeOf(cols, rows) } : x))))} />}
-                    <div className="wf-body" style={editing ? { pointerEvents: 'none' } : null}>
-                      <W w={w} update={(patchW) => setW(pi, p.widgets.map((x) => (x.id === w.id ? { ...x, ...patchW } : x)))} />
-                    </div>
-                  </div>
-                )
-              })}
-              {!p.widgets.length && <div className="empty w-l">‘편집’ → ‘위젯’으로 추가하세요</div>}
-            </div>
-          </div>
-        ))}
-      </div>
-      {pages.length > 1 && <div className="page-dots no-print">{pages.map((p, i) => <i key={p.id} className={i === idx ? 'on' : ''} />)}</div>}
-    </div>
-  )
-}
-
-function WidgetSettings({ w, pages, pi, close, onSave, onDelete }) {
-  const [f, setF] = useState({ ...w, cols: wCols(w), rows: wRows(w), style: w.style || 'card' })
-  const [to, setTo] = useState(pi)
-  return (
-    <div className="form">
-      <Field label="너비"><Seg value={f.cols} onChange={(v) => setF({ ...f, cols: v, size: sizeOf(v, f.rows) })} options={COLS} /></Field>
-      <Field label="높이"><Seg value={f.rows} onChange={(v) => setF({ ...f, rows: v, size: sizeOf(f.cols, v) })} options={ROWS} /></Field>
-      <Field label="형태"><Seg value={f.style} onChange={(v) => setF({ ...f, style: v })} options={STYLES} /></Field>
-      <Field label="안쪽 여백"><Seg value={f.pad || ''} onChange={(v) => setF({ ...f, pad: v || null })} options={[['tight', '좁게'], ['', '기본'], ['roomy', '넓게']]} /></Field>
-      <Field label="포인트 색">
-        <div className="row"><ColorPick value={f.color} onChange={(c) => setF({ ...f, color: c })} colors={PALETTE} />{f.color && <button className="chip" onClick={() => setF({ ...f, color: null })}>기본</button>}</div>
-      </Field>
-      {pages.length > 1 && (
-        <Field label="페이지">
-          <select className="input" value={to} onChange={(e) => setTo(+e.target.value)}>{pages.map((p, i) => <option key={p.id} value={i}>{p.name}</option>)}</select>
-        </Field>
-      )}
-      <div className="row">
-        <button className="btn danger" onClick={() => { onDelete(); close() }}><Icon name="trash" size={16} />삭제</button>
-        <button className="btn primary grow" onClick={() => { onSave(f, to); close() }}>적용</button>
-      </div>
-    </div>
-  )
-}
-
-function Greeting() {
-  const quotes = [...useColl('quotes')].sort((a, b) => a.id.localeCompare(b.id))
-  const now = useNow(60000)
-  const q = pickQuote(quotes, now)
-  return (
-    <button className="greet" onClick={() => openSheet(() => <QuoteEditor />, { title: '다짐 · 명언' })}>
-      <div className="greet-hi">{q ? q.text : '다짐이나 명언을 적어 보세요'}</div>
-    </button>
-  )
-}
-
-// 오늘 계획 세우기 배너: 오늘 계획을 끝내면 사라짐
-function PlanBanner() {
-  useColl('days'); const tasks = useColl('tasks')
-  const d = today()
-  if (dayRec(d).planned || isEvening()) return null // 저녁엔 하루 마감 안내로
-  const overdue = tasks.filter((t) => !t.done && !t.archived && t.due && t.due < d).length
-  const inbox = tasks.filter((t) => !t.done && !t.archived && t.inbox).length
-  return (
-    <button className="plan-banner no-print" onClick={openPlanDay}>
-      <span>☀</span><span className="grow" style={{ textAlign: 'left' }}><b>오늘 계획 세우기</b><span className="tiny muted">{[overdue && `밀린 일 ${overdue}`, inbox && `받은 편지함 ${inbox}`].filter(Boolean).join(' · ') || '오늘 할 일과 오늘의 하나 정하기'}</span></span>
-      <span className="tiny muted" onClick={(e) => { e.stopPropagation(); setDay(d, { planned: true }) }}>건너뛰기</span>
-    </button>
-  )
-}
-
-// 하루 마감 배너: 저녁(20시~)에 오늘 돌아보기 · 남은 일 · 내일 Top 3 · 마감하면 사라짐
-const isEvening = () => new Date().getHours() >= 20
-function CloseBanner() {
-  useColl('days'); const tasks = useColl('tasks'); useNow(60000)
-  const d = today()
-  if (!isEvening() || dayRec(d).closed) return null
-  const left = tasks.filter((t) => !t.done && !t.archived && t.due && t.due <= d).length
-  return (
-    <button className="plan-banner close-banner no-print" onClick={openCloseDay}>
-      <span>☾</span><span className="grow" style={{ textAlign: 'left' }}><b>오늘 마감하기</b><span className="tiny muted">{left ? `남은 일 ${left} · ` : ''}오늘 돌아보고 내일 Top 3 고르기</span></span>
-      <span className="tiny muted" onClick={(e) => { e.stopPropagation(); setDay(d, { closed: true }) }}>건너뛰기</span>
-    </button>
-  )
-}
-
-// 오늘의 하나: 오늘 가장 중요한 한 가지를 홈 맨 위에 고정 (할 일 연결 또는 직접 입력)
-function TodayOne() {
-  useColl('days'); const tasks = useColl('tasks')
-  const d = today()
-  const one = dayRec(d).one
-  const task = one?.taskId ? tasks.find((t) => t.id === one.taskId) : null
-  const title = task ? task.title : one?.text
-  const done = task ? task.done : one?.done
-  const pick = () => openSheet((close) => <OnePicker close={close} />, { title: '오늘의 하나' })
-  if (!title) return <button className="one-empty no-print" onClick={pick}><Icon name="star" size={14} />오늘 가장 중요한 한 가지 정하기</button>
-  return (
-    <div className={'one' + (done ? ' done' : '')}>
-      <Check on={!!done} onClick={() => (task ? toggleTask(task.id) : setDay(d, { one: { ...one, done: !one.done } }))} />
-      <button className="one-t" onClick={pick}><span className="tiny muted">오늘의 하나</span><span className="one-title">{title}</span></button>
-      <button className="icon-btn no-print" aria-label="지우기" onClick={() => setDay(d, { one: null })}><Icon name="close" size={14} /></button>
-    </div>
-  )
-}
-function OnePicker({ close }) {
-  const d = today()
-  const tasks = useColl('tasks').filter((t) => !t.done && !t.archived && (!t.due || t.due <= d))
-  return (
-    <div className="form">
-      <AddInput placeholder="직접 적기 (예: 수학 3단원 끝내기)" onAdd={(text) => { setDay(d, { one: { text, done: false } }); close() }} />
-      <div className="tiny muted">또는 할 일에서 고르기</div>
-      <div className="list">
-        {tasks.map((t) => <button key={t.id} className="item" style={{ textAlign: 'left' }} onClick={() => { setDay(d, { one: { taskId: t.id } }); close() }}><span className="t ellipsis">{t.title}</span></button>)}
-        {!tasks.length && <div className="small muted">오늘 할 일이 없어요</div>}
-      </div>
-    </div>
-  )
-}
-
-function QuoteEditor() {
-  const quotes = useColl('quotes')
-  return (
-    <div className="form">
-      <div className="small muted">홈 맨 위와 위젯에 30분마다 무작위로 바뀌어 보여요</div>
-      <div className="list">
-        {quotes.map((x) => (
-          <div key={x.id} className="row" style={{ padding: '4px 0' }}>
-            <input className="input" value={x.text} onChange={(e) => patch('quotes', x.id, { text: e.target.value })} />
-            <button className="icon-btn" onClick={() => remove('quotes', x.id)} aria-label="삭제"><Icon name="close" size={14} /></button>
-          </div>
-        ))}
-      </div>
-      <AddInput placeholder="새 다짐 · 명언" onAdd={(text) => put('quotes', { text })} />
-    </div>
+    </>
   )
 }

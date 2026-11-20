@@ -20,12 +20,12 @@ const DEVICES = [
   ['iPadPro13-가로', 1376, 1032, 2, UA_IPAD, false],
   ['iPadPro11', 834, 1210, 2, UA_IPAD, false],
 ]
-const SEGS = { home: [''], planner: ['today', 'page', 'days3', 'week', 'month', 'timetable'], tasks: ['day', 'list', 'board', 'matrix', 'kanban', 'gantt', 'table', 'archive'], study: ['log', 'timer', 'records', 'subjects', 'review', 'progress', 'plan'], notes: ['daily', 'pages', 'todos', 'hub', 'graph', 'library'], health: [''], settings: [''] }
+const SEGS = { home: [''], plan: ['list', 'week', 'books'], record: ['timer', 'log', 'stats'], exam: [''], settings: [''] }
 
 const b = await chromium.launch()
 let bad = 0
 if (SHOT) mkdirSync('audit-shots', { recursive: true })
-// 기기 × 밝기 조합을 여러 창에서 나눠 동시에 점검
+// 기기 × 기기 밝기 설정(다크 모드여도 앱은 늘 밝게) 조합을 여러 창에서 나눠 동시에 점검
 const jobs = DEVICES.flatMap((d) => ['light', 'dark'].map((scheme) => [...d, scheme]))
 async function run([name, w, h, dpr, ua, mobile, scheme]) {
   const ctx = await b.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: dpr, userAgent: ua, isMobile: mobile, hasTouch: true, colorScheme: scheme })
@@ -35,13 +35,14 @@ async function run([name, w, h, dpr, ua, mobile, scheme]) {
   await p.goto(URL0); await p.waitForTimeout(800)
   for (const [tab, segs] of Object.entries(SEGS)) for (const seg of segs) {
     errs = []
-    await p.evaluate(([tab, seg]) => { sessionStorage.setItem('safari_note', '1'); localStorage.setItem('nav', JSON.stringify({ tab, seg: seg ? { [tab]: seg } : {}, params: {} })) }, [tab, seg])
+    await p.evaluate(([tab, seg]) => { localStorage.setItem('x_nav', JSON.stringify({ tab, seg: seg ? { [tab]: seg } : {} })) }, [tab, seg])
     await p.reload(); await p.waitForSelector('.content-inner', { timeout: 8000 }).catch(() => {}); await p.waitForTimeout(400)
     const r = await p.evaluate(() => ({
       hscroll: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
       boxes: document.querySelectorAll('.err-box').length,
+      dark: getComputedStyle(document.body).backgroundColor.match(/\d+/g).slice(0, 3).some((x) => +x < 200),
     }))
-    const issues = [errs.length && '오류: ' + [...new Set(errs)].join(' / '), r.hscroll && '화면 가로 넘침', r.boxes && `다시 불러오기 상자 ${r.boxes}개`].filter(Boolean)
+    const issues = [errs.length && '오류: ' + [...new Set(errs)].join(' / '), r.hscroll && '화면 가로 넘침', r.boxes && `다시 불러오기 상자 ${r.boxes}개`, r.dark && '바탕이 어두움 (다크 모드 금지)'].filter(Boolean)
     if (issues.length) { bad++; console.log(`✗ ${name} ${scheme} ${tab}/${seg} — ${issues.join(' · ')}`) }
     if (SHOT) await p.screenshot({ path: `audit-shots/${name}-${scheme}-${tab}-${seg || 'main'}.png` })
   }

@@ -1,5 +1,5 @@
 // 앱 셸 캐시: 문서는 네트워크 우선, 정적 자산은 캐시 우선
-const CACHE = 'study-v4'
+const CACHE = 'exam-v1'
 // 빌드할 때 이번 배포의 assets/ 파일 목록이 들어감 → 새 버전이 켜지면 지난 빌드 파일을 캐시에서 지움
 const ASSETS = /*ASSETS*/null
 async function prune() {
@@ -20,7 +20,7 @@ self.addEventListener('fetch', (e) => {
   const req = e.request
   if (req.method !== 'GET') return
   const url = new URL(req.url)
-  if (url.origin !== location.origin && !url.host.includes('fonts') && !url.host.includes('jsdelivr')) return
+  if (url.origin !== location.origin) return
   if (req.mode === 'navigate') {
     e.respondWith(fetch(req, { cache: 'no-store' }).then((res) => { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); return res }).catch(() => caches.match(req).then((r) => r || caches.match('./'))))
     return
@@ -29,25 +29,4 @@ self.addEventListener('fetch', (e) => {
     if (res.ok || res.type === 'opaque') { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)) }
     return res
   })))
-})
-
-// 푸시 알림 (GitHub Actions 가 발송)
-self.addEventListener('push', (e) => {
-  let d = {}
-  try { d = e.data ? e.data.json() : {} } catch { d = { title: '스터디', body: e.data?.text() } }
-  // 선언형 푸시(web_push 8030)를 서비스 워커가 받은 경우도 같은 모양으로
-  const n = d.notification || d
-  const url = n.navigate || d.url || './'
-  const badge = n.app_badge != null ? +n.app_badge : null
-  if (badge != null && self.navigator.setAppBadge) e.waitUntil(badge ? self.navigator.setAppBadge(badge).catch(() => {}) : self.navigator.clearAppBadge().catch(() => {}))
-  e.waitUntil(self.registration.showNotification(n.title || 'notificação', { body: n.body || '', icon: './icon-192.png', badge: './icon-192.png', tag: n.tag, data: { url } }))
-})
-self.addEventListener('notificationclick', (e) => {
-  e.notification.close()
-  const url = new URL(e.notification.data?.url || './', self.registration.scope).href
-  // 열린 앱이 있으면 앞으로 가져와 그 화면을 열게 하고, 없으면 링크로 새로 엶
-  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
-    for (const c of list) if ('focus' in c) { c.postMessage({ type: 'open-link', url }); return c.focus() }
-    return self.clients.openWindow(url)
-  }))
 })
