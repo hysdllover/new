@@ -1,5 +1,5 @@
 // 설정: 공부 목표 · 디자인 · 동기화 · 백업 · 위젯 · 데이터 · 정보
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { useSettings, setSettings, useColl, exportJSON, importJSON, resetAll, deviceId } from '../store/store.js'
 import { Card, Seg, Toggle, Field, Icon, confirmSheet } from '../components/ui.jsx'
 import { toast } from '../components/toast.js'
@@ -7,6 +7,7 @@ import { useSyncStatus, connect, disconnect, syncNow, token, listBackups, backup
 import { buildLoader, WIDGET_KINDS } from '../lib/scriptable.js'
 import { WidgetPreview } from './WidgetPreview.jsx'
 import { CHANGES } from '../lib/whatsnew.js'
+import { fontInfo, onFont, addFont, removeFont } from '../lib/fonts.js'
 import { PALETTE } from '../store/schema.js'
 import { hm, fmtDate, tsYmd } from '../lib/date.js'
 
@@ -31,6 +32,7 @@ export default function Settings() {
           <div className="form">
             <Field label="테마"><Seg small value={st.theme} onChange={(v) => setSettings({ theme: v })} options={[['basic', '기본'], ['pencil', '연필 아날로그']]} /></Field>
             <Toggle label="필기 느낌" hint="손으로 그린 체크 · 부드러운 점수 선" checked={st.handFx !== false} onChange={(v) => setSettings({ handFx: v })} />
+            <FontField />
             <Field label="포인트 색"><div className="chips">{PALETTE.map((c) => <button key={c} className={'chip sw-pick' + (st.accent === c ? ' on' : '')} onClick={() => setSettings({ accent: c })} aria-label={c}><i className="sw" style={{ background: c }} /></button>)}</div></Field>
           </div>
         </Card>
@@ -44,6 +46,23 @@ export default function Settings() {
         </Card>
       </div>
     </>
+  )
+}
+
+// 내 글꼴: 이 기기에만 저장 (사이트 · 저장소에 올리지 않음)
+function FontField() {
+  const f = useSyncExternalStore(onFont, fontInfo)
+  const [busy, setBusy] = useState(false)
+  const pick = () => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2'; i.onchange = async () => { const file = i.files[0]; if (!file) return; setBusy(true); try { await addFont(file); toast('글꼴을 바꿨어요') } catch (e) { toast(e.message) } setBusy(false) }; i.click() }
+  return (
+    <Field label="글꼴">
+      <div className="row wrap">
+        <span className="grow small">{f ? f.name : '기본 (시스템)'}{f && <span className="soft"> · {(f.size / 1048576).toFixed(1)}MB</span>}</span>
+        <button className="btn sm" disabled={busy} onClick={pick}>{busy ? '넣는 중…' : f ? '다른 글꼴' : '내 글꼴 넣기'}</button>
+        {f && <button className="btn sm" onClick={() => removeFont().then(() => toast('기본 글꼴로 돌렸어요'))}>기본으로</button>}
+      </div>
+      <span className="tiny soft">파일 앱에서 ttf · otf 를 고르면 이 기기에만 저장돼요 (아이폰 · 아이패드 각각 한 번). 일본어처럼 글꼴에 없는 글자는 기본 글꼴로 나와요. 위젯은 Scriptable 이라 기본 글꼴이에요.</span>
+    </Field>
   )
 }
 
