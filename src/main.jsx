@@ -4,13 +4,14 @@ import './styles/app.css'
 import './styles/pencil.css'
 import App from './App.jsx'
 import { loadState, find } from './store/store.js'
+import { loadFont } from './lib/fonts.js'
 import { seedDemo } from './lib/seed.js'
 import { go } from './lib/nav.js'
 import { toggleTask } from './store/actions.js'
 import { toast } from './components/toast.js'
 
 async function boot() {
-  await loadState()
+  await Promise.all([loadState(), loadFont()])
   const q = new URLSearchParams(location.search)
   if (q.has('demo')) seedDemo()
   // 위젯 링크: ?go=탭.세그먼트 · ?done=할일id (누르면 바로 체크 · 다시 누르면 취소)
