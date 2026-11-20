@@ -1,58 +1,34 @@
-import coreBase from './widget/core-base.js'
-import coreLock from './widget/core-lock.js'
-import coreHome from './widget/core-home.js'
-import coreRun from './widget/core-run.js'
-// iPhone·iPad 홈 화면·잠금 화면 위젯 (Scriptable) — 얇은 단일 서체 · 모노톤
-// 유형: 위젯 편집 › Parameter 에 공부 · 할일 · 디데이 · 달력 · 다짐 (비우면 기본)
-export const WIDGET_KINDS = [['', '기본'], ['공부', '공부'], ['할일', '할 일'], ['하위', '하위 할 일 (오늘 · 누르면 체크)'], ['하위진행', '하위 진행 (할 일마다 진행선)'], ['디데이', 'D-day'], ['달력', '공부 달력'], ['캘린더', '캘린더'], ['다짐', '다짐'], ['시간표', '시간표'], ['주간', '주간 공부'], ['과목', '과목별'], ['지금', '지금·다음'], ['진도', '진도'], ['목표', '이번 주 목표'], ['오늘', '오늘 한눈에'], ['대시보드', '대시보드'], ['내일', '내일 준비'], ['마감', '마감 임박'], ['일주일', '7일 일정'], ['디데이목록', 'D-day 목록'], ['바로가기', '바로 시작'], ['진행', '공부 진행'], ['남은분', '남은 시간'], ['타이머', '타이머·공부 시간'], ['노트', '노트'], ['습관', '습관'], ['시리즈', '시리즈 진행'], ['배치', '이번 주 배치'], ['주차', 'D-day까지 주차'], ['표', '노트 표'], ['보드', '노트 보드'], ['사진', '노트 사진'], ['10분', '10분 플래너'], ['하루', '하루 진행'], ['한줄', '한 줄 요약'], ['공책', '한 주 공책'], ['숫자', '숫자만'], ['숫자:디데이', '숫자 · D-day'], ['숫자:할일', '숫자 · 할 일'], ['숫자:주간', '숫자 · 이번 주'], ['선그래프', '선 그래프'], ['원호', '원호'], ['메모지', '종이 메모'], ['인쇄', '흑백 인쇄풍'], ['주간표', '주간표'], ['과목표', '과목표'], ['일정표', '일정표'], ['디데이표', 'D-day 표'], ['월간표', '월간표'], ['노트표', '노트표'], ['수업표', '수업표'], ['내일표', '내일표'], ['마감표', '마감표'], ['진도표', '진도표'], ['습관표', '습관표'], ['기록표', '공부 기록표'], ['반반', '노트 · 할 일 반반'], ['일정할일', '일정 · 할 일 반반'], ['공부중', '공부 중 (잠금 화면)'], ['하루지면', '하루 지면'], ['주간지면', '주간 지면 (대형·아주 큰)'], ['디데이진행', 'D-day 진행선'], ['디데이선', 'D-day 타임라인'], ['스택', '스택 (대형)'], ['대시4', '4칸 대시보드 + 오늘 세 가지'], ['한화면', '한 화면 대시보드 (아이패드 아주 큰)'], ['주간대시', '주간 대시보드'], ['주간7칸', '이번 주 7칸 (아주 큰)'], ['오늘세단', '오늘 세 단 (아주 큰)'], ['월간판', '월간 달력 판 (아주 큰)'], ['노트두개', '노트 두 개 (아주 큰)'], ['디데이판', 'D-day 판 (아주 큰)'], ['과목판', '과목 판 (아주 큰)'], ['3일플랜', '3일 플랜 (아주 큰)'], ['할일판', '할 일 판 (아주 큰)'], ['공부판', '공부 판 (아주 큰)'], ['디데이주차판', 'D-day 주차 판 (아주 큰)'], ['다짐지면', '다짐 지면 (아주 큰)'], ['습관판', '습관 판 (아주 큰)'], ['8주판', '최근 8주 판 (아주 큰)'], ['비교판', '이번 주 vs 지난주 (아주 큰)'], ['하루계획', '하루 계획 (일정 · 할 일)'], ['디데이글', 'D-day 큰 숫자'], ['이번주판', '이번 주 판 (오늘 ~ 나흘 뒤)'], ['다짐판', '다짐 (큰 문장)'], ['큰수', '큰 수 · 목록'], ['세단', '세 단'], ['자동', '시간대별 자동'], ['묶음', 'D-day · 일정 묶음'], ['달력:과목', '공부 달력 · 과목 색'], ['기록카드', '기록 카드'], ['디데이카드', 'D-day 카드'], ['일지', '일지'], ['매거진', '매거진'], ['신문', '신문'], ['목록카드', '목록 카드'], ['타임카드', '타임카드'], ['구성1', '내 위젯 1'], ['구성2', '내 위젯 2'], ['구성3', '내 위젯 3']]
+// Scriptable 위젯: 사용자는 짧은 로더만 한 번 붙여 넣음 → 본체(widget-core.js)는 앱과 같이 배포되어 자동으로 바뀜
+// 토큰은 넣지 않음 (위젯은 비공개 gist 의 widget.json 주소로만 읽음)
+export const WIDGET_KINDS = [
+  ['', '기본', 'D-day · 오늘 공부 · 오늘 할 일'],
+  ['디데이', 'D-day', '가까운 시험 D-day 크게 · 다른 시험'],
+  ['공부', '공부 시간', '오늘 공부 / 목표 · 7일 막대'],
+  ['할일', '할 일', '오늘 할 일 · 누르면 체크'],
+  ['점수', '점수', '최근 점수 · 목표까지 · 추이'],
+  ['교재', '교재 · 강의', '진도 선'],
+]
 
-// 스크립트 버전 — 위젯 모양이 바뀔 때 올림. 앱이 위젯 데이터에 같이 올려서, 예전 스크립트면 위젯에 '스크립트 업데이트' 표시
-export const SCRIPT_VER = 151
-
-// 전체 스크립트 (예전 방식 · 테스트용): 머리 + 본체
-export function buildScript({ widgetRaw, appUrl }) {
-  return `// Study — 홈 화면·잠금 화면 위젯 (Scriptable)
-const SRC = ${JSON.stringify(widgetRaw || '')}
-const APP = ${JSON.stringify(appUrl)}
-` + coreBody()
-}
-
-// 자동 업데이트 본체: 앱과 같이 배포(widget-core.js)되고, 로더가 매번 받아 실행
-export function buildCore() {
-  return `// STUDY_CORE v${SCRIPT_VER} — 스터디 위젯 본체 (Scriptable 로더가 받아 실행)
-module.exports = async function (ctx) {
-const SRC = ctx.SRC
-const APP = ctx.APP
-` + coreBody() + `
-}
-`
-}
-
-// 사용자가 Scriptable 에 붙여 넣는 짧은 로더 — 한 번만 붙여 넣으면 이후 위젯 모양·기능은 앱 배포와 함께 자동으로 바뀜
 export function buildLoader({ widgetRaw, appUrl }) {
-  return `// 스터디 위젯 (Scriptable) — 자동 업데이트
-// 한 번만 붙여 넣으면 돼요. 위젯 본체는 앱 주소에서 받아 와서, 앱이 바뀌면 위젯도 같이 바뀌어요.
-// 토큰 없음: 비공개 위젯 gist 주소로만 읽어요
+  return `// 어학 스터디 위젯 (Scriptable) — 한 번만 붙여 넣으면 돼요
+// 위젯 모양은 앱이 바뀌면 같이 바뀌어요 · 토큰 없음 (비공개 gist 주소로만 읽어요)
+// 위젯 편집 › Parameter: 비우면 기본 · 디데이 · 공부 · 할일 · 점수 · 교재
 const SRC = ${JSON.stringify(widgetRaw || '')}
 const APP = ${JSON.stringify(appUrl)}
 const fm = FileManager.local()
-const path = fm.joinPath(fm.documentsDirectory(), 'study-core.js')
-const vpath = fm.joinPath(fm.documentsDirectory(), 'study-core.ver')
+const path = fm.joinPath(fm.documentsDirectory(), 'exam-core.js')
+const vpath = fm.joinPath(fm.documentsDirectory(), 'exam-core.ver')
 const lockW = String(config.widgetFamily || '').startsWith('accessory')
-// 본체는 이 기기에 저장해 두고, 작은 버전 파일만 확인해서 바뀌었을 때만 다시 받음 (위젯은 5분에 한 번 · Scriptable 에서 직접 실행하면 바로 확인)
 const has = fm.fileExists(path) && fm.fileExists(vpath)
-const fresh = has && config.runsInWidget && Date.now() - fm.modificationDate(vpath).getTime() < 5 * 60000
+const fresh = has && config.runsInWidget && Date.now() - fm.modificationDate(vpath).getTime() < 30 * 60000
 if (!fresh) {
   try {
-    const rv = new Request(APP + 'widget-core.ver?t=' + Date.now())
-    rv.timeoutInterval = lockW ? 4 : 8
-    const ver = (await rv.loadString()).trim()
-    const cur = has ? fm.readString(vpath).trim() : ''
+    const rv = new Request(APP + 'widget-core.ver?t=' + Date.now()); rv.timeoutInterval = lockW ? 4 : 8
+    const ver = (await rv.loadString()).trim(), cur = has ? fm.readString(vpath).trim() : ''
     if (/^[0-9a-f]{6,40}$/.test(ver) && ver !== cur) {
-      const r = new Request(APP + 'widget-core.js?v=' + ver)
-      r.timeoutInterval = lockW ? 5 : 10
+      const r = new Request(APP + 'widget-core.js?v=' + ver); r.timeoutInterval = lockW ? 5 : 10
       const s = await r.loadString()
-      if (s && s.includes('STUDY_CORE')) { fm.writeString(path, s); fm.writeString(vpath, ver) }
+      if (s && s.includes('EXAM_CORE')) { fm.writeString(path, s); fm.writeString(vpath, ver) }
     } else if (has) fm.writeString(vpath, cur)
   } catch (e) {}
 }
@@ -65,8 +41,3 @@ if (!fm.fileExists(path)) {
 }
 `
 }
-
-// 단색 테마(색조 홈 화면용): 본체의 모든 색을 nC() 로 — 단색일 때 흰색 한 가지(밝기만 다르게)로 바꿈
-function coreBody() { return coreRaw().replace(/new Color\(/g, 'nC(') }
-// 본체는 네 조각(src/lib/widget/core-*.js)을 이어 붙임 — 공통 · 잠금 화면 · 홈 화면 형태별 · 실행
-function coreRaw() { return coreBase() + coreLock() + coreHome() + coreRun() }

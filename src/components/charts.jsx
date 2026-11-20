@@ -1,172 +1,58 @@
-import { useState } from 'react'
-import { shareBlob } from '../lib/shareCard.js'
-import { settings } from '../store/store.js'
-import { addDays, addMonths, diffDays, today, weekStart, fmtShort, parseYmd, monthStart, daysInMonth, fmtDur, WD } from '../engine/date.js'
+// 그래프: 7일 막대 · 점수 추이 선 · 한 달 칸 — 각진 점 · 가는 선 (필기 느낌이면 선을 살짝 부드럽게)
+import { hm, parseYmd, WD, today, fmtShort } from '../lib/date.js'
 
-// 선 그래프: series = [{ points: [[x,y]], color, dash }], x 는 0..1 로 정규화된 값
-// 부드러운 곡선 (Catmull-Rom → 베지어): 필기 느낌에서 손으로 그은 듯
-const smooth = (pts) => { if (pts.length < 2) return ''; let d = `M${pts[0][0]},${pts[0][1]}`; for (let i = 0; i < pts.length - 1; i++) { const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2; const c1 = [p1[0] + (p2[0] - p0[0]) / 8, p1[1] + (p2[1] - p0[1]) / 8], c2 = [p2[0] - (p3[0] - p1[0]) / 8, p2[1] - (p3[1] - p1[1]) / 8]; d += ` C${c1[0].toFixed(1)},${c1[1].toFixed(1)} ${c2[0].toFixed(1)},${c2[1].toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}` } return d }
-export function LineChart({ series, height = 140, yMax, yMin = 0, labels = [], goal }) {
-  const HAND = typeof document !== 'undefined' && document.documentElement.hasAttribute('data-hand') // 필기 느낌: 비스듬한 날짜 자리만큼 아래 여유
-  const W = 320, H = height + (HAND ? 14 : 0), P = HAND ? 18 : 22, BASE = H - (HAND ? 32 : 18)
-  const ys = series.flatMap((s) => s.points.map((p) => p[1]))
-  const max = yMax ?? Math.max(1, ...ys)
-  const sx = (x) => P + x * (W - P - 8)
-  const sy = (y) => BASE - ((y - yMin) / (max - yMin || 1)) * (BASE - 12)
+export function Bars7({ days, mins, goal }) {
+  const mx = Math.max(goal || 0, ...days.map((d) => mins[d] || 0), 1), t0 = today()
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="chart">
-      {[0, .5, 1].map((k) => { const v = yMin + (max - yMin) * k; return <g key={k} className="chart-grid"><line x1={P} x2={W - 8} y1={sy(v)} y2={sy(v)} stroke="var(--line)" strokeWidth=".6" /><text x={P - 4} y={sy(v) + 3} fontSize="8" fill="var(--muted)" textAnchor="end">{Math.round(v)}</text></g> })}
-      {goal != null && <line x1={P} x2={W - 8} y1={sy(goal)} y2={sy(goal)} stroke="var(--c4)" strokeDasharray="3 3" strokeWidth="1" />}
-      {series.map((s, i) => s.points.length > 0 && (
-        <g key={i}>
-          {/* 필기 느낌에서만 보이는 것: 선 아래 옅은 빗금 면 · 점마다 값 (CSS 로 켬) */}
-          {!s.dash && s.points.length > 1 && <pattern id={`hatch-${i}`} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(40)"><line x1="0" y1="0" x2="0" y2="6" stroke={s.color} strokeWidth=".55" opacity=".5" /></pattern>}
-          {!s.dash && s.points.length > 1 && <path className="chart-hatch" d={smooth(s.points.map(([x, y]) => [sx(x), sy(y)])) + ` L${sx(s.points[s.points.length - 1][0])},${BASE} L${sx(s.points[0][0])},${BASE} Z`} fill={`url(#hatch-${i})`} />}
-          {!s.dash && s.points.length > 1 && <path className="chart-curve" d={smooth(s.points.map(([x, y]) => [sx(x), sy(y)]))} fill="none" stroke={s.color} strokeWidth="2.2" strokeLinecap="round" />}
-          <polyline className="chart-line" points={s.points.map(([x, y]) => `${sx(x)},${sy(y)}`).join(' ')} fill="none" stroke={s.color} strokeWidth="1.6" strokeDasharray={s.dash} strokeLinejoin="round" />
-          {!s.dash && s.points.map(([x, y], j) => { const lo = y === Math.min(...s.points.map((p) => p[1])); return <circle key={j} className={lo ? 'chart-pt lo' : 'chart-pt'} cx={sx(x)} cy={sy(y)} r="2.2" fill={s.color} stroke={s.color} /> })}
-          {!s.dash && s.points.length <= 31 && s.points.map(([x, y], j) => <text key={'v' + j} className="chart-val" x={sx(x)} y={sy(y) - 5} fontSize="7.5" textAnchor="middle" fill="var(--muted)">{Math.round(y * 10) / 10}</text>)}
-        </g>
-      ))}
-      {labels.map(([x, l], i) => <text key={i} className="chart-x" x={sx(x)} y={HAND ? BASE + 12 : H - 4} fontSize="8" fill="var(--muted)" textAnchor={x > .95 ? 'end' : x < .05 ? 'start' : 'middle'}>{l}</text>)}
+    <div className="bars" role="img" aria-label="최근 7일 공부 시간">
+      {days.map((d) => {
+        const v = mins[d] || 0
+        return (
+          <div key={d} className={d === t0 ? 'today' : ''} title={hm(v)}>
+            <span className="num">{v ? hm(v) : ''}</span>
+            <b style={{ height: (v / mx) * 100 + '%' }} />
+            <span>{WD[parseYmd(d).getDay()]}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// 점수 추이: points [{ date, total }] · target · pass · max
+export function ScoreChart({ points, target, pass, max, color = 'var(--accent)' }) {
+  const W = 320, H = 130, L = 30, R = 10, T = 14, B = 20
+  if (!points.length) return null
+  const vals = points.map((p) => p.total), lo0 = Math.min(...vals, target ?? Infinity, pass ?? Infinity), hi0 = Math.max(...vals, target ?? -Infinity, pass ?? -Infinity)
+  const pad = Math.max(5, (hi0 - lo0) * 0.15), lo = Math.max(0, Math.floor((lo0 - pad) / 5) * 5), hi = Math.min(max, Math.ceil((hi0 + pad) / 5) * 5)
+  const x = (i) => (points.length === 1 ? (L + W - R) / 2 : L + (i * (W - L - R)) / (points.length - 1)), y = (v) => T + (1 - (v - lo) / Math.max(1, hi - lo)) * (H - T - B)
+  const hand = typeof document !== 'undefined' && document.documentElement.hasAttribute('data-hand')
+  let d = points.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(p.total).toFixed(1)}`).join(' ')
+  if (hand && points.length > 2) { // 부드러운 곡선 (Catmull-Rom → 베지어)
+    const P = points.map((p, i) => [x(i), y(p.total)])
+    d = `M${P[0][0]} ${P[0][1]}` + P.slice(1).map((p, i) => { const p0 = P[i - 1] || P[i], p1 = P[i], p3 = P[i + 2] || p; return ` C${p1[0] + (p[0] - p0[0]) / 6} ${p1[1] + (p[1] - p0[1]) / 6} ${p[0] - (p3[0] - p1[0]) / 6} ${p[1] - (p3[1] - p1[1]) / 6} ${p[0]} ${p[1]}` }).join('')
+  }
+  const hl = (v, label, dash) => v != null && v >= lo && v <= hi && <g><line x1={L} x2={W - R} y1={y(v)} y2={y(v)} stroke="var(--soft)" strokeWidth=".7" strokeDasharray={dash} /><text x={W - R} y={y(v) - 3} textAnchor="end">{label} {v}</text></g>
+  return (
+    <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="점수 추이">
+      <text x={L - 6} y={y(hi) + 3} textAnchor="end">{hi}</text><text x={L - 6} y={y(lo) + 3} textAnchor="end">{lo}</text>
+      {hl(target, '목표', '3 3')}{hl(pass, '합격', '1 3')}
+      <path d={d} fill="none" stroke={color} strokeWidth="1.3" strokeLinejoin="round" />
+      {points.map((p, i) => <g key={i}><rect x={x(i) - 2.5} y={y(p.total) - 2.5} width="5" height="5" fill={p.real ? color : 'var(--surface)'} stroke={color} strokeWidth="1" /><text className="val" x={x(i)} y={y(p.total) - 6} textAnchor="middle">{p.total}</text><text x={x(i)} y={H - 4} textAnchor="middle">{fmtShort(p.date)}</text></g>)}
     </svg>
   )
 }
 
-// 번다운: 남은 분량 (이상선 vs 실제)
-export function Burndown({ plan, textbook }) {
-  const start = plan.startDate, end = addDays(plan.examDate, -(plan.reviewDays || 0) - 1)
-  const span = Math.max(1, diffDays(end, start))
-  const total = plan.to - plan.from + 1
-  const X = (d) => Math.min(1, Math.max(0, diffDays(d, start) / span))
-  const hist = (textbook?.history || []).filter((h) => h.date >= start).sort((a, b) => a.date.localeCompare(b.date))
-  const actual = [[0, total], ...hist.map((h) => [X(h.date), Math.max(0, plan.to - Math.max(plan.from - 1, h.value))])]
-  const last = actual[actual.length - 1]
-  // 현재 속도로 예측
-  const elapsed = Math.max(1, diffDays(today(), start))
-  const rate = (total - last[1]) / elapsed
-  const daysNeed = rate > 0 ? last[1] / rate : Infinity
-  const eta = isFinite(daysNeed) ? addDays(today(), Math.ceil(daysNeed)) : null
-  const onTrack = eta && eta <= end
+// 한 달 칸: 공부한 만큼 진하게
+export function MonthGrid({ month, mins, goal, weekStart = 1 }) {
+  const [y, m] = month.split('-').map(Number), first = new Date(y, m - 1, 1), n = new Date(y, m, 0).getDate()
+  const lead = (first.getDay() - weekStart + 7) % 7, t0 = today()
+  const cells = [...Array(lead).fill(null), ...Array.from({ length: n }, (_, i) => `${month}-${String(i + 1).padStart(2, '0')}`)]
+  const wd = Array.from({ length: 7 }, (_, i) => WD[(i + weekStart) % 7])
   return (
-    <div>
-      <LineChart height={130} yMax={total} series={[
-        { points: [[0, total], [1, 0]], color: 'var(--muted)', dash: '4 3' },
-        { points: actual, color: 'var(--accent-t)' },
-      ]} labels={[[0, fmtShort(start)], [X(today()), '오늘'], [1, fmtShort(end)]]} />
-      <div className="small" style={{ color: onTrack ? 'var(--ok)' : 'var(--danger)' }}>
-        {last[1] === 0 ? '범위 완료 🎉' : eta ? (onTrack ? `지금 속도면 ${fmtShort(eta)} 완료 — 여유 있어요` : `지금 속도면 ${fmtShort(eta)} 완료 — 시험 전 복습일보다 늦어요`) : '아직 진도 기록이 없어요'}
-      </div>
-    </div>
-  )
-}
-
-// 잔디 히트맵: values = { 'YYYY-MM-DD': number }
-export function Heatmap({ values, weeks = 15, max, color = 'var(--c2)', onPick }) {
-  const end = today()
-  const start = addDays(weekStart(end, 0), -(weeks - 1) * 7)
-  const m = max ?? Math.max(1, ...Object.values(values))
-  return (
-    <div className="heat" style={{ gridTemplateColumns: `repeat(${weeks}, 1fr)` }}>
-      {Array.from({ length: weeks }, (_, w) => (
-        <div key={w} className="heat-col">
-          {Array.from({ length: 7 }, (_, d) => {
-            const day = addDays(start, w * 7 + d)
-            const v = values[day] || 0
-            return <button key={d} className="heat-cell" title={`${day} ${v}`} disabled={day > end} onClick={() => onPick?.(day)}
-              style={{ background: day > end ? 'transparent' : v ? `color-mix(in srgb, ${color} ${Math.round(25 + 75 * Math.min(1, v / m))}%, var(--surface))` : 'var(--surface-2)', outline: day === end ? '1px solid var(--accent)' : null }} />
-          })}
-        </div>
-      ))}
-    </div>
-  )
-}
-
-const hmT = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`
-// 월별 공부 달력: 칸 진하기 = 목표 대비 공부량
-export function MonthHeat({ values, goal = 240, weekStartDow = 1, color = 'var(--c2)', onPick, compact, fixed }) {
-  // goal: 숫자 또는 날짜 → 그날 목표 (요일별 목표)
-  const gOf = typeof goal === 'function' ? goal : () => goal
-  const t = today()
-  const [m0, setMonth] = useState(monthStart(t)), month = fixed || m0
-  // 이미지로 저장 (리포트 이미지 색 설정을 따름)
-  const saveImg = async () => {
-    const { drawMonthCal } = await import('../lib/reportImage.js')
-    const blob = await drawMonthCal({ month, values, goal, weekStartDow, theme: settings().reportTheme || 'app' })
-    await shareBlob(blob, `공부달력-${month.slice(0, 7)}.png`)
-  }
-  const y = +month.slice(0, 4), mo = +month.slice(5, 7) - 1
-  const n = daysInMonth(y, mo)
-  const lead = (parseYmd(month).getDay() - weekStartDow + 7) % 7
-  const days = Array.from({ length: n }, (_, i) => addDays(month, i))
-  const vals = days.map((d) => values[d] || 0)
-  const total = vals.reduce((a, v) => a + v, 0), studied = vals.filter(Boolean).length
-  const hit = days.filter((d, i) => vals[i] >= gOf(d)).length
-  const wd = Array.from({ length: 7 }, (_, i) => WD[(i + weekStartDow) % 7])
-  return (
-    <div className={'mheat' + (compact ? ' compact' : '')}>
-      {!fixed && <div className="row between mheat-top">
-        <button className="icon-btn no-print" onClick={() => setMonth(addMonths(month, -1))} aria-label="이전 달">‹</button>
-        <b>{y}. {mo + 1}</b>
-        <span className="row" style={{ gap: 2 }}>
-          {!compact && <button className="chip no-print" onClick={saveImg}>이미지</button>}
-          <button className="icon-btn no-print" onClick={() => setMonth(addMonths(month, 1))} aria-label="다음 달">›</button>
-        </span>
-      </div>}
-      <div className="mheat-grid">
-        {wd.map((w) => <span key={w} className="mheat-wd">{w}</span>)}
-        {Array.from({ length: lead }, (_, i) => <span key={'e' + i} />)}
-        {days.map((d, i) => {
-          const v = vals[i], r = Math.min(1, v / (gOf(d) || 1))
-          return (
-            <button key={d} className={'mheat-cell' + (d === t ? ' today' : '') + (r >= .9 ? ' dark' : '') + (v ? '' : ' empty')} disabled={d > t} onClick={() => onPick?.(d)}
-              style={v ? { background: `color-mix(in srgb, ${color} ${Math.round(16 + 70 * r)}%, var(--surface))` } : null}>
-              <span className="mheat-d">{i + 1}</span>
-              {!compact && v > 0 && <span className="mheat-v">{Math.floor(v / 60)}:{String(v % 60).padStart(2, '0')}</span>}
-            </button>
-          )
-        })}
-      </div>
-      <div className="mheat-sum">
-        {[['합계', hmT(total)], ['공부한 날', studied + '일'], ['목표 달성', hit + '일'], ['하루 평균', hmT(studied ? Math.round(total / studied) : 0)]].map(([l, v]) => <span key={l} className="stat-mini"><i>{l}</i><b>{v}</b></span>)}
-      </div>
-    </div>
-  )
-}
-
-export function Bars({ items, unit = '' }) {
-  const max = Math.max(1, ...items.map((i) => i.value))
-  return (
-    <div className="bars">
-      {items.map((i) => (
-        <div key={i.label} className="bar-row">
-          <span className="bar-l ellipsis">{i.label}</span>
-          <div className="bar-t"><i style={{ width: (i.value / max) * 100 + '%', background: i.color || 'var(--accent)' }} /></div>
-          <span className="bar-v">{i.text ?? i.value + unit}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// 요일별 막대 (최근 7일): 가는 막대 · 목표 점선 · 칸 위에 시간
-export function WeekBars({ values, goal }) {
-  const t = today(), days = Array.from({ length: 7 }, (_, i) => addDays(t, i - 6))
-  const max = Math.max(goal || 1, ...days.map((d) => values[d] || 0))
-  const hm = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`
-  return (
-    <div className="wbars">
-      <div className="wbars-plot">
-        {goal > 0 && <span className="wbars-goal" style={{ bottom: (goal / max) * 100 + '%' }}><em>목표 {hm(goal)}</em></span>}
-        {days.map((d) => { const v = values[d] || 0; return (
-          <div key={d} className={'wbar' + (d === t ? ' now' : '') + (goal && v >= goal ? ' hit' : '')}>
-            {v > 0 && <span className="wbar-v">{hm(v)}</span>}
-            {goal > 0 && v < goal && <i className="wbar-ghost" style={{ height: (goal / max) * 100 + '%' }} />}
-            <i className="wbar-b" style={{ height: Math.max(v ? 3 : 0, (v / max) * 100) + '%' }} />
-          </div>
-        ) })}
-      </div>
-      <div className="wbars-l">{days.map((d) => <span key={d} className={d === t ? 'now' : ''}>{'일월화수목금토'[parseYmd(d).getDay()]}</span>)}</div>
+    <div className="mgrid">
+      {wd.map((w) => <span key={w} className="mg-h">{w}</span>)}
+      {cells.map((k, i) => k ? <span key={k} className={'mg-c' + (k === t0 ? ' today' : '') + ((mins[k] || 0) / Math.max(goal, 1) > 0.5 ? ' dk' : '')} title={hm(mins[k] || 0)} style={{ '--a': mins[k] ? Math.min(1, 0.18 + 0.82 * (mins[k] / Math.max(goal, 1))) : 0 }}><i>{+k.slice(8)}</i></span> : <span key={'e' + i} />)}
     </div>
   )
 }

@@ -1,173 +1,24 @@
-import { StrictMode, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import './styles/tokens.css'
 import './styles/app.css'
-import './styles/views.css'
-import './styles/print.css'
+import './styles/pencil.css'
 import App from './App.jsx'
-import { loadState, useSettings, settings } from './store/store.js'
-import { applyTheme } from './theme/theme.js'
-import { initFonts } from './lib/fonts.js'
-import { applyAppIcon } from './lib/appIcon.js'
-import { startNoteVersions } from './lib/noteVersions.js'
-import { installErrorLog, persistStorage, updateBadge } from './lib/diag.js'
-import { pendingChanges } from './lib/whatsnew.js'
-import { subscribe } from './store/store.js'
-installErrorLog()
-// 창 크기 단계 (iPad 창 크기 조절·Stage Manager 에 맞춰 바뀜): compact < 600 ≤ medium < 900 ≤ wide < 1300 ≤ xwide
-const winTier = () => { const w = innerWidth; document.documentElement.dataset.win = w < 600 ? 'compact' : w < 900 ? 'medium' : w < 1300 ? 'wide' : 'xwide' }
-winTier(); addEventListener('resize', winTier)
-applyAppIcon()
-import { TABS, EXTRA, go } from './nav.js'
-import { addTask } from './store/actions.js'
-import { toast } from './components/ui.jsx'
-import { setPrefs } from './engine/date.js'
-import { setHaptics } from './lib/haptic.js'
-import { startServices } from './lib/notify.js'
-import { startSync, restoreSync, readConnectLink, connect } from './sync/sync.js'
+import { loadState, find } from './store/store.js'
+import { seedDemo } from './lib/seed.js'
+import { go } from './lib/nav.js'
+import { toggleTask } from './store/actions.js'
+import { toast } from './components/toast.js'
 
-function Root() {
-  const st = useSettings()
-  setPrefs({ ws: st.weekStart, date: st.dateFmt, dur: st.durFmt }); setHaptics(st.haptics)
-  useEffect(() => { applyTheme(st.theme) }, [st.theme])
-  // 조용한 모드: 숫자·지연 강조·이월 표시 숨김
-  useEffect(() => { document.documentElement.toggleAttribute('data-calm', !!st.calm) }, [st.calm])
-  return <App />
-}
-
-const linkIn = readConnectLink() // 렌더 전에 주소에서 토큰 지움
-Promise.all([loadState(), initFonts(), restoreSync()]).then(async () => {
-  persistStorage()
-  // 위젯을 홈 화면 타자기 배경화면에 맞춘 '타자기' 테마로 한 번 바꿔 둠 (설정에서 언제든 되돌릴 수 있음)
-  try { const { settings, setSettings } = await import('./store/store.js'); if (!settings().widgetTypeOnce) setSettings({ widgetTheme: 'type', widgetTypeOnce: true }) } catch {}
-  // 앱 아이콘 배지: 할 일이 바뀔 때마다 (잠깐 모아서)
-  let bt = 0; updateBadge(); subscribe(() => { clearTimeout(bt); bt = setTimeout(updateBadge, 800) })
-  // 업데이트 뒤 처음 열면 새로워진 점 한 줄
-  setTimeout(() => { const ch = pendingChanges(); if (ch?.length) toast('새로워진 점 · ' + ch[0].items[0], { label: '보기', fn: () => import('./components/ui.jsx').then((m) => m.openSheet(() => <div className="col" style={{ gap: 10 }}>{ch.map((c) => <div key={c.v}><div className="tiny muted">{c.v}</div>{c.items.map((x, i) => <div key={i} className="small">· {x}</div>)}</div>)}</div>, { title: '새로워진 점' })) }) }, 1500)
-  if (linkIn) connect(linkIn.t, linkIn.g).then((id) => toast(id ? '이 브라우저도 동기화 연결됨' : '토큰 저장됨 · 연결은 자동으로 다시 시도해요')).catch((e) => toast(e.message))
-  if (location.search.includes('demo')) (await import('./dev/seed.js')).seed()
-  // 홈 화면 위젯에서 연 링크: ?go=탭.세그먼트
-  const target = new URLSearchParams(location.search).get('go')
-  // 위젯 링크(?go=탭.세그먼트) 또는 설정의 시작 화면
-  const start = target || (settings().startTab && settings().startTab !== 'last' ? settings().startTab : null)
-  if (start) {
-    const [tab, seg] = start.split('.')
-    if ([...TABS, ...EXTRA].some((t) => t.id === tab)) go(tab, seg)
-  }
-  // 알림에서 연 링크: ?ev=일정id&occ=날짜 · ?close=1(하루 마감) — 할 일(?task=)은 아래 위젯 링크와 같이
-  const evIn = /[?&](ev|close)=/.test(location.search)
-  if (evIn) { const qs = location.search; import('./lib/links.js').then((m) => m.openLink(qs.replace(/[?&]task=[^&]*/, ''))) }
-  // 이미 열린 앱에서 알림을 누르면 서비스 워커가 링크를 보내 줌
-  navigator.serviceWorker?.addEventListener('message', (e) => { if (e.data?.type === 'open-link' && e.data.url) import('./lib/links.js').then((m) => m.openLink(new URL(e.data.url, location.href).search)) })
-  // 공유(단축어)로 들어온 할 일: ?add=내용&url=링크 → 받은 편지함
+async function boot() {
+  await loadState()
   const q = new URLSearchParams(location.search)
-  const added = q.get('add')?.trim(), link = q.get('url')?.trim()
-  if ((added || link) && q.get('note') == null) {
-    let title = added || link
-    const urlIn = link || (added?.match(/https?:\/\/\S+/) || [])[0]
-    if (urlIn && title.includes(urlIn) && title.trim() !== urlIn) title = title.replace(urlIn, '').trim()
-    addTask({ title: title.slice(0, 200), inbox: true, links: urlIn ? [{ url: urlIn, title: '' }] : [] })
-    go('tasks', 'list', { smart: 'inbox' })
-    setTimeout(() => toast('받은 편지함에 추가했어요'), 600)
-  }
-  // 공유(단축어)로 들어온 노트: ?note=내용&url=링크&title=제목 → 새 노트 열기
-  const noteIn = q.get('note'), noteTitleIn = q.get('title') || ''
-  if (noteIn != null && (noteIn.trim() || link)) {
-    const { noteFromShare } = await import('./lib/notes.js')
-    const { openNote } = await import('./nav.js')
-    const n = noteFromShare({ text: noteIn, url: link || '', title: noteTitleIn })
-    openNote(n.id)
-    setTimeout(() => toast('노트로 저장했어요'), 600)
-  }
-  // 위젯에서 누른 할 일: ?done=할일id → 완료 확인
-  const doneIn = q.get('done')
-  if (doneIn) {
-    const { find } = await import('./store/store.js')
-    // 하위 할 일 ('할일id:하위id'): 그 하위만 체크 · 다시 누르면 취소
-    if (doneIn.includes(':')) {
-      const [tid, sid] = doneIn.split(':'), { toggleSub } = await import('./store/actions.js'), pt = find('tasks', tid)
-      if (pt && (pt.subtasks || []).some((x) => x.id === sid)) setTimeout(() => toggleSub(tid, sid), 500)
-    }
-    const tk = doneIn.includes(':') ? null : find('tasks', doneIn)
-    if (doneIn.includes(':')) { /* 하위는 위에서 처리 */ } else if (q.get('quick') && tk && !tk.deleted) {
-      // 위젯에서 바로 완료 (확인 창 없이) — 잘못 눌렀으면 되돌리기
-      const { toggleTask } = await import('./store/actions.js')
-      // 끝낸 할 일을 다시 누르면 완료 취소
-      const was = tk.done
-      toggleTask(doneIn, { quiet: true })
-      setTimeout(() => toast(`${was ? '완료 취소' : '완료'} · ${tk.title}`, { label: '되돌리기', fn: () => toggleTask(doneIn, { quiet: true }) }), 500)
-    } else {
-      const [{ default: DoneConfirm }, { openSheet }] = await Promise.all([import('./components/DoneConfirm.jsx'), import('./components/ui.jsx')])
-      setTimeout(() => openSheet((c) => <DoneConfirm id={doneIn} close={c} />, { title: '할 일' }), 300)
-    }
-  }
-  // 위젯 '바로 시작': ?timer=과목id → 스톱워치 시작 (이미 도는 중이면 그대로) · ?new=task|event|record|memo → 빠른 추가
-  const timerIn = q.get('timer'), newIn = q.get('new')
-  if (timerIn != null) {
-    const tm = await import('./lib/timer.js')
-    if (!tm.getTimer()) { const { list } = await import('./store/store.js'); const sid = list('subjects').some((s) => s.id === timerIn) ? timerIn : list('subjects')[0]?.id; tm.startStopwatch(sid); setTimeout(() => toast('타이머를 시작했어요'), 600) }
-    go('study', 'timer')
-  }
-  if (newIn && ['task', 'event', 'record', 'memo'].includes(newIn)) {
-    const [{ default: QuickAdd }, { openSheet }] = await Promise.all([import('./components/QuickAdd.jsx'), import('./components/ui.jsx')])
-    setTimeout(() => openSheet((c) => <QuickAdd close={c} initial={newIn} />, { title: '빠른 추가', top: true }), 300)
-  }
-  // 공유 시트 사진: ?photo=1 → 붙여넣기 시트 (단축어가 사진을 클립보드에 복사해 둠)
-  const photoIn = q.get('photo') != null
-  if (photoIn) {
-    const [{ default: PhotoPaste }, { openSheet }] = await Promise.all([import('./components/PhotoPaste.jsx'), import('./components/ui.jsx')])
-    setTimeout(() => openSheet((c) => <PhotoPaste close={c} />, { title: '사진 넣기' }), 300)
-  }
-  // 단축어(애플 인텔리전스)가 돌려준 답: ?ai=답
-  const aiIn = q.get('ai')
-  if (aiIn != null) {
-    let pending = null
-    try { pending = JSON.parse(localStorage.getItem('aiPending') || 'null'); localStorage.setItem('aiAnswer', JSON.stringify({ q: pending?.q || '', a: aiIn, at: Date.now() })); localStorage.removeItem('aiPending') } catch {}
-    const [{ default: AskSheet }, { openSheet }] = await Promise.all([import('./components/AskSheet.jsx'), import('./components/ui.jsx')])
-    setTimeout(() => openSheet(() => <AskSheet initial={pending?.q || ''} />, { title: '내 기록에 물어보기' }), 300)
-  }
-  // 건강 앱(단축어 자동화): ?health=1&sleep=..&steps=..
-  const healthIn = q.get('health') != null
-  if (healthIn) {
-    const { importHealth } = await import('./lib/health.js')
-    const r = importHealth(q)
-    if (r) { go('health'); setTimeout(() => toast(`건강 기록 · ${[r.sleep != null && `수면 ${r.sleep}시간`, r.steps != null && `걸음 ${r.steps.toLocaleString()}`].filter(Boolean).join(' · ')}`), 600) }
-  }
-  // 위젯에서 노트 열기: ?open=노트id
-  const openIn = q.get('open')
-  // 위젯에서 할 일 열기: ?task=할일id
-  const taskIn = q.get('task')
-  if (taskIn) setTimeout(() => import('./components/ui.jsx').then((m) => m.openDetail('task', taskIn)), 500)
-  if (openIn) { const blk = q.get('b'); if (blk) import('./components/BlockEditor.jsx').then((m) => setTimeout(() => m.goBlock(openIn, blk), 400)); else { const { openNote } = await import('./nav.js'); openNote(openIn) } }
-  if (evIn || taskIn || openIn || target || added || link || noteIn != null || healthIn || aiIn != null || doneIn || timerIn != null || newIn || photoIn) history.replaceState(null, '', location.pathname + location.hash)
-  createRoot(document.getElementById('root')).render(<StrictMode><Root /></StrictMode>)
-  startServices()
-  startNoteVersions()
-  import('./lib/ink.js').then((m) => m.installInk()).catch(() => {})
-  // 노트에서 만든 할 일 제목에 남은 꾸밈 기호(==형광== 등) 정리
-  import('./lib/marks.js').then(({ plainText }) => import('./store/store.js').then(({ list, patch }) => { for (const t of list('tasks')) { const p = plainText(t.title); if (p !== t.title) patch('tasks', t.id, { title: p }) } }))
-  import('./lib/resume.js').then((m) => m.startResume())
-  startSync()
-  // 완료 30일 지난 할 일 보관함으로 (동기화가 먼저 끝나도록 조금 뒤 · 6시간마다)
-  import('./store/actions.js').then((m) => { setTimeout(m.autoArchive, 8000); setInterval(m.autoArchive, 6 * 3600000) })
-  // 동기화를 안 쓰면 바로 한 번 정리 (쓰면 첫 동기화 뒤에)
-  if (!localStorage.getItem('gist_token')) import('./lib/notes.js').then((m) => setTimeout(() => m.cleanNoteTasksOnce(), 1500))
-})
-
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  window.addEventListener('load', async () => {
-    const reg = await navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).catch(() => null)
-    // 새 버전 배포 확인: 앱으로 돌아올 때마다 index.html 을 새로 받아 스크립트가 바뀌었으면 새로고침
-    const current = [...document.scripts].map((x) => x.src).find((x) => x.includes('/assets/'))
-    const check = async () => {
-      reg?.update().catch(() => {})
-      try {
-        const html = await (await fetch('./?v=' + Date.now(), { cache: 'no-store' })).text()
-        const m = html.match(/assets\/index-[\w-]+\.js/)
-        if (m && current && !current.includes(m[0])) location.reload()
-      } catch {}
-    }
-    check()
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check() })
-  })
+  if (q.has('demo')) seedDemo()
+  // 위젯 링크: ?go=탭.세그먼트 · ?done=할일id (누르면 바로 체크 · 다시 누르면 취소)
+  const g = q.get('go'); if (g) { const [tab, seg] = g.split('.'); go(tab, seg) }
+  const dn = q.get('done')
+  if (dn) { const t = find('tasks', dn); if (t) { toggleTask(dn, { quiet: true }); setTimeout(() => toast((t.done ? '완료 취소 · ' : '끝냄 · ') + t.title, { label: '되돌리기', fn: () => toggleTask(dn, { quiet: true }) }), 400) } }
+  if (q.toString()) history.replaceState(null, '', location.pathname)
+  createRoot(document.getElementById('root')).render(<App />)
+  if ('serviceWorker' in navigator && import.meta.env.PROD) navigator.serviceWorker.register('./sw.js').catch(() => {})
 }
+boot()

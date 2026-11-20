@@ -1,55 +1,32 @@
-import { mergeColl } from '../sync/merge.js'
+// 앱 데이터: 메모리 상태 + IndexedDB 저장 (컬렉션마다 'x:<이름>' — 예전 앱 데이터와 섞이지 않게)
 import { useMemo, useSyncExternalStore } from 'react'
-import { get, getMany, setMany } from 'idb-keyval'
-import { COLL_NAMES, DEFAULT_SETTINGS, DEFAULT_SUBJECTS, DEFAULT_QUOTES, emptyState } from './schema.js'
+import { getMany, setMany } from 'idb-keyval'
+import { COLL_NAMES, DEFAULT_SETTINGS, emptyState } from './schema.js'
+import { mergeColl } from '../sync/merge.js'
 
-const SCHEMA_VERSION = 1
+const KEY = (c) => 'x:' + c
 let state = emptyState()
-const listeners = new Set()
-const changeHooks = new Set()
-let batching = 0
-let pendingNotify = false
-let saveTimer = null
-const dirty = new Set() // 저장할 컬렉션 (바뀐 것만 IndexedDB 의 `c:<컬렉션>` 에)
+const listeners = new Set(), hooks = new Set(), dirty = new Set()
+let batching = 0, pending = false, saveTimer = null
 
 export const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
-
-export const deviceId = (() => {
-  try {
-    let d = localStorage.getItem('deviceId')
-    if (!d) { d = uid(); localStorage.setItem('deviceId', d) }
-    return d
-  } catch { return 'local' }
-})()
+export const deviceId = (() => { try { let d = localStorage.getItem('x_device'); if (!d) { d = uid(); localStorage.setItem('x_device', d) } return d } catch { return 'local' } })()
 
 export const getState = () => state
 export const subscribe = (fn) => { listeners.add(fn); return () => listeners.delete(fn) }
-// (coll, next, prev) 형태로 모든 레코드 변경을 전달 — 동기화·자동화·로그가 사용
-export const onChange = (fn) => { changeHooks.add(fn); return () => changeHooks.delete(fn) }
+// 레코드가 바뀔 때마다 (동기화 예약 등)
+export const onChange = (fn) => { hooks.add(fn); return () => hooks.delete(fn) }
 
 function notify() {
-  if (batching) { pendingNotify = true; return }
+  if (batching) { pending = true; return }
   listeners.forEach((l) => l())
-  scheduleSave()
-}
-function scheduleSave() {
   if (!dirty.size) return
   clearTimeout(saveTimer)
-  saveTimer = setTimeout(() => {
-    const cs = [...dirty]; dirty.clear()
-    setMany(cs.map((c) => ['c:' + c, state[c]])).catch(() => cs.forEach((c) => dirty.add(c)))
-  }, 400)
+  saveTimer = setTimeout(() => { const cs = [...dirty]; dirty.clear(); setMany(cs.map((c) => [KEY(c), state[c]])).catch(() => cs.forEach((c) => dirty.add(c))) }, 300)
 }
+export function batch(fn) { batching++; try { return fn() } finally { batching--; if (!batching && pending) { pending = false; notify() } } }
 
-export function batch(fn) {
-  batching++
-  try { return fn() } finally {
-    batching--
-    if (!batching && pendingNotify) { pendingNotify = false; notify() }
-  }
-}
-
-// 되돌리기용 기록: recordChanges(fn) 안에서 바뀐 레코드의 이전 모습을 모아 둠
+// 되돌리기: recordChanges(fn) 안에서 바뀐 레코드의 이전 모습
 let journal = null
 export function recordChanges(fn) {
   if (journal) { fn(); return [] }
@@ -59,147 +36,73 @@ export function recordChanges(fn) {
   return out
 }
 export function undoChanges(changes) {
-  batch(() => {
-    for (const { coll, id, prev } of [...changes].reverse()) {
-      if (prev) write(coll, stamp({ ...prev }), state[coll][id])
-      else remove(coll, id)
-    }
-  })
+  batch(() => { for (const { coll, id, prev } of [...changes].reverse()) { if (prev) write(coll, stamp({ ...prev }), state[coll][id]); else remove(coll, id) } })
 }
-function write(coll, rec, prev, silent) {
+const stamp = (rec) => ({ ...rec, updatedAt: Date.now(), deviceId })
+function write(coll, rec, prev) {
   if (journal && !journal.has(coll + ':' + rec.id)) journal.set(coll + ':' + rec.id, { coll, id: rec.id, prev })
   state = { ...state, [coll]: { ...state[coll], [rec.id]: rec } }
   dirty.add(coll)
-  if (!silent) changeHooks.forEach((h) => { try { h(coll, rec, prev) } catch (e) { console.error(e) } })
+  hooks.forEach((h) => { try { h(coll, rec, prev) } catch (e) { console.error(e) } })
   notify()
   return rec
 }
-
-const stamp = (rec) => ({ ...rec, updatedAt: Date.now(), deviceId })
-
 export function put(coll, rec) {
-  const id = rec.id || uid()
-  const prev = state[coll][id]
-  const { deleted, deletedAt, purged, ...base } = prev || {} // 같은 id 로 다시 쓰면 휴지통에서 되살림
+  const id = rec.id || uid(), prev = state[coll][id]
+  const { deleted, deletedAt, ...base } = prev || {}
   return write(coll, stamp({ createdAt: prev?.createdAt || Date.now(), ...base, ...rec, id }), prev)
 }
 export function patch(coll, id, partial) {
   const prev = state[coll][id]
   if (!prev) return null
-  const next = typeof partial === 'function' ? partial(prev) : partial
-  return write(coll, stamp({ ...prev, ...next }), prev)
+  return write(coll, stamp({ ...prev, ...(typeof partial === 'function' ? partial(prev) : partial) }), prev)
 }
 export function remove(coll, id) {
   const prev = state[coll][id]
   if (!prev || prev.deleted) return
   write(coll, stamp({ ...prev, deleted: true, deletedAt: Date.now() }), prev)
 }
-export function restore(coll, id) {
-  const prev = state[coll][id]
-  if (!prev) return
-  const { deleted, deletedAt, ...rest } = prev
-  write(coll, stamp(rest), prev)
-}
-// 동기화 병합 결과 반영 (타임스탬프 유지, 훅 미발생)
-export function replaceColl(coll, recs) {
-  state = { ...state, [coll]: recs }
-  dirty.add(coll)
-  notify()
-}
-export function replaceAll(next) {
-  state = { ...emptyState(), ...next }
-  COLL_NAMES.forEach((c) => dirty.add(c))
-  notify()
-}
+// 동기화 병합 결과 (시각 유지 · 훅 없음)
+export function replaceColl(coll, recs) { state = { ...state, [coll]: recs }; dirty.add(coll); notify() }
+export function replaceAll(next) { state = { ...emptyState(), ...next }; COLL_NAMES.forEach((c) => dirty.add(c)); notify() }
 
-export const alive = (obj) => Object.values(obj).filter((r) => !r.deleted)
+const alive = (o) => Object.values(o || {}).filter((r) => !r.deleted)
 export const find = (coll, id) => { const r = state[coll][id]; return r && !r.deleted ? r : null }
-// 과목은 정한 순서대로 (order · 없으면 만든 순서)
-const ordered = (coll, arr) => (coll === 'subjects' ? arr.sort((a, b) => (a.order ?? 1e15) - (b.order ?? 1e15) || (a.createdAt || 0) - (b.createdAt || 0)) : arr)
-export const list = (coll) => ordered(coll, alive(state[coll]))
-// 고르는 곳(과목 선택 · 타이머 · 빠른 기록)엔 숨긴 과목을 빼고
-export const shown = (subjects) => subjects.filter((s) => !s.hidden)
+export const list = (coll) => alive(state[coll])
+export function useColl(coll) { const raw = useSyncExternalStore(subscribe, () => state[coll]); return useMemo(() => alive(raw), [raw]) }
+export function useRec(coll, id) { const r = useSyncExternalStore(subscribe, () => state[coll][id]); return r && !r.deleted ? r : null }
+export const settings = () => ({ ...DEFAULT_SETTINGS, ...state.settings.main })
+export function useSettings() { const s = useSyncExternalStore(subscribe, () => state.settings.main); return useMemo(() => ({ ...DEFAULT_SETTINGS, ...s }), [s]) }
+export const setSettings = (p) => put('settings', { ...settings(), ...p, id: 'main' })
 
-// React hooks
-export function useColl(coll) {
-  const raw = useSyncExternalStore(subscribe, () => state[coll])
-  return useMemo(() => ordered(coll, alive(raw)), [raw])
-}
-export function useRaw(coll) { return useSyncExternalStore(subscribe, () => state[coll]) }
-export function useRec(coll, id) {
-  const raw = useSyncExternalStore(subscribe, () => state[coll][id])
-  return raw && !raw.deleted ? raw : null
-}
-export function useSettings() {
-  const s = useSyncExternalStore(subscribe, () => state.settings.main)
-  return s || DEFAULT_SETTINGS
-}
-export const settings = () => state.settings.main || DEFAULT_SETTINGS
-export const setSettings = (partial) => put('settings', { ...settings(), ...(typeof partial === 'function' ? partial(settings()) : partial), id: 'main' })
-
-// 휴지통 정리: 정한 날(기본 30일 · 설정 trashDays) 지난 삭제 항목은 내용 비우고 표식만, 그 뒤 60일 지나면 완전 제거
-export const TRASH_DAYS = 30
-export const trashDays = () => +state.settings.main?.trashDays || TRASH_DAYS
+// 지운 지 60일 지난 표식은 완전히 정리
 function purge() {
-  // 첨부 항목은 보관함 주소(raw)를 남겨 나중에 보관함에서도 지움
-  const now = Date.now(), D = 86400000
-  let changed = false
-  const next = { ...state }
+  const now = Date.now()
   for (const c of COLL_NAMES) {
-    let coll = null
-    for (const r of Object.values(state[c])) {
-      if (!r.deleted) continue
-      const age = now - (r.deletedAt || r.updatedAt)
-      if (age > (trashDays() + 60) * D) { coll = coll || { ...state[c] }; delete coll[r.id] }
-      else if (age > trashDays() * D && !r.purged) { coll = coll || { ...state[c] }; coll[r.id] = { id: r.id, deleted: true, purged: true, deletedAt: r.deletedAt, updatedAt: r.updatedAt, deviceId: r.deviceId, ...(r.raw ? { raw: r.raw, rm: r.rm } : null) } }
-    }
-    if (coll) { next[c] = coll; changed = true; dirty.add(c) }
+    const gone = Object.values(state[c]).filter((r) => r.deleted && now - (r.deletedAt || 0) > 60 * 86400000)
+    if (gone.length) { const o = { ...state[c] }; gone.forEach((r) => delete o[r.id]); state = { ...state, [c]: o }; dirty.add(c) }
   }
-  if (changed) { state = next; notify() }
 }
-
 export async function loadState() {
   try {
-    const vals = await getMany(COLL_NAMES.map((c) => 'c:' + c))
-    if (vals.some(Boolean)) {
-      const next = emptyState()
-      COLL_NAMES.forEach((c, i) => { if (vals[i]) next[c] = vals[i] })
-      state = next
-    } else {
-      // 예전 저장(전체를 'state' 한 덩어리로) → 컬렉션별로 옮김 · 예전 키는 그대로 둠(되돌아갈 때 대비)
-      const saved = await get('state')
-      if (saved?.state) {
-        state = { ...emptyState(), ...saved.state }
-        await setMany(COLL_NAMES.map((c) => ['c:' + c, state[c]]))
-      }
-    }
+    const vals = await getMany(COLL_NAMES.map(KEY))
+    const next = emptyState(); COLL_NAMES.forEach((c, i) => { if (vals[i]) next[c] = vals[i] })
+    state = next
   } catch (e) { console.error(e) }
-  if (!state.settings.main) {
-    batch(() => {
-      put('settings', { ...DEFAULT_SETTINGS })
-      DEFAULT_SUBJECTS.forEach((s) => put('subjects', s))
-      DEFAULT_QUOTES.forEach((q) => put('quotes', q))
-    })
-  } else {
-    // 새 설정 키가 추가된 경우 기본값 보충
-    const s = state.settings.main
-    const merged = { ...DEFAULT_SETTINGS, ...s, theme: { ...DEFAULT_SETTINGS.theme, ...s.theme }, modules: { ...DEFAULT_SETTINGS.modules, ...s.modules } }
-    state = { ...state, settings: { ...state.settings, main: merged } }
-  }
-  purge()
+  // 처음 여는 기기: 기본 설정은 시각 0 으로 — 동기화하면 다른 기기에서 정한 설정이 이김
+  if (!state.settings.main) replaceColl('settings', { main: { ...DEFAULT_SETTINGS, updatedAt: 0, deviceId } })
+  purge(); notify()
 }
 
-export function exportJSON() { return JSON.stringify({ app: 'study-dashboard', v: SCHEMA_VERSION, exportedAt: new Date().toISOString(), state }, null, 1) }
-export function importJSON(text, { merge = false } = {}) {
+export const exportJSON = () => JSON.stringify({ app: 'exam-study', v: 1, exportedAt: new Date().toISOString(), state }, null, 1)
+// 가져오기: 합치기(항목마다 최신 수정) 또는 바꾸기
+export function importJSON(text, { merge = true } = {}) {
   const data = JSON.parse(text)
-  if (!data.state) throw new Error('형식이 올바르지 않습니다')
-  if (!merge) return replaceAll(data.state)
-  // 합치기: 항목마다 최신 수정이 남음 (지금 데이터는 지우지 않음)
+  if (!data?.state || data.app !== 'exam-study') throw new Error('이 앱의 백업 파일이 아니에요')
+  if (!merge) { replaceAll(data.state); return -1 }
   let n = 0
-  for (const [c, recs] of Object.entries(data.state)) {
-    if (!(c in state) || c === 'settings' || !recs || typeof recs !== 'object') continue
-    const { merged, localChanged, received } = mergeColl(state[c], recs)
-    if (localChanged) { replaceColl(c, merged); n += received }
-  }
+  for (const c of COLL_NAMES) { const { merged, localChanged, received } = mergeColl(state[c], data.state[c]); if (localChanged) { replaceColl(c, merged); n += received } }
   return n
 }
+// 모든 데이터 지우기 (이 기기)
+export function resetAll() { replaceAll({ settings: { main: { ...DEFAULT_SETTINGS, updatedAt: 0, deviceId } } }) }

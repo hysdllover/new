@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "스터디 대시보드",
-  "short_name": "스터디",
-  "description": "공부 기록 · 할 일 · 캘린더 · 노트를 한곳에 — 아이폰 · 아이패드 홈 화면 앱",
+  "name": "어학 스터디",
+  "short_name": "어학",
+  "description": "JLPT · 토익 공부 — 시험 D-day · 점수 · 할 일 · 공부 시간",
   "lang": "ko",
   "dir": "ltr",
   "start_url": "./",

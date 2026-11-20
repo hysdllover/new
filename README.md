@@ -1,49 +1,37 @@
-# 스터디 대시보드
+# 어학 스터디
 
-할 일 · 공부 플래너 · 생활 일정 · 노트를 한 화면에서 관리하는 학생용 앱. iPhone·iPad 홈 화면 앱(PWA)으로 동작하고, GitHub Gist로 두 기기를 동기화합니다.
+JLPT · 토익 공부 앱. iPhone · iPad 홈 화면 앱(PWA)으로 동작하고, GitHub Gist로 두 기기를 동기화합니다.
 
-## 주요 기능
-- **할 일**: 스마트 리스트·저장된 뷰, 매트릭스, 칸반, 간트(선행 작업), 표/갤러리/보드 DB 뷰, 반복(격주·N번째 요일·예외일), 하위 할 일·롤업, 활동 로그, 보관함·휴지통
-- **플래너**: 오늘 타임라인(드래그·연쇄 재조정·버퍼·실제 기록), Top 3·꾸미기·요일 템플릿, 자투리 시간, 주·월(레이어)·원형 24시간·10분 플래너, 공휴일
-- **공부**: 과목별 스톱워치·타이머·모의고사 타이머, 자동 학습 계획·번다운, 망각곡선 복습, 교재 진도, 성적·습관·통계
-- **노트**: 블록 에디터, `[[링크]]`·백링크, `@내일 15:00` 멘션 → 일정/할 일, 체크박스 ↔ 할 일, 임베드·동기화 블록, 데일리 노트, 허브, 그래프, 마인드맵, 자료 라이브러리, MD/PDF 내보내기
-- **공부 기록**: 과목·시간 직접 입력(사진·메모·집중도), 타이머 기록 수정, + 버튼 길게 누르기로 바로 기록
-- **건강**: 컨디션, 약·영양제
-- **홈**: 위젯 대시보드(추가·삭제·크기·순서), 전역 검색 ⌘K, 빠른 추가 ⌘N
-- **디자인**: 색상 프리셋·포인트 색, 폰트 5종·크기·굵기, 모서리·간격·카드 스타일, 다크 모드
+## 기능
+- **오늘**: 가까운 시험 D-day · 최근 점수 · 목표까지, 오늘 공부 시간 / 하루 목표, 타이머, 오늘 할 일, 이번 주 막대, 교재 진도
+- **계획**: 할 일(지난 · 오늘 · 내일 · 이번 주 · 나중 · 날짜 없음), 주간 7칸, 교재 · 강의 진도(+1)
+- **기록**: 타이머(시험 · 영역별), 직접 기록, 날짜별 기록, 영역별 시간 · 한 달 칸
+- **시험**: JLPT(N1~N5 · 영역별 점수 · 합격점과 기준점 판정) · 토익(LC/RC 5점 단위 · 990) · 직접 만든 시험(영역 · 만점 · 합격 점수), 점수 추이 · 목표선
+- **설정**: 하루 목표, 기본 · 연필 아날로그 테마, 필기 느낌, 동기화 · 주간 백업, Scriptable 위젯, 내보내기 · 가져오기
 
 ## 설치 (iPhone · iPad)
-1. 저장소 **Settings → Pages → Source: GitHub Actions** 선택
+1. 저장소 **Settings → Pages → Source: GitHub Actions**
 2. `main`에 병합하면 자동 배포 → `https://<사용자>.github.io/<저장소>/`
 3. Safari로 열고 **공유 → 홈 화면에 추가**
 
-## 기기 간 동기화
-1. GitHub → Settings → Developer settings → Personal access tokens → **Tokens (classic)** → `gist` 권한만 체크해 생성
-2. 앱 **설정 → 동기화**에 토큰 입력 (iPhone·iPad 모두 같은 토큰)
-3. 비공개 Gist가 자동 생성/탐색되고, 앱을 열 때·편집 후·열려 있는 동안 3분마다(설정에서 10분·끄기) 동기화. 같은 항목은 최신 수정 우선
+## 동기화
+1. GitHub → Settings → Developer settings → Personal access tokens → **Tokens (classic)** → `gist` 권한만 체크
+2. 앱 **설정 → 동기화**에 토큰 입력 (두 기기 모두)
+3. 비공개 gist `exam-study-sync` 하나에 `data.json` · `widget.json` · 주간 `backup-날짜.json`(최근 4개)
 
-## 홈 화면 위젯 (Scriptable)
-1. App Store에서 무료 앱 **Scriptable** 설치
-2. 앱 **설정 → 홈 화면 위젯 → 스크립트 복사** → Scriptable에 새 스크립트로 붙여넣기
-3. 홈 화면에 Scriptable 위젯(소·중·대) 추가 → 위젯 편집에서 스크립트 선택
-
-## 앱을 닫아도 받는 알림 (Web Push)
-1. 저장소 **Settings → Secrets and variables → Actions → New repository secret**: 이름 `GIST_TOKEN`, 값은 동기화 토큰
-2. 홈 화면에 설치한 앱에서 **설정 → 알림 → 이 기기에서 알림 켜기** (iOS 16.4+)
-3. `Push notifications` 워크플로가 5분마다 할 일 시간·일정·약·아침 요약·저녁 목표 알림을 보냅니다 (수 분 지연 가능)
-
-## 노션 공부 기록 (monologue)
-1. https://www.notion.so/my-integrations → 새 내부 통합 만들기 → 토큰 복사
-2. 노션 monologue 페이지 `···` → 연결 → 만든 통합 추가
-3. 저장소 Secrets 에 `NOTION_TOKEN` 추가 (`GIST_TOKEN` 은 알림과 같이 사용)
-4. `Notion study log` 워크플로가 매일 23:50 최근 3일을 monologue(하루 한 페이지)와 habits(습관 체크·공부 시간)에 올림 (바뀐 날만 · Actions 에서 바로 실행 가능)
+## 위젯 (Scriptable)
+1. App Store에서 **Scriptable** 설치
+2. 앱 **설정 → Scriptable 위젯 → 로더 복사** → Scriptable 새 스크립트에 붙여 넣기
+3. 홈 · 잠금 화면에 Scriptable 위젯 추가 → Parameter: 비움(기본) · 디데이 · 공부 · 할일 · 점수 · 교재
+- 위젯 본체(`src/widget/core.js`)는 앱과 함께 배포되어 로더가 자동으로 받습니다. 위젯에는 토큰을 넣지 않습니다.
 
 ## 개발
-```bash
-npm install
-npm run dev      # 개발 서버
-npm test         # 단위 테스트
-npm run build    # dist/ 생성
-npm run audit    # 기기 크기별 모든 화면 점검 (dev 서버 필요)
 ```
-`?demo`를 붙여 열면 샘플 데이터가 채워집니다.
+npm install
+npm run dev      # http://localhost:5173  (?demo 로 둘러보기 데이터)
+npm test
+npm run build
+npm run audit    # dev 서버를 띄운 뒤 · 아이폰 · 아이패드 크기 모든 화면 점검
+```
+
+예전 '스터디 대시보드'는 `backup/study-dashboard-v1` 브랜치에 있습니다.
