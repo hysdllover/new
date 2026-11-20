@@ -204,3 +204,22 @@ textarea.input { min-height: 70px; resize: vertical; }
 .wp-bars span { font-size: 7px; text-align: center; color: var(--wsoft); }
 .wp-split { display: flex; gap: 12px; height: 100%; } .wp-split > div:first-child { width: 44%; } .wp-split > div:last-child { flex: 1; min-width: 0; }
 .wp-vr { width: 1px; background: var(--wrule); }
+
+/* 진도표 */
+.sheet-title { font-size: 22px; }
+.acc-t { color: var(--accent); }
+.sh-week { margin: 22px 0 0; padding-bottom: 6px; font-size: 12px; color: var(--soft); border-bottom: 1px solid var(--line); }
+.sh-day { display: grid; grid-template-columns: 74px 1fr; gap: 6px; padding: 12px 0; border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent); scroll-margin-top: 12px; }
+.sh-day.tint { background: color-mix(in srgb, var(--accent) 6%, transparent); margin: 0 -15px; padding: 12px 15px; }
+.sh-day.today .sh-date b { color: var(--accent); }
+.sh-day.past:not(.today) .sh-date b { color: var(--soft); }
+.sh-date { display: flex; flex-direction: column; gap: 2px; }
+.sh-date b { font-size: 22px; font-weight: 300; line-height: 1.1; }
+.sh-date span { font-size: 11px; color: var(--soft); }
+.sh-rows { display: flex; flex-direction: column; gap: 9px; min-width: 0; }
+.sh-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.sh-area { width: 34px; flex-shrink: 0; font-size: 11px; color: var(--soft); }
+.sh-t { flex: 1; min-width: 0; text-align: left; font-size: 14px; }
+.sh-row.done .sh-t { color: var(--soft); text-decoration: line-through; text-decoration-thickness: .5px; }
+@media (min-width: 760px) { .sh-day { grid-template-columns: 110px 1fr; } }
+@media print { .sh-day.tint { background: #f1f3f6; } }
