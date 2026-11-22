@@ -7,7 +7,7 @@ import { useSyncStatus, connect, disconnect, syncNow, token, listBackups, backup
 import { buildLoader, WIDGET_KINDS } from '../lib/scriptable.js'
 import { WidgetPreview } from './WidgetPreview.jsx'
 import { CHANGES } from '../lib/whatsnew.js'
-import { fontInfo, onFont, addFont, removeFont } from '../lib/fonts.js'
+import { fontInfo, onFont, addFont, removeFont, textScale, setTextScale } from '../lib/fonts.js'
 import { PALETTE } from '../store/schema.js'
 import { hm, fmtDate, tsYmd } from '../lib/date.js'
 
@@ -33,6 +33,7 @@ export default function Settings() {
             <Field label="테마"><Seg small value={st.theme} onChange={(v) => setSettings({ theme: v })} options={[['basic', '기본'], ['pencil', '연필 아날로그']]} /></Field>
             <Toggle label="필기 느낌" hint="손으로 그린 체크 · 부드러운 점수 선" checked={st.handFx !== false} onChange={(v) => setSettings({ handFx: v })} />
             <FontField />
+            <SizeField />
             <Field label="포인트 색"><div className="chips">{PALETTE.map((c) => <button key={c} className={'chip sw-pick' + (st.accent === c ? ' on' : '')} onClick={() => setSettings({ accent: c })} aria-label={c}><i className="sw" style={{ background: c }} /></button>)}</div></Field>
           </div>
         </Card>
@@ -46,6 +47,19 @@ export default function Settings() {
         </Card>
       </div>
     </>
+  )
+}
+
+// 글자 크기: 이 기기만 (아이폰 · 아이패드 따로)
+function SizeField() {
+  useSyncExternalStore(onFont, textScale)
+  const v = textScale()
+  return (
+    <Field label={`글자 크기 · ${Math.round(v * 100)}%`}>
+      <Seg small value={[0.9, 1, 1.1, 1.2, 1.3].includes(v) ? v : null} onChange={setTextScale} options={[[0.9, '작게'], [1, '보통'], [1.1, '크게'], [1.2, '더 크게'], [1.3, '아주 크게']]} />
+      <input className="range" type="range" min="0.85" max="1.4" step="0.05" value={v} onChange={(e) => setTextScale(+e.target.value)} aria-label="글자 크기" />
+      <span className="tiny soft">이 기기에만 적용돼요 (아이폰 · 아이패드 따로). 위젯 글자는 그대로예요.</span>
+    </Field>
   )
 }
 

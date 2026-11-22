@@ -39,3 +39,9 @@ export async function addFont(file) {
   apply(true); cur = { name, size: buf.byteLength }; emit()
 }
 export async function removeFont() { await del(KEY); apply(false); cur = null; emit() }
+
+// 글자 크기 (이 기기만 · 아이폰과 아이패드를 따로 정할 수 있게): 0.85 ~ 1.4 배
+const TS = 'x_ts'
+export const textScale = () => { try { const v = +localStorage.getItem(TS); return v >= 0.85 && v <= 1.4 ? v : 1 } catch { return 1 } }
+export function applyTextScale(v = textScale()) { document.documentElement.style.setProperty('--ts', String(v)) }
+export function setTextScale(v) { v = Math.max(0.85, Math.min(1.4, Math.round(v * 100) / 100)); try { localStorage.setItem(TS, String(v)) } catch {} applyTextScale(v); emit() }

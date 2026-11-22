@@ -4,7 +4,7 @@
   --bg: #f7f7f5; --surface: #ffffff; --surface-2: #f2f2ef; --text: #2b2f36; --muted: #5f636c; --soft: #8a8f99;
   --line: #dcdcd6; --danger: #a8706f; --ok: #7a8660;
   --font: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", sans-serif;
-  --fs: 13px; --fw: 300; --fw-b: 500; --r: 3px;
+  --ts: 1; --fs: calc(13px * var(--ts)); --fw: 300; --fw-b: 500; --r: 3px;
   --sat: env(safe-area-inset-top, 0px); --sab: env(safe-area-inset-bottom, 0px); --sal: env(safe-area-inset-left, 0px); --sar: env(safe-area-inset-right, 0px);
   color-scheme: light;
 }
