@@ -9,7 +9,7 @@ import { openSheet, toast } from '../components/toast.js'
 import { today, addDays, fmtDate, rel, WD, parseYmd, fmtShort, dday, diffDays } from '../lib/date.js'
 import { examName } from '../lib/exams.js'
 import { setSeg } from '../lib/nav.js'
-import { PLANS, planCount, planDays, importPlan } from '../lib/plans.js'
+import { PLANS, planCount, planDays, importPlan, planTitle } from '../lib/plans.js'
 
 export default function Plan({ seg = 'list' }) {
   return (
@@ -105,7 +105,7 @@ function Books() {
 export { rel }
 
 // 영역 표시 색 (옅은 칸)
-const AREA_C = { LC: 'lc', RC: 'rc', 보카: 'vo', 기타: 'et', 모의: 'lc', 오답: 'et', 복습: 'et' }
+const AREA_C = { LC: 'lc', RC: 'rc', 보카: 'vo', 토스: 'ts', 기타: 'et', 모의: 'lc', 오답: 'et', 복습: 'et' }
 
 // 진도표 불러오기 시트
 export const openPlanImport = () => openSheet((close) => <PlanImport close={close} />, { title: '진도표 불러오기' })
@@ -117,10 +117,10 @@ function PlanImport({ close }) {
         <div key={p.id} className="col" style={{ gap: 8 }}>
           <b>{p.title}</b>
           <div className="small muted">{p.note}</div>
-          <div className="meta"><span>{planDays(p)}일 · 할 일 {planCount(p)}개</span><span>{fmtShort(Object.keys(p.days)[0])} – {fmtShort(p.exam.date)}</span><span>교재 {p.materials.length}권</span></div>
+          <div className="meta"><span>{planDays(p)}일 · 할 일 {planCount(p)}개</span><span>{fmtShort(Object.keys(p.days)[0])} – {fmtShort(Object.keys(p.days).slice(-1)[0])}</span><span>시험 {Object.values(p.exams).map((e) => e.name && e.kind === 'custom' ? e.name : '토익').join(' · ')}</span></div>
           <Toggle label={`하루 목표를 ${p.goalDaily / 60}시간으로`} checked={goal} onChange={setGoal} />
-          <Toggle label="교재 진도도 함께 (단기공략 LC · RC · 기출보카 · 기출문제집)" checked={books} onChange={setBooks} />
-          <div className="row end"><button className="btn primary" onClick={() => { const r = importPlan(p, { goal, books }); close(); setSeg('plan', 'sheet'); toast(r.added ? `할 일 ${r.added}개를 넣었어요${r.removed ? ` · 예전 진도표 ${r.removed}개는 뺐어요` : ''}` : '이미 넣은 진도표예요') }}>{list('tasks').some((t) => t.plan === p.replaces) ? '예전 진도표를 이걸로 바꾸기' : '넣기'}</button></div>
+          <Toggle label={`교재 진도도 함께 (${p.materials.map((m) => m.title).join(' · ')})`} checked={books} onChange={setBooks} />
+          <div className="row end"><button className="btn primary" onClick={() => { const r = importPlan(p, { goal, books }); close(); setSeg('plan', 'sheet'); toast(r.added ? `할 일 ${r.added}개를 넣었어요${r.removed ? ` · 예전 진도표 ${r.removed}개는 뺐어요` : ''}` : '이미 넣은 진도표예요') }}>{list('tasks').some((t) => (p.replaces || []).includes(t.plan)) ? '예전 진도표를 이걸로 바꾸기' : '넣기'}</button></div>
         </div>
       ))}
     </div>
@@ -129,40 +129,46 @@ function PlanImport({ close }) {
 
 // 진도표: 시험까지 날짜별 할 일을 주 단위로 (영역 · 체크) — 모의고사 날 · 시험 날은 옅게 칠함
 function Sheet() {
-  const st = useSettings(), exams = upcoming(useColl('exams')), all = useColl('tasks')
-  const withTasks = exams.filter((e) => e.date && all.some((t) => t.examId === e.id && t.due))
+  const st = useSettings(), exams = useColl('exams'), all = useColl('tasks')
+  // 보는 단위: 불러온 진도표(여러 시험을 한 달력에) · 그 밖에는 시험마다
+  const plans = [...new Set(all.filter((t) => t.plan && t.due).map((t) => t.plan))].filter((id) => PLANS.some((p) => p.id === id))
+  const olds = PLANS.flatMap((p) => p.replaces || []), inPlan = (t) => plans.includes(t.plan) || olds.includes(t.plan) // 바꾼 예전 진도표의 끝낸 기록은 따로 보이지 않게
+  const loose = upcoming(exams).filter((e) => e.date && all.some((t) => t.examId === e.id && t.due && !inPlan(t)))
+  const opts = [...plans.map((id) => ({ key: 'p:' + id, title: planTitle(id), tasks: all.filter((t) => t.plan === id && t.due) })), ...loose.map((e) => ({ key: 'e:' + e.id, title: examName(e) + ' 진도표', tasks: all.filter((t) => t.examId === e.id && t.due && !inPlan(t)) }))]
   const [pick, setPick] = useState(null)
-  const ex = withTasks.find((e) => e.id === pick) || withTasks[0]
-  if (!ex) return <Card><Empty>시험에 날짜를 정한 할 일이 아직 없어요<br /><button className="btn sm" style={{ marginTop: 8 }} onClick={openPlanImport}>진도표 불러오기</button></Empty></Card>
-  const L = all.filter((t) => t.examId === ex.id && t.due).sort((a, b) => a.due.localeCompare(b.due) || byOrder(a, b))
+  const cur = opts.find((o) => o.key === pick) || opts[0]
+  if (!cur) return <Card><Empty>시험에 날짜를 정한 할 일이 아직 없어요<br /><button className="btn sm" style={{ marginTop: 8 }} onClick={openPlanImport}>진도표 불러오기</button></Empty></Card>
+  const L = [...cur.tasks].sort((a, b) => a.due.localeCompare(b.due) || byOrder(a, b))
+  const exs = [...new Set(L.map((t) => t.examId))].map((id) => exams.find((e) => e.id === id)).filter((e) => e?.date).sort((a, b) => a.date.localeCompare(b.date))
   const done = L.filter((t) => t.done).length, t0 = today()
   const days = [...new Set(L.map((t) => t.due))]
   const ws0 = weekDays(days[0], st.weekStart)[0], weeks = []
   for (const d of days) { const k = Math.floor(diffDays(d, ws0) / 7); (weeks[k] = weeks[k] || []).push(d) }
-  const lastK = Math.floor(diffDays(ex.date, ws0) / 7)
+  const lastK = weeks.length - 1
   const toToday = () => document.getElementById('sh-' + (days.find((d) => d >= t0) || days[days.length - 1]))?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   return (
     <>
-      {withTasks.length > 1 && <div className="chips" style={{ marginBottom: 12 }}>{withTasks.map((e) => <button key={e.id} className={'chip' + (e.id === ex.id ? ' on' : '')} onClick={() => setPick(e.id)}><i className="sw" style={{ background: e.color }} />{examName(e)}</button>)}</div>}
+      {opts.length > 1 && <div className="chips" style={{ marginBottom: 12 }}>{opts.map((o) => <button key={o.key} className={'chip' + (o.key === cur.key ? ' on' : '')} onClick={() => setPick(o.key)}>{o.title}</button>)}</div>}
       <Card className="sheet-card">
-        <div className="row" style={{ alignItems: 'flex-end' }}>
-          <div className="grow"><h2 className="sheet-title">{examName(ex)} 진도표</h2><div className="small soft">하루 목표 {Math.round(st.goalDaily / 6) / 10}시간{ex.name ? ' · ' + ex.name : ''}</div></div>
-          <div style={{ textAlign: 'right' }}><div className="big num" style={{ color: ex.color || 'var(--accent)' }}>{dday(ex.date)}</div><div className="small soft">{fmtDate(ex.date)} 시험</div></div>
+        <h2 className="sheet-title">{cur.title}</h2>
+        <div className="small soft">하루 목표 {Math.round(st.goalDaily / 6) / 10}시간</div>
+        <div className="row wrap" style={{ alignItems: 'flex-end', gap: 22, marginTop: 10 }}>
+          {exs.map((e) => <div key={e.id}><div className="small soft">{examName(e)} {fmtShort(e.date)}</div><div className="big num" style={{ color: e.color || 'var(--accent)' }}>{dday(e.date)}</div></div>)}
         </div>
-        <div style={{ margin: '12px 0 6px' }}><Line value={L.length ? done / L.length : 0} color={ex.color} /></div>
+        <div style={{ margin: '12px 0 6px' }}><Line value={L.length ? done / L.length : 0} /></div>
         <div className="row"><span className="small soft grow">완료 {done} / {L.length}</span><button className="btn sm" onClick={toToday}>오늘로 이동</button><button className="btn sm" onClick={openPlanImport}>불러오기</button></div>
         {weeks.map((W, k) => W && (
           <div key={k}>
-            <div className="sh-week">{k === lastK ? '마지막 주' : `${k + 1}주`} · {fmtShort(addDays(ws0, k * 7))}–{fmtShort(addDays(ws0, k * 7 + 6))}</div>
+            <div className="sh-week">{k === lastK && k > 0 ? '마지막 주' : `${k + 1}주`} · {fmtShort(addDays(ws0, k * 7))}–{fmtShort(addDays(ws0, k * 7 + 6))}</div>
             {W.map((d) => {
-              const T = L.filter((t) => t.due === d), wd = parseYmd(d).getDay(), mock = T.some((t) => t.mock || t.area === '모의'), exam = d === ex.date
+              const T = L.filter((t) => t.due === d), wd = parseYmd(d).getDay(), mock = T.some((t) => t.mock || t.area === '모의'), exam = T.some((t) => t.examDay) || exs.some((e) => e.date === d)
               return (
                 <div key={d} id={'sh-' + d} className={'sh-day' + (mock ? ' tint' : '') + (exam ? ' exam' : '') + (d === t0 ? ' today' : '') + (d < t0 ? ' past' : '')}>
                   <div className="sh-date"><b className="num">{+d.slice(5, 7)}/{+d.slice(8)}</b><span className={wd === 0 ? 'bad-t' : wd === 6 ? 'acc-t' : ''}>{WD[wd]}{mock ? ' · 모의고사' : ''}{d === t0 ? ' · 오늘' : ''}</span></div>
                   <div className="sh-rows">{T.map((t) => (
                     <div key={t.id} className={'sh-row' + (t.done ? ' done' : '') + (t.imp || t.examDay ? ' imp' : '')}>
                       <Check on={t.done} onClick={() => toggleTask(t.id)} />
-                      <span className={'sh-area a-' + (AREA_C[t.area] || 'x')}>{t.area || (exam ? '시험' : '할일')}</span>
+                      <span className={'sh-area a-' + (AREA_C[t.area] || 'x')}>{t.area || (t.examDay ? '시험' : '할일')}</span>
                       <button className="sh-t" onClick={() => openTask(t.id)}>{t.title}</button>
                     </div>
                   ))}</div>
