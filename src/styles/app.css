@@ -228,3 +228,4 @@ textarea.input { min-height: 70px; resize: vertical; }
 .sh-row.done .sh-t { color: var(--soft); text-decoration: line-through; text-decoration-thickness: .5px; }
 @media (min-width: 760px) { .sh-day { grid-template-columns: 110px 1fr; } }
 @media print { .sh-day.tint { background: #f1f3f6; } }
+.sh-area.a-ts { background: color-mix(in srgb, #c9a0a8 22%, transparent); }
