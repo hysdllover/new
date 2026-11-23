@@ -28,7 +28,7 @@ export const PLANS = [{
   days: {
     '2026-11-23': T('단기공략 모의고사 LC', '단기공략 모의고사 RC', 'Day 01–02', 'Part 1 소개·전략·기초 (p.16–24)', '모의고사 오답 정리 (860점)', { mock: true }),
     '2026-11-24': T('11/23 모의고사 LC 오답 12문항 다시 듣기', '11/23 모의고사 RC 오답 14문항 다시 풀기', 'Day 03–04', 'Part 1 기초 다지기 (p.25–28)', '쉐도잉 · 오답'),
-    '2026-11-25': T('U5 Why/How 의문문 (p.44–47) · U8 요청·제안문/평서문 (p.56–59)', 'U3 형용사&부사 (p.138–147)', 'Day 05–06', 'Part 1 유형·실전 (p.29–35)', '쉐도잉 · 오답'),
+    '2026-11-25': T('U5 Why/How 의문문 (p.44–47) · U8 요청·제안문/평서문 (p.56–59)', 'P7 3중 지문 시간 재고 풀기 (교재 실전 문제)', 'Day 05–06', 'Part 1 유형·실전 (p.29–35)', '쉐도잉 · 오답'),
     '2026-11-26': T('P2 만점 빈출 표현 (p.60–65) · P1 만점 빈출 표현 훑기 (p.28–33)', 'U11 ETS 기출 어휘 ① (p.198–208)', 'Day 07–08', 'Part 2 소개·전략·기초 (p.36–42)', '쉐도잉 · 오답'),
     '2026-11-27': T('P3 INTRO · U11 요청·제안/다음에 할 일 (p.66–67, 80–85)', 'U11 ETS 기출 어휘 ② (p.209–219)', 'Day 09–10', 'Part 2 유형 익히기 (p.43–53)', '쉐도잉 · 오답'),
     '2026-11-28': T('U12 의도 파악/시각 정보 연계 (p.86–92)', 'P6 INTRO · U12 문법 문제 · U13 어휘 문제 (p.220–233)', 'Day 11–12', 'Part 2 실전 + 묘사 틀 암기 (p.54–57)', '쉐도잉 · 오답'),
@@ -62,9 +62,9 @@ export const planDays = (p) => Object.values(p.days).filter((d) => !d.examDay).l
 const planOf = (id) => PLANS.find((p) => p.id === id)
 export const planTitle = (id) => planOf(id)?.title || '진도표'
 
-// 넣기: 같은 종류 · 같은 날 시험이 있으면 그 시험에 연결 · 할 일 · 교재는 고정 id (다시 넣으면 건너뜀)
+// 넣기 (다시 누르면 바뀐 내용 반영): 같은 종류 · 같은 날 시험이 있으면 그 시험에 연결 · 할 일 · 교재는 고정 id (다시 넣으면 건너뜀)
 export function importPlan(p, { goal = true, books = true } = {}) {
-  let added = 0, removed = 0
+  let added = 0, removed = 0, fixed = 0
   batch(() => {
     const olds = p.replaces || []
     for (const t of list('tasks')) if (olds.includes(t.plan) && !t.done) { remove('tasks', t.id); removed++ }
@@ -79,7 +79,8 @@ export function importPlan(p, { goal = true, books = true } = {}) {
     for (const [due, d] of Object.entries(p.days)) d.items.forEach(([area, title], i) => {
       const id = `plan-${p.id}-${due}-${i}`
       n++
-      if (find('tasks', id)) return
+      const had = find('tasks', id)
+      if (had) { if (!had.done && had.title !== title) { put('tasks', { ...had, title }); fixed++ } return } // 진도표 내용이 바뀌면 안 끝낸 할 일만 고침
       const ex = d.examDay || d.exam || (area === '토스' ? 'tos' : 'toeic')
       put('tasks', { id, title, due, examId: ids[ex], area: area === '시험' ? null : area, done: false, order: n, plan: p.id, ...(d.mock ? { mock: true } : null), ...(d.imp && area === '기타' ? { imp: true } : null), ...(d.examDay ? { examDay: true } : null) })
       added++
@@ -92,5 +93,5 @@ export function importPlan(p, { goal = true, books = true } = {}) {
     }
     if (goal && p.goalDaily) setSettings({ goalDaily: p.goalDaily })
   })
-  return { added, removed }
+  return { added, removed, fixed }
 }
