@@ -89,7 +89,7 @@ function SyncCard() {
   return (
     <Card title="아이폰 · 아이패드 동기화" action={<span className="small soft">{label}</span>}>
       {!on ? (
-        <form className="form" onSubmit={async (e) => { e.preventDefault(); if (!tok.trim()) return; setBusy(true); try { await connect(tok); setTok(''); toast('연결했어요') } catch (er) { toast(er.message) } setBusy(false) }}>
+        <form className="form" noValidate onSubmit={async (e) => { e.preventDefault(); if (!tok.trim()) return; setBusy(true); try { await connect(tok); setTok(''); toast('연결했어요') } catch (er) { toast(er.message) } setBusy(false) }}>
           <div className="small muted">GitHub › Settings › Developer settings › Personal access tokens › Tokens (classic)에서 <b>gist</b> 권한만 체크해 만든 토큰을 두 기기 모두에 넣어 주세요. 비공개 gist 하나에 저장돼요.</div>
           <input className="input" type="password" autoComplete="off" placeholder="ghp_…" value={tok} onChange={(e) => setTok(e.target.value)} />
           <div className="tiny soft">토큰은 이 기기에만 저장돼요. 메모 · 채팅 · 공개 저장소에 붙여 넣지 마세요.</div>
