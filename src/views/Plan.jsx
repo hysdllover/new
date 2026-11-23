@@ -120,7 +120,7 @@ function PlanImport({ close }) {
           <div className="meta"><span>{planDays(p)}일 · 할 일 {planCount(p)}개</span><span>{fmtShort(Object.keys(p.days)[0])} – {fmtShort(Object.keys(p.days).slice(-1)[0])}</span><span>시험 {Object.values(p.exams).map((e) => e.name && e.kind === 'custom' ? e.name : '토익').join(' · ')}</span></div>
           <Toggle label={`하루 목표를 ${p.goalDaily / 60}시간으로`} checked={goal} onChange={setGoal} />
           <Toggle label={`교재 진도도 함께 (${p.materials.map((m) => m.title).join(' · ')})`} checked={books} onChange={setBooks} />
-          <div className="row end"><button className="btn primary" onClick={() => { const r = importPlan(p, { goal, books }); close(); setSeg('plan', 'sheet'); toast(r.added ? `할 일 ${r.added}개를 넣었어요${r.removed ? ` · 예전 진도표 ${r.removed}개는 뺐어요` : ''}` : '이미 넣은 진도표예요') }}>{list('tasks').some((t) => (p.replaces || []).includes(t.plan)) ? '예전 진도표를 이걸로 바꾸기' : '넣기'}</button></div>
+          <div className="row end"><button className="btn primary" onClick={() => { const r = importPlan(p, { goal, books }); close(); setSeg('plan', 'sheet'); toast(r.added ? `할 일 ${r.added}개를 넣었어요${r.removed ? ` · 예전 진도표 ${r.removed}개는 뺐어요` : ''}` : r.fixed ? `할 일 ${r.fixed}개를 고쳤어요` : '이미 넣은 진도표예요') }}>{list('tasks').some((t) => !t.done && (p.replaces || []).includes(t.plan)) ? '예전 진도표를 이걸로 바꾸기' : list('tasks').some((t) => t.plan === p.id) ? '바뀐 내용 반영하기' : '넣기'}</button></div>
         </div>
       ))}
     </div>
