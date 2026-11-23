@@ -1,11 +1,10 @@
-// 여러 화면이 같이 쓰는 줄 · 카드: 할 일 줄 · 빠른 추가 · 타이머 · 시험 요약 · 교재 줄
-import { useEffect, useState, useSyncExternalStore } from 'react'
-import { useColl, find } from '../store/store.js'
-import { toggleTask, addTask, getTimer, timerSec, startTimer, pauseTimer, resumeTimer, stopTimer, cancelTimer, setTimerArea, stepMaterial, upcoming } from '../store/actions.js'
-import { Check, Icon, Line, Card, confirmSheet } from './ui.jsx'
-import { openTask, openExam, openScore, openMaterial, ExamTag, ExamAreaPick } from './editors.jsx'
-import { openSheet } from './toast.js'
-import { today, rel, clock, fmtDate, dday, diffDays } from '../lib/date.js'
+// 여러 화면이 같이 쓰는 줄 · 카드: 할 일 줄 · 빠른 추가 · 시험 요약 · 교재 줄
+import { useState } from 'react'
+import { find } from '../store/store.js'
+import { toggleTask, addTask, stepMaterial } from '../store/actions.js'
+import { Check, Icon, Line } from './ui.jsx'
+import { openTask, openExam, openScore, openMaterial, ExamTag } from './editors.jsx'
+import { today, rel, fmtDate, dday, diffDays } from '../lib/date.js'
 import { examName, judge, maxTotal, passLine } from '../lib/exams.js'
 
 export function TaskRow({ t, exams, showDate }) {
@@ -30,47 +29,6 @@ export function QuickAdd({ due = today(), examId = null, placeholder = '할 일 
       <input className="input" value={v} onChange={(e) => setV(e.target.value)} placeholder={placeholder} aria-label="할 일 추가" />
       <button className="icon-btn" type="button" onClick={() => openTask(null, { due, examId, title: v })} aria-label="자세히 추가"><Icon name="plus" /></button>
     </form>
-  )
-}
-
-/* ── 타이머 ── */
-const tSub = (f) => { window.addEventListener('x-timer', f); window.addEventListener('storage', f); return () => { window.removeEventListener('x-timer', f); window.removeEventListener('storage', f) } }
-const tGet = () => localStorage.getItem('x_timer')
-export function useTimer() {
-  useSyncExternalStore(tSub, tGet)
-  const t = getTimer()
-  const [, tick] = useState(0)
-  useEffect(() => { if (!t?.run) return; const i = setInterval(() => tick((x) => x + 1), 1000); return () => clearInterval(i) }, [t?.run])
-  return t
-}
-export function TimerCard({ compact }) {
-  const t = useTimer(), exams = useColl('exams')
-  const ex = t && exams.find((e) => e.id === t.examId)
-  const pick = () => openSheet((close) => <TimerPick close={close} />, { title: t ? '무엇을 공부하나요?' : '타이머 시작' })
-  return (
-    <Card title="타이머" className={'timer-card' + (t?.run ? ' running' : '')} action={t && <button className="lnk" onClick={pick}>바꾸기</button>}>
-      <div className={'timer' + (compact ? ' compact' : '')}>
-        <div className="big num">{clock(timerSec(t))}</div>
-        <div className="meta">{t ? <ExamTag exam={ex} area={t.area} /> : <span>시작하면 이 기기에서 시간을 재요</span>}{t && !t.run && <span>멈춤</span>}</div>
-        <div className="row">
-          {!t && <button className="btn primary" onClick={pick}><Icon name="play" size={16} />시작</button>}
-          {t?.run && <button className="btn" onClick={pauseTimer}><Icon name="pause" size={16} />잠깐</button>}
-          {t && !t.run && <button className="btn" onClick={resumeTimer}><Icon name="play" size={16} />이어서</button>}
-          {t && <button className="btn primary" onClick={stopTimer}><Icon name="stop" size={15} />끝내고 기록</button>}
-          {t && <button className="icon-btn" onClick={() => confirmSheet('타이머 버리기', '기록하지 않고 타이머를 지울까요?', cancelTimer, '버리기')} aria-label="버리기"><Icon name="trash" size={16} /></button>}
-        </div>
-      </div>
-    </Card>
-  )
-}
-function TimerPick({ close }) {
-  const t = getTimer(), exams = useColl('exams')
-  const [v, setV] = useState(() => ({ examId: t?.examId || upcoming(exams)[0]?.id || null, area: t?.area || null }))
-  return (
-    <div className="form">
-      <ExamAreaPick examId={v.examId} area={v.area} onChange={(examId, area) => setV({ examId, area })} />
-      <div className="row end"><button className="btn primary" onClick={() => { if (t) setTimerArea(v.examId, v.area); else startTimer(v.examId, v.area); close() }}>{t ? '바꾸기' : <><Icon name="play" size={16} />시작</>}</button></div>
-    </div>
   )
 }
 
