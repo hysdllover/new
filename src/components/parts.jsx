@@ -26,7 +26,7 @@ export function TaskRow({ t, exams, showDate }) {
 export function QuickAdd({ due = today(), examId = null, placeholder = '할 일 적고 엔터' }) {
   const [v, setV] = useState('')
   return (
-    <form className="row quick" onSubmit={(e) => { e.preventDefault(); const title = v.trim(); if (!title) return; addTask({ title, due, examId }); setV('') }}>
+    <form className="row quick" noValidate onSubmit={(e) => { e.preventDefault(); const title = v.trim(); if (!title) return; addTask({ title, due, examId }); setV('') }}>
       <input className="input" value={v} onChange={(e) => setV(e.target.value)} placeholder={placeholder} aria-label="할 일 추가" />
       <button className="icon-btn" type="button" onClick={() => openTask(null, { due, examId, title: v })} aria-label="자세히 추가"><Icon name="plus" /></button>
     </form>

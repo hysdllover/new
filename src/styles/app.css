@@ -230,3 +230,7 @@ textarea.input { min-height: 70px; resize: vertical; }
 @media print { .sh-day.tint { background: #f1f3f6; } }
 .sh-area.a-ts { background: color-mix(in srgb, #c9a0a8 22%, transparent); }
 .range { width: 100%; accent-color: var(--accent); margin: 6px 0 2px; }
+/* 날짜 · 시간 칸: 아이폰에서 고유 폭 때문에 옆 칸을 덮지 않게 · 글자는 왼쪽 */
+input.input[type="date"], input.input[type="time"] { -webkit-appearance: none; appearance: none; display: block; min-width: 0; max-width: 100%; text-align: left; }
+input.input[type="date"]::-webkit-date-and-time-value { text-align: left; }
+.fields > * { min-width: 0; }

@@ -4,7 +4,7 @@ import { put, patch, find, useColl, remove, settings } from '../store/store.js'
 import { addTask, addSession, deleteTask, deleteExam, upcoming } from '../store/actions.js'
 import { openSheet, toast } from './toast.js'
 import { Field, Seg, Icon, confirmSheet } from './ui.jsx'
-import { today, addDays, fmtDate, dday } from '../lib/date.js'
+import { today, addDays, fmtDate, dday, dur } from '../lib/date.js'
 import { JLPT_LEVELS, sectionsOf, areasOf, examName, clampPart, judge, jlptDates, passLine, maxTotal } from '../lib/exams.js'
 import { PALETTE } from '../store/schema.js'
 
@@ -37,7 +37,7 @@ function TaskForm({ id, preset, close }) {
     close()
   }
   return (
-    <form className="form" onSubmit={(e) => { e.preventDefault(); save() }}>
+    <form className="form" noValidate onSubmit={(e) => { e.preventDefault(); save() }}>
       <input className="input" autoFocus={!id} placeholder="예: N2 문법 30과 · RC Part 5" value={v.title} onChange={(e) => setV({ ...v, title: e.target.value })} />
       <Field label="날짜">
         <div className="row wrap">
@@ -68,12 +68,12 @@ function SessionForm({ id, preset, close }) {
     close()
   }
   return (
-    <form className="form" onSubmit={(e) => { e.preventDefault(); save() }}>
+    <form className="form" noValidate onSubmit={(e) => { e.preventDefault(); save() }}>
       <div className="fields">
         <Field label="날짜"><input className="input" type="date" value={v.date} onChange={(e) => setV({ ...v, date: e.target.value })} /></Field>
-        <Field label="시간 (분)"><input className="input num" type="number" inputMode="numeric" min="1" step="5" value={v.min} onChange={(e) => setV({ ...v, min: e.target.value })} /></Field>
+        <Field label="시간 (분)"><input className="input num" type="number" inputMode="numeric" min="1" step="1" value={v.min} onChange={(e) => setV({ ...v, min: e.target.value })} /></Field>
       </div>
-      <div className="chips">{[15, 30, 45, 60, 90, 120].map((m) => <button type="button" key={m} className={'chip' + (+v.min === m ? ' on' : '')} onClick={() => setV({ ...v, min: m })}>{m < 60 ? m + '분' : m / 60 + '시간' + (m % 60 ? ' 30분' : '')}</button>)}</div>
+      <div className="chips">{[15, 30, 45, 60, 90, 120].map((m) => <button type="button" key={m} className={'chip' + (+v.min === m ? ' on' : '')} onClick={() => setV({ ...v, min: m })}>{dur(m)}</button>)}</div>
       <ExamAreaPick examId={v.examId} area={v.area} onChange={(examId, area) => setV({ ...v, examId, area })} />
       <Field label="메모"><input className="input" value={v.memo || ''} onChange={(e) => setV({ ...v, memo: e.target.value })} placeholder="한 일 (선택)" /></Field>
       <div className="row end">
@@ -101,7 +101,7 @@ function ExamForm({ id, close }) {
   }
   const max = maxTotal(v)
   return (
-    <form className="form" onSubmit={(e) => { e.preventDefault(); save() }}>
+    <form className="form" noValidate onSubmit={(e) => { e.preventDefault(); save() }}>
       <Seg value={v.kind} onChange={(kind) => setV({ ...v, kind })} options={[['jlpt', 'JLPT'], ['toeic', '토익'], ['custom', '직접 만들기']]} />
       {v.kind === 'jlpt' && <Field label="급수"><Seg value={v.level} onChange={(level) => setV({ ...v, level })} options={JLPT_LEVELS.map((l) => [l, l])} /></Field>}
       <Field label={v.kind === 'custom' ? '시험 이름' : '메모 이름 (선택 · 예: 12월 정기)'}><input className="input" value={v.name || ''} onChange={(e) => setV({ ...v, name: e.target.value })} placeholder={v.kind === 'custom' ? '예: JPT · 토플 · HSK' : ''} /></Field>
@@ -155,12 +155,12 @@ function ScoreForm({ examId, id, close }) {
     close()
   }
   return (
-    <form className="form" onSubmit={(e) => { e.preventDefault(); save() }}>
+    <form className="form" noValidate onSubmit={(e) => { e.preventDefault(); save() }}>
       <div className="row wrap"><Seg value={v.kind} onChange={(kind) => setV({ ...v, kind })} options={[['mock', '모의고사'], ['real', '실제 시험']]} /><span className="grow" /><input className="input" style={{ width: 'auto' }} type="date" value={v.date} onChange={(e) => setV({ ...v, date: e.target.value })} /></div>
       <div className="fields">
         {S.map((s) => (
           <Field key={s.id} label={`${s.name} / ${s.max}`}>
-            <input className="input num" type="number" inputMode="numeric" min={s.low ?? 0} max={s.max} step={ex.kind === 'toeic' ? 5 : 1} value={v.parts[s.id] ?? ''} onChange={(e) => setV({ ...v, parts: { ...v.parts, [s.id]: e.target.value } })} />
+            <input className="input num" type="number" inputMode="numeric" min={s.low ?? 0} max={s.max} step="1" value={v.parts[s.id] ?? ''} onChange={(e) => setV({ ...v, parts: { ...v.parts, [s.id]: e.target.value } })} />
           </Field>
         ))}
       </div>
@@ -192,7 +192,7 @@ function MaterialForm({ id, close }) {
     close()
   }
   return (
-    <form className="form" onSubmit={(e) => { e.preventDefault(); save() }}>
+    <form className="form" noValidate onSubmit={(e) => { e.preventDefault(); save() }}>
       <input className="input" autoFocus={!id} placeholder="예: 新完全マスター 文法 N2 · 해커스 토익 RC" value={v.title} onChange={(e) => setV({ ...v, title: e.target.value })} />
       <div className="fields">
         <Field label="단위"><input className="input" value={v.unit} onChange={(e) => setV({ ...v, unit: e.target.value })} placeholder="과 · 강 · 회 · 쪽" /></Field>
