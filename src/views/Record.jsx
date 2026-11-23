@@ -1,19 +1,19 @@
-// 기록: 타이머 · 기록 목록 · 통계 (7일 막대 · 영역별 · 한 달 칸)
+// 기록: 오늘 · 기록 목록 · 통계 (7일 막대 · 영역별 · 한 달 칸)
 import { useMemo, useState } from 'react'
 import { useColl, useSettings } from '../store/store.js'
 import { weekDays, byArea } from '../store/actions.js'
 import { Card, Seg, Empty, Icon } from '../components/ui.jsx'
-import { TimerCard } from '../components/parts.jsx'
 import { openSession, ExamTag } from '../components/editors.jsx'
 import { Bars7, MonthGrid } from '../components/charts.jsx'
 import { today, addDays, fmtDate, hm, dur } from '../lib/date.js'
 import { setSeg } from '../lib/nav.js'
 
-export default function Record({ seg = 'timer' }) {
+export default function Record({ seg }) {
+  seg = ['log', 'stats'].includes(seg) ? seg : 'today'
   return (
     <>
-      <header className="page-h"><h1>기록</h1><span className="grow" /><Seg small value={seg} onChange={(v) => setSeg('record', v)} options={[['timer', '타이머'], ['log', '기록'], ['stats', '통계']]} /></header>
-      {seg === 'log' ? <Log /> : seg === 'stats' ? <Stats /> : <TimerPage />}
+      <header className="page-h"><h1>기록</h1><span className="grow" /><Seg small value={seg} onChange={(v) => setSeg('record', v)} options={[['today', '오늘'], ['log', '기록'], ['stats', '통계']]} /></header>
+      {seg === 'log' ? <Log /> : seg === 'stats' ? <Stats /> : <TodayPage />}
     </>
   )
 }
@@ -21,24 +21,21 @@ export default function Record({ seg = 'timer' }) {
 function SessionRows({ list, exams }) {
   return <div className="rows">{list.map((s) => (
     <button key={s.id} className="row-line" style={{ textAlign: 'left', width: '100%' }} onClick={() => openSession(s.id)}>
-      <span className="num small" style={{ width: 52 }}>{dur(s.min)}</span>
+      <span className="num small" style={{ minWidth: 64, whiteSpace: 'nowrap' }}>{dur(s.min)}</span>
       <span className="t"><span className="meta"><ExamTag exam={exams.find((e) => e.id === s.examId)} area={s.area} />{s.memo && <span className="ellipsis">{s.memo}</span>}</span></span>
       {s.start && <span className="tiny soft num">{new Date(s.start).toTimeString().slice(0, 5)}</span>}
     </button>
   ))}</div>
 }
 
-function TimerPage() {
+function TodayPage() {
   const exams = useColl('exams'), sessions = useColl('sessions'), st = useSettings(), t0 = today()
   const L = sessions.filter((s) => s.date === t0).sort((a, b) => (b.start || b.createdAt || 0) - (a.start || a.createdAt || 0)), tot = L.reduce((a, s) => a + s.min, 0)
   return (
-    <div className="grid two">
-      <TimerCard />
-      <Card title={`오늘 ${hm(tot)} / ${hm(st.goalDaily)}`} action={<button className="lnk" onClick={() => openSession()}>+ 직접 기록</button>}>
-        <SessionRows list={L} exams={exams} />
-        {!L.length && <Empty>오늘 기록이 없어요</Empty>}
-      </Card>
-    </div>
+    <Card title={`오늘 ${hm(tot)} / ${hm(st.goalDaily)}`} action={<button className="lnk" onClick={() => openSession()}>+ 기록</button>}>
+      <SessionRows list={L} exams={exams} />
+      {!L.length && <Empty>오늘 기록이 없어요</Empty>}
+    </Card>
   )
 }
 

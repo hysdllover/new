@@ -35,6 +35,7 @@ b, strong { font-weight: var(--fw-b); }
 .page-h h1 { font-size: calc(22px * var(--ts, 1)); letter-spacing: -.01em; }
 .page-h .sub { color: var(--soft); font-size: calc(12px * var(--ts, 1)); padding-bottom: 4px; }
 .grid { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+.grid.dense { grid-auto-flow: row dense; }
 @media (min-width: 760px) { .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); } .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); } .span2 { grid-column: span 2; } }
 @media (min-width: 760px) and (max-width: 1099px) { .grid.three { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
@@ -162,9 +163,6 @@ textarea.input { min-height: 70px; resize: vertical; }
 .mg-c.dk i { color: #fff; }
 .mg-c.today { outline: 1px solid var(--text); outline-offset: -1px; }
 .quick { gap: 4px; margin-top: 6px; }
-.timer { display: flex; flex-direction: column; gap: 8px; }
-.timer .big { font-size: calc(44px * var(--ts, 1)); }
-.timer-card.running .big { color: var(--accent); }
 .exam-sum { display: flex; flex-direction: column; gap: 5px; padding: 8px 0; border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
 .exam-sum:last-child { border-bottom: 0; }
 .exam-last { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; text-align: left; }
