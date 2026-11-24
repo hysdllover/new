@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useColl, useSettings, list } from '../store/store.js'
 import { byOrder, upcoming, weekDays, toggleTask } from '../store/actions.js'
 import { Card, Seg, Empty, Icon, Check, Line, Toggle } from '../components/ui.jsx'
-import { TaskRow, QuickAdd, MaterialRow, PlanDetail, detailTotal } from '../components/parts.jsx'
+import { TaskRow, QuickAdd, MaterialRow, PlanDetail, detailTotal, detailCount } from '../components/parts.jsx'
 import { openTask, openMaterial } from '../components/editors.jsx'
 import { openSheet, toast } from '../components/toast.js'
 import { today, addDays, fmtDate, rel, WD, parseYmd, fmtShort, dday, diffDays, dur } from '../lib/date.js'
@@ -128,7 +128,7 @@ function PlanImport({ close }) {
 
 // 진도표: 시험까지 날짜별 할 일을 주 단위로 (영역 · 체크) — 모의고사 날 · 시험 날은 옅게 칠함
 function Sheet() {
-  const st = useSettings(), exams = useColl('exams'), all = useColl('tasks')
+  const st = useSettings(), exams = useColl('exams'), all = useColl('tasks'), dayList = useColl('days')
   // 보는 단위: 불러온 진도표(여러 시험을 한 달력에) · 그 밖에는 시험마다
   const plans = [...new Set(all.filter((t) => t.plan && t.due).map((t) => t.plan))].filter((id) => PLANS.some((p) => p.id === id))
   const olds = PLANS.flatMap((p) => p.replaces || []), inPlan = (t) => plans.includes(t.plan) || olds.includes(t.plan) // 바꾼 예전 진도표의 끝낸 기록은 따로 보이지 않게
@@ -144,6 +144,7 @@ function Sheet() {
   const ws0 = weekDays(days[0], st.weekStart)[0], weeks = []
   for (const d of days) { const k = Math.floor(diffDays(d, ws0) / 7); (weeks[k] = weeks[k] || []).push(d) }
   const lastK = weeks.length - 1
+  const dayRec = Object.fromEntries(dayList.map((r) => [r.id, r]))
   const plan = cur.key.startsWith('p:') ? PLANS.find((p) => 'p:' + p.id === cur.key) : null
   const flip = (d) => setOpen((s) => { const n = new Set(s); n.has(d) ? n.delete(d) : n.add(d); return n })
   const toToday = () => document.getElementById('sh-' + (days.find((d) => d >= t0) || days[days.length - 1]))?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -161,7 +162,7 @@ function Sheet() {
           <div key={k}>
             <div className="sh-week">{k === lastK && k > 0 ? '마지막 주' : `${k + 1}주`} · {fmtShort(addDays(ws0, k * 7))}–{fmtShort(addDays(ws0, k * 7 + 6))}</div>
             {W.map((d) => {
-              const det = plan ? planDetail(plan, d) : [], on = det.length > 0 && (allOpen || open.has(d))
+              const det = plan ? planDetail(plan, d) : [], on = det.length > 0 && (allOpen || open.has(d)), dc = detailCount(det, dayRec[d]?.steps)
               const T = L.filter((t) => t.due === d), wd = parseYmd(d).getDay(), mock = T.some((t) => t.mock || t.area === '모의'), exam = T.some((t) => t.examDay) || exs.some((e) => e.date === d)
               return (
                 <div key={d} id={'sh-' + d} className={'sh-day' + (mock ? ' tint' : '') + (exam ? ' exam' : '') + (d === t0 ? ' today' : '') + (d < t0 ? ' past' : '')}>
@@ -173,8 +174,8 @@ function Sheet() {
                       <button className="sh-t" onClick={() => openTask(t.id)}>{t.title}</button>
                     </div>
                   ))}
-                  {det.length > 0 && <button className="sh-more" aria-expanded={on} onClick={() => flip(d)}>{on ? '상세 계획 접기' : '상세 계획'} · 총 {dur(detailTotal(det))}</button>}
-                  {on && <PlanDetail rows={det} />}
+                  {det.length > 0 && <button className="sh-more" aria-expanded={on} onClick={() => flip(d)}>{on ? '상세 계획 접기' : '상세 계획'} · {dc.done}/{dc.n} · 총 {dur(detailTotal(det))}</button>}
+                  {on && <PlanDetail rows={det} due={d} />}
                   </div>
                 </div>
               )
