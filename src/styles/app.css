@@ -219,7 +219,14 @@ input.input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .pdl-r:first-child { border-top: 0; }
 .pdl-l { color: var(--soft); font-size: calc(11.5px * var(--ts, 1)); }
 .pdl-l small { display: block; color: var(--accent); font-size: calc(11px * var(--ts, 1)); }
+.pdl-it + .pdl-it { margin-top: 8px; }
 .pdl-h { margin-bottom: 2px; }
+.pdl-tip { margin: 2px 0 0 25px; color: var(--accent); font-size: calc(11.5px * var(--ts, 1)); }
+.sh-guide { margin-top: 12px; }
+.pdl-guide { display: grid; gap: 6px; margin: 4px 0 0; font-size: calc(12.5px * var(--ts, 1)); }
+.pdl-guide > div { display: grid; grid-template-columns: 78px minmax(0, 1fr); gap: 8px; }
+.pdl-guide dt { color: var(--soft); }
+.pdl-guide dd { margin: 0; }
 .pdl-ss { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
 .pdl-s { display: flex; align-items: flex-start; gap: 9px; padding: 4px 0; color: var(--muted); }
 .pdl-s .check { width: 16px; height: 16px; margin-top: 1px; }

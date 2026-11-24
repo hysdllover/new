@@ -74,22 +74,31 @@ export function MaterialRow({ m, exams }) {
 /* ── 일별 상세 계획 (진도표) ── */
 // 세부 단계 체크: days 컬렉션(id 날짜)의 steps { '영역/번호': true } — 동기화됨
 export const detailTotal = (rows) => rows.reduce((a, r) => a + (r.min || 0), 0)
-const stepKey = (r, j) => r.label + '/' + j
+const stepKey = (r, j) => r.label + '/' + j // j: 그 영역 안 단계 순번 (항목을 이어서 셈)
+const rowSteps = (r) => r.items.flatMap((it) => it.steps)
 export function toggleStep(due, k) { const d = find('days', due) || {}, steps = { ...(d.steps || {}) }; if (steps[k]) delete steps[k]; else steps[k] = true; put('days', { ...d, id: due, steps }) }
-export const detailCount = (rows, steps = {}) => rows.reduce((a, r) => { r.steps.forEach((_, j) => { a.n++; if (steps[stepKey(r, j)]) a.done++ }); return a }, { done: 0, n: 0 })
+export const detailCount = (rows, steps = {}) => rows.reduce((a, r) => { rowSteps(r).forEach((_, j) => { a.n++; if (steps[stepKey(r, j)]) a.done++ }); return a }, { done: 0, n: 0 })
 export function PlanDetail({ rows, due }) {
   const S = useRec('days', due)?.steps || {}
   return (
-    <div className="pdl">{rows.map((r, i) => (
+    <div className="pdl">{rows.map((r, i) => { let j = 0; return (
       <div key={i} className={'pdl-r' + (r.label === '알림' ? ' note' : '')}>
         <span className="pdl-l">{r.label}{r.min ? <small className="num">{dur(r.min)}</small> : null}</span>
-        <div className="pdl-b">{r.head && <div className="pdl-h">{r.head}</div>}
-          <div className="pdl-ss">{r.steps.map((s, j) => { const on = !!S[stepKey(r, j)]; return (
-            <div key={j} className={'pdl-s' + (on ? ' done' : '')}><Check on={on} onClick={() => toggleStep(due, stepKey(r, j))} label={(on ? '되돌리기 · ' : '했어요 · ') + s} /><span>{s}</span></div>
-          ) })}</div>
-        </div>
+        <div className="pdl-b">{r.items.map((it, x) => (
+          <div key={x} className="pdl-it">
+            {it.h && <div className="pdl-h">{it.h}</div>}
+            <div className="pdl-ss">{it.steps.map((s) => { const k = stepKey(r, j++), on = !!S[k]; return (
+              <div key={k} className={'pdl-s' + (on ? ' done' : '')}><Check on={on} onClick={() => toggleStep(due, k)} label={(on ? '되돌리기 · ' : '했어요 · ') + s} /><span>{s}</span></div>
+            ) })}</div>
+            {it.tip && <div className="pdl-tip">{it.tip}</div>}
+          </div>
+        ))}</div>
       </div>
-    ))}</div>
+    ) })}</div>
   )
+}
+// 처음이라면 알아두기 (용어)
+export function PlanGuide({ items }) {
+  return <dl className="pdl-guide">{items.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
 }
 export { find }
