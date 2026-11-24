@@ -110,7 +110,7 @@ const AREA_C = { LC: 'lc', RC: 'rc', 보카: 'vo', 토스: 'ts', 기타: 'et', �
 // 진도표 불러오기 시트
 export const openPlanImport = () => openSheet((close) => <PlanImport close={close} />, { title: '진도표 불러오기' })
 function PlanImport({ close }) {
-  const [books, setBooks] = useState(true)
+  const [goal, setGoal] = useState(true), [books, setBooks] = useState(true)
   return (
     <div className="form">
       {PLANS.map((p) => (
@@ -118,8 +118,9 @@ function PlanImport({ close }) {
           <b>{p.title}</b>
           <div className="small muted">{p.note}</div>
           <div className="meta"><span>{planDays(p)}일 · 할 일 {planCount(p)}개</span><span>{fmtShort(Object.keys(p.days)[0])} – {fmtShort(Object.keys(p.days).slice(-1)[0])}</span><span>시험 {Object.values(p.exams).map((e) => e.name && e.kind === 'custom' ? e.name : '토익').join(' · ')}</span></div>
+          <Toggle label={`하루 목표를 ${p.goalDaily / 60}시간으로`} checked={goal} onChange={setGoal} />
           <Toggle label={`교재 진도도 함께 (${p.materials.map((m) => m.title).join(' · ')})`} checked={books} onChange={setBooks} />
-          <div className="row end"><button className="btn primary" onClick={() => { const r = importPlan(p, { books }); close(); setSeg('plan', 'sheet'); toast(r.added ? `할 일 ${r.added}개를 넣었어요${r.removed ? ` · 예전 진도표 ${r.removed}개는 뺐어요` : ''}` : r.fixed ? `할 일 ${r.fixed}개를 고쳤어요` : '이미 넣은 진도표예요') }}>{list('tasks').some((t) => !t.done && (p.replaces || []).includes(t.plan)) ? '예전 진도표를 이걸로 바꾸기' : list('tasks').some((t) => t.plan === p.id) ? '바뀐 내용 반영하기' : '넣기'}</button></div>
+          <div className="row end"><button className="btn primary" onClick={() => { const r = importPlan(p, { goal, books }); close(); setSeg('plan', 'sheet'); toast(r.added ? `할 일 ${r.added}개를 넣었어요${r.removed ? ` · 예전 진도표 ${r.removed}개는 뺐어요` : ''}` : r.fixed ? `할 일 ${r.fixed}개를 고쳤어요` : '이미 넣은 진도표예요') }}>{list('tasks').some((t) => !t.done && (p.replaces || []).includes(t.plan)) ? '예전 진도표를 이걸로 바꾸기' : list('tasks').some((t) => t.plan === p.id) ? '바뀐 내용 반영하기' : '넣기'}</button></div>
         </div>
       ))}
     </div>
@@ -153,6 +154,7 @@ function Sheet() {
       {opts.length > 1 && <div className="chips" style={{ marginBottom: 12 }}>{opts.map((o) => <button key={o.key} className={'chip' + (o.key === cur.key ? ' on' : '')} onClick={() => setPick(o.key)}>{o.title}</button>)}</div>}
       <Card className="sheet-card">
         <h2 className="sheet-title">{cur.title}</h2>
+        <div className="small soft">하루 목표 {Math.round(st.goalDaily / 6) / 10}시간</div>
         <div className="row wrap" style={{ alignItems: 'flex-end', gap: 22, marginTop: 10 }}>
           {exs.map((e) => <div key={e.id}><div className="small soft">{examName(e)} {fmtShort(e.date)}</div><div className="big num" style={{ color: e.color || 'var(--accent)' }}>{dday(e.date)}</div></div>)}
         </div>

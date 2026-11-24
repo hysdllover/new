@@ -1,5 +1,5 @@
 // 진도표 불러오기: 시험 · 날짜별 할 일 · 교재를 한 번에 넣음 (같은 id 로 넣어서 두 번 눌러도 겹치지 않음)
-import { batch, put, find, list, remove } from '../store/store.js'
+import { batch, put, find, list, remove, setSettings } from '../store/store.js'
 
 // 토익 · 토스 진도 달력 — ~12/12 토익 3시간 + 토스 1시간 · 12/14~ 토스 4시간
 // 토익: 단기공략 850+ LC · RC · ETS 기출보카 · 기출문제집 / 토스: 시계토끼 올인원 기본서
@@ -15,6 +15,7 @@ export const PLANS = [{
   replaces: ['toeic-1213', 'toeic-1213b', 'toeic-tos-1220', 'toeic-tos-1220b', 'toeic-tos-1220c', 'toeic-tos-1220d'], // 예전 진도표의 끝내지 않은 할 일은 지우고 이걸로 바꿈 (끝낸 건 기록으로 남김)
   title: '토익 · 토스 진도 달력',
   note: '하루 4시간 — ~12/12 토익 3시간 + 토스 1시간 · 12/14~ 토스 4시간 · 토익은 YBM 단기공략 850+, 토스는 시계토끼 올인원 기본서 기준',
+  goalDaily: 240,
   exams: {
     toeic: { kind: 'toeic', date: '2026-12-13', name: '12/13 정기', areas: ['LC', 'RC', '보카', '기타'], color: '#7a8660', legacyId: 'plan-toeic-1213' },
     tos: { kind: 'custom', name: '토익스피킹', date: '2026-12-20', sections: [{ id: 's', name: '점수', max: 200 }], areas: ['토스', '기타'], color: '#a99bc4' },
@@ -148,7 +149,7 @@ const planOf = (id) => PLANS.find((p) => p.id === id)
 export const planTitle = (id) => planOf(id)?.title || '진도표'
 
 // 넣기 (다시 누르면 바뀐 내용 반영): 같은 종류 · 같은 날 시험이 있으면 그 시험에 연결 · 할 일 · 교재는 고정 id (다시 넣으면 건너뜀)
-export function importPlan(p, { books = true } = {}) {
+export function importPlan(p, { goal = true, books = true } = {}) {
   let added = 0, removed = 0, fixed = 0
   batch(() => {
     const olds = p.replaces || []
@@ -176,6 +177,7 @@ export function importPlan(p, { books = true } = {}) {
       if (old) { if (old.examId !== ids[m.exam]) put('materials', { ...old, examId: ids[m.exam] }); continue }
       put('materials', { id: `plan-${p.id}-${m.id}`, title: m.title, unit: m.unit, total: m.total, current: 0, examId: ids[m.exam] })
     }
+    if (goal && p.goalDaily) setSettings({ goalDaily: p.goalDaily })
   })
   return { added, removed, fixed }
 }

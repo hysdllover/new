@@ -23,5 +23,7 @@ export function seedDemo() {
     put('tasks', { id: 't6', title: '교재 다음 단원 훑어보기', order: 6 })
     put('materials', { id: 'm1', title: '新完全マスター 文法 N2', examId: 'e1', unit: '과', total: 40, current: 29 })
     put('materials', { id: 'm2', title: 'ETS 토익 정기시험 기출 1000', examId: 'e2', unit: '회', total: 10, current: 3 })
+    const areas = [['e1', '문법'], ['e1', '청해'], ['e2', 'RC'], ['e2', 'LC'], ['e1', '독해']]
+    for (let i = 0; i < 14; i++) { const [examId, area] = areas[i % areas.length]; put('sessions', { id: 'x' + i, date: d(-(i % 7)), min: 30 + ((i * 17) % 60), examId, area }) }
   })
 }

@@ -1,8 +1,9 @@
 // Scriptable 위젯: 사용자는 짧은 로더만 한 번 붙여 넣음 → 본체(widget-core.js)는 앱과 같이 배포되어 자동으로 바뀜
 // 토큰은 넣지 않음 (위젯은 비공개 gist 의 widget.json 주소로만 읽음)
 export const WIDGET_KINDS = [
-  ['', '기본', 'D-day · 오늘 할 일'],
+  ['', '기본', 'D-day · 오늘 공부 · 오늘 할 일'],
   ['디데이', 'D-day', '가까운 시험 D-day 크게 · 다른 시험'],
+  ['공부', '공부 시간', '오늘 공부 / 목표 · 7일 막대'],
   ['할일', '할 일', '오늘 할 일 · 누르면 체크'],
   ['점수', '점수', '최근 점수 · 목표까지 · 추이'],
   ['교재', '교재 · 강의', '진도 선'],
@@ -11,7 +12,7 @@ export const WIDGET_KINDS = [
 export function buildLoader({ widgetRaw, appUrl }) {
   return `// 어학 스터디 위젯 (Scriptable) — 한 번만 붙여 넣으면 돼요
 // 위젯 모양은 앱이 바뀌면 같이 바뀌어요 · 토큰 없음 (비공개 gist 주소로만 읽어요)
-// 위젯 편집 › Parameter: 비우면 기본 · 디데이 · 할일 · 점수 · 교재
+// 위젯 편집 › Parameter: 비우면 기본 · 디데이 · 공부 · 할일 · 점수 · 교재
 const SRC = ${JSON.stringify(widgetRaw || '')}
 const APP = ${JSON.stringify(appUrl)}
 const fm = FileManager.local()

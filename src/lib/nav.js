@@ -4,6 +4,7 @@ import { useSyncExternalStore } from 'react'
 export const TABS = [
   ['home', '오늘', 'home'],
   ['plan', '계획', 'plan'],
+  ['record', '기록', 'clock'],
   ['exam', '시험', 'flag'],
   ['settings', '설정', 'settings'],
 ]
