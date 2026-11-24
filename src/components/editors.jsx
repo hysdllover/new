@@ -65,6 +65,9 @@ export function SessionForm({ id, preset, close, inline }) {
   const fresh = () => ({ date: today(), min: 30, memo: '', ...(id ? {} : pickDefault()), ...preset, ...s0 })
   const [v, setV] = useState(fresh)
   const add = (d) => setV((x) => ({ ...x, min: Math.max(0, Math.round(+x.min || 0) + d) }))
+  // 시간 · 분 따로 적기 (분은 0–59, 넘치면 시간으로)
+  const total = Math.max(0, Math.round(+v.min || 0)), H = Math.floor(total / 60), M = total % 60
+  const setHM = (h, m) => setV((x) => ({ ...x, min: Math.max(0, (Math.floor(+h) || 0) * 60 + Math.min(59, Math.floor(+m) || 0)) }))
   const save = () => {
     const min = Math.round(+v.min); if (!(min > 0)) return toast('공부한 시간을 적어 주세요')
     const rec = { date: v.date || today(), min, examId: v.examId || null, area: v.area || null, memo: v.memo || '' }
@@ -75,7 +78,10 @@ export function SessionForm({ id, preset, close, inline }) {
     <form className="form" noValidate onSubmit={(e) => { e.preventDefault(); save() }}>
       <div className="fields">
         <Field label="날짜"><input className="input" type="date" value={v.date} onChange={(e) => setV({ ...v, date: e.target.value })} /></Field>
-        <Field label={`시간 · ${dur(+v.min || 0)}`}><input className="input num" type="number" inputMode="numeric" min="1" step="1" value={v.min} onChange={(e) => setV({ ...v, min: e.target.value })} aria-label="분" /></Field>
+      </div>
+      <div className="fields hm">
+        <Field label="시간"><input className="input num" type="number" inputMode="numeric" min="0" step="1" placeholder="0" value={H || ''} onChange={(e) => setHM(e.target.value, M)} /></Field>
+        <Field label="분"><input className="input num" type="number" inputMode="numeric" min="0" max="59" step="1" placeholder="0" value={M || ''} onChange={(e) => setHM(H, e.target.value)} /></Field>
       </div>
       <div className="chips time-add">
         <button type="button" className="chip" onClick={() => add(-10)}>−10분</button>
