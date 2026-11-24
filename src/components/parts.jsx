@@ -1,9 +1,9 @@
 // 여러 화면이 같이 쓰는 줄 · 카드: 할 일 줄 · 빠른 추가 · 시험 요약 · 교재 줄 · 상세 계획
 import { useState } from 'react'
-import { find, put, useRec } from '../store/store.js'
-import { toggleTask, addTask, stepMaterial } from '../store/actions.js'
+import { find, put, useRec, useColl } from '../store/store.js'
+import { toggleTask, addTask, stepMaterial, logSession } from '../store/actions.js'
 import { Check, Icon, Line } from './ui.jsx'
-import { openTask, openExam, openScore, openMaterial, ExamTag } from './editors.jsx'
+import { openTask, openExam, openScore, openMaterial, openSession, ExamTag } from './editors.jsx'
 import { today, rel, fmtDate, dday, diffDays, dur } from '../lib/date.js'
 import { examName, judge, maxTotal, passLine } from '../lib/exams.js'
 
@@ -78,12 +78,28 @@ const stepKey = (r, j) => r.label + '/' + j // j: 그 영역 안 단계 순번 (
 const rowSteps = (r) => r.items.flatMap((it) => it.steps)
 export function toggleStep(due, k) { const d = find('days', due) || {}, steps = { ...(d.steps || {}) }; if (steps[k]) delete steps[k]; else steps[k] = true; put('days', { ...d, id: due, steps }) }
 export const detailCount = (rows, steps = {}) => rows.reduce((a, r) => { rowSteps(r).forEach((_, j) => { a.n++; if (steps[stepKey(r, j)]) a.done++ }); return a }, { done: 0, n: 0 })
+// 상세 계획 한 줄 → 공부 기록 (계획 시간 · 시험 · 영역을 채워서 한 번에)
+const AREAS = ['LC', 'RC', '보카', '토스']
+function useRowLog(due) {
+  const tasks = useColl('tasks'), sessions = useColl('sessions')
+  const T = tasks.filter((t) => t.plan && t.due === due)
+  const toeic = T.find((t) => t.area && t.area !== '토스' && !t.examDay)?.examId || null, tos = T.find((t) => t.area === '토스')?.examId || null
+  return (r) => {
+    const key = due + '/' + r.label, done = sessions.find((s) => s.planKey === key)
+    const isTos = r.label === '토스' || !toeic
+    const area = AREAS.includes(r.label) ? r.label : isTos ? '토스' : r.label === '모의고사' ? null : '기타'
+    const memo = r.label + (r.items[0]?.h ? ' · ' + r.items[0].h : '')
+    return { done, log: () => done ? openSession(done.id) : logSession({ date: due, min: r.min, examId: isTos ? tos : toeic, area, memo, planKey: key }, `기록했어요 · ${r.label} ${dur(r.min)}`) }
+  }
+}
 export function PlanDetail({ rows, due }) {
-  const S = useRec('days', due)?.steps || {}
+  const S = useRec('days', due)?.steps || {}, rowLog = useRowLog(due), canLog = due <= today()
   return (
     <div className="pdl">{rows.map((r, i) => { let j = 0; return (
       <div key={i} className={'pdl-r' + (r.label === '알림' ? ' note' : '')}>
-        <span className="pdl-l">{r.label}{r.min ? <small className="num">{dur(r.min)}</small> : null}</span>
+        <span className="pdl-l">{r.label}{r.min ? <small className="num">{dur(r.min)}</small> : null}
+          {r.min && canLog ? (() => { const L = rowLog(r); return <button className={'pdl-log' + (L.done ? ' on' : '')} onClick={L.log} aria-label={L.done ? `${r.label} 기록 보기` : `${r.label} ${dur(r.min)} 공부 기록`}>{L.done ? `기록함 ${dur(L.done.min)}` : '+ 기록'}</button> })() : null}
+        </span>
         <div className="pdl-b">{r.items.map((it, x) => (
           <div key={x} className="pdl-it">
             {it.h && <div className="pdl-h">{it.h}</div>}

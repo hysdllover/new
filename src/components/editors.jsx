@@ -1,7 +1,7 @@
 // 편집 시트: 할 일 · 공부 기록 · 시험 · 점수 · 교재
 import { useState } from 'react'
-import { put, patch, find, useColl, remove, settings } from '../store/store.js'
-import { addTask, addSession, deleteTask, deleteExam, upcoming } from '../store/actions.js'
+import { put, patch, find, useColl, remove, settings, list } from '../store/store.js'
+import { addTask, deleteTask, deleteExam, upcoming, logSession, lastPick } from '../store/actions.js'
 import { openSheet, toast } from './toast.js'
 import { Field, Seg, Icon, confirmSheet } from './ui.jsx'
 import { today, addDays, fmtDate, dday, dur } from '../lib/date.js'
@@ -58,22 +58,30 @@ function TaskForm({ id, preset, close }) {
 
 /* ── 공부 기록 ── */
 export const openSession = (id, preset = {}) => openSheet((close) => <SessionForm id={id} preset={preset} close={close} />, { title: id ? '공부 기록' : '공부 기록 추가' })
-function SessionForm({ id, preset, close }) {
+// 새 기록 기본값: 마지막으로 고른 시험 · 영역 (없으면 가장 가까운 시험)
+const pickDefault = () => { const lp = lastPick(), ups = upcoming(list('exams')); return lp && (!lp.examId || ups.some((e) => e.id === lp.examId)) ? lp : { examId: ups[0]?.id || null, area: null } }
+export function SessionForm({ id, preset, close, inline }) {
   const s0 = id ? find('sessions', id) : null
-  const [v, setV] = useState(() => ({ date: today(), min: 30, examId: null, area: null, memo: '', ...preset, ...s0 }))
+  const fresh = () => ({ date: today(), min: 30, memo: '', ...(id ? {} : pickDefault()), ...preset, ...s0 })
+  const [v, setV] = useState(fresh)
+  const add = (d) => setV((x) => ({ ...x, min: Math.max(0, Math.round(+x.min || 0) + d) }))
   const save = () => {
     const min = Math.round(+v.min); if (!(min > 0)) return toast('공부한 시간을 적어 주세요')
     const rec = { date: v.date || today(), min, examId: v.examId || null, area: v.area || null, memo: v.memo || '' }
-    if (id) patch('sessions', id, rec); else addSession(rec)
-    close()
+    if (id) patch('sessions', id, rec); else logSession(rec)
+    if (inline) setV({ ...fresh(), ...pickDefault(), min: 30 }); else close()
   }
   return (
     <form className="form" noValidate onSubmit={(e) => { e.preventDefault(); save() }}>
       <div className="fields">
         <Field label="날짜"><input className="input" type="date" value={v.date} onChange={(e) => setV({ ...v, date: e.target.value })} /></Field>
-        <Field label="시간 (분)"><input className="input num" type="number" inputMode="numeric" min="1" step="1" value={v.min} onChange={(e) => setV({ ...v, min: e.target.value })} /></Field>
+        <Field label={`시간 · ${dur(+v.min || 0)}`}><input className="input num" type="number" inputMode="numeric" min="1" step="1" value={v.min} onChange={(e) => setV({ ...v, min: e.target.value })} aria-label="분" /></Field>
       </div>
-      <div className="chips">{[15, 30, 45, 60, 90, 120].map((m) => <button type="button" key={m} className={'chip' + (+v.min === m ? ' on' : '')} onClick={() => setV({ ...v, min: m })}>{dur(m)}</button>)}</div>
+      <div className="chips time-add">
+        <button type="button" className="chip" onClick={() => add(-10)}>−10분</button>
+        {[10, 30, 60].map((m) => <button type="button" key={m} className="chip" onClick={() => add(m)}>+{dur(m)}</button>)}
+        <button type="button" className="chip" onClick={() => setV({ ...v, min: 0 })}>0</button>
+      </div>
       <ExamAreaPick examId={v.examId} area={v.area} onChange={(examId, area) => setV({ ...v, examId, area })} />
       <Field label="메모"><input className="input" value={v.memo || ''} onChange={(e) => setV({ ...v, memo: e.target.value })} placeholder="한 일 (선택)" /></Field>
       <div className="row end">

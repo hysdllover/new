@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import { useColl, useSettings } from '../store/store.js'
 import { weekDays, byArea } from '../store/actions.js'
 import { Card, Seg, Empty, Icon } from '../components/ui.jsx'
-import { openSession, ExamTag } from '../components/editors.jsx'
+import { openSession, ExamTag, SessionForm } from '../components/editors.jsx'
 import { Bars7, MonthGrid } from '../components/charts.jsx'
 import { today, addDays, fmtDate, hm, dur } from '../lib/date.js'
 import { setSeg } from '../lib/nav.js'
@@ -32,10 +32,13 @@ function TodayPage() {
   const exams = useColl('exams'), sessions = useColl('sessions'), st = useSettings(), t0 = today()
   const L = sessions.filter((s) => s.date === t0).sort((a, b) => (b.start || b.createdAt || 0) - (a.start || a.createdAt || 0)), tot = L.reduce((a, s) => a + s.min, 0)
   return (
-    <Card title={`오늘 ${hm(tot)} / ${hm(st.goalDaily)}`} action={<button className="lnk" onClick={() => openSession()}>+ 기록</button>}>
-      <SessionRows list={L} exams={exams} />
-      {!L.length && <Empty>오늘 기록이 없어요</Empty>}
-    </Card>
+    <div className="grid two">
+      <Card title="기록하기"><SessionForm inline close={() => {}} /></Card>
+      <Card title={`오늘 ${hm(tot)} / ${hm(st.goalDaily)}`}>
+        <SessionRows list={L} exams={exams} />
+        {!L.length && <Empty>오늘 기록이 없어요</Empty>}
+      </Card>
+    </div>
   )
 }
 
