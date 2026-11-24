@@ -259,3 +259,4 @@ input.input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .pdl-log { display: block; margin-top: 4px; padding: 3px 0; min-height: 26px; font-size: calc(11px * var(--ts, 1)); color: var(--accent); text-align: left; }
 .pdl-log.on { color: var(--soft); }
 @media print { .pdl-log { display: none; } }
+.fields.hm { grid-template-columns: 1fr 1fr; }

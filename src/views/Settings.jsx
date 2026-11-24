@@ -24,7 +24,10 @@ export default function Settings() {
         <Card title="공부">
           <div className="form">
             <Field label={`하루 목표 · ${hm(st.goalDaily)}`}><Seg small value={st.goalDaily} onChange={(v) => setSettings({ goalDaily: v })} options={[60, 90, 120, 180, 240, 300].map((m) => [m, hm(m)])} /></Field>
-            <Field label="직접 (분)"><input className="input num" type="number" inputMode="numeric" step="10" value={st.goalDaily} onChange={(e) => setSettings({ goalDaily: Math.max(10, +e.target.value || 10) })} /></Field>
+            <div className="fields hm">
+              <Field label="직접 · 시간"><input className="input num" type="number" inputMode="numeric" min="0" step="1" placeholder="0" value={Math.floor(st.goalDaily / 60) || ''} onChange={(e) => setSettings({ goalDaily: Math.max(10, (Math.floor(+e.target.value) || 0) * 60 + (st.goalDaily % 60)) })} /></Field>
+              <Field label="분"><input className="input num" type="number" inputMode="numeric" min="0" max="59" step="5" placeholder="0" value={st.goalDaily % 60 || ''} onChange={(e) => setSettings({ goalDaily: Math.max(10, Math.floor(st.goalDaily / 60) * 60 + Math.min(59, Math.floor(+e.target.value) || 0)) })} /></Field>
+            </div>
             <Field label="주 시작"><Seg small value={st.weekStart} onChange={(v) => setSettings({ weekStart: v })} options={[[1, '월요일'], [0, '일요일']]} /></Field>
           </div>
         </Card>
