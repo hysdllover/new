@@ -3,13 +3,13 @@ import { useState } from 'react'
 import { useColl, useSettings, list } from '../store/store.js'
 import { byOrder, upcoming, weekDays, toggleTask } from '../store/actions.js'
 import { Card, Seg, Empty, Icon, Check, Line, Toggle } from '../components/ui.jsx'
-import { TaskRow, QuickAdd, MaterialRow, PlanDetail, detailTotal, detailCount } from '../components/parts.jsx'
+import { TaskRow, QuickAdd, MaterialRow, PlanDetail, PlanGuide, detailTotal, detailCount } from '../components/parts.jsx'
 import { openTask, openMaterial } from '../components/editors.jsx'
 import { openSheet, toast } from '../components/toast.js'
 import { today, addDays, fmtDate, rel, WD, parseYmd, fmtShort, dday, diffDays, dur } from '../lib/date.js'
 import { examName } from '../lib/exams.js'
 import { setSeg } from '../lib/nav.js'
-import { PLANS, planCount, planDays, importPlan, planTitle, planDetail } from '../lib/plans.js'
+import { PLANS, planCount, planDays, importPlan, planTitle, planDetail, GUIDE } from '../lib/plans.js'
 
 export default function Plan({ seg = 'list' }) {
   return (
@@ -134,7 +134,7 @@ function Sheet() {
   const olds = PLANS.flatMap((p) => p.replaces || []), inPlan = (t) => plans.includes(t.plan) || olds.includes(t.plan) // 바꾼 예전 진도표의 끝낸 기록은 따로 보이지 않게
   const loose = upcoming(exams).filter((e) => e.date && all.some((t) => t.examId === e.id && t.due && !inPlan(t)))
   const opts = [...plans.map((id) => ({ key: 'p:' + id, title: planTitle(id), tasks: all.filter((t) => t.plan === id && t.due) })), ...loose.map((e) => ({ key: 'e:' + e.id, title: examName(e) + ' 진도표', tasks: all.filter((t) => t.examId === e.id && t.due && !inPlan(t)) }))]
-  const [pick, setPick] = useState(null), [open, setOpen] = useState(() => new Set([today()])), [allOpen, setAllOpen] = useState(false)
+  const [pick, setPick] = useState(null), [open, setOpen] = useState(() => new Set([today()])), [allOpen, setAllOpen] = useState(false), [guide, setGuide] = useState(false)
   const cur = opts.find((o) => o.key === pick) || opts[0]
   if (!cur) return <Card><Empty>시험에 날짜를 정한 할 일이 아직 없어요<br /><button className="btn sm" style={{ marginTop: 8 }} onClick={openPlanImport}>진도표 불러오기</button></Empty></Card>
   const L = [...cur.tasks].sort((a, b) => a.due.localeCompare(b.due) || byOrder(a, b))
@@ -158,6 +158,7 @@ function Sheet() {
         </div>
         <div style={{ margin: '12px 0 6px' }}><Line value={L.length ? done / L.length : 0} /></div>
         <div className="row"><span className="small soft grow">완료 {done} / {L.length}</span>{plan && <button className="btn sm" onClick={() => { setAllOpen(!allOpen); if (allOpen) setOpen(new Set()) }}>{allOpen ? '상세 접기' : '상세 모두 펼치기'}</button>}<button className="btn sm" onClick={toToday}>오늘로 이동</button><button className="btn sm" onClick={openPlanImport}>불러오기</button></div>
+        {plan && <div className="sh-guide"><button className="sh-more" aria-expanded={guide} onClick={() => setGuide(!guide)}>{guide ? '알아두기 접기' : '처음이라면 알아두기 · 받아쓰기 · 쉐도잉 · 오답노트'}</button>{guide && <PlanGuide items={GUIDE} />}</div>}
         {weeks.map((W, k) => W && (
           <div key={k}>
             <div className="sh-week">{k === lastK && k > 0 ? '마지막 주' : `${k + 1}주`} · {fmtShort(addDays(ws0, k * 7))}–{fmtShort(addDays(ws0, k * 7 + 6))}</div>
