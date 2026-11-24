@@ -15,5 +15,4 @@ export const dday = (s, t0 = today()) => { const n = diffDays(s, t0); return n >
 export const rel = (s, t0 = today()) => { const n = diffDays(s, t0); return n === 0 ? '오늘' : n === 1 ? '내일' : n === 2 ? '모레' : n === -1 ? '어제' : fmtShort(s) }
 // 분 → 1:05 · 1시간 5분
 export const hm = (m) => `${Math.floor((m || 0) / 60)}:${pad(Math.round(m || 0) % 60)}`
-export const dur = (m) => { m = Math.round(m || 0); const h = Math.floor(m / 60), r = m % 60; return h ? (r ? `${h}시간 ${r}분` : `${h}시간`) : `${r}분` }
 export const tsYmd = (ts) => ymd(new Date(ts))

@@ -15,13 +15,13 @@
 - HTML 결과물은 A4 인쇄에 맞게, 아이폰·아이패드 모두 호환
 
 ## 하지 않는 것
-- 뽀모도로, 연속 기록(N일 연속), 오답 기능, 미룸 배지
+- 뽀모도로 · 타이머, 공부 시간 기록, 연속 기록(N일 연속), 오답 기능, 미룸 배지
 - 할 일 순서는 사용자가 정함 (정리 정렬은 날짜·시간만)
 - 위젯 스크립트에 토큰 넣지 않기 (위젯은 비공개 gist 의 widget.json 주소로만 읽음), 너무 잦은 자동 동기화 금지
 
 ## 개발
 - React 19 + Vite PWA. 데이터는 idb-keyval(키 `x:<컬렉션>` — 예전 앱 데이터와 분리) + GitHub Gist 동기화(gist `exam-study-sync`: data.json · widget.json · backup-날짜.json)
-- 구조: `src/lib/exams.js`(시험 규칙 · JLPT 합격 판정) · `src/store/`(저장 · 액션) · `src/sync/`(동기화 · 위젯 요약) · `src/views/`(오늘 · 계획 · 기록 · 시험 · 설정)
+- 구조: `src/lib/exams.js`(시험 규칙 · JLPT 합격 판정) · `src/store/`(저장 · 액션) · `src/sync/`(동기화 · 위젯 요약) · `src/views/`(오늘 · 계획 · 시험 · 설정)
 - 위젯은 Scriptable: 사용자는 `src/lib/scriptable.js` 의 로더만 붙여 넣고, 본체 `src/widget/core.js`(일반 JS 파일)는 앱과 함께 배포되어 자동으로 받음
 - 새 위젯 형태를 넣으면 `WIDGET_KINDS`(scriptable.js) · 본체 KIND 표 · 설정 미리보기(`src/views/WidgetPreview.jsx` 의 `PREVIEW_KINDS`)를 함께 — `tests/core.test.js` 가 검사
 - `npm test` (node --test), `npm run build`, `npm run audit`

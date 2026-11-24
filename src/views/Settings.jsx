@@ -1,4 +1,4 @@
-// 설정: 공부 목표 · 디자인 · 동기화 · 백업 · 위젯 · 데이터 · 정보
+// 설정: 주 시작 · 디자인 · 동기화 · 백업 · 위젯 · 데이터 · 정보
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { useSettings, setSettings, useColl, exportJSON, importJSON, resetAll, deviceId } from '../store/store.js'
 import { Card, Seg, Toggle, Field, Icon, confirmSheet } from '../components/ui.jsx'
@@ -9,7 +9,7 @@ import { WidgetPreview } from './WidgetPreview.jsx'
 import { CHANGES } from '../lib/whatsnew.js'
 import { fontInfo, onFont, addFont, removeFont, textScale, setTextScale } from '../lib/fonts.js'
 import { PALETTE } from '../store/schema.js'
-import { hm, fmtDate, tsYmd } from '../lib/date.js'
+import { fmtDate, tsYmd } from '../lib/date.js'
 
 const APP_URL = () => location.origin + location.pathname.replace(/index\.html$/, '')
 const download = (name, text, type = 'application/json') => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000) }
@@ -21,10 +21,8 @@ export default function Settings() {
     <>
       <header className="page-h"><h1>설정</h1></header>
       <div className="grid two">
-        <Card title="공부">
+        <Card title="계획">
           <div className="form">
-            <Field label={`하루 목표 · ${hm(st.goalDaily)}`}><Seg small value={st.goalDaily} onChange={(v) => setSettings({ goalDaily: v })} options={[60, 90, 120, 180, 240, 300].map((m) => [m, hm(m)])} /></Field>
-            <Field label="직접 (분)"><input className="input num" type="number" inputMode="numeric" step="10" value={st.goalDaily} onChange={(e) => setSettings({ goalDaily: Math.max(10, +e.target.value || 10) })} /></Field>
             <Field label="주 시작"><Seg small value={st.weekStart} onChange={(v) => setSettings({ weekStart: v })} options={[[1, '월요일'], [0, '일요일']]} /></Field>
           </div>
         </Card>

@@ -6,11 +6,10 @@ import { Icon, UiHost } from './components/ui.jsx'
 import { startSync } from './sync/sync.js'
 import Home from './views/Home.jsx'
 import Plan from './views/Plan.jsx'
-import Record from './views/Record.jsx'
 import Exams from './views/Exams.jsx'
 import Settings from './views/Settings.jsx'
 
-const VIEWS = { home: Home, plan: Plan, record: Record, exam: Exams, settings: Settings }
+const VIEWS = { home: Home, plan: Plan, exam: Exams, settings: Settings }
 
 // 화면 하나가 오류 나도 앱 전체가 멈추지 않게
 class Guard extends Component {

@@ -22,7 +22,7 @@ html[data-pencil] :is(.card, .btn:not(.primary), .seg button.on, .chip.on)::befo
   -webkit-mask-image: var(--pn-fine); mask-image: var(--pn-fine); -webkit-mask-size: 90px 90px; mask-size: 90px 90px;
 }
 html[data-pencil] .card-h h2 { background: linear-gradient(transparent 60%, rgba(159, 177, 207, .26) 60% 94%, transparent 94%); padding: 0 2px; margin-left: -2px; }
-html[data-pencil] :is(.pline b, .bars b, .area-bar b) { -webkit-mask-image: var(--pn-crayon); mask-image: var(--pn-crayon); -webkit-mask-size: 80px 80px; mask-size: 80px 80px; }
+html[data-pencil] :is(.pline b) { -webkit-mask-image: var(--pn-crayon); mask-image: var(--pn-crayon); -webkit-mask-size: 80px 80px; mask-size: 80px 80px; }
 html[data-pencil] .row-line { border-bottom-color: transparent; border-image: var(--bi-line) 0 0 6 0 / 0 0 1.5px 0 / 0 stretch; }
 
 /* 필기 느낌: 손으로 그린 네모 · 그은 체크 (색은 테마 그대로) */
