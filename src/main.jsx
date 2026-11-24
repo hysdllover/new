@@ -17,7 +17,7 @@ async function boot() {
   const q = new URLSearchParams(location.search)
   if (q.has('demo')) seedDemo()
   // 진도표 수정본 자동 반영 (안 끝낸 할 일만)
-  for (const r of autoApplyPlans()) setTimeout(() => toast(`진도표 수정본을 반영했어요 · 할 일 ${r.fixed + r.added}개`), 600)
+  for (const r of autoApplyPlans()) setTimeout(() => toast(`진도표 수정본을 반영했어요 · 할 일 ${r.fixed + r.added + r.removed}개`), 600)
   // 위젯 링크: ?go=탭.세그먼트 · ?done=할일id (누르면 바로 체크 · 다시 누르면 취소)
   const g = q.get('go'); if (g) { const [tab, seg] = g.split('.'); go(tab, seg) }
   const dn = q.get('done')
