@@ -213,3 +213,18 @@ textarea.input { min-height: 70px; resize: vertical; }
 input.input[type="date"], input.input[type="time"] { -webkit-appearance: none; appearance: none; display: block; min-width: 0; max-width: 100%; text-align: left; }
 input.input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .fields > * { min-width: 0; }
+/* 일별 상세 계획 */
+.pdl { display: flex; flex-direction: column; }
+.pdl-r { display: grid; grid-template-columns: 78px minmax(0, 1fr); gap: 8px; padding: 7px 0; border-top: 1px solid var(--line); font-size: calc(12.5px * var(--ts, 1)); line-height: 1.5; }
+.pdl-r:first-child { border-top: 0; }
+.pdl-l { color: var(--soft); font-size: calc(11.5px * var(--ts, 1)); }
+.pdl-l small { display: block; color: var(--accent); font-size: calc(11px * var(--ts, 1)); }
+.pdl-h { margin-bottom: 2px; }
+.pdl-b ol { margin: 0; padding-left: 16px; color: var(--muted); }
+.pdl-b li { margin: 1px 0; }
+.pdl-h + ol { color: var(--soft); }
+.pdl-r.note .pdl-b, .pdl-r.note .pdl-b ol { color: color-mix(in srgb, #c9a0a8 75%, var(--text)); }
+.sh-more { align-self: flex-start; font-size: calc(11px * var(--ts, 1)); color: var(--soft); padding: 4px 0; min-height: 28px; }
+.sh-more[aria-expanded="true"] { color: var(--accent); }
+.sh-rows .pdl { margin-top: 2px; padding-top: 4px; border-top: 1px solid var(--line); }
+@media print { .sh-more { display: none; } .pdl-r { break-inside: avoid; } }

@@ -1,10 +1,10 @@
-// 여러 화면이 같이 쓰는 줄 · 카드: 할 일 줄 · 빠른 추가 · 시험 요약 · 교재 줄
+// 여러 화면이 같이 쓰는 줄 · 카드: 할 일 줄 · 빠른 추가 · 시험 요약 · 교재 줄 · 상세 계획
 import { useState } from 'react'
 import { find } from '../store/store.js'
 import { toggleTask, addTask, stepMaterial } from '../store/actions.js'
 import { Check, Icon, Line } from './ui.jsx'
 import { openTask, openExam, openScore, openMaterial, ExamTag } from './editors.jsx'
-import { today, rel, fmtDate, dday, diffDays } from '../lib/date.js'
+import { today, rel, fmtDate, dday, diffDays, dur } from '../lib/date.js'
 import { examName, judge, maxTotal, passLine } from '../lib/exams.js'
 
 export function TaskRow({ t, exams, showDate }) {
@@ -69,6 +69,18 @@ export function MaterialRow({ m, exams }) {
       </button>
       <button className="btn sm" onClick={() => stepMaterial(m.id, 1)} disabled={(m.current || 0) >= m.total} aria-label="한 단위 끝냄">+1</button>
     </div>
+  )
+}
+/* ── 일별 상세 계획 (진도표) ── */
+export const detailTotal = (rows) => rows.reduce((a, r) => a + (r.min || 0), 0)
+export function PlanDetail({ rows }) {
+  return (
+    <div className="pdl">{rows.map((r, i) => (
+      <div key={i} className={'pdl-r' + (r.label === '알림' ? ' note' : '')}>
+        <span className="pdl-l">{r.label}{r.min ? <small className="num">{dur(r.min)}</small> : null}</span>
+        <div className="pdl-b">{r.head && <div className="pdl-h">{r.head}</div>}<ol>{r.steps.map((s, j) => <li key={j}>{s}</li>)}</ol></div>
+      </div>
+    ))}</div>
   )
 }
 export { find }

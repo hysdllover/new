@@ -3,13 +3,13 @@ import { useState } from 'react'
 import { useColl, useSettings, list } from '../store/store.js'
 import { byOrder, upcoming, weekDays, toggleTask } from '../store/actions.js'
 import { Card, Seg, Empty, Icon, Check, Line, Toggle } from '../components/ui.jsx'
-import { TaskRow, QuickAdd, MaterialRow } from '../components/parts.jsx'
+import { TaskRow, QuickAdd, MaterialRow, PlanDetail, detailTotal } from '../components/parts.jsx'
 import { openTask, openMaterial } from '../components/editors.jsx'
 import { openSheet, toast } from '../components/toast.js'
-import { today, addDays, fmtDate, rel, WD, parseYmd, fmtShort, dday, diffDays } from '../lib/date.js'
+import { today, addDays, fmtDate, rel, WD, parseYmd, fmtShort, dday, diffDays, dur } from '../lib/date.js'
 import { examName } from '../lib/exams.js'
 import { setSeg } from '../lib/nav.js'
-import { PLANS, planCount, planDays, importPlan, planTitle } from '../lib/plans.js'
+import { PLANS, planCount, planDays, importPlan, planTitle, planDetail } from '../lib/plans.js'
 
 export default function Plan({ seg = 'list' }) {
   return (
@@ -134,7 +134,7 @@ function Sheet() {
   const olds = PLANS.flatMap((p) => p.replaces || []), inPlan = (t) => plans.includes(t.plan) || olds.includes(t.plan) // 바꾼 예전 진도표의 끝낸 기록은 따로 보이지 않게
   const loose = upcoming(exams).filter((e) => e.date && all.some((t) => t.examId === e.id && t.due && !inPlan(t)))
   const opts = [...plans.map((id) => ({ key: 'p:' + id, title: planTitle(id), tasks: all.filter((t) => t.plan === id && t.due) })), ...loose.map((e) => ({ key: 'e:' + e.id, title: examName(e) + ' 진도표', tasks: all.filter((t) => t.examId === e.id && t.due && !inPlan(t)) }))]
-  const [pick, setPick] = useState(null)
+  const [pick, setPick] = useState(null), [open, setOpen] = useState(() => new Set([today()])), [allOpen, setAllOpen] = useState(false)
   const cur = opts.find((o) => o.key === pick) || opts[0]
   if (!cur) return <Card><Empty>시험에 날짜를 정한 할 일이 아직 없어요<br /><button className="btn sm" style={{ marginTop: 8 }} onClick={openPlanImport}>진도표 불러오기</button></Empty></Card>
   const L = [...cur.tasks].sort((a, b) => a.due.localeCompare(b.due) || byOrder(a, b))
@@ -144,6 +144,8 @@ function Sheet() {
   const ws0 = weekDays(days[0], st.weekStart)[0], weeks = []
   for (const d of days) { const k = Math.floor(diffDays(d, ws0) / 7); (weeks[k] = weeks[k] || []).push(d) }
   const lastK = weeks.length - 1
+  const plan = cur.key.startsWith('p:') ? PLANS.find((p) => 'p:' + p.id === cur.key) : null
+  const flip = (d) => setOpen((s) => { const n = new Set(s); n.has(d) ? n.delete(d) : n.add(d); return n })
   const toToday = () => document.getElementById('sh-' + (days.find((d) => d >= t0) || days[days.length - 1]))?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   return (
     <>
@@ -154,11 +156,12 @@ function Sheet() {
           {exs.map((e) => <div key={e.id}><div className="small soft">{examName(e)} {fmtShort(e.date)}</div><div className="big num" style={{ color: e.color || 'var(--accent)' }}>{dday(e.date)}</div></div>)}
         </div>
         <div style={{ margin: '12px 0 6px' }}><Line value={L.length ? done / L.length : 0} /></div>
-        <div className="row"><span className="small soft grow">완료 {done} / {L.length}</span><button className="btn sm" onClick={toToday}>오늘로 이동</button><button className="btn sm" onClick={openPlanImport}>불러오기</button></div>
+        <div className="row"><span className="small soft grow">완료 {done} / {L.length}</span>{plan && <button className="btn sm" onClick={() => { setAllOpen(!allOpen); if (allOpen) setOpen(new Set()) }}>{allOpen ? '상세 접기' : '상세 모두 펼치기'}</button>}<button className="btn sm" onClick={toToday}>오늘로 이동</button><button className="btn sm" onClick={openPlanImport}>불러오기</button></div>
         {weeks.map((W, k) => W && (
           <div key={k}>
             <div className="sh-week">{k === lastK && k > 0 ? '마지막 주' : `${k + 1}주`} · {fmtShort(addDays(ws0, k * 7))}–{fmtShort(addDays(ws0, k * 7 + 6))}</div>
             {W.map((d) => {
+              const det = plan ? planDetail(plan, d) : [], on = det.length > 0 && (allOpen || open.has(d))
               const T = L.filter((t) => t.due === d), wd = parseYmd(d).getDay(), mock = T.some((t) => t.mock || t.area === '모의'), exam = T.some((t) => t.examDay) || exs.some((e) => e.date === d)
               return (
                 <div key={d} id={'sh-' + d} className={'sh-day' + (mock ? ' tint' : '') + (exam ? ' exam' : '') + (d === t0 ? ' today' : '') + (d < t0 ? ' past' : '')}>
@@ -169,7 +172,10 @@ function Sheet() {
                       <span className={'sh-area a-' + (AREA_C[t.area] || 'x')}>{t.area || (t.examDay ? '시험' : '할일')}</span>
                       <button className="sh-t" onClick={() => openTask(t.id)}>{t.title}</button>
                     </div>
-                  ))}</div>
+                  ))}
+                  {det.length > 0 && <button className="sh-more" aria-expanded={on} onClick={() => flip(d)}>{on ? '상세 계획 접기' : '상세 계획'} · 총 {dur(detailTotal(det))}</button>}
+                  {on && <PlanDetail rows={det} />}
+                  </div>
                 </div>
               )
             })}

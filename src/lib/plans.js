@@ -44,7 +44,7 @@ export const PLANS = [{
     '2026-12-09': M(3, 'Day 29–30 · 실전 5–6회', 'Part 5 유형 ① (p.173–203)'),
     '2026-12-10': T('기출 3회 LC 오답 다시 듣기 · 의도 파악·다음에 할 일 모아 보기', '기출 3회 RC 오답 다시 풀기 · P5·6 20분 안에 풀기', 'Day 25–30·Level-Up · 실전 7–9회', 'Part 5 유형 ② (p.204–234)', '오답노트 전체 훑기'),
     '2026-12-11': M(4, '실전 10–12회', 'Part 5 실전 (p.235–239)'),
-    '2026-12-12': T('오답노트 가볍게', '오답노트 가볍게', '체크한 단어만', '포켓북 만능문장 낭독만', '수험표·신분증 챙기기 · 일찍 자기', { imp: true }),
+    '2026-12-12': T('오답노트 가볍게', '오답노트 가볍게', '체크한 단어만', '포켓북 만능문장 낭독만', '수험표·신분증 챙기기 · 일찍 자기', { imp: true, light: true }),
     '2026-12-13': { items: [['시험', '토익 시험']], examDay: 'toeic' },
     '2026-12-14': S('모의고사 1회 · Part 1–2 집중'),
     '2026-12-15': S('모의고사 2회 · Part 3 집중'),
@@ -55,6 +55,45 @@ export const PLANS = [{
     '2026-12-20': { items: [['시험', '토익스피킹 시험']], examDay: 'tos' },
   },
 }]
+
+// 일별 상세 계획: 그날 할 일을 순서 · 시간 배분(계획)으로 풀어 씀 — { label, head, steps[], min }
+const LS = (t) => t.includes('문제만') ? '개념은 건너뛰고 문제만 풀기 → 채점 → 틀린 문제 스크립트 확인 → 받아쓰기' : t.includes('오답') ? '틀린 문제 다시 듣기 → 스크립트로 근거 확인 → 받아쓰기 → 쉐도잉' : '개념·전략 읽기 → 문제 풀이 → 채점 → 틀린 문제 스크립트 확인 → 받아쓰기'
+const RS = (t) => t.includes('문제만') ? '개념은 건너뛰고 문제만 풀기 → 채점 → 틀린 문제만 해설 확인' : t.includes('오답') || t.includes('시간 재고') ? '시간 재고 다시 풀기 → 근거 문장 표시 → 틀린 이유 오답노트에 적기' : '개념 정리 → 문제 풀이 → 채점 → 오답 이유 적기'
+export function planDetail(p, due) {
+  const d = p?.days[due]; if (!d) return []
+  const out = [], add = (label, text, min = 0) => { const i = text.indexOf(': '); out.push({ label, head: i > 0 ? text.slice(0, i) : '', steps: (i > 0 ? text.slice(i + 2) : text).split(' → '), min }) }
+  const get = (a) => d.items.find((x) => x[0] === a)?.[1] || ''
+  const lc = get('LC'), rc = get('RC'), vo = get('보카'), ts = get('토스'), note = d.imp ? get('기타') : ''
+  if (d.examDay === 'toeic') { add('시험', '토익 시험 (LC · RC) → 신분증 · 수험표 · 연필 확인'); add('휴식', '시험 끝나면 푹 쉬기 → 토스는 내일부터'); return out }
+  if (d.examDay) { add('시험', '시험 전 포켓북 만능문장 소리 내어 읽기 → 토익스피킹 시험 → 신분증 · 수험표 확인'); return out }
+  if (d.exam === 'tos') {
+    const m = ts.match(/모의고사 (\d회) · (.+) 집중/)
+    if (!m) { add('토스', `${ts.split(' · ')[0]}: 응시하며 녹음 → 모범 답안과 비교 → 고친 답변으로 다시 말하기`, 90); add('포켓북', 'Part별 템플릿과 만능문장 소리 내어 읽기', 60); add('스크립트', '나만의 답변 스크립트 최종 점검', 30) }
+    else {
+      add('모의고사', `실전 모의고사 ${m[1]} 응시하며 녹음 → 모범 답안과 비교 → 막혔던 문항 답변 고치기`, 90)
+      add('Part 복습', `${m[2]}: 교재 유형 익히기 다시 보기 → 실전 트레이닝 문항 소리 내어 답하기`, 90)
+      add('포켓북', '템플릿 · 만능문장 암기 → 보지 않고 따라 말하기', 60)
+      add('재녹음', `모의고사 ${m[1]} 다시 답하고 녹음 → 처음 녹음과 비교`, 30)
+      add('스크립트', '오늘 고친 답변을 나만의 스크립트에 정리', 30)
+    }
+    if (note) add('알림', note); return out
+  }
+  if (d.light) { add('오답', 'LC · RC 오답노트 훑어보기 → 틀린 이유만 다시 확인', 90); add('보카', '체크한 단어만 빠르게 보기', 40); add('토스', '포켓북 만능문장 소리 내어 읽기', 30); if (note) add('알림', note); return out }
+  add('보카', `${vo}: 새 단어 외우기 → MP3로 발음 확인 → 전날 Day 뜻 가리고 테스트`, 40)
+  if (d.mock) {
+    add('모의고사', `${lc.replace(/ LC$/, '')}: LC → RC 쉬지 않고 이어서 풀기 (실전처럼)`, 120)
+    add('채점 · 오답', '파트별 틀린 개수 기록 → 응시자 정답률 75% 이상인데 틀린 문제부터 원인 적기 (개념 · 실수 · 시간) → LC 틀린 문장 받아쓰기 → RC 틀린 문장 해석', 80)
+  } else {
+    add('LC', `${lc}: ${LS(lc)}`, 70)
+    add('RC', `${rc}: ${RS(rc)}`, 90)
+    add('오답 · 쉐도잉', '오늘 틀린 문제 오답노트에 정리 → LC 음원 따라 말하기', 40)
+  }
+  add('토스', ts.startsWith('포켓북') ? ts : `${ts}: 교재 읽기 → 만능문장 따라 말하기 → 녹음하고 다시 듣기`, 60)
+  if (note) add('알림', note)
+  return out
+}
+// 할 일들 중 불러온 진도표에서 그날 상세 계획 찾기
+export const detailFor = (tasks, due) => { for (const t of tasks) if (t.plan && t.due === due) { const p = planOf(t.plan); if (p?.days[due]) return planDetail(p, due) } return [] }
 
 export const planCount = (p) => Object.values(p.days).reduce((a, d) => a + d.items.length, 0)
 export const planDays = (p) => Object.values(p.days).filter((d) => !d.examDay).length
