@@ -105,7 +105,7 @@ function Books() {
 export { rel }
 
 // 영역 표시 색 (옅은 칸)
-const AREA_C = { LC: 'lc', RC: 'rc', 보카: 'vo', 토스: 'ts', 기타: 'et', 모의: 'lc', 오답: 'et', 복습: 'et' }
+const AREA_C = { LC: 'lc', RC: 'rc', 보카: 'vo', 토스: 'ts', 기타: 'et', 알림: 'et', 모의: 'lc', 오답: 'et', 복습: 'et' }
 
 // 진도표 불러오기 시트
 export const openPlanImport = () => openSheet((close) => <PlanImport close={close} />, { title: '진도표 불러오기' })
