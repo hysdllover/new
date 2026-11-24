@@ -18,8 +18,11 @@ export function deleteTask(id) { const t = find('tasks', id); const ch = recordC
 // 순서: 날짜·시간 정리는 사용자가 누를 때만 · 평소엔 사용자가 정한 order
 export const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0)
 
-/* ── 주 ── */
+/* ── 공부 기록 ── */
+export function addSession(s) { return put('sessions', { date: today(), min: 0, ...s, min: Math.max(1, Math.round(s.min || 0)) }) }
+export const minsOn = (d, sessions = list('sessions')) => sessions.filter((s) => s.date === d).reduce((a, s) => a + (s.min || 0), 0)
 export function weekDays(d = today(), start = settings().weekStart) { const ws = weekStart(d, start); return Array.from({ length: 7 }, (_, i) => addDays(ws, i)) }
+export function byArea(sessions) { const m = new Map(); for (const s of sessions) { const k = (s.examId || '') + '|' + (s.area || ''); m.set(k, (m.get(k) || 0) + (s.min || 0)) } return [...m.entries()].map(([k, min]) => { const [examId, area] = k.split('|'); return { examId, area, min } }).sort((a, b) => b.min - a.min) }
 
 /* ── 교재 · 강의 진도 ── */
 export function stepMaterial(id, d = 1) { const m = find('materials', id); if (!m) return; const cur = Math.max(0, Math.min(m.total || 9999, (m.current || 0) + d)); patch('materials', id, { current: cur }) }

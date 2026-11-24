@@ -108,6 +108,15 @@ textarea.input { min-height: 70px; resize: vertical; }
 .kv .k { font-size: calc(10px * var(--ts, 1)); letter-spacing: .14em; color: var(--soft); }
 
 /* 막대 (7일) */
+.bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; align-items: end; height: 96px; }
+.bars > div { display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch; height: 100%; gap: 4px; min-width: 0; }
+.bars b { display: block; background: color-mix(in srgb, var(--accent) 62%, var(--surface)); min-height: 1px; }
+.bars .today b { background: var(--accent); }
+.bars .goal { border-top: 1px dashed color-mix(in srgb, var(--soft) 60%, transparent); }
+.bars span { font-size: calc(10px * var(--ts, 1)); text-align: center; color: var(--soft); }
+.bars .today span { color: var(--text); }
+.area-bar { display: block; height: 4px; background: color-mix(in srgb, var(--soft) 15%, transparent); }
+.area-bar b { display: block; height: 100%; }
 
 /* 그래프 */
 .chart { width: 100%; height: auto; display: block; overflow: visible; }
@@ -147,6 +156,12 @@ textarea.input { min-height: 70px; resize: vertical; }
 .sw { display: inline-block; width: 8px; height: 8px; border-radius: 1px; flex-shrink: 0; }
 .sw-pick { padding: 0 9px; } .sw-pick .sw { width: 14px; height: 14px; }
 .ok-t { color: var(--ok); } .bad-t { color: var(--danger); }
+.mgrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; max-width: 420px; }
+.mg-h { font-size: calc(10px * var(--ts, 1)); color: var(--soft); text-align: center; padding-bottom: 2px; }
+.mg-c { position: relative; aspect-ratio: 1; background: color-mix(in srgb, var(--accent) calc(var(--a) * 85%), color-mix(in srgb, var(--soft) 10%, var(--surface))); border-radius: 1px; }
+.mg-c i { position: absolute; left: 3px; top: 1px; font-style: normal; font-size: calc(9px * var(--ts, 1)); color: var(--muted); }
+.mg-c.dk i { color: #fff; }
+.mg-c.today { outline: 1px solid var(--text); outline-offset: -1px; }
 .quick { gap: 4px; margin-top: 6px; }
 .exam-sum { display: flex; flex-direction: column; gap: 5px; padding: 8px 0; border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
 .exam-sum:last-child { border-bottom: 0; }
@@ -181,6 +196,10 @@ textarea.input { min-height: 70px; resize: vertical; }
 .wp-task i { width: 9px; height: 9px; border: 1px solid var(--wacc); border-radius: 1px; flex-shrink: 0; }
 .wp-task.done { color: var(--wsoft); } .wp-task.done i { border-color: var(--wsoft); background: color-mix(in srgb, var(--wsoft) 35%, transparent); }
 .wp-task span { margin-left: auto; font-size: 9px; color: var(--wsoft); }
+.wp-bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; align-items: end; margin-top: 12px; }
+.wp-bars > div { display: flex; flex-direction: column; justify-content: flex-end; height: 100%; }
+.wp-bars b { display: block; background: var(--wacc); min-height: 1px; }
+.wp-bars span { font-size: 7px; text-align: center; color: var(--wsoft); }
 .wp-split { display: flex; gap: 12px; height: 100%; } .wp-split > div:first-child { width: 44%; } .wp-split > div:last-child { flex: 1; min-width: 0; }
 .wp-vr { width: 1px; background: var(--wrule); }
 

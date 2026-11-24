@@ -3,7 +3,7 @@
 // scores: 점수 { examId, date, kind: 'mock'|'real', parts: { 영역id: 점수 }, memo }
 // tasks: 할 일 { title, due, done, doneAt, examId, area, order, memo }
 // materials: 교재·강의 { title, examId, unit, total, current, done }
-// sessions: 예전 공부 기록 (지금은 쓰지 않음 · 동기화 데이터는 그대로 둠)
+// sessions: 공부 기록 { date, start, min, examId, area, memo }
 // days: 날마다 메모 { id: 'YYYY-MM-DD', memo }
 // settings: { id: 'main', ... } · live: 동기화 · 백업 표시 (기기별)
 export const COLL_NAMES = ['exams', 'scores', 'tasks', 'materials', 'sessions', 'days', 'settings', 'live']
@@ -13,6 +13,7 @@ export const PALETTE = ['#4a5a78', '#7a8660', '#a99bc4', '#c9a0a8', '#8a9bb5', '
 
 export const DEFAULT_SETTINGS = {
   id: 'main',
+  goalDaily: 120, // 하루 목표 공부 (분)
   weekStart: 1,
   theme: 'basic', // basic · pencil
   handFx: true, // 필기 느낌 (연필 선 · 손으로 그은 체크)
