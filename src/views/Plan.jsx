@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useColl, useSettings, list } from '../store/store.js'
 import { byOrder, upcoming, weekDays, toggleTask } from '../store/actions.js'
 import { Card, Seg, Empty, Icon, Check, Line, Toggle } from '../components/ui.jsx'
-import { TaskRow, QuickAdd, MaterialRow, PlanDetail, PlanGuide, detailTotal, detailCount } from '../components/parts.jsx'
+import { TaskRow, QuickAdd, MaterialRow, PlanDetail, PlanGuide, TitleLines, detailTotal, detailCount } from '../components/parts.jsx'
 import { openTask, openMaterial } from '../components/editors.jsx'
 import { openSheet, toast } from '../components/toast.js'
 import { today, addDays, fmtDate, rel, WD, parseYmd, fmtShort, dday, diffDays, dur } from '../lib/date.js'
@@ -174,7 +174,7 @@ function Sheet() {
                     <div key={t.id} className={'sh-row' + (t.done ? ' done' : '') + (t.imp || t.examDay ? ' imp' : '')}>
                       <Check on={t.done} onClick={() => toggleTask(t.id)} />
                       <span className={'sh-area a-' + (AREA_C[t.area] || 'x')}>{t.area || (t.examDay ? '시험' : '할일')}</span>
-                      <button className="sh-t" onClick={() => openTask(t.id)}>{t.title}</button>
+                      <button className="sh-t" onClick={() => openTask(t.id)}><TitleLines text={t.title} /></button>
                     </div>
                   ))}
                   {det.length > 0 && <button className="sh-more" aria-expanded={on} onClick={() => flip(d)}>{on ? '상세 계획 접기' : '상세 계획'} · {dc.done}/{dc.n} · 총 {dur(detailTotal(det))}</button>}

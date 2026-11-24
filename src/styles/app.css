@@ -215,7 +215,8 @@ textarea.input { min-height: 70px; resize: vertical; }
 .sh-date b { font-size: calc(22px * var(--ts, 1)); font-weight: 300; line-height: 1.1; }
 .sh-date span { font-size: calc(11px * var(--ts, 1)); color: var(--soft); }
 .sh-rows { display: flex; flex-direction: column; gap: 9px; min-width: 0; }
-.sh-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.sh-row { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
+.sh-row > .check, .sh-row > .sh-area { margin-top: 2px; }
 .sh-area { width: 34px; flex-shrink: 0; font-size: calc(11px * var(--ts, 1)); color: var(--muted); text-align: center; padding: 1px 0; border-radius: 2px; background: color-mix(in srgb, var(--soft) 14%, transparent); }
 .sh-area.a-lc { background: color-mix(in srgb, #8a9bb5 22%, transparent); }
 .sh-area.a-rc { background: color-mix(in srgb, #a99bc4 24%, transparent); }
@@ -260,3 +261,23 @@ input.input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .pdl-log.on { color: var(--soft); }
 @media print { .pdl-log { display: none; } }
 .fields.hm { grid-template-columns: 1fr 1fr; }
+/* 읽기 쉽게: 단원 줄 나눔 · 쪽수 옅게 */
+.tl { display: flex; flex-direction: column; gap: 2px; }
+.tl-l { display: block; }
+.pg { margin-left: 6px; color: var(--soft); font-size: .86em; white-space: nowrap; }
+.row-line.done .pg, .sh-row.done .pg { text-decoration: none; }
+.rows-h { margin: 12px 0 2px; font-size: calc(11px * var(--ts, 1)); color: var(--soft); }
+.sh-t { line-height: 1.45; }
+.pdl-h { color: var(--text); line-height: 1.45; }
+.pdl-s { line-height: 1.45; padding: 3px 0; }
+.pdl-it + .pdl-it { margin-top: 10px; padding-top: 8px; border-top: 1px dashed color-mix(in srgb, var(--line) 80%, transparent); }
+.pdl-tip { margin: 4px 0 2px 25px; padding-left: 8px; border-left: 2px solid color-mix(in srgb, var(--accent) 35%, transparent); }
+/* 아이폰: 날짜 · 영역 라벨을 위로 올려 내용 폭을 넓게 */
+@media (max-width: 559px) {
+  .sh-day { grid-template-columns: 1fr; gap: 8px; }
+  .sh-date { flex-direction: row; align-items: baseline; gap: 8px; }
+  .pdl-r { grid-template-columns: 1fr; gap: 4px; }
+  .pdl-l { display: flex; align-items: baseline; gap: 8px; }
+  .pdl-l small { display: inline; }
+  .pdl-log { display: inline-block; margin: 0 0 0 auto; padding: 0; min-height: 0; }
+}
