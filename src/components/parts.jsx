@@ -7,6 +7,13 @@ import { openTask, openExam, openScore, openMaterial, openSession, ExamTag } fro
 import { today, rel, fmtDate, dday, diffDays, dur } from '../lib/date.js'
 import { examName, judge, maxTotal, passLine } from '../lib/exams.js'
 
+// 긴 제목 읽기 쉽게: ' · ' 로 나눈 단원은 줄마다, 쪽수(p.~)는 옅게
+const PG = /\s*\((p\.[^)]*)\)\s*$/
+export function TitleLines({ text }) {
+  const parts = String(text || '').split(' · ')
+  if (parts.length < 2 && !PG.test(text)) return text
+  return <span className="tl">{parts.map((x, i) => { const m = x.match(PG); return <span key={i} className="tl-l">{m ? x.slice(0, m.index) : x}{m && <span className="pg">{m[1]}</span>}</span> })}</span>
+}
 export function TaskRow({ t, exams, showDate }) {
   const ex = exams.find((e) => e.id === t.examId)
   const late = !t.done && t.due && t.due < today()
@@ -14,7 +21,7 @@ export function TaskRow({ t, exams, showDate }) {
     <div className={'row-line' + (t.done ? ' done' : '')}>
       <Check on={t.done} onClick={() => toggleTask(t.id)} />
       <button className="t" style={{ textAlign: 'left' }} onClick={() => openTask(t.id)}>
-        <div className="tt">{t.title}</div>
+        <div className="tt">{t.plan ? <TitleLines text={t.title} /> : t.title}</div>
         {(ex || t.area || (showDate && t.due) || late) && <div className="meta"><ExamTag exam={ex} area={t.area} />{(showDate || late) && t.due && <span className={late ? 'bad-t' : ''}>{rel(t.due)}</span>}</div>}
       </button>
     </div>
@@ -102,7 +109,7 @@ export function PlanDetail({ rows, due }) {
         </span>
         <div className="pdl-b">{r.items.map((it, x) => (
           <div key={x} className="pdl-it">
-            {it.h && <div className="pdl-h">{it.h}</div>}
+            {it.h && <div className="pdl-h"><TitleLines text={it.h} /></div>}
             <div className="pdl-ss">{it.steps.map((s) => { const k = stepKey(r, j++), on = !!S[k]; return (
               <div key={k} className={'pdl-s' + (on ? ' done' : '')}><Check on={on} onClick={() => toggleStep(due, k)} label={(on ? '되돌리기 · ' : '했어요 · ') + s} /><span>{s}</span></div>
             ) })}</div>

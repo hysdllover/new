@@ -34,7 +34,8 @@ export default function Home() {
           <div className="meta"><span>이번 주 {hm(wk)}</span></div>
         </Card>
         <Card title={`오늘 할 일${mine.length ? ` ${mine.length - left}/${mine.length}` : ''}`} className="span2" action={<button className="lnk" onClick={() => go('plan', 'list')}>계획 →</button>}>
-          <div className="rows">{mine.map((t) => <TaskRow key={t.id} t={t} exams={exams} />)}</div>
+          <div className="rows">{mine.filter((t) => t.due === t0).map((t) => <TaskRow key={t.id} t={t} exams={exams} />)}</div>
+          {mine.some((t) => t.due < t0) && <><div className="rows-h">지난 날짜에서 남은 할 일</div><div className="rows">{mine.filter((t) => t.due < t0).map((t) => <TaskRow key={t.id} t={t} exams={exams} />)}</div></>}
           {!mine.length && <Empty>오늘 할 일이 없어요</Empty>}
           <QuickAdd />
         </Card>
