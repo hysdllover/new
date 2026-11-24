@@ -1,5 +1,5 @@
 import { put, patch, remove, find, list, batch, settings, recordChanges, undoChanges } from './store.js'
-import { today, addDays, weekStart } from '../lib/date.js'
+import { today, addDays, weekStart, dur } from '../lib/date.js'
 import { toast } from '../components/toast.js'
 
 // 바꾼 뒤 '되돌리기' 알림
@@ -19,6 +19,11 @@ export function deleteTask(id) { const t = find('tasks', id); const ch = recordC
 export const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0)
 
 /* ── 공부 기록 ── */
+// 마지막으로 고른 시험 · 영역 (이 기기) — 다음 기록의 기본값
+export const lastPick = () => { try { return JSON.parse(localStorage.getItem('x_last_log') || 'null') } catch { return null } }
+const savePick = (examId, area) => { try { localStorage.setItem('x_last_log', JSON.stringify({ examId, area })) } catch {} }
+// 기록하고 되돌리기 알림
+export function logSession(s, text) { savePick(s.examId || null, s.area || null); let rec; const ch = recordChanges(() => { rec = addSession(s) }); undoToast(text || `기록했어요 · ${dur(s.min)}`, ch); return rec }
 export function addSession(s) { return put('sessions', { date: today(), min: 0, ...s, min: Math.max(1, Math.round(s.min || 0)) }) }
 export const minsOn = (d, sessions = list('sessions')) => sessions.filter((s) => s.date === d).reduce((a, s) => a + (s.min || 0), 0)
 export function weekDays(d = today(), start = settings().weekStart) { const ws = weekStart(d, start); return Array.from({ length: 7 }, (_, i) => addDays(ws, i)) }
