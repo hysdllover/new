@@ -1,6 +1,6 @@
 // 여러 화면이 같이 쓰는 줄 · 카드: 할 일 줄 · 빠른 추가 · 시험 요약 · 교재 줄 · 상세 계획
 import { useState } from 'react'
-import { find } from '../store/store.js'
+import { find, put, useRec } from '../store/store.js'
 import { toggleTask, addTask, stepMaterial } from '../store/actions.js'
 import { Check, Icon, Line } from './ui.jsx'
 import { openTask, openExam, openScore, openMaterial, ExamTag } from './editors.jsx'
@@ -72,13 +72,22 @@ export function MaterialRow({ m, exams }) {
   )
 }
 /* ── 일별 상세 계획 (진도표) ── */
+// 세부 단계 체크: days 컬렉션(id 날짜)의 steps { '영역/번호': true } — 동기화됨
 export const detailTotal = (rows) => rows.reduce((a, r) => a + (r.min || 0), 0)
-export function PlanDetail({ rows }) {
+const stepKey = (r, j) => r.label + '/' + j
+export function toggleStep(due, k) { const d = find('days', due) || {}, steps = { ...(d.steps || {}) }; if (steps[k]) delete steps[k]; else steps[k] = true; put('days', { ...d, id: due, steps }) }
+export const detailCount = (rows, steps = {}) => rows.reduce((a, r) => { r.steps.forEach((_, j) => { a.n++; if (steps[stepKey(r, j)]) a.done++ }); return a }, { done: 0, n: 0 })
+export function PlanDetail({ rows, due }) {
+  const S = useRec('days', due)?.steps || {}
   return (
     <div className="pdl">{rows.map((r, i) => (
       <div key={i} className={'pdl-r' + (r.label === '알림' ? ' note' : '')}>
         <span className="pdl-l">{r.label}{r.min ? <small className="num">{dur(r.min)}</small> : null}</span>
-        <div className="pdl-b">{r.head && <div className="pdl-h">{r.head}</div>}<ol>{r.steps.map((s, j) => <li key={j}>{s}</li>)}</ol></div>
+        <div className="pdl-b">{r.head && <div className="pdl-h">{r.head}</div>}
+          <div className="pdl-ss">{r.steps.map((s, j) => { const on = !!S[stepKey(r, j)]; return (
+            <div key={j} className={'pdl-s' + (on ? ' done' : '')}><Check on={on} onClick={() => toggleStep(due, stepKey(r, j))} label={(on ? '되돌리기 · ' : '했어요 · ') + s} /><span>{s}</span></div>
+          ) })}</div>
+        </div>
       </div>
     ))}</div>
   )

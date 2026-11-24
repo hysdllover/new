@@ -220,11 +220,13 @@ input.input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .pdl-l { color: var(--soft); font-size: calc(11.5px * var(--ts, 1)); }
 .pdl-l small { display: block; color: var(--accent); font-size: calc(11px * var(--ts, 1)); }
 .pdl-h { margin-bottom: 2px; }
-.pdl-b ol { margin: 0; padding-left: 16px; color: var(--muted); }
-.pdl-b li { margin: 1px 0; }
-.pdl-h + ol { color: var(--soft); }
-.pdl-r.note .pdl-b, .pdl-r.note .pdl-b ol { color: color-mix(in srgb, #c9a0a8 75%, var(--text)); }
+.pdl-ss { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
+.pdl-s { display: flex; align-items: flex-start; gap: 9px; padding: 4px 0; color: var(--muted); }
+.pdl-s .check { width: 16px; height: 16px; margin-top: 1px; }
+.pdl-s.done span { color: var(--soft); text-decoration: line-through; text-decoration-thickness: .5px; }
+.pdl-r.note .pdl-b, .pdl-r.note .pdl-s { color: color-mix(in srgb, #c9a0a8 75%, var(--text)); }
 .sh-more { align-self: flex-start; font-size: calc(11px * var(--ts, 1)); color: var(--soft); padding: 4px 0; min-height: 28px; }
 .sh-more[aria-expanded="true"] { color: var(--accent); }
 .sh-rows .pdl { margin-top: 2px; padding-top: 4px; border-top: 1px solid var(--line); }
 @media print { .sh-more { display: none; } .pdl-r { break-inside: avoid; } }
+.pdl-s .check.on::after { left: 4.5px; top: 1.5px; height: 8px; }
