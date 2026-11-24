@@ -1,14 +1,14 @@
-// 편집 시트: 할 일 · 공부 기록 · 시험 · 점수 · 교재
+// 편집 시트: 할 일 · 시험 · 점수 · 교재
 import { useState } from 'react'
 import { put, patch, find, useColl, remove, settings } from '../store/store.js'
-import { addTask, addSession, deleteTask, deleteExam, upcoming } from '../store/actions.js'
+import { addTask, deleteTask, deleteExam, upcoming } from '../store/actions.js'
 import { openSheet, toast } from './toast.js'
 import { Field, Seg, Icon, confirmSheet } from './ui.jsx'
-import { today, addDays, fmtDate, dday, dur } from '../lib/date.js'
+import { today, addDays, fmtDate, dday } from '../lib/date.js'
 import { JLPT_LEVELS, sectionsOf, areasOf, examName, clampPart, judge, jlptDates, passLine, maxTotal } from '../lib/exams.js'
 import { PALETTE } from '../store/schema.js'
 
-// 시험 · 영역 고르기 (기록 · 할 일 공용)
+// 시험 · 영역 고르기
 export function ExamAreaPick({ examId, area, onChange }) {
   const exams = upcoming(useColl('exams'))
   const ex = exams.find((e) => e.id === examId)
@@ -51,35 +51,6 @@ function TaskForm({ id, preset, close }) {
         {id && <button type="button" className="btn danger" onClick={() => { close(); deleteTask(id) }}><Icon name="trash" size={15} />지우기</button>}
         <span className="grow" />
         <button className="btn primary">{id ? '저장' : '추가'}</button>
-      </div>
-    </form>
-  )
-}
-
-/* ── 공부 기록 ── */
-export const openSession = (id, preset = {}) => openSheet((close) => <SessionForm id={id} preset={preset} close={close} />, { title: id ? '공부 기록' : '공부 기록 추가' })
-function SessionForm({ id, preset, close }) {
-  const s0 = id ? find('sessions', id) : null
-  const [v, setV] = useState(() => ({ date: today(), min: 30, examId: null, area: null, memo: '', ...preset, ...s0 }))
-  const save = () => {
-    const min = Math.round(+v.min); if (!(min > 0)) return toast('공부한 시간을 적어 주세요')
-    const rec = { date: v.date || today(), min, examId: v.examId || null, area: v.area || null, memo: v.memo || '' }
-    if (id) patch('sessions', id, rec); else addSession(rec)
-    close()
-  }
-  return (
-    <form className="form" noValidate onSubmit={(e) => { e.preventDefault(); save() }}>
-      <div className="fields">
-        <Field label="날짜"><input className="input" type="date" value={v.date} onChange={(e) => setV({ ...v, date: e.target.value })} /></Field>
-        <Field label="시간 (분)"><input className="input num" type="number" inputMode="numeric" min="1" step="1" value={v.min} onChange={(e) => setV({ ...v, min: e.target.value })} /></Field>
-      </div>
-      <div className="chips">{[15, 30, 45, 60, 90, 120].map((m) => <button type="button" key={m} className={'chip' + (+v.min === m ? ' on' : '')} onClick={() => setV({ ...v, min: m })}>{dur(m)}</button>)}</div>
-      <ExamAreaPick examId={v.examId} area={v.area} onChange={(examId, area) => setV({ ...v, examId, area })} />
-      <Field label="메모"><input className="input" value={v.memo || ''} onChange={(e) => setV({ ...v, memo: e.target.value })} placeholder="한 일 (선택)" /></Field>
-      <div className="row end">
-        {id && <button type="button" className="btn danger" onClick={() => confirmSheet('기록 지우기', '이 공부 기록을 지울까요?', () => { remove('sessions', id); close() }, '지우기')}><Icon name="trash" size={15} />지우기</button>}
-        <span className="grow" />
-        <button className="btn primary">{id ? '저장' : '기록'}</button>
       </div>
     </form>
   )
