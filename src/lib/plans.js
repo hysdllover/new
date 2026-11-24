@@ -8,6 +8,8 @@ const T = (lc, rc, voca, tos, etc, o = {}) => ({ items: [['LC', lc], ['RC', rc],
 const TIP = 'P5·6는 20분 안에 · 채점 후 정답률 75% 이상 오답부터 분석'
 const M = (n, voca, tos) => T(`기출문제집 ${n}회 LC`, `기출문제집 ${n}회 RC`, voca, tos, TIP, { mock: true, imp: true })
 const S = (tos, etc = '포켓북 1시간 · 재녹음 · 스크립트 정리', o = {}) => ({ items: [['토스', tos], ['기타', etc]], mock: true, exam: 'tos', ...o })
+// 원본: claude.ai 아티팩트 '토익 · 토스 진도 달력' — 수정본이 나오면 days · 상세 계획 규칙을 맞추고 version 을 갱신 (진도표 id 는 그대로 → '바뀐 내용 반영하기')
+export const PLAN_SOURCE = { artifact: 'https://claude.ai/artifact/4RjQDMJsFFjcN9iHR6UjFG', version: '1795507335-28e4' }
 export const PLANS = [{
   id: 'toeic-tos-1220e',
   replaces: ['toeic-1213', 'toeic-1213b', 'toeic-tos-1220', 'toeic-tos-1220b', 'toeic-tos-1220c', 'toeic-tos-1220d'], // 예전 진도표의 끝내지 않은 할 일은 지우고 이걸로 바꿈 (끝낸 건 기록으로 남김)

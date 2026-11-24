@@ -25,4 +25,5 @@
 - 위젯은 Scriptable: 사용자는 `src/lib/scriptable.js` 의 로더만 붙여 넣고, 본체 `src/widget/core.js`(일반 JS 파일)는 앱과 함께 배포되어 자동으로 받음
 - 새 위젯 형태를 넣으면 `WIDGET_KINDS`(scriptable.js) · 본체 KIND 표 · 설정 미리보기(`src/views/WidgetPreview.jsx` 의 `PREVIEW_KINDS`)를 함께 — `tests/core.test.js` 가 검사
 - `npm test` (node --test), `npm run build`, `npm run audit`
+- 진도표(`src/lib/plans.js`)의 원본은 아티팩트 '토익 · 토스 진도 달력'(`PLAN_SOURCE`). 수정본이 있으면 항상 반영: 할 일(days) · 상세 계획 규칙 · 팁 · 알아두기 · 머리말을 맞추고 `PLAN_SOURCE.version` 갱신, 진도표 id 는 그대로 둬서 앱에서 '바뀐 내용 반영하기'로 고쳐지게
 - 예전 스터디 대시보드는 `backup/study-dashboard-v1` 브랜치에 보관
