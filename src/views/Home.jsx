@@ -1,9 +1,9 @@
 // 오늘: 시험 D-day · 오늘 공부 · 오늘 할 일 · 오늘 상세 계획(진도표) · 이번 주 · 교재 진도
 import { useMemo } from 'react'
-import { useColl, useRec, useSettings } from '../store/store.js'
+import { useColl, useSettings } from '../store/store.js'
 import { upcoming, weekDays, byOrder } from '../store/actions.js'
 import { Card, Line, Empty, Icon } from '../components/ui.jsx'
-import { TaskRow, QuickAdd, ExamSummary, MaterialRow, PlanDetail, detailTotal, detailCount } from '../components/parts.jsx'
+import { TaskRow, QuickAdd, ExamSummary, MaterialRow, PlanDetail, detailTotal } from '../components/parts.jsx'
 import { openExam, openSession } from '../components/editors.jsx'
 import { Bars7 } from '../components/charts.jsx'
 import { today, fmtDate, hm, tsYmd, dur } from '../lib/date.js'
@@ -17,7 +17,7 @@ export default function Home() {
   const ups = upcoming(exams)
   const mine = tasks.filter((t) => t.due && (t.due < t0 ? !t.done : t.due === t0 && (!t.done || tsYmd(t.doneAt || 0) === t0))).sort((a, b) => (a.due < t0) - (b.due < t0) || byOrder(a, b))
   const left = mine.filter((t) => !t.done).length
-  const det = detailFor(tasks, t0), dc = detailCount(det, useRec('days', t0)?.steps)
+  const det = detailFor(tasks, t0)
   const days = weekDays(t0, st.weekStart), wk = days.reduce((a, d) => a + (mins[d] || 0), 0)
   const now = mins[t0] || 0
   return (
@@ -40,7 +40,7 @@ export default function Home() {
           <QuickAdd />
         </Card>
         {det.length > 0 && (
-          <Card title={`오늘 상세 계획 ${dc.done}/${dc.n} · 총 ${dur(detailTotal(det))}`} className="span2" action={<button className="lnk" onClick={() => go('plan', 'sheet')}>진도 달력 →</button>}>
+          <Card title={`오늘 상세 계획 · 총 ${dur(detailTotal(det))}`} className="span2" action={<button className="lnk" onClick={() => go('plan', 'sheet')}>진도 달력 →</button>}>
             <PlanDetail rows={det} due={t0} />
           </Card>
         )}
