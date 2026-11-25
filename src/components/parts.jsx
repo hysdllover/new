@@ -107,7 +107,7 @@ export function PlanDetail({ rows, due }) {
           <div key={x} className="pdl-it">
             {it.h && <div className="pdl-h"><TitleLines text={it.h} /></div>}
             <ol className="pdl-ol">{it.steps.map((s, j) => <li key={j}>{s}</li>)}</ol>
-            {it.tip && <div className="pdl-tip">{it.tip}</div>}
+            {it.tip && <div className="pdl-tip"><span className="tip-k">팁</span>{it.tip}</div>}
           </div>
         ))}</div>
       </div>
