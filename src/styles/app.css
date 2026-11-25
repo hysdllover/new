@@ -247,16 +247,11 @@ input.input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .pdl-guide > div { display: grid; grid-template-columns: 78px minmax(0, 1fr); gap: 8px; }
 .pdl-guide dt { color: var(--soft); }
 .pdl-guide dd { margin: 0; }
-.pdl-ss { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
-.pdl-s { display: flex; align-items: flex-start; gap: 9px; padding: 4px 0; color: var(--muted); }
-.pdl-s .check { width: 16px; height: 16px; margin-top: 1px; }
-.pdl-s.done span { color: var(--soft); text-decoration: line-through; text-decoration-thickness: .5px; }
-.pdl-r.note .pdl-b, .pdl-r.note .pdl-s { color: color-mix(in srgb, #c9a0a8 75%, var(--text)); }
+.pdl-r.note .pdl-b, .pdl-r.note .pdl-ol { color: color-mix(in srgb, #c9a0a8 75%, var(--text)); }
 .sh-more { align-self: flex-start; font-size: calc(11px * var(--ts, 1)); color: var(--soft); padding: 4px 0; min-height: 28px; }
 .sh-more[aria-expanded="true"] { color: var(--accent); }
 .sh-rows .pdl { margin-top: 2px; padding-top: 4px; border-top: 1px solid var(--line); }
 @media print { .sh-more { display: none; } .pdl-r { break-inside: avoid; } }
-.pdl-s .check.on::after { left: 4.5px; top: 1.5px; height: 8px; }
 .pdl-log { display: block; margin-top: 4px; padding: 3px 0; min-height: 26px; font-size: calc(11px * var(--ts, 1)); color: var(--accent); text-align: left; }
 .pdl-log.on { color: var(--soft); }
 @media print { .pdl-log { display: none; } }
@@ -269,9 +264,8 @@ input.input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .rows-h { margin: 12px 0 2px; font-size: calc(11px * var(--ts, 1)); color: var(--soft); }
 .sh-t { line-height: 1.45; }
 .pdl-h { color: var(--text); line-height: 1.45; }
-.pdl-s { line-height: 1.45; padding: 3px 0; }
 .pdl-it + .pdl-it { margin-top: 10px; padding-top: 8px; border-top: 1px dashed color-mix(in srgb, var(--line) 80%, transparent); }
-.pdl-tip { margin: 4px 0 2px 25px; padding-left: 8px; border-left: 2px solid color-mix(in srgb, var(--accent) 35%, transparent); }
+.pdl-tip { margin: 4px 0 2px 20px; padding-left: 8px; border-left: 2px solid color-mix(in srgb, var(--accent) 35%, transparent); }
 /* 아이폰: 날짜 · 영역 라벨을 위로 올려 내용 폭을 넓게 */
 @media (max-width: 559px) {
   .sh-day { grid-template-columns: 1fr; gap: 8px; }
@@ -281,3 +275,6 @@ input.input[type="date"]::-webkit-date-and-time-value { text-align: left; }
   .pdl-l small { display: inline; }
   .pdl-log { display: inline-block; margin: 0 0 0 auto; padding: 0; min-height: 0; }
 }
+.pdl-ol { margin: 2px 0 0; padding-left: 20px; color: var(--muted); line-height: 1.5; }
+.pdl-ol li { padding: 1px 0; }
+.pdl-ol li::marker { color: var(--soft); font-size: .9em; }
