@@ -278,3 +278,4 @@ input.input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .pdl-ol { margin: 2px 0 0; padding-left: 20px; color: var(--muted); line-height: 1.5; }
 .pdl-ol li { padding: 1px 0; }
 .pdl-ol li::marker { color: var(--soft); font-size: .9em; }
+.tip-k { margin-right: 6px; color: var(--accent); }
